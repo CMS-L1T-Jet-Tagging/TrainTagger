@@ -128,24 +128,13 @@ def doTraining(
 
     nconstit = 16
 
-    # PATH_load = workdir + '/datasets_13X_v9_DucLeptons4/' + filetag + "/" + flavs + "/"
     PATH_load = workdir + '/datasetsNewComplete/' + filetag + "/" + flavs + "/"
-    # PATH_load = '/eos/home-s/sewuchte/L1Trigger/July24/jet-nets/datasets_13X_v9_DucLeptons4/' + filetag + "/" + flavs + "/"
-    # PATH_load = '/eos/home-s/sewuchte/L1Trigger/July24/jet-nets/datasets_13X_v9_DucLeptons5/' + filetag + "/" + flavs + "/"
-    # PATH_load = '/eos/home-s/sewuchte/L1Trigger/July24/jet-nets/datasetsNewComplete/' + filetag + "/" + flavs + "/"
     chunksmatching = glob.glob(PATH_load+"X_"+inputSetTag+"_test*.parquet")
     chunksmatching = [chunksm.replace(PATH_load+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
 
     if test:
         import random
-        # chunksmatching = random.sample(chunksmatching, 4)
-        # chunksmatching = random.sample(chunksmatching, 5)
-        # chunksmatching = random.sample(chunksmatching, 10)
         chunksmatching = random.sample(chunksmatching, 1)
-    # else:
-    #     import random
-    #     # chunksmatching = random.sample(chunksmatching, 65)
-    #     chunksmatching = random.sample(chunksmatching, 42)
 
     filter = "/(jet)_(eta|eta_phys|phi|pt|pt_phys|pt_raw|bjetscore|tauscore|pt_corr|genmatch_lep_vis_pt|genmatch_pt|label_b|label_uds|label_g|label_c|label_tau|label_taup|label_taum|label_electron|label_muon/"
 

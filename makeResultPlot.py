@@ -80,7 +80,7 @@ def doPlots(
     modelsAndNames = {}
 
     tempflav = "btgc"
-    PATH_load = workdir + '/datasets_13X_v9_DucLeptons3/' + filetag + "/" + tempflav + "/"
+    PATH_load = workdir + '/datasetsNewComplete/' + filetag + "/" + tempflav + "/"
     outFolder = "outputPlots/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)

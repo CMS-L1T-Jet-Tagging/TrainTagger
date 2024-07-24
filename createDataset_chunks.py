@@ -5,13 +5,22 @@ gc.set_threshold(0)
 
 # All PF candidate properties
 pfcand_fields_all = [
-    'puppiweight','pt_rel','pt_rel_log',
+    'puppiweight',
+    'pt_rel','pt_rel_log',
+    'pt_rel_phys',
+    'pt',
+    'pt_phys',
     'dxy',
     'dxy_custom',
-    'id','charge','pperp_ratio','ppara_ratio','deta','dphi','etarel','track_chi2',
+    'id','charge','pperp_ratio','ppara_ratio',
+    'deta','dphi',
+    'deta_phys','dphi_phys',
+    'etarel','track_chi2',
     'track_chi2norm','track_qual','track_npar','track_vx','track_vy','track_vz','track_pterror',
     'cluster_hovere','cluster_sigmarr','cluster_abszbarycenter','cluster_emet',
-    'pt_log','eta','phi',
+    'pt_log',
+    'eta','phi',
+    'eta_phys','phi_phys',
 
     'emid','quality','tkquality',
     'track_valid','track_rinv',
@@ -21,6 +30,8 @@ pfcand_fields_all = [
     # 'track_mvaquality',
     'track_mvaother',
     'mass',
+    'isPhoton', 'isElectronPlus', 'isElectronMinus', 'isMuonPlus', 'isMuonMinus', 'isNeutralHadron', 'isChargedHadronPlus', 'isChargedHadronMinus',
+    'isfilled',
     ]
 
 pfcand_fields_baselineHW = [
@@ -184,15 +195,14 @@ def processPerFeatureSet(data_split_, name_, features_, chunk_,outFolder, nconst
     ak.to_parquet(x_electron_, outFolder+"/X_"+name_+"_electron_"+str(chunk_)+".parquet")
     ak.to_parquet(x_electron_global, outFolder+"/X_global_"+name_+"_electron_"+str(chunk_)+".parquet")
 
-    del X_train_, Y_train_, X_test_, Y_test_, x_b_,x_taup_,x_taum_, x_gluon_, x_bkg_, x_electron_, x_muon_, x_b_global, x_taup_global, x_taum_global, x_gluon_global, x_charm_global, x_charm_, x_bkg_global, x_muon_global, x_electron_global
-    gc.collect()
+    # del X_train_, Y_train_, X_test_, Y_test_, x_b_,x_taup_,x_taum_, x_gluon_, x_bkg_, x_electron_, x_muon_, x_b_global, x_taup_global, x_taum_global, x_gluon_global, x_charm_global, x_charm_, x_bkg_global, x_muon_global, x_electron_global
 
 
 def createDataset(filetag):
     # Open the input ROOT files and check its contents
     fname = "../nTuples/"+filetag+".root"
-    # outFolder = "/eos/home-s/sewuchte/L1Trigger/July24/jet-nets/datasetsNewComplete/"
     outFolder = "datasetsNewComplete/"
+    # outFolder = "datasetsNewComplete_plotting/"
     outFolder = outFolder + "/" + filetag + "/" + "/btgc/"
     nconstit = 16
 
@@ -206,8 +216,7 @@ def createDataset(filetag):
 
 
     chunk = 0
-    # for data in uproot.iterate(fname, filter_name = filter, how = "zip"):
-    for data in uproot.iterate(fname, filter_name = filter, how = "zip", step_size=1000000):
+    for data in uproot.iterate(fname, filter_name = filter, how = "zip"):
 
         # jet_cut = (data['jet_pt_phys'] > 15.) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_genmatch_pt'] > 5.)
         jet_cut = (data['jet_pt_phys'] > 15.) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_genmatch_pt'] > 5.) & (data['jet_reject'] == 0 )
@@ -218,43 +227,26 @@ def createDataset(filetag):
         print("JET PFcand Fields:", data.jet_pfcand.fields)
 
         data_split = splitFlavors(data)
-        data_b = data_split["b"]
-        data_taup = data_split["taup"]
-        data_taum = data_split["taum"]
-        data_gluon = data_split["gluon"]
-        data_charm = data_split["charm"]
-        data_bkg = data_split["bkg"]
-        data_electron = data_split["electron"]
-        data_muon = data_split["muon"]
-        
-        data_b = data_split["b"]
-        data_taup = data_split["taup"]
-        data_taum = data_split["taum"]
-        data_gluon = data_split["gluon"]
-        data_charm = data_split["charm"]
-        data_bkg = data_split["bkg"]
-        data_electron = data_split["electron"]
-        data_muon = data_split["muon"]
-
-        del data_b, data_bkg, data_electron, data_muon, data_taup, data_taum, data_gluon, data_charm
 
         # Create datasets
-        ##### processPerFeatureSet(data_split, "all", pfcand_fields_all, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "baselineHW", pfcand_fields_baselineHW, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "baselineHWMe", pfcand_fields_baselineHWMe, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "baselineEmulator", pfcand_fields_baselineEmulator, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "baselineEmulatorMe", pfcand_fields_baselineEmulatorMe, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "all", pfcand_fields_all, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "baselineHW", pfcand_fields_baselineHW, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "baselineHWMe", pfcand_fields_baselineHWMe, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "baselineEmulator", pfcand_fields_baselineEmulator, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "baselineEmulatorMe", pfcand_fields_baselineEmulatorMe, chunk, outFolder, nconstit)
         processPerFeatureSet(data_split, "baselineEmulatorAdd", pfcand_fields_baselineEmulatorMe, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "minimalMe", pfcand_fields_minimalMe, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "ext1", pfcand_fields_ext1, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "ext2", pfcand_fields_ext2, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "ext3", pfcand_fields_ext3, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "ext4", pfcand_fields_ext4, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "ext5", pfcand_fields_ext5, chunk, outFolder, nconstit)
-        # processPerFeatureSet(data_split, "ext6", pfcand_fields_ext6, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "minimalMe", pfcand_fields_minimalMe, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "ext1", pfcand_fields_ext1, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "ext2", pfcand_fields_ext2, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "ext3", pfcand_fields_ext3, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "ext4", pfcand_fields_ext4, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "ext5", pfcand_fields_ext5, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "ext6", pfcand_fields_ext6, chunk, outFolder, nconstit)
 
         chunk = chunk + 1
+
+        del data_split
 
 
 if __name__ == "__main__":

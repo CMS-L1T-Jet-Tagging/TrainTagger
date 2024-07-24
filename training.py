@@ -111,13 +111,9 @@ def doTraining(
         plotFeatures = False,
         workdir = "./",):
 
-    PATH = workdir + '/datasets/' + filetag + "/" + flavs + "/"
-    if nnConfig["classweights"]:
-        PATH = workdir + '/datasets_notreduced/' + filetag + "/" + flavs + "/"
     outFolder = "trainings/"
     if nnConfig["classweights"]:
         outFolder = "trainings_weighted/"
-
     if nnConfig["regression"]:
         outFolder = outFolder.replace("trainings_","trainings_regression_")
 
@@ -128,15 +124,17 @@ def doTraining(
 
     nconstit = 16
 
-    PATH_load = workdir + '/datasetsNewComplete/' + filetag + "/" + flavs + "/"
+    PATH_load = workdir + '/datasetsNewComplete2/' + filetag + "/" + flavs + "/"
+    print (PATH_load)
     chunksmatching = glob.glob(PATH_load+"X_"+inputSetTag+"_test*.parquet")
     chunksmatching = [chunksm.replace(PATH_load+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
 
+    import random
     if test:
-        import random
-        chunksmatching = random.sample(chunksmatching, 1)
+        chunksmatching = random.sample(chunksmatching, 10)
+    else:
+        chunksmatching = random.sample(chunksmatching, len(chunksmatching))
 
-    filter = "/(jet)_(eta|eta_phys|phi|pt|pt_phys|pt_raw|bjetscore|tauscore|pt_corr|genmatch_lep_vis_pt|genmatch_pt|label_b|label_uds|label_g|label_c|label_tau|label_taup|label_taum|label_electron|label_muon/"
 
     print ("Loading data in all",len(chunksmatching),"chunks.")
 
@@ -214,6 +212,7 @@ def doTraining(
             else:
                 x_taup =ak.concatenate((x_taup, x_taup_))
                 x_taup_global =ak.concatenate((x_taup_global, x_taup_global_))
+
         x_taum_ = ak.from_parquet(PATH_load+"X_"+inputSetTag+"_taum_"+c+".parquet")
         x_taum_global_ = ak.from_parquet(PATH_load+"X_global_"+inputSetTag+"_taum_"+c+".parquet")
         if len(x_taum_) > 0:
@@ -385,7 +384,6 @@ def doTraining(
         x_gluon = input_quantizer(x_gluon.astype(np.float32)).numpy()
         x_charm = input_quantizer(x_charm.astype(np.float32)).numpy()
 
-
         plotInputFeatures(x_b, x_bkg, x_taup+x_taum, x_gluon, x_charm, feature_names, outFolder, outputAddName = "_quant")
 
     # calculate class weights
@@ -409,8 +407,8 @@ def doTraining(
     counts_electron, edges_electron = np.histogram(X_train_global[X_train_global["label_electron"]>0]["jet_pt_phys"], bins = bins_pt_weights) 
 
     # print(counts_b, counts_uds, counts_g, counts_c, counts_taup, counts_taum, counts_muon, counts_electron)
-    # for tp in (counts_b, counts_uds, counts_g, counts_c, counts_taup, counts_taum, counts_muon, counts_electron):
-    #     print (tp)
+    for tp in (counts_b, counts_uds, counts_g, counts_c, counts_taup, counts_taum, counts_muon, counts_electron):
+        print (tp)
 
     w_b = np.nan_to_num(counts_b/counts_b * class_weights[0], nan = 1., posinf = 1., neginf = 1.)
     w_uds =  np.nan_to_num(counts_b/counts_uds * class_weights[1], nan = 1., posinf = 1., neginf = 1.)
@@ -596,8 +594,8 @@ def doTraining(
 
     # callbacks_=[es,ls,chkp])
     # callbacks_=[es,chkp])
-    # callbacks_ = [chkp]
-    callbacks_ = [chkp, ls]
+    callbacks_ = [chkp]
+    # callbacks_ = [chkp, ls]
     if nnConfig["pruning"]:
         # Prunning callback
         pr = pruning_callbacks.UpdatePruningStep()

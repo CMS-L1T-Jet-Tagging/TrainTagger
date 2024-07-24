@@ -80,7 +80,7 @@ def doPlots(
     modelsAndNames = {}
 
     tempflav = "btgc"
-    PATH_load = workdir + '/datasetsNewComplete/' + filetag + "/" + tempflav + "/"
+    PATH_load = workdir + '/datasetsNewComplete2/' + filetag + "/" + tempflav + "/"
     outFolder = "outputPlots/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)
@@ -290,7 +290,7 @@ def doPlots(
 
     # Get inference of model
     if regression:
-        trainingBasePath = "trainings_regression_notreduced/" + timestamp + "_" + filetag + "_" + flav + "_" + inputSetTag + "_"
+        trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + filetag + "_" + flav + "_" + inputSetTag + "_"
     else:
         trainingBasePath = "trainings_notreduced/" + filetag + "_" + flav + "_" + inputSetTag + "_"
 

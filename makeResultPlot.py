@@ -93,7 +93,8 @@ def doPlots(
 
     if test:
         import random
-        chunksmatching = random.sample(chunksmatching, 5)
+        # chunksmatching = random.sample(chunksmatching, 5)
+        chunksmatching = random.sample(chunksmatching, 15)
 
     print ("Loading data in all",len(chunksmatching),"chunks.")
 

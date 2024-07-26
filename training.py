@@ -392,8 +392,8 @@ def doTraining(
 
     # get pT weights, weighting all to b spectrum
     # bins_pt_weights = np.array([15, 20, 25, 30, 38, 48, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 9999999999999999999])
-    bins_pt_weights = np.array([15, 18, 22, 25, 30, 38, 48, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 9999999999999999999])
-    # bins_pt_weights = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 9999999999999999999])
+    # bins_pt_weights = np.array([15, 18, 22, 25, 30, 38, 48, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 9999999999999999999])
+    bins_pt_weights = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 9999999999999999999])
     # bins_pt_weights = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 9999999999999999999])
     # bins_pt_weights = np.array([15, 18, 22, 25, 30, 38, 48, 60, 76, 97, 122, 154, 200, 300, 400, 627, 9999999999999999999])
     # bins_pt_weights = np.array([15, 18, 22, 25, 30, 38, 48, 60, 76, 97, 122, 154, 300, 627, 9999999999999999999])
@@ -422,15 +422,17 @@ def doTraining(
     # print (w_uds)
 
     # do it flat in pt and overwrite the other one
-    # for iBin in range(0, len(counts_b)):
-    #     w_b[iBin] = np.nan_to_num(counts_b[0] / counts_b[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_uds[iBin] = np.nan_to_num(counts_b[0] / counts_uds[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_g[iBin] = np.nan_to_num(counts_b[0] / counts_g[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_c[iBin] = np.nan_to_num(counts_b[0] / counts_c[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_taup[iBin] = np.nan_to_num(counts_b[0] / counts_taup[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_taum[iBin] = np.nan_to_num(counts_b[0] / counts_taum[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_muon[iBin] = np.nan_to_num(counts_b[0] / counts_muon[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_electron[iBin] = np.nan_to_num(counts_b[0] / counts_electron[iBin], nan = 1., posinf = 1., neginf = 1.)
+    # enable this for tests - if we can do a flat pT weighting and if it helps
+    # otherwise just comment this for loop block
+    for iBin in range(0, len(counts_b)):
+        w_b[iBin] = np.nan_to_num(counts_b[0] / counts_b[iBin], nan = 1., posinf = 1., neginf = 1.)
+        w_uds[iBin] = np.nan_to_num(counts_b[0] / counts_uds[iBin], nan = 1., posinf = 1., neginf = 1.)
+        w_g[iBin] = np.nan_to_num(counts_b[0] / counts_g[iBin], nan = 1., posinf = 1., neginf = 1.)
+        w_c[iBin] = np.nan_to_num(counts_b[0] / counts_c[iBin], nan = 1., posinf = 1., neginf = 1.)
+        w_taup[iBin] = np.nan_to_num(counts_b[0] / counts_taup[iBin], nan = 1., posinf = 1., neginf = 1.)
+        w_taum[iBin] = np.nan_to_num(counts_b[0] / counts_taum[iBin], nan = 1., posinf = 1., neginf = 1.)
+        w_muon[iBin] = np.nan_to_num(counts_b[0] / counts_muon[iBin], nan = 1., posinf = 1., neginf = 1.)
+        w_electron[iBin] = np.nan_to_num(counts_b[0] / counts_electron[iBin], nan = 1., posinf = 1., neginf = 1.)
 
     # print (w_uds)
 
@@ -486,6 +488,8 @@ def doTraining(
 
     sample_weights = ak.to_numpy(X_train_global["weight_pt"])
     sample_weights = (sample_weights/np.mean(sample_weights))
+
+    X_train_global["weight_pt"] = X_train_global["weight_pt"] / np.mean(sample_weights)
 
     print ("Using sample weights:", sample_weights)
     sample_weights = np.nan_to_num(sample_weights, nan = 1., posinf = 1., neginf = 1.)
@@ -543,7 +547,8 @@ def doTraining(
         model.compile(optimizer=optim, loss={'output_class': 'categorical_crossentropy', 'output_reg': 'log_cosh'},
                       metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
                       weighted_metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
-                      loss_weights=[1., 50.])
+                      loss_weights=[1., 2.])
+                    #   loss_weights=[1., 50.])
     else:
         model.compile(optimizer=optim, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
@@ -651,7 +656,8 @@ def doTraining(
             pmodel.compile(optimizer=optim, loss={'output_class': 'categorical_crossentropy', 'output_reg': 'log_cosh'},
                         metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
                         weighted_metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
-                        loss_weights=[1., 50.])
+                        loss_weights=[1., 2.])
+                        # loss_weights=[1., 50.])
         else:
             pmodel.compile(optimizer=optim, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         # Print the stripped model summary

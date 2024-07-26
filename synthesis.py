@@ -47,7 +47,7 @@ def synthesize(
         workdir = "./", build=False, trace=True):
 
     tempflav = "btgc"
-    PATH = workdir + '/datasetsNewComplete/' + filetag + "/" + tempflav + "/"
+    PATH = workdir + '/datasetsNewComplete2/' + filetag + "/" + tempflav + "/"
     outFolder = "outputSynthesis/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)
@@ -185,7 +185,7 @@ def synthesize(
 
     # Get inference of model
     if regression:
-        trainingBasePath = "trainings_regression_notreduced/" + timestamp + "_" + filetag + "_" + flav + "_" + inputSetTag + "_"
+        trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + filetag + "_" + flav + "_" + inputSetTag + "_"
     else:
         trainingBasePath = "trainings_notreduced/" + filetag + "_" + flav + "_" + inputSetTag + "_"
     modelpath = modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
@@ -563,9 +563,6 @@ if __name__ == "__main__":
             args.input,
             args.model,
             args.outname,
-            args.splitTau,
-            args.splitGluon,
-            args.splitCharm,
             args.regression,
             args.pruning,
             build=args.build

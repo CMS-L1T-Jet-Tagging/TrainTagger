@@ -201,7 +201,7 @@ def processPerFeatureSet(data_split_, name_, features_, chunk_,outFolder, nconst
 def createDataset(filetag):
     # Open the input ROOT files and check its contents
     fname = "../nTuples/"+filetag+".root"
-    outFolder = "datasetsNewComplete/"
+    outFolder = "datasetsNewComplete2/"
     # outFolder = "datasetsNewComplete_plotting/"
     outFolder = outFolder + "/" + filetag + "/" + "/btgc/"
     nconstit = 16
@@ -234,7 +234,7 @@ def createDataset(filetag):
         processPerFeatureSet(data_split, "baselineHWMe", pfcand_fields_baselineHWMe, chunk, outFolder, nconstit)
         processPerFeatureSet(data_split, "baselineEmulator", pfcand_fields_baselineEmulator, chunk, outFolder, nconstit)
         processPerFeatureSet(data_split, "baselineEmulatorMe", pfcand_fields_baselineEmulatorMe, chunk, outFolder, nconstit)
-        processPerFeatureSet(data_split, "baselineEmulatorAdd", pfcand_fields_baselineEmulatorMe, chunk, outFolder, nconstit)
+        processPerFeatureSet(data_split, "baselineEmulatorAdd", pfcand_fields_baselineEmulatorAdd, chunk, outFolder, nconstit)
         processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outFolder, nconstit)
         processPerFeatureSet(data_split, "minimalMe", pfcand_fields_minimalMe, chunk, outFolder, nconstit)
         processPerFeatureSet(data_split, "ext1", pfcand_fields_ext1, chunk, outFolder, nconstit)

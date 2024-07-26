@@ -393,14 +393,14 @@ def getDeepSet(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nbits = 
     print("Quantization of integer part =",integ)
 
     #############################################################################
-    REGL = regularizers.l2(0.0001)
+    REGL = regularizers.l2(0.00001)
 
     dense_kwargs = dict(
-        # kernel_initializer = 'glorot_normal',
+        kernel_initializer = 'glorot_normal',
         # kernel_initializer = 'glorot_uniform',
-        # kernel_regularizer = REGL,
-        # bias_regularizer = REGL,
-        # kernel_constraint = tf.keras.constraints.max_norm(5),
+        kernel_regularizer = REGL,
+        bias_regularizer = REGL,
+        kernel_constraint = tf.keras.constraints.max_norm(5),
         kernel_quantizer = qbits,
         bias_quantizer = qbits,
     )

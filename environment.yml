@@ -1,0 +1,11 @@
+name: l1_training
+dependencies:
+  - python=3.8
+  - pip
+  - ipykernel
+  - pip:
+    - numpy
+    - matplotlib
+    - mplhep
+    - tensorflow
+    - keras

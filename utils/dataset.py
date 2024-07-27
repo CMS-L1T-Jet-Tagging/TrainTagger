@@ -1,4 +1,6 @@
-from imports import *
+import numpy as np
+import awkward as ak
+import tensorflow as tf
 
 def getPadNParr(events, obj, n_pad, fields, cuts = None, name = None, pad_val = 0):
     '''
@@ -221,7 +223,6 @@ def splitFlavors(data, splitTau = True, splitGluon = True, splitCharm = True):
     # return {"b": data_b, "tau": data_tau, "gluon": data_gluon, "charm": data_charm, "bkg": data_bkg, "muon": data_muon, "electron": data_electron, "taup": data_taup, "taum": data_taum}
     return {"b": data_b, "taup": data_taup, "taum": data_taum, "gluon": data_gluon, "charm": data_charm, "bkg": data_bkg, "muon": data_muon, "electron": data_electron}
 
-
 def reduceDatasetToMin(dataJson):
     # lenghts = [len(dataJson[key]) for key in dataJson]
     lenghts = []
@@ -236,12 +237,10 @@ def reduceDatasetToMin(dataJson):
             random_indices = np.random.choice(len(dataJson[key]), size=minL, replace=False)
             dataJson[key] = dataJson[key][random_indices]
 
-
 def addResponseVars(data):
     data['jet_ptUncorr_div_ptGen'] = ak.nan_to_num(data['jet_pt_phys']/data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0., neginf=0.)
     data['jet_ptCorr_div_ptGen'] = ak.nan_to_num(data['jet_pt_corr']/data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0., neginf=0.)
     data['jet_ptRaw_div_ptGen'] = ak.nan_to_num(data['jet_pt_raw']/data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0., neginf=0.)
-
 
 def createAndSaveTrainingData(data_json, keys, nconstit=16):
     print ("createAndSaveTrainingData with keys:", keys)
@@ -289,6 +288,7 @@ def createAndSaveTrainingData(data_json, keys, nconstit=16):
     return classes, var_names, x_all, y_all, x_global, y_target
 
 def splitAndShuffle(x, y, x_global, y_target, nvars, nconstit = 16, testfraction = 0.2, shuffleConst = True):
+
     # Reshape Data and Split into Train and Test
     from sklearn.model_selection import train_test_split
 

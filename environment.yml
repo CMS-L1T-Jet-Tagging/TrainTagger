@@ -13,3 +13,4 @@ dependencies:
     - pandas==2.0.3
     - uproot4==4.0.0
     - xxhash
+    - pyarrow==17.0.0

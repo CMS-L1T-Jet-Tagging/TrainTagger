@@ -23,7 +23,7 @@ from hls_node_edge_projection import *
 __tf_profiling_enabled__ = True
 __torch_profiling_enabled__ = True
 
-from createDataset_chunks import *
+from utils.createDataset import *
 
 modelnamesDict = {
     "DeepSet": "QDeepSets_PermutationInv",

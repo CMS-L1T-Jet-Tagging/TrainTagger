@@ -7,7 +7,7 @@ from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks, pruning_wrapper,  pruning_schedule
 from tensorflow_model_optimization.sparsity.keras import strip_pruning
 
-from createDataset_chunks import *
+from utils.createDataset import *
 
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 import matplotlib.pyplot as plt

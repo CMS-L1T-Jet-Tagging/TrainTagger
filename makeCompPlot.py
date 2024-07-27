@@ -9,7 +9,7 @@ import json
 import glob
 import pdb
 
-from createDataset_chunks import *
+from utils.createDataset import *
 
 modelnamesDict = {
     "DeepSet": "QDeepSets_PermutationInv",

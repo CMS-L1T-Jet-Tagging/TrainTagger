@@ -57,7 +57,7 @@ The -i and -o values are optional, see the script for the default values.
 The model can be trained using this command:
 
 ```
-python3 training.py -f extendedAll200 -c btgc -i minimal --train-epochs 15 --model DeepSet --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_07_22_vTEST --nLayers 2 --pruning --test
+python train/training.py -f extendedAll200 -c btgc -i minimal --train-epochs 15 --model DeepSet --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_07_22_vTEST --nLayers 2 --pruning --test
 ```
 
 

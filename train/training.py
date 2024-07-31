@@ -1,23 +1,52 @@
-from imports import *
-from dataset import *
-import argparse
-from models import *
-import tensorflow_model_optimization as tfmot
-from tensorflow_model_optimization.sparsity import keras as sparsity
-from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks, pruning_wrapper,  pruning_schedule
-from tensorflow_model_optimization.sparsity.keras import strip_pruning
-
-from utils.createDataset import *
-
-from sklearn.metrics import roc_curve, auc,precision_recall_curve
-import matplotlib.pyplot as plt
-import pandas as pd
-import shap
+import os, sys
+import random
+import numpy as np
+import awkward as ak
 import json
 import glob
-from datetime import datetime
 
-import pdb
+#Plotting
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import mplhep as hep
+
+#Training
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Activation, BatchNormalization
+from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.regularizers import l1
+import tensorflow_model_optimization as tfmot
+from tensorflow_model_optimization.sparsity import keras as sparsity
+from tensorflow_model_optimization.sparsity.keras import strip_pruning
+from sklearn.metrics import roc_curve, auc, precision_recall_curve
+
+#Data set related
+from utils.dataset import *
+from utils.createDataset import *
+import models
+
+# Set environment variables and styles
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+hep.style.use("CMS")
+mpl.rcParams.update({'font.size': 20})
+plt.rcParams.update({'figure.max_open_warning': 0})
+
+# Configure TensorFlow GPU settings
+gpus = tf.config.list_physical_devices("GPU")
+if gpus:
+    print(f"Number of available GPUs : {len(gpus)}")
+    tf.config.set_visible_devices(gpus[0], "GPU")
+    tf.config.experimental.set_memory_growth(gpus[0], True)
+else:
+    print("No GPU available, using CPU !!!")
+
+# To disable GPU use
+tf.config.set_visible_devices([], 'GPU')
+
+#Adds the project root directory to the Python path dynamically.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 '''
 # https://www.tensorflow.org/model_optimization/guide/pruning/comprehensive_guide#prune_custom_keras_layer_or_modify_parts_of_layer_to_prune
@@ -53,8 +82,6 @@ def pruneFunction(layer):
 #            return tfmot.sparsity.keras.prune_low_magnitude(layer, **pruning_params)
 #
     return layer
-#
-
 
 def plotInputFeatures(Xb, Xuds, Xtau, Xtaum, Xgluon, Xcharm, Xmuon, Xelectron, featureNames, outFolder, outputAddName = ""):
     print ("Plot all input features w/ add. name", outputAddName)
@@ -95,48 +122,30 @@ def plotInputFeatures(Xb, Xuds, Xtau, Xtaum, Xgluon, Xcharm, Xmuon, Xelectron, f
         plt.savefig(outFolder+"/inputFeature_"+name+outputAddName+".pdf")
         plt.cla()
 
-
 def rms(array):
    return np.sqrt(np.mean(array ** 2))
 
+def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strstamp = "strstamp", test = False, plotFeatures = False, workdir = "./",):
 
-def doTraining(
-        filetag,
-        flavs,
-        inputSetTag,
-        nnConfig,
-        save = True,
-        strstamp = "strstamp",
-        test = False,
-        plotFeatures = False,
-        workdir = "./",):
-
+    #Training output folder path
     outFolder = "trainings/"
-    if nnConfig["classweights"]:
-        outFolder = "trainings_weighted/"
-    if nnConfig["regression"]:
-        outFolder = outFolder.replace("trainings_","trainings_regression_")
-
-    if not os.path.exists(outFolder):
-        os.makedirs(outFolder, exist_ok=True)
+    if nnConfig["classweights"]: outFolder = "trainings_weighted/"
+    if nnConfig["regression"]: outFolder = outFolder.replace("trainings_","trainings_regression_")
+    if not os.path.exists(outFolder): os.makedirs(outFolder, exist_ok=True)
 
     feature_names = dict_fields[inputSetTag]
+    nconstit = 16 #Number of constituents
 
-    nconstit = 16
+    #Set data loading path
+    PATH_load = f"{train_data_dir}/{flavs}/"
+    print("Loading data from: ", PATH_load)
+    chunksmatching = glob.glob(f"{PATH_load}X_{inputSetTag}_test*.parquet")
+    chunksmatching = [chunksm.replace(f"{PATH_load}X_{inputSetTag}_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
 
-    PATH_load = workdir + '/datasetsNewComplete2/' + filetag + "/" + flavs + "/"
-    print (PATH_load)
-    chunksmatching = glob.glob(PATH_load+"X_"+inputSetTag+"_test*.parquet")
-    chunksmatching = [chunksm.replace(PATH_load+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
+    if test: chunksmatching = random.sample(chunksmatching, 10)
+    else: chunksmatching = random.sample(chunksmatching, len(chunksmatching))
 
-    import random
-    if test:
-        chunksmatching = random.sample(chunksmatching, 10)
-    else:
-        chunksmatching = random.sample(chunksmatching, len(chunksmatching))
-
-
-    print ("Loading data in all",len(chunksmatching),"chunks.")
+    print (f"Loading data in all {len(chunksmatching)} chunks.")
 
     X_train_val = None
     X_test = None
@@ -263,7 +272,6 @@ def doTraining(
                 x_electron =ak.concatenate((x_electron, x_electron_))
                 x_electron_global =ak.concatenate((x_electron_global, x_electron_global_))
 
-
     x_b = ak.to_numpy(x_b)
     x_bkg = ak.to_numpy(x_bkg)
     x_taup = ak.to_numpy(x_taup)
@@ -290,12 +298,13 @@ def doTraining(
     integ = nnConfig["integ"]
     nfeat = X_train_val.shape[-1]
 
+    #Define the models
     if nnConfig["model"] == "DeepSet":
-        model, modelname, custom_objects = getDeepSet(nclasses = len(Y_train_val[0]), input_shape = (nconstit, nfeat),
+        model, modelname, custom_objects = models.getDeepSet(nclasses = len(Y_train_val[0]), input_shape = (nconstit, nfeat),
                                                       nnodes_phi = nnConfig["nNodes"], nnodes_rho = nnConfig["nNodes"],
                                                       nbits = nbits, integ = integ, addRegression = nnConfig["regression"], nLayers = nnConfig["nLayers"])
     elif nnConfig["model"] == "MLP":
-        model, modelname, custom_objects = getMLP(nclasses = len(Y_train_val[0]), input_shape = (nconstit*nfeat)+4,
+        model, modelname, custom_objects = models.getMLP(nclasses = len(Y_train_val[0]), input_shape = (nconstit*nfeat)+4,
                                                       nnodes_phi = nnConfig["nNodes"], nnodes_rho = nnConfig["nNodes"],
                                                       nbits = nbits, integ = integ, addRegression = nnConfig["regression"], nLayers = nnConfig["nLayers"], nFeatures = nfeat)
         # pdb.set_trace()
@@ -332,14 +341,13 @@ def doTraining(
         x_muon = np.concatenate((np.array(X_muon_global),x_muon), axis=-1)
         x_electron = np.concatenate((np.array(X_electron_global),x_electron), axis=-1)
         X_test = np.concatenate((np.array(X_test_val_global),X_test), axis=-1)
-
     elif nnConfig["model"] == "DeepSet-MHA":
-        model, modelname, custom_objects = getDeepSetWAttention(nclasses = len(Y_train_val[0]), input_shape = (nconstit, nfeat),
+        model, modelname, custom_objects = models.getDeepSetWAttention(nclasses = len(Y_train_val[0]), input_shape = (nconstit, nfeat),
                                                                 nnodes_phi = nnConfig["nNodes"], nnodes_rho = nnConfig["nNodes"]/2,
                                                                 nbits = nbits, integ = integ,
                                                                 n_head = nnConfig["nHeads"], dim = nfeat, dim2 = nnConfig["nNodesHead"], addRegression = nnConfig["regression"])
     elif nnConfig["model"] == "MLP-MHA":
-        model, modelname, custom_objects = getMLPWAttention(nclasses = len(Y_train_val[0]), input_shape = (nconstit*nfeat),
+        model, modelname, custom_objects = models.getMLPWAttention(nclasses = len(Y_train_val[0]), input_shape = (nconstit*nfeat),
                                                                 nnodes_phi = nnConfig["nNodes"], nnodes_rho = nnConfig["nNodes"]/2,
                                                                 nbits = nbits, integ = integ,
                                                                 n_head = nnConfig["nHeads"], dim = nfeat, dim2 = nnConfig["nNodesHead"], addRegression = nnConfig["regression"], nLayers = nnConfig["nLayers"],
@@ -361,16 +369,14 @@ def doTraining(
     if nnConfig["inputQuant"]:
         modelname = modelname + "_inputQuant"
 
-    print('Model name :', modelname)
-
+    # Print the model summary
+    print('Model name:', modelname)
     print ("Model summary:")
-    # print the model summary
     model.summary()
 
-    outFolder = outFolder + "/"+ strstamp + "_" + filetag + "_" + flavs + "_" + inputSetTag + "_" + modelname + "/"
-    if not os.path.exists(outFolder):
-        os.makedirs(outFolder, exist_ok=True)
-    print ("Use the following output folder:", outFolder)
+    outFolder = f"{outFolder}/{strstamp}_{flavs}_{inputSetTag}_{modelname}/"
+    if not os.path.exists(outFolder): os.makedirs(outFolder, exist_ok=True)
+    print ("Using the following output folder:", outFolder)
 
     if plotFeatures:
         plotInputFeatures(x_b, x_bkg, x_taup, x_taum, x_gluon, x_charm, x_muon, x_electron, feature_names, outFolder, outputAddName = "")
@@ -949,57 +955,48 @@ def doTraining(
         plt.savefig(outFolder+"/response_"+inputSetTag+".pdf")
         plt.cla()
 
-
 if __name__ == "__main__":
     from args import get_common_parser, handle_common_args
     parser = get_common_parser()
-    parser.add_argument('-f','--file', help = 'input file name part')
-    parser.add_argument('-c','--classes', help = 'Which flavors to run, options are b, bt, btg, btgc.')
-    parser.add_argument('-i','--inputs', help = 'Which inputs to run, options are baseline, ext1, ext2, all.')
-    parser.add_argument('--model', dest = 'model', default = "deepset")
-    parser.add_argument('--train-batch-size', dest = 'batch_size', default = 1024)
-    parser.add_argument('--train-epochs', dest = 'epochs', default = 50)
+    parser.add_argument('-t','--trainDataDir', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/datasetsNewComplete/extendedAll200/' , help = 'input training data directory')
+    parser.add_argument('-c','--classes', default='btgc', help = 'Which flavors to run, options are b, bt, btg, btgc.')
+    parser.add_argument('-i','--inputs', default='minimal', help = 'Which inputs to run, options are baseline, ext1, ext2, all.')
+    parser.add_argument('--model', dest = 'model', default = "DeepSet")
+    parser.add_argument('--train-batch-size', dest = 'batch_size', default = 2048)
+    parser.add_argument('--train-epochs', dest = 'epochs', default = 15)
     parser.add_argument('--train-validation-split', dest = 'validation_split', default = .25)
-    parser.add_argument('--learning-rate', dest = 'learning_rate', default = 0.0001)
+    parser.add_argument('--learning-rate', dest = 'learning_rate', default = 0.001)
     parser.add_argument('--optimizer', dest = 'optimizer', default = "adam")
-    parser.add_argument('--classweights', dest = 'classweights', default = False, action='store_true')
-    parser.add_argument('--regression', dest = 'regression', default = False, action='store_true')
-    parser.add_argument('--pruning', dest = 'pruning', default = False, action='store_true')
+    parser.add_argument('--classweights', dest = 'classweights', default = True, action='store_true')
+    parser.add_argument('--regression', dest = 'regression', default = True, action='store_true')
+    parser.add_argument('--pruning', dest = 'pruning', default = True, action='store_true')
     parser.add_argument('--inputQuant', dest = 'inputQuant', default = False, action='store_true')
-    parser.add_argument('--test', dest = 'test', default = False, action='store_true')
+    parser.add_argument('--test', dest = 'test', default = True, action='store_true')
     parser.add_argument('--plotFeatures', dest = 'plotFeatures', default = False, action='store_true')
     parser.add_argument('--nbits', dest = 'nbits', default = 8)
     parser.add_argument('--integ', dest = 'integ', default = 0)
-    parser.add_argument('--nNodes', dest = 'nNodes', default = 15)
-    parser.add_argument('--nLayers', dest = 'nLayers', default = 3)
+    parser.add_argument('--nNodes', dest = 'nNodes', default = 16)
+    parser.add_argument('--nLayers', dest = 'nLayers', default = 2)
     parser.add_argument('--nHeads', dest = 'nHeads', default = 3)
     parser.add_argument('--nNodesHead', dest = 'nNodesHead', default = 12)
-    parser.add_argument('--strstamp', dest = 'strstamp', default = "")
+    parser.add_argument('--strstamp', dest = 'strstamp', default = "2024_07_22_vTEST_all")
 
     args = parser.parse_args()
     handle_common_args(args)
 
     print('#'*30)
-    for arg in vars(args):
-        print('%s: %s' %(arg, getattr(args, arg)))
+    for arg in vars(args): print('%s: %s' %(arg, getattr(args, arg)))
     print('#'*30)
 
     allowedModels = ["DeepSet", "DeepSet-MHA", "MLP", "MLP-MHA"]
     allowedClasses = ["b", "bt", "btg", "btgc"]
-    allowedFiles = ["All200", "extendedAll200", "baselineAll200", "AllHIG200", "AllQCD200", "AllTT200", "TT_PU200", "TT1L_PU200", "TT2L_PU200", "ggHtt_PU200"]
     allowedInputs = dict_fields.keys()
     allowedOptimizer = ["adam", "ranger", "sgd"]
 
-    if args.model not in allowedModels:
-        raise ValueError("args.model not in allowed models! Options are", allowedModels)
-    if args.classes not in allowedClasses:
-        raise ValueError("args.classes not in allowed classes! Options are", allowedClasses)
-    if args.file not in allowedFiles:
-        raise ValueError("args.file not in allowed file! Options are", allowedFiles)
-    if args.inputs not in allowedInputs:
-        raise ValueError("args.inputs not in allowed inputs! Options are", allowedInputs)
-    if args.optimizer not in allowedOptimizer:
-        raise ValueError("args.optimizer not in allowed optimizer! Options are", allowedOptimizer)
+    if args.model not in allowedModels: raise ValueError("args.model not in allowed models! Options are", allowedModels)
+    if args.classes not in allowedClasses: raise ValueError("args.classes not in allowed classes! Options are", allowedClasses)
+    if args.inputs not in allowedInputs: raise ValueError("args.inputs not in allowed inputs! Options are", allowedInputs)
+    if args.optimizer not in allowedOptimizer: raise ValueError("args.optimizer not in allowed optimizer! Options are", allowedOptimizer)
 
     nnConfig = {
         "batch_size": int(args.batch_size),
@@ -1021,7 +1018,7 @@ if __name__ == "__main__":
     }
 
     doTraining(
-        args.file,
+        args.trainDataDir,
         args.classes,
         args.inputs,
         nnConfig,

@@ -1,7 +1,7 @@
-from imports import *
-from dataset import *
+from utils.imports import *
+from utils.dataset import *
 import argparse
-from models import *
+from train.models import *
 import tensorflow_model_optimization as tfmot
 from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks, pruning_wrapper,  pruning_schedule

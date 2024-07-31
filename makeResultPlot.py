@@ -1,7 +1,7 @@
-from imports import *
-from dataset import *
+from utils.imports import *
+from utils.dataset import *
 import argparse
-from models import *
+from train.models import *
 import tensorflow_model_optimization as tfmot
 
 from array import array

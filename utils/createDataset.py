@@ -6,7 +6,7 @@ import uproot
 import numpy as np
 import awkward as ak
 import tensorflow as tf
-from dataset import *
+from . import dataset
 
 # All PF candidate properties
 pfcand_fields_all = [
@@ -165,8 +165,8 @@ def processPerFeatureSet(data_split_, name_, features_, chunk_, outFolder, ncons
     print (f"Process chunk {chunk_} for {name_}")
     
     # Create and save training data
-    classes_, var_names_, x_, y_, x_global_, y_target_ = createAndSaveTrainingData(data_split_, features_)
-    X_train_, X_test_, Y_train_, Y_test_, x_global_train_, x_global_test_, y_target_train_, y_target_test_ = splitAndShuffle(x_, y_, x_global_, y_target_, len(features_), shuffleConst = False)
+    classes_, var_names_, x_, y_, x_global_, y_target_ = dataset.createAndSaveTrainingData(data_split_, features_)
+    X_train_, X_test_, Y_train_, Y_test_, x_global_train_, x_global_test_, y_target_train_, y_target_test_ = dataset.splitAndShuffle(x_, y_, x_global_, y_target_, len(features_), shuffleConst = False)
 
     # Reshape arrays for different classes
     x_b_ = np.reshape(classes_["b"]["x"],[-1, nconstit, len(features_)])
@@ -237,12 +237,12 @@ def createDataset(infile, outdir, nconstit = 16):
         # jet_cut = (data['jet_pt_phys'] > 15.) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_genmatch_pt'] > 5.)
         jet_cut = (data['jet_pt_phys'] > 15.) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_genmatch_pt'] > 5.) & (data['jet_reject'] == 0 )
         data = data[jet_cut]
-        addResponseVars(data)
+        dataset.addResponseVars(data)
 
         print("Data Fields:", data.fields)
         print("JET PFcand Fields:", data.jet_pfcand.fields)
 
-        data_split = splitFlavors(data)
+        data_split = dataset.splitFlavors(data)
 
         # Process and save datasets for each feature set
         processPerFeatureSet(data_split, "all", pfcand_fields_all, chunk, outdir, nconstit)

@@ -1,26 +1,45 @@
 import numpy as np
 import awkward as ak
 
-# Sample data
-event_id = np.array([1, 2, 1, 2, 3])
-tau_pt = np.array([10.5, 20.1, 11.0, 21.2, 30.3])
+def group_id_values(event_id, *arrays):
+    '''
+    Group multiple arrays according to event id.
+    '''
+    # Use ak.argsort to sort based on event_id
+    sorted_indices = ak.argsort(event_id)
+    sorted_event_id = event_id[sorted_indices]
 
-# Step 1: Convert to Awkward Arrays
-event_id_ak = ak.Array(event_id)
-tau_pt_ak = ak.Array(tau_pt)
+    # Find unique event_ids and their counts
+    unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
 
-# Step 2: Use ak.argsort to sort based on event_id
-sorted_indices = ak.argsort(event_id_ak)
-sorted_event_id = event_id_ak[sorted_indices]
-sorted_tau_pt = tau_pt_ak[sorted_indices]
+    # Group each array by the sorted indices and counts
+    grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
 
-# Step 3: Find unique event_ids and counts manually
-unique_event_id = np.unique(sorted_event_id)
-counts = [np.sum(sorted_event_id == eid) for eid in unique_event_id]
+    return unique_event_id, grouped_arrays
 
-# Step 4: Use ak.unflatten to group the tau_pt by counts
-grouped_event_id = ak.unflatten(sorted_event_id, counts)
-grouped_tau_pt = ak.unflatten(sorted_tau_pt, counts)
+# Test function
+def test_group_id_values():
+    # Dummy data
+    event_id = np.array([1, 2, 1, 3, 2, 1])
+    values1 = np.array([10, 20, 30, 40, 50, 60])
+    values2 = np.array([100, 200, 300, 400, 500, 600])
 
-print(grouped_event_id)
-print(grouped_tau_pt)
+    # Expected results
+    expected_unique_event_id = np.array([1, 2, 3])
+    expected_grouped_values1 = ak.Array([[10, 30, 60], [20, 50], [40]])
+    expected_grouped_values2 = ak.Array([[100, 300, 600], [200, 500], [400]])
+
+    # Run the function
+    unique_event_id, grouped_arrays = group_id_values(event_id, values1, values2)
+
+    grouped_values1, grouped_values2 = grouped_arrays
+
+    # Check if the results are as expected
+    assert np.array_equal(unique_event_id, expected_unique_event_id), "Unique event IDs do not match!"
+    assert ak.to_list(grouped_values1) == ak.to_list(expected_grouped_values1), "Grouped values1 do not match!"
+    assert ak.to_list(grouped_values2) == ak.to_list(expected_grouped_values2), "Grouped values2 do not match!"
+
+    print("All tests passed!")
+
+# Run the test
+test_group_id_values()

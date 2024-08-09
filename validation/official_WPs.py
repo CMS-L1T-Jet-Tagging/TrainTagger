@@ -2,7 +2,7 @@
 from types import SimpleNamespace
 
 WPs = SimpleNamespace(**{
-    'tau': 0.22,
+    'tau': 0.3,
 })
 
 WPs_CMSSW = SimpleNamespace(**{

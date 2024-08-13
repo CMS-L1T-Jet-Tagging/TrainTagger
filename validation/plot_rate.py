@@ -26,7 +26,7 @@ pylab.rcParams.update(params)
 import matplotlib as mpl
 mpl.rcParams['lines.linewidth'] = 5
 
-def plot_bkg_rate_tau(model, minbias_path, model_WP=WPs.tau, tree='jetntuple/Jets', n_entries=500000):
+def plot_bkg_rate_tau(model, minbias_path, model_WP=WPs["tau"], tree='jetntuple/Jets', n_entries=500000):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
@@ -41,23 +41,22 @@ def plot_bkg_rate_tau(model, minbias_path, model_WP=WPs.tau, tree='jetntuple/Jet
     nn_inputs = np.asarray(helpers.extract_nn_inputs(minbias, input_fields_tag='ext3', nconstit=16, n_entries=n_entries)).transpose(0, 2, 1)
     
     #Get the NN predictions
-    tau_index = 4
+    tau_index = [2,3]
     pred_score, ratio = model.predict(nn_inputs)
-    model_tau = pred_score[:, tau_index]
+    model_tau = pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
 
     #Emulator tau score
     cmssw_tau = helpers.extract_array(minbias, 'jet_tauscore', n_entries)
 
     #Use event id to track which jets belong to which event.
     event_id = helpers.extract_array(minbias, 'event', n_entries)
-    event_id_cmssw = event_id[cmssw_tau > WPs_CMSSW.tau]
-    event_id_model = event_id[model_tau > WPs.tau]
+    event_id_cmssw = event_id[cmssw_tau > WPs_CMSSW["tau"]]
+    event_id_model = event_id[model_tau > WPs["tau"]]
 
     #Cut on jet pT to extract the rate
     jet_pt = helpers.extract_array(minbias, 'jet_pt', n_entries)
-    jet_pt_cmssw = helpers.extract_array(minbias, 'jet_taupt', n_entries)[cmssw_tau > WPs_CMSSW.tau]
-    jet_pt_model = (jet_pt*ratio.flatten())[model_tau > WPs.tau]
-
+    jet_pt_cmssw = helpers.extract_array(minbias, 'jet_taupt', n_entries)[cmssw_tau > WPs_CMSSW["tau"]]
+    jet_pt_model = (jet_pt*ratio.flatten())[model_tau > WPs["tau"]]
 
     #Total number of unique event
     n_event = len(np.unique(event_id))

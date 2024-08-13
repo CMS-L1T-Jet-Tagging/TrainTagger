@@ -132,15 +132,15 @@ def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000
     input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]).transpose(0, 2, 1), np.asarray(jet_nn_inputs[:, 1][cuts]).transpose(0, 2, 1) #Flip the last two axes
 
     #Get the NN predictions
-    tau_index = 4
+    tau_index = [2,3] #2=tau positive, 3=tau_negative
     pred_score1, ratio1 = model.predict(input1)
     pred_score2, ratio2 = model.predict(input2)
 
-    pt1 = pt1_uncorrected*ratio1
-    pt2 = pt2_uncorrected*ratio2
+    pt1 = pt1_uncorrected*(ratio1.flatten())
+    pt2 = pt2_uncorrected*(ratio2.flatten())
 
-    tau_score1=pred_score1[:,tau_index]
-    tau_score2=pred_score2[:,tau_index]
+    tau_score1=pred_score1[:,tau_index[0]] + pred_score1[:,tau_index[1]]
+    tau_score2=pred_score2[:,tau_index[0]] + pred_score2[:,tau_index[1]]
     
     # #Put them together
     NN_score = np.vstack([tau_score1, tau_score2]).transpose()

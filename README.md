@@ -2,6 +2,10 @@
 
 Documentation for training a L1T Jet Tagging model. 
 
+## Documentation
+
+* [Sebastian, Tau-Jets-MET, 7 May 2024, Jet tagging @ Phase-2 correlator layer](https://indico.cern.ch/event/1413293/#28-phase-2-jet-tagging)
+
 ## Conda environment
 
 Create conda environment:

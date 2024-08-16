@@ -26,7 +26,7 @@ pylab.rcParams.update(params)
 import matplotlib as mpl
 mpl.rcParams['lines.linewidth'] = 5
 
-def plot_bkg_rate_tau(model, minbias_path, model_WP=WPs["tau"], tree='jetntuple/Jets', n_entries=500000):
+def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, tree='jetntuple/Jets', n_entries=500000):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
@@ -51,18 +51,25 @@ def plot_bkg_rate_tau(model, minbias_path, model_WP=WPs["tau"], tree='jetntuple/
     #Use event id to track which jets belong to which event.
     event_id = helpers.extract_array(minbias, 'event', n_entries)
     event_id_cmssw = event_id[cmssw_tau > WPs_CMSSW["tau"]]
-    event_id_model = event_id[model_tau > WPs["tau"]]
+    event_id_model = event_id[model_tau > WPs["tau_ptCorrected"]]
 
     #Cut on jet pT to extract the rate
     jet_pt = helpers.extract_array(minbias, 'jet_pt', n_entries)
     jet_pt_cmssw = helpers.extract_array(minbias, 'jet_taupt', n_entries)[cmssw_tau > WPs_CMSSW["tau"]]
-    jet_pt_model = (jet_pt*ratio.flatten())[model_tau > WPs["tau"]]
+
+    if uncorrect_pt: jet_pt_model=jet_pt[model_tau > WPs["tau_ptUncorrected"]]
+    else: jet_pt_model = (jet_pt*ratio.flatten())[model_tau > WPs["tau_ptCorrected"]]
 
     #Total number of unique event
     n_event = len(np.unique(event_id))
     minbias_rate_no_nn = []
     minbias_rate_cmssw = []
     minbias_rate_model = []
+
+    # Initialize lists for uncertainties (Poisson)
+    uncertainty_no_nn = []
+    uncertainty_cmssw = []
+    uncertainty_model = []
 
     for pt_cut in pt_cuts:
 
@@ -76,22 +83,38 @@ def plot_bkg_rate_tau(model, minbias_path, model_WP=WPs["tau"], tree='jetntuple/
         minbias_rate_cmssw.append((n_pass_cmssw/n_event)*minbias_rate)
         minbias_rate_model.append((n_pass_model/n_event)*minbias_rate)
 
+        # Poisson uncertainty is sqrt(N) where N is the number of events passing the cut
+        uncertainty_no_nn.append(np.sqrt(n_pass_no_nn) / n_event * minbias_rate)
+        uncertainty_cmssw.append(np.sqrt(n_pass_cmssw) / n_event * minbias_rate)
+        uncertainty_model.append(np.sqrt(n_pass_model) / n_event * minbias_rate)
+
     plt.plot(pt_cuts, minbias_rate_no_nn, label=r'No ID/$p_T$ correction', linewidth = 5)
     plt.plot(pt_cuts, minbias_rate_cmssw, label=r'CMSSW PuppiTau Emulator', linewidth = 5)
     plt.plot(pt_cuts, minbias_rate_model, label=r'SeedCone Tau', linewidth = 5)
+    
+    # Add uncertainty bands
+    plt.fill_between(pt_cuts, np.array(minbias_rate_no_nn) - np.array(uncertainty_no_nn),
+                     np.array(minbias_rate_no_nn) + np.array(uncertainty_no_nn), alpha=0.3)
+    plt.fill_between(pt_cuts, np.array(minbias_rate_cmssw) - np.array(uncertainty_cmssw),
+                     np.array(minbias_rate_cmssw) + np.array(uncertainty_cmssw), alpha=0.3)
+    plt.fill_between(pt_cuts, np.array(minbias_rate_model) - np.array(uncertainty_model),
+                     np.array(minbias_rate_model) + np.array(uncertainty_model), alpha=0.3)
+    
     hep.cms.text("Phase 2 Simulation")
     hep.cms.lumitext("PU 200 (14 TeV)")
     plt.yscale('log')
     plt.ylabel(r"$\tau_h$ trigger rate [kHz]")
-    plt.xlabel(r"Offline $p_T$ [GeV]")
+    plt.xlabel(r"L1 $p_T$ [GeV]")
     plt.legend(loc = 'upper right',fontsize = 15)
-    plt.savefig('plots/bkg_rate_tau.pdf', bbox_inches='tight')
+    figname='bkg_rate_tau_ptUncorrected' if uncorrect_pt else 'bkg_rate_tau_ptCorrected'
+    plt.savefig(f'plots/{figname}.pdf', bbox_inches='tight')
 
 
 if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_07_25_v10_extendedAll200_btgc_ext3_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
+    parser.add_argument('--uncorrect_pt', action='store_true', help='Enable pt correction in plot_bkg_rate_tau')
     args = parser.parse_args()
 
     model=load_qmodel(args.model)
@@ -100,4 +123,4 @@ if __name__ == "__main__":
     #These paths are default to evaluate some of the rate
     minbias_path = '/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/MinBias_PU200.root'
 
-    plot_bkg_rate_tau(model, minbias_path)
+    plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=args.uncorrect_pt)

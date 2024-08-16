@@ -41,7 +41,7 @@ def delta_r(eta1, phi1, eta2, phi2):
 
 def find_rate(rate_list, target_rate = 28):
     
-    RateRange = 0.5 #kHz
+    RateRange = 1 #kHz
     
     idx_list = []
     
@@ -51,7 +51,7 @@ def find_rate(rate_list, target_rate = 28):
             
     return idx_list
 
-def plot_rate(rate_list, pt_list, nn_list, target_rate = 28):
+def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
     
     fig, ax = plt.subplots()
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
@@ -80,7 +80,7 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28):
         
         if legend_count == 0:
             plt.scatter(nn_list[i], pt_list[i], s=600, marker='*',
-                        color ='firebrick', label = r"${} \pm 0.5$ kHz".format(target_rate))
+                        color ='firebrick', label = r"${} \pm 1$ kHz".format(target_rate))
         else:
             plt.scatter(nn_list[i], pt_list[i], s=600, marker='*',
                         color ='firebrick')
@@ -88,9 +88,10 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28):
         legend_count += 1
     
     plt.legend(loc='upper right')
-    plt.savefig('plots/tau_rate_scan.pdf', bbox_inches='tight')
+    plot_name = 'tau_rate_scan_ptcorrected.pdf' if correct_pt else 'tau_rate_scan_ptuncorrected.pdf' 
+    plt.savefig(f'plots/{plot_name}', bbox_inches='tight')
 
-def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000):
+def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000, correct_pt=True):
     '''
     Derive the tau rate, using n_entries minbias events 
     '''
@@ -136,8 +137,12 @@ def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000
     pred_score1, ratio1 = model.predict(input1)
     pred_score2, ratio2 = model.predict(input2)
 
-    pt1 = pt1_uncorrected*(ratio1.flatten())
-    pt2 = pt2_uncorrected*(ratio2.flatten())
+    if correct_pt:
+        pt1 = pt1_uncorrected*(ratio1.flatten())
+        pt2 = pt2_uncorrected*(ratio2.flatten())
+    else:
+        pt1 = pt1_uncorrected
+        pt2 = pt2_uncorrected
 
     tau_score1=pred_score1[:,tau_index[0]] + pred_score1[:,tau_index[1]]
     tau_score2=pred_score2[:,tau_index[0]] + pred_score2[:,tau_index[1]]
@@ -175,7 +180,7 @@ def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000
             pt_list.append(pt)
             nn_list.append(NN)
 
-    plot_rate(rate_list, pt_list, nn_list)
+    plot_rate(rate_list, pt_list, nn_list, target_rate=28, correct_pt=correct_pt)
 
 if __name__ == "__main__":
 
@@ -189,4 +194,4 @@ if __name__ == "__main__":
     #These paths are default to evaluate some of the rate
     minbias_path = '/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/MinBias_PU200.root'
 
-    derive_tau_rate(model, minbias_path, n_entries=100000)
+    derive_tau_rate(model, minbias_path, n_entries=None)

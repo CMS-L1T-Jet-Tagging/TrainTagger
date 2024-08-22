@@ -67,7 +67,7 @@ evaluate:
     - .template
   stage: evaluate
   needs: train
-  dependencies: train
+  dependencies: [train]
   script:
   - echo evaluate
   # artifacts:
@@ -81,7 +81,7 @@ synth:
   stage: synth
   tags:
     - cb_vivado
-  needs : [train]
+  needs : train
   dependencies : [train]
   script:
     - source /opt/Xilinx/Vivado/2022.2/settings64.sh

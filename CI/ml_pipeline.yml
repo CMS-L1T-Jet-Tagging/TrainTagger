@@ -66,8 +66,8 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  needs: train
-  dependencies: train
+  needs: [train]
+  dependencies: [train]
   script:
   - echo evaluate
   # artifacts:

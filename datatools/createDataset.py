@@ -215,7 +215,7 @@ def processPerFeatureSet(data_split_, name_, features_, chunk_, outFolder, ncons
     # del X_train_, Y_train_, X_test_, Y_test_, x_b_,x_taup_,x_taum_, x_gluon_, x_bkg_, x_electron_, x_muon_, x_b_global, x_taup_global, x_taum_global, x_gluon_global, x_charm_global, x_charm_, x_bkg_global, x_muon_global, x_electron_global
 
 
-def createDataset(infile, outdir, nconstit = 16):
+def createDataset(infile, outdir, inputs, nconstit = 16):
     """
     Process the data set in chunks from the input ntuples file.
 
@@ -244,21 +244,9 @@ def createDataset(infile, outdir, nconstit = 16):
 
         data_split = dataset.splitFlavors(data)
 
-        # Process and save datasets for each feature set
-        processPerFeatureSet(data_split, "all", pfcand_fields_all, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "baselineHW", pfcand_fields_baselineHW, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "baselineHWMe", pfcand_fields_baselineHWMe, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "baselineEmulator", pfcand_fields_baselineEmulator, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "baselineEmulatorMe", pfcand_fields_baselineEmulatorMe, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "baselineEmulatorAdd", pfcand_fields_baselineEmulatorAdd, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "minimalMe", pfcand_fields_minimalMe, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "ext1", pfcand_fields_ext1, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "ext2", pfcand_fields_ext2, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "ext3", pfcand_fields_ext3, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "ext4", pfcand_fields_ext4, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "ext5", pfcand_fields_ext5, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "ext6", pfcand_fields_ext6, chunk, outdir, nconstit)
+        # Process and save datasets for a given feature set
+
+        processPerFeatureSet(data_split, inputs, dict_fields[inputs], chunk, outdir, nconstit)
 
         chunk = chunk + 1
 
@@ -272,10 +260,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process input ntuples.')
     parser.add_argument('-i', '--infile', help='Input file name.', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/All200.root')
     parser.add_argument('-o', '--outdir', help='Ouput directory path.', default='data/')
+    parser.add_argument('-t','--inputs', default='minimal', help = 'Which inputs to run, options are baseline, ext1, ext2, all.')
     args = parser.parse_args()
+
+    allowedInputs = dict_fields.keys()
+
+    if args.inputs not in allowedInputs: raise ValueError("args.inputs not in allowed inputs! Options are", allowedInputs)
+
 
     #Print the arguments
     for arg in vars(args): print('%s: %s' %(arg, getattr(args, arg)))
 
     #Create the dataset parquet files
-    createDataset(args.infile, args.outdir)
+    createDataset(args.infile, args.outdir, args.inputs)

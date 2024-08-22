@@ -38,7 +38,7 @@ data:
   - cd data
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$Dataset ./
   - cd ..
-  - python datatools/createDataset.py -i data/$Dataset -o data/TT 
+  - python datatools/createDataset.py -i data/$Dataset -o data/TT -t $Inputs
   - cd data 
   - tar -cvf convertedfiles.tgz data/TT
   - mc cp convertedfiles.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/

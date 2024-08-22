@@ -1,115 +1,18 @@
-stages:
-  - data
-  - train
-  - test
-  - evaluate
-  - synth
-  - publish
+include:
+  - local: "CI/template.yml"
 
-.template:
-  image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_tq:latest
-  before_script:
-    - source activate tq
-    - export PYTHONPATH="/builds/cebrown/trackqualityml/"
-  script:
-    - python Steps/$SCRIPT 
-  artifacts:
-    paths:
-      - Datasets/*
-    expire_in: 1 day
-  rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
-    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
-      when: on_success
-    - when: manual
-
-
-
-data:
-  extends:
-    - .template
-  stage: data
+DeepSet:all:
+  extends: .ml_pipeline
   variables:
-    SCRIPT: dataset.py
+    Model: DeepSet
+    Classes: btgc
+    Inputs: all
+    Dataset: jetTuple_TT_PU200.131X_v9a.root
 
-train:
-  extends:
-    - .template
-  dependencies:
-    - data
-  needs:
-    - data
-  stage: train
+DeepSet:all:
+  extends: .ml_pipeline
   variables:
-    SCRIPT: train.py
-  artifacts:
-    paths:
-      - Datasets/*
-      - Projects/*
-      - run_id.txt
-    expire_in: 1 day
-
-
-test:
-  extends:
-    - .template
-  dependencies:
-    - train
-  needs:
-    - train
-  stage: test
-  variables:
-    SCRIPT: test.py
-  artifacts:
-    paths:
-      - Projects/*
-
-evaluate:
-  extends:
-    - .template
-  dependencies:
-    - train
-  needs:
-    - train
-  stage: evaluate
-  variables:
-    SCRIPT: evaluate.py
-  artifacts:
-    paths:
-      - Projects/*
-
-
-synth:
-  extends:
-    - .template
-  needs: 
-    - train
-  dependencies:
-    - train
-  tags:
-    - vivado
-  stage: synth
-  before_script:
-    #- curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-    #- bash Miniforge3-$(uname)-$(uname -m).sh -b
-    - source /opt/Xilinx/Vitis_HLS/2021.2/settings64.sh
-    - cd ${WORKDIR}
-    - micromamba env create -f environment.yml
-    - source activate tq
-    - export PYTHONPATH="/builds/cebrown/trackqualityml/"
-  script:
-    - python Steps/synth.py
-
-# .publish:
-#   stage: publish
-#   extends: .auto_devops_upload_eos_template
-#   variables:
-#     LOCAL_FOLDER: builds/${PROJECT_NAME}
-#     CERNBOX_FOLDER: /eos/user/c/cebrown/${EOS_DEPLOY_SUBDIR}/${EOS_PIPELINE_SUBDIR}/builds/${PROJECT_NAME}
-#   rules:
-#     - if: '$CI_COMMIT_TAG'
-#         EOS_PIPELINE_SUBDIR: tags/${CI_COMMIT_REF_NAME}/pipeline${PARENT_PIPELINE_ID}
-#       variables:
-#     - variables:
-#             EOS_PIPELINE_SUBDIR: branches/${CI_COMMIT_REF_NAME}/pipeline${PARENT_PIPELINE_ID}
-#   needs: [package]
-
+    Model: DeepSet
+    Classes: btgc
+    Inputs: minimal
+    Dataset: jetTuple_TT_PU200.131X_v9a.root

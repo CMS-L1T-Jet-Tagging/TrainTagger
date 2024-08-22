@@ -9,7 +9,7 @@ DeepSet:all:
     Inputs: all
     Dataset: jetTuple_TT_PU200.131X_v9a.root
 
-DeepSet:all:
+DeepSet:minimal:
   extends: .ml_pipeline
   variables:
     Model: DeepSet

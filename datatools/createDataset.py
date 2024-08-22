@@ -251,7 +251,7 @@ def createDataset(infile, outdir, nconstit = 16):
         # processPerFeatureSet(data_split, "baselineEmulator", pfcand_fields_baselineEmulator, chunk, outdir, nconstit)
         # processPerFeatureSet(data_split, "baselineEmulatorMe", pfcand_fields_baselineEmulatorMe, chunk, outdir, nconstit)
         # processPerFeatureSet(data_split, "baselineEmulatorAdd", pfcand_fields_baselineEmulatorAdd, chunk, outdir, nconstit)
-        # processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outdir, nconstit)
+        processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outdir, nconstit)
         # processPerFeatureSet(data_split, "minimalMe", pfcand_fields_minimalMe, chunk, outdir, nconstit)
         # processPerFeatureSet(data_split, "ext1", pfcand_fields_ext1, chunk, outdir, nconstit)
         # processPerFeatureSet(data_split, "ext2", pfcand_fields_ext2, chunk, outdir, nconstit)

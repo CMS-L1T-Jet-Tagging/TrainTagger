@@ -14,7 +14,7 @@ from hls4ml.model.layers import GRU, LSTM, SeparableConv1D, SeparableConv2D
 
 import qkeras
 from tensorflow import keras
-import torch
+#import torch
 
 __tf_profiling_enabled__ = True
 __torch_profiling_enabled__ = True

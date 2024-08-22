@@ -37,6 +37,11 @@ conda env update --file environment.yml  --prune
 
 Reference on conda environment here: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
+Add train tagger to the python path to allow relative imports, from within TrainTagger:
+```
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+```
+
 ## Produce Training Dataset
 
 Creating the training datasets involve several steps: 
@@ -52,7 +57,7 @@ Creating the training datasets involve several steps:
 3. Finally, from the ntuple outputs of FastPUPPI, we could create the training parquet files using:
 
 ```
-python utils/createDataset.py -i <input ntuple root file> -o <output directory>
+python datatools/createDataset.py -i <input ntuple root file> -o <output directory>
 ```
 
 The -i and -o values are optional, see the script for the default values.
@@ -64,11 +69,17 @@ The -i and -o values are optional, see the script for the default values.
 The model can be trained using this command:
 
 ```
-python train/training.py -f extendedAll200 -c btgc -i minimal --train-epochs 15 --model DeepSet --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_07_22_vTEST --nLayers 2 --pruning --test
+python train/training.py -t extendedAll200 -c btgc -i minimal --train-epochs 15 --model DeepSet --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_07_22_vTEST --nLayers 2 --pruning --test
 ```
 
 
 ## Synthesize the model to HDL Codes
 ```
-python3 synthesis.py -f extendedAll200 -c btgc -i minimal -m DeepSet -o regression --regression --timestamp 2024_07_22_vTEST --pruning -B
+python synthesis/synthesis.py -f extendedAll200 -c btgc -i minimal -m DeepSet -o regression --regression --timestamp 2024_07_22_vTEST --pruning -B
 ```
+
+
+## Things to fix / questions
+Pruning
+Dataset creation sanity check failing
+

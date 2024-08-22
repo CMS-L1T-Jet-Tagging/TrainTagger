@@ -6,7 +6,7 @@ import uproot
 import numpy as np
 import awkward as ak
 import tensorflow as tf
-from . import dataset
+from datatools import dataset
 
 # All PF candidate properties
 pfcand_fields_all = [
@@ -246,23 +246,23 @@ def createDataset(infile, outdir, nconstit = 16):
 
         # Process and save datasets for each feature set
         processPerFeatureSet(data_split, "all", pfcand_fields_all, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "baselineHW", pfcand_fields_baselineHW, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "baselineHWMe", pfcand_fields_baselineHWMe, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "baselineEmulator", pfcand_fields_baselineEmulator, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "baselineEmulatorMe", pfcand_fields_baselineEmulatorMe, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "baselineEmulatorAdd", pfcand_fields_baselineEmulatorAdd, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "minimalMe", pfcand_fields_minimalMe, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "ext1", pfcand_fields_ext1, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "ext2", pfcand_fields_ext2, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "ext3", pfcand_fields_ext3, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "ext4", pfcand_fields_ext4, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "ext5", pfcand_fields_ext5, chunk, outdir, nconstit)
-        processPerFeatureSet(data_split, "ext6", pfcand_fields_ext6, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "baselineHW", pfcand_fields_baselineHW, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "baselineHWMe", pfcand_fields_baselineHWMe, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "baselineEmulator", pfcand_fields_baselineEmulator, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "baselineEmulatorMe", pfcand_fields_baselineEmulatorMe, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "baselineEmulatorAdd", pfcand_fields_baselineEmulatorAdd, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "minimal", pfcand_fields_minimal, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "minimalMe", pfcand_fields_minimalMe, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "ext1", pfcand_fields_ext1, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "ext2", pfcand_fields_ext2, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "ext3", pfcand_fields_ext3, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "ext4", pfcand_fields_ext4, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "ext5", pfcand_fields_ext5, chunk, outdir, nconstit)
+        # processPerFeatureSet(data_split, "ext6", pfcand_fields_ext6, chunk, outdir, nconstit)
 
         chunk = chunk + 1
 
-        if chunk == 1: break
+        #if chunk == 1: break
 
         del data_split
 

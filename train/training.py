@@ -22,8 +22,8 @@ from tensorflow_model_optimization.sparsity.keras import strip_pruning
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
 
 #Data set related
-from utils.dataset import *
-from utils.createDataset import *
+from datatools.dataset import *
+from datatools.createDataset import *
 import models
 
 # Set environment variables and styles
@@ -430,19 +430,19 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
     # do it flat in pt and overwrite the other one
     # enable this for tests - if we can do a flat pT weighting and if it helps
     # otherwise just comment this for loop block
-    for iBin in range(0, len(counts_b)):
-        w_b[iBin] = np.nan_to_num(counts_b[0] / counts_b[iBin], nan = 1., posinf = 1., neginf = 1.)
-        w_uds[iBin] = np.nan_to_num(counts_b[0] / counts_uds[iBin], nan = 1., posinf = 1., neginf = 1.)
-        w_g[iBin] = np.nan_to_num(counts_b[0] / counts_g[iBin], nan = 1., posinf = 1., neginf = 1.)
-        w_c[iBin] = np.nan_to_num(counts_b[0] / counts_c[iBin], nan = 1., posinf = 1., neginf = 1.)
-        w_taup[iBin] = np.nan_to_num(counts_b[0] / counts_taup[iBin], nan = 1., posinf = 1., neginf = 1.)
-        w_taum[iBin] = np.nan_to_num(counts_b[0] / counts_taum[iBin], nan = 1., posinf = 1., neginf = 1.)
-        w_muon[iBin] = np.nan_to_num(counts_b[0] / counts_muon[iBin], nan = 1., posinf = 1., neginf = 1.)
-        w_electron[iBin] = np.nan_to_num(counts_b[0] / counts_electron[iBin], nan = 1., posinf = 1., neginf = 1.)
+    # for iBin in range(0, len(counts_b)):
+    #     w_b[iBin] = np.nan_to_num(counts_b[0] / counts_b[iBin], nan = 1., posinf = 1., neginf = 1.)
+    #     w_uds[iBin] = np.nan_to_num(counts_b[0] / counts_uds[iBin], nan = 1., posinf = 1., neginf = 1.)
+    #     w_g[iBin] = np.nan_to_num(counts_b[0] / counts_g[iBin], nan = 1., posinf = 1., neginf = 1.)
+    #     w_c[iBin] = np.nan_to_num(counts_b[0] / counts_c[iBin], nan = 1., posinf = 1., neginf = 1.)
+    #     w_taup[iBin] = np.nan_to_num(counts_b[0] / counts_taup[iBin], nan = 1., posinf = 1., neginf = 1.)
+    #     w_taum[iBin] = np.nan_to_num(counts_b[0] / counts_taum[iBin], nan = 1., posinf = 1., neginf = 1.)
+    #     w_muon[iBin] = np.nan_to_num(counts_b[0] / counts_muon[iBin], nan = 1., posinf = 1., neginf = 1.)
+    #     w_electron[iBin] = np.nan_to_num(counts_b[0] / counts_electron[iBin], nan = 1., posinf = 1., neginf = 1.)
 
     # print (w_uds)
 
-    X_train_global["weight_jetpT_binidx"] = to_categorical( np.digitize(X_train_global["jet_pt_phys"], bins_pt_weights)-1)
+    X_train_global["weight_jetpT_binidx"] = tf.keras.utils.to_categorical( np.digitize(X_train_global["jet_pt_phys"], bins_pt_weights)-1)
 
     X_train_global["weight_pt"] = (X_train_global["label_b"]*ak.sum(w_b*X_train_global["weight_jetpT_binidx"], axis =-1) + \
                                 X_train_global["label_uds"]*ak.sum(w_uds*X_train_global["weight_jetpT_binidx"], axis =-1) + \
@@ -592,13 +592,13 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
     merit = 'val_loss'
 
     # early stopping callback
-    es = EarlyStopping(monitor=merit, patience = 10)
+    es = tf.keras.callbacks.EarlyStopping(monitor=merit, patience = 10)
     # Learning rate scheduler 
     # ls = ReduceLROnPlateau(monitor=merit, factor=0.2, patience=10)
-    ls = ReduceLROnPlateau(monitor=merit, factor=0.2, patience=5, min_lr=0.00001)
+    ls = tf.keras.callbacks.ReduceLROnPlateau(monitor=merit, factor=0.2, patience=5, min_lr=0.00001)
     # model checkpoint callback
     # this saves our model architecture + parameters into mlp_model.h5
-    chkp = ModelCheckpoint(outFolder+'/model_'+modelname+'.h5', monitor = merit, 
+    chkp = tf.keras.callbacks.ModelCheckpoint(outFolder+'/model_'+modelname+'.h5', monitor = merit, 
                                     verbose = 0, save_best_only = True, 
                                     save_weights_only = False, mode = 'auto', 
                                     save_freq = 'epoch')
@@ -969,7 +969,7 @@ if __name__ == "__main__":
     parser.add_argument('--optimizer', dest = 'optimizer', default = "adam")
     parser.add_argument('--classweights', dest = 'classweights', default = True, action='store_true')
     parser.add_argument('--regression', dest = 'regression', default = True, action='store_true')
-    parser.add_argument('--pruning', dest = 'pruning', default = True, action='store_true')
+    parser.add_argument('--pruning', dest = 'pruning', default = False, action='store_true')
     parser.add_argument('--inputQuant', dest = 'inputQuant', default = False, action='store_true')
     parser.add_argument('--test', dest = 'test', default = True, action='store_true')
     parser.add_argument('--plotFeatures', dest = 'plotFeatures', default = False, action='store_true')

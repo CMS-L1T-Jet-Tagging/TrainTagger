@@ -1,9 +1,9 @@
-from utils.imports import *
-from utils.dataset import *
+from datatools.imports import *
+from datatools.dataset import *
 
 import argparse
 from train.models import *
-from profiling import *
+from synthesis.profiling import *
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 import matplotlib.pyplot as plt
 import glob
@@ -24,7 +24,7 @@ from hls_node_edge_projection import *
 __tf_profiling_enabled__ = True
 __torch_profiling_enabled__ = True
 
-from utils.createDataset import *
+from datatools.createDataset import *
 
 modelnamesDict = {
     "DeepSet": "QDeepSets_PermutationInv",
@@ -48,7 +48,7 @@ def synthesize(
         workdir = "./", build=False, trace=True):
 
     tempflav = "btgc"
-    PATH = workdir + '/datasetsNewComplete2/' + filetag + "/" + tempflav + "/"
+    PATH = workdir + filetag + "/" + tempflav + "/"
     outFolder = "outputSynthesis/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)
@@ -186,7 +186,7 @@ def synthesize(
 
     # Get inference of model
     if regression:
-        trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + filetag + "_" + flav + "_" + inputSetTag + "_"
+        trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + flav + "_" + inputSetTag + "_"
     else:
         trainingBasePath = "trainings_notreduced/" + filetag + "_" + flav + "_" + inputSetTag + "_"
     modelpath = modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
@@ -292,12 +292,12 @@ def synthesize(
     print ("Changed  config")
     print (config)
 
-    for layer in model.layers:
-        if "qDense_phi" in layer.name:
-            if modelArchName in ["DeepSet"]:
-                print ("Add custom pointwise implementation for layer", layer.name)
-                config["LayerName"][layer.name]["ConvImplementation"] = "Pointwise"
-            config["LayerName"][layer.name]["Strategy"] = "Latency"
+    # for layer in model.layers:
+    #     if "qDense_phi" in layer.name:
+    #         if modelArchName in ["DeepSet"]:
+    #             print ("Add custom pointwise implementation for layer", layer.name)
+    #             config["LayerName"][layer.name]["ConvImplementation"] = "Pointwise"
+    #         config["LayerName"][layer.name]["Strategy"] = "Latency"
 
 
     layerNames = [layer.name for layer in model.layers]

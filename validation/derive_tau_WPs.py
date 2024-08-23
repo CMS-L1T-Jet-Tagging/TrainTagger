@@ -1,5 +1,5 @@
 '''
-Scripts for deriving the working points for various heads of the tagger.
+Scripts for deriving the working points for taus.
 '''
 import sys, gc
 import uproot4

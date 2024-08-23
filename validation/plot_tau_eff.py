@@ -1,9 +1,13 @@
+"""
+Plot tau efficiencies, usage:
+
+python plot_tau_eff.py <see more arguments below>
+"""
 import sys
 import uproot4
 import numpy as np
 from argparse import ArgumentParser
 from qkeras.utils import load_qmodel
-
 
 # Add path so the script sees other modules
 sys.path.append('../')
@@ -38,7 +42,7 @@ def eta_region_selection(eta_array, eta_region):
 
     if eta_region == 'barrel': return np.abs(eta_array) < 1.5
     elif eta_region == 'endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.5)
-    else: return True #Select everything
+    else: return np.abs(eta_array) > 0.0 #Select everything
 
 def plot_ratio(all_tau, selected_tau, num_label = r"Selected CMSSW Emulator Taus", figname='plots/cmssw_eff.pdf'):
 
@@ -88,7 +92,7 @@ def eff_pt_tau(model, signal_path, uncorrect_pt=False, eta_region='barrel', tree
     tau_flav = helpers.extract_array(signal, 'jet_tauflav', n_entries)
     gen_pt_raw = helpers.extract_array(signal, 'jet_genmatch_pt', n_entries)
     gen_eta_raw = helpers.extract_array(signal, 'jet_genmatch_eta', n_entries)
-    gen_dr_raw = helpers.extract_array(signal, 'jet_taumatch_dR', n_entries)
+    gen_dr_raw = helpers.extract_array(signal, 'jet_genmatch_dR', n_entries)
 
     l1_pt_raw = helpers.extract_array(signal, 'jet_pt', n_entries)
     jet_taupt_raw= helpers.extract_array(signal, 'jet_taupt', n_entries)
@@ -158,13 +162,88 @@ def eff_pt_tau(model, signal_path, uncorrect_pt=False, eta_region='barrel', tree
     plt.savefig(f'plots/{figname}.pdf')
     plt.show(block=False)
 
+def eff_sc_and_tau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000):
+    """
+    Plot the raw seedcone and tau efficiencies without any pt or nn cuts
+    """
+
+    pT_egdes = [0,10,15,20,25,30,35,40,45,50,55,60,70,80,100,125,150,175,200]
+
+    signal = uproot4.open(signal_path)[tree]
+
+    #Select out the taus
+    tau_flav = helpers.extract_array(signal, 'jet_tauflav', n_entries)
+    gen_pt_raw = helpers.extract_array(signal, 'jet_genmatch_pt', n_entries)
+    gen_eta_raw = helpers.extract_array(signal, 'jet_genmatch_eta', n_entries)
+    gen_dr_raw = helpers.extract_array(signal, 'jet_genmatch_dR', n_entries)
+    tau_dr_raw = helpers.extract_array(signal, 'jet_taumatch_dR', n_entries)
+
+
+    l1_pt_raw = helpers.extract_array(signal, 'jet_pt', n_entries)
+    jet_taupt_raw= helpers.extract_array(signal, 'jet_taupt', n_entries)
+    jet_tauscore_raw = helpers.extract_array(signal, 'jet_tauscore', n_entries)
+
+    #Denominator & numerator selection for efficiency
+    tau_deno = (tau_flav==1) & (gen_pt_raw > 1.)
+    tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > 1.)
+    tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (np.abs(tau_dr_raw) < 0.4) & (jet_taupt_raw > 1.)
+    
+    #Get the needed attributes
+    #Basically we want to bin the selected truth pt and divide it by the overall count
+    gen_pt = gen_pt_raw[tau_deno]
+    seedcone_pt = gen_pt_raw[tau_nume_seedcone]
+    cmssw_pt = gen_pt_raw[tau_nume_cmssw]
+    
+    #Constructing the histograms
+    pT_axis = hist.axis.Variable(pT_egdes, name = r"$ \tau_h$ $p_T^{gen}$")
+
+    all_tau = Hist(pT_axis)
+    seedcone_tau = Hist(pT_axis)
+    cmssw_tau = Hist(pT_axis)
+
+    #Fill the histogram using the values above
+    all_tau.fill(gen_pt)
+    seedcone_tau.fill(seedcone_pt)
+    cmssw_tau.fill(cmssw_pt)
+
+    #Plot and get the artist objects
+    eff_seedcone = plot_ratio(all_tau, seedcone_tau, num_label="Selected SeededCone Taus", figname=f'plots/seedcone_eff_{eta_region}.pdf')
+    eff_cmssw = plot_ratio(all_tau, cmssw_tau, num_label="Selected CMSSW Taus", figname=f'plots/cmssw_eff_{eta_region}.pdf')
+
+    #Extract data from the artists
+    sc_x, sc_y, sc_err = get_bar_patch_data(eff_seedcone)
+    cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
+    
+    #Plot the efficiencies together
+    fig = plt.figure()
+    eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
+    if eta_region != 'none':
+        plt.plot([], [], 'none', label=eta_label)
+
+    plt.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=color_cycle[0], linewidth=2, label=r'SeededCone CMSSW Emulator')
+    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator')
+    
+    #Plot other labels
+    plt.hlines(1, 0, 150, linestyles='dashed', color='black', linewidth=3)
+    plt.ylim([0., 1.1])
+    plt.xlim([0, 150])
+    hep.cms.text("Phase 2 Simulation")
+    hep.cms.lumitext("PU 200 (14 TeV)")
+    plt.xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
+    plt.ylabel(r"$\epsilon$ (VBF H $\rightarrow$ $\tau\tau$)")
+    plt.legend(loc='lower right', fontsize=15)
+    figname = f'sc_and_tau_eff_{eta_region}'
+    plt.savefig(f'plots/{figname}.pdf')
+    plt.show(block=False)
+
+
 
 if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_07_25_v10_extendedAll200_btgc_ext3_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5', help = 'Input model for plotting')    
     parser.add_argument('--uncorrect_pt', action='store_true', help='Enable pt correction in plot_bkg_rate_tau')
-    parser.add_argument('--eta_region', choices=['barrel', 'endcap'], default='barrel', help='Select the eta region: "barrel" or "endcap"')
+    parser.add_argument('--eta_region', choices=['barrel', 'endcap','none'], default='none', help='Select the eta region: "barrel", "endcap" or "none"')
 
     args = parser.parse_args()
 
@@ -175,4 +254,4 @@ if __name__ == "__main__":
     tau_eff_filepath = '/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/VBFHtt_PU200.root'
 
     #Barrel
-    eff_pt_tau(model, tau_eff_filepath, uncorrect_pt=args.uncorrect_pt, eta_region=args.eta_region, n_entries=100000)
+    eff_pt_tau(model, tau_eff_filepath, eta_region=args.eta_region, n_entries=100000)

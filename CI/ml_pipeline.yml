@@ -40,7 +40,7 @@ data:
   - cd ..
   - python datatools/createDataset.py -i data/$Dataset -o data/TT -t $Inputs
   - cd data 
-  - tar -cvf convertedfiles.tgz data/TT
+  - tar -cvf convertedfiles.tgz TT
   - mc cp convertedfiles.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
 
 train:

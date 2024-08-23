@@ -1,0 +1,18 @@
+include:
+  - local: "CI/template.yml"
+
+DeepSet:all:
+  extends: .ml_pipeline
+  variables:
+    Model: DeepSet
+    Classes: btgc
+    Inputs: all
+    Dataset: DYToLL_M10To50_PU200.root
+
+DeepSet:minimal:
+  extends: .ml_pipeline
+  variables:
+    Model: DeepSet
+    Classes: btgc
+    Inputs: minimal
+    Dataset: DYToLL_M10To50_PU200.root

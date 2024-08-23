@@ -1,0 +1,9 @@
+.ml_pipeline:
+  stage: build
+  variables:
+    PARENT_PIPELINE_ID: ${CI_PIPELINE_ID}
+  trigger:
+    include:
+      - '/CI/ml_pipeline.yml'
+    strategy: depend
+  needs: []

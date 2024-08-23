@@ -1,5 +1,5 @@
-from utils.imports import *
-from utils.dataset import *
+from datatools.imports import *
+from datatools.dataset import *
 import argparse
 from train.models import *
 import tensorflow_model_optimization as tfmot
@@ -9,7 +9,7 @@ import json
 import glob
 import pdb
 
-from utils.createDataset import *
+from datatools.createDataset import *
 
 modelnamesDict = {
     "DeepSet": "QDeepSets_PermutationInv",

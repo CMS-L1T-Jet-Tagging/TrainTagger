@@ -1,0 +1,107 @@
+stages:
+  - data
+  - train
+  - evaluate
+  - synth
+   
+variables:
+    Model: DeepSet
+    Classes: btgc
+    Inputs: minimal
+
+.template:
+  image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
+  before_script:
+    - export PYTHONPATH=/builds/cebrown/l1-vertex-finding:$PYTHONPATH
+    - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
+    - mc admin info $ARTIFACTS_ALIAS
+  script:
+    - python $FOLDER/$SCRIPT $ARGS
+  tags:
+    - docker
+  # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
+  #   - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
+  #     when: on_success
+  #   - when: manual
+
+data:
+  extends:
+    - .template
+  stage: data
+  # rules:
+  #   - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+  #       - datatools/**
+  #     when: manual
+  script:
+  - source activate l1_training
+  - mkdir data
+  - cd data
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$Dataset ./
+  - cd ..
+  - python datatools/createDataset.py -i data/$Dataset -o data/TT -t $Inputs
+  - cd data 
+  - tar -cvf convertedfiles_$Inputs.tgz TT
+  - mc cp convertedfiles_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
+
+train:
+  extends:
+    - .template
+  stage: train
+  needs: 
+    - job : data
+      optional: true
+  script:
+  - mkdir data
+  - cd data
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
+  - tar -xvf convertedfiles_$Inputs.tgz
+  - cd TT
+  - mkdir btgc
+  - mv *.parquet btgc
+  - ls
+  - ls btgc/
+  - cd ../..
+  - source activate l1_training
+  - ls data/TT/btgc/
+  - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2  --test
+  artifacts:
+    paths:
+      - trainings_regression_weighted
+    expire_in: 1 day
+
+evaluate:
+  extends:
+    - .template
+  stage: evaluate
+  needs: [train]
+  dependencies: [train]
+  script:
+  - echo evaluate
+  # artifacts:
+  #   paths:
+  #     - Eval/FullPlots/*
+  #   expire_in: 1 day
+
+synth:
+  extends:
+    - .template
+  stage: synth
+  tags:
+    - cb_vivado
+  needs : [train]
+  dependencies : [train]
+  script:
+    - source /opt/Xilinx/Vivado/2022.2/settings64.sh
+    - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
+    - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
+    - cd data
+    - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
+    - tar -xvf convertedfiles_$Inputs.tgz
+    - cd ..
+    - source activate l1_training
+    - python synthesis/synthesis.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B
+  artifacts:
+    paths:
+      - outputSynthesis/*
+    expire_in: 1 day
+

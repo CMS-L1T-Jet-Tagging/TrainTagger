@@ -51,10 +51,14 @@ train:
     - job : data
       optional: true
   script:
+  - mkdir data
   - cd data
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles.tgz ./
   - tar -xvf convertedfiles.tgz
-  - cd ..
+  - cd TT
+  - mkdir btgc
+  - mv *.parquet btgc
+  - cd ../..
   - source activate l1_training
   - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2  --test
   artifacts:

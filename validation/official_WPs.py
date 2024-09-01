@@ -3,12 +3,12 @@ from types import SimpleNamespace
 
 WPs = {
     #Working points when pT is corrected
-    'tau_ptCorrected': 0.09,
-    'tau_l1_pt_ptCorrected': 44, #GeV
+    'tau_ptCorrected': 0.17,
+    'tau_l1_pt_ptCorrected': 34, #GeV
 
     #Working points when pT is not corrected
-    'tau_ptUncorrected': 0.09,
-    'tau_l1_pt_ptUncorrected': 38, #GeV
+    'tau_ptUncorrected': 0.17,
+    'tau_l1_pt_ptUncorrected': 34, #GeV
 }
 
 WPs_CMSSW = {

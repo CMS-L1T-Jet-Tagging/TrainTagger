@@ -38,7 +38,7 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, tree='jetntuple/J
     minbias = uproot4.open(minbias_path)[tree]
 
     #Prepare the nn inputs, and flip the last two axes
-    nn_inputs = np.asarray(helpers.extract_nn_inputs(minbias, input_fields_tag='ext3', nconstit=16, n_entries=n_entries)).transpose(0, 2, 1)
+    nn_inputs = np.asarray(helpers.extract_nn_inputs(minbias, input_fields_tag='ext7', nconstit=16, n_entries=n_entries)).transpose(0, 2, 1)
     
     #Get the NN predictions
     tau_index = [2,3]
@@ -113,7 +113,7 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, tree='jetntuple/J
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_07_25_v10_extendedAll200_btgc_ext3_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
+    parser.add_argument('-m','--model', default='/eos/home-s/sewuchte/www/L1T/trainings_regression_weighted/2024_08_27_v4_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
     parser.add_argument('--uncorrect_pt', action='store_true', help='Enable pt correction in plot_bkg_rate_tau')
     args = parser.parse_args()
 
@@ -121,6 +121,6 @@ if __name__ == "__main__":
     print(model.summary())
 
     #These paths are default to evaluate some of the rate
-    minbias_path = '/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/MinBias_PU200.root'
+    minbias_path = '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_HW_260824/MinBias_PU200.root'
 
-    plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=args.uncorrect_pt)
+    plot_bkg_rate_tau(model, minbias_path, n_entries=600000, uncorrect_pt=args.uncorrect_pt)

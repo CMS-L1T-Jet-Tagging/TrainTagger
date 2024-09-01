@@ -1,5 +1,9 @@
 '''
 Scripts for deriving the working points for taus.
+
+Usage: 
+
+python derive_tau_WPs.py
 '''
 import sys, gc
 import uproot4
@@ -91,7 +95,7 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
     plot_name = 'tau_rate_scan_ptcorrected.pdf' if correct_pt else 'tau_rate_scan_ptuncorrected.pdf' 
     plt.savefig(f'plots/{plot_name}', bbox_inches='tight')
 
-def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000, correct_pt=True):
+def derive_tau_rate(model, minbias_path, input_tag='ext7', tree='jetntuple/Jets', n_entries=500000, correct_pt=True):
     '''
     Derive the tau rate, using n_entries minbias events 
     '''
@@ -105,14 +109,14 @@ def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000
     raw_jet_pt = helpers.extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = helpers.extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = helpers.extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = helpers.extract_nn_inputs(minbias, input_fields_tag='ext3', nconstit=16, n_entries=n_entries)
+    raw_inputs = helpers.extract_nn_inputs(minbias, input_fields_tag=input_tag, nconstit=16, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = helpers.group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs)
+    event_id, grouped_arrays  = helpers.group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, num_elements=2)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
@@ -185,13 +189,13 @@ def derive_tau_rate(model, minbias_path, tree='jetntuple/Jets', n_entries=500000
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_07_25_v10_extendedAll200_btgc_ext3_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
+    parser.add_argument('-m','--model', default='/eos/home-s/sewuchte/www/L1T/trainings_regression_weighted/2024_08_27_v4_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
     args = parser.parse_args()
 
     model=load_qmodel(args.model)
     print(model.summary())
 
     #These paths are default to evaluate some of the rate
-    minbias_path = '/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/MinBias_PU200.root'
+    minbias_path = '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_HW_260824/MinBias_PU200.root'
 
-    derive_tau_rate(model, minbias_path, n_entries=None)
+    derive_tau_rate(model, minbias_path, n_entries=2000000, input_tag='ext7')

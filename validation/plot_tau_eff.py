@@ -57,7 +57,7 @@ def plot_ratio(all_tau, selected_tau, num_label = r"Selected CMSSW Emulator Taus
 
 def get_model_prediction(signal, model, l1_pt_raw, n_entries, uncorrect_pt=False, tau_index = [2,3]):
 
-    nn_inputs = np.asarray(helpers.extract_nn_inputs(signal, input_fields_tag='ext3', nconstit=16, n_entries=n_entries)).transpose(0, 2, 1)
+    nn_inputs = np.asarray(helpers.extract_nn_inputs(signal, input_fields_tag='ext7', nconstit=16, n_entries=n_entries)).transpose(0, 2, 1)
     pred_score, ratio = model.predict(nn_inputs)
 
     tau_score = pred_score[:,tau_index[0]] + pred_score[:,tau_index[1]]
@@ -237,11 +237,10 @@ def eff_sc_and_tau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets
     plt.show(block=False)
 
 
-
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_07_25_v10_extendedAll200_btgc_ext3_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5', help = 'Input model for plotting')    
+    parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_08_17_v6_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5', help = 'Input model for plotting')    
     parser.add_argument('--uncorrect_pt', action='store_true', help='Enable pt correction in plot_bkg_rate_tau')
     parser.add_argument('--eta_region', choices=['barrel', 'endcap','none'], default='none', help='Select the eta region: "barrel", "endcap" or "none"')
 

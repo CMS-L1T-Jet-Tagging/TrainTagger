@@ -25,42 +25,6 @@ params = {'legend.fontsize': 'medium',
          'ytick.labelsize':'medium'}
 pylab.rcParams.update(params)
 
-def extract_nn_inputs(minbias, nconstit=16, n_entries=None):
-    """
-    Extract NN inputs based on input_fields_tag
-    """
-
-    features = [
-    'pt_rel_phys','deta_phys','dphi_phys',
-    'pt_log','eta_phys','phi_phys', 'mass',
-    'isPhoton', 'isElectronPlus', 'isElectronMinus', 'isMuonPlus', 'isMuonMinus', 'isNeutralHadron', 'isChargedHadronPlus', 'isChargedHadronMinus',
-    'z0', 'dxySqrt',
-    'isfilled',
-    'puppiweight', 'emid', 'quality']
-
-    #Concatenate all the inputs
-    inputs_list = []
-
-    #Vertically stacked them to create input sets
-    #https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
-    #Also pad and fill them with 0 to the number of constituents we are using (nconstit)
-    for i in range(len(features)):
-
-        if features[i] != "dxySqrt":
-            field = f"jet_pfcand_{features[i]}"
-            field_array = helpers.extract_array(minbias, field, n_entries)
-        else:
-            field = f"jet_pfcand_dxy_custom"
-            dxy_custom = helpers.extract_array(minbias, field, n_entries)
-            field_array = np.nan_to_num(np.sqrt(dxy_custom), nan=0.0, posinf=0., neginf=0.)
-
-        padded_filled_array = helpers.pad_fill(field_array, nconstit)
-        inputs_list.append(padded_filled_array[:, np.newaxis])
-
-    inputs = ak.concatenate(inputs_list, axis=1)
-
-    return inputs
-
 def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
     
     idx_list = []
@@ -71,7 +35,7 @@ def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
             
     return idx_list
 
-def plot_rate(rate_list, ht_list, nn_list, target_rate = 14, plot_name="btag_rate_scan_cmwssw.pdf", correct_pt=True):
+def plot_rate(rate_list, ht_list, nn_list, target_rate = 14, plot_name="btag_rate_scan_cmwssw.pdf", correct_pt=True, cmssw=False):
     
     fig, ax = plt.subplots()
     im = ax.scatter(nn_list, ht_list, c=rate_list, s=500, marker='s',
@@ -85,8 +49,12 @@ def plot_rate(rate_list, ht_list, nn_list, target_rate = 14, plot_name="btag_rat
     plt.ylabel(r"HT [GeV]")
     plt.xlabel(r"$\sum_{4~leading~jets}$ b scores")
     
-    plt.xlim([0,1.5])
-    plt.ylim([10,500])
+    if cmssw:
+        plt.xlim([0,3.5])
+        plt.ylim([10,500])
+    else:
+        plt.xlim([0,1.5])
+        plt.ylim([10,500])
 
     #plus, minus range
     RateRange = 0.5
@@ -167,7 +135,7 @@ def derive_btag_rate_cmssw(minbias_path, n_entries=500000, target_rate=14, tree=
             ht_list.append(ht)
             nn_list.append(NN)
 
-    plot_rate(rate_list, ht_list, nn_list, target_rate=target_rate, correct_pt=False)
+    plot_rate(rate_list, ht_list, nn_list, target_rate=target_rate, correct_pt=False, cmssw=True)
 
 def derive_btag_rate(model, minbias_path, n_entries=500000, target_rate=14, tree='jetntuple/Jets'):
     """
@@ -181,7 +149,7 @@ def derive_btag_rate(model, minbias_path, n_entries=500000, target_rate=14, tree
 
     raw_event_id = helpers.extract_array(minbias, 'event', n_entries)
     raw_jet_pt = helpers.extract_array(minbias, 'jet_pt', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, nconstit=16, n_entries=n_entries)
+    raw_inputs = helpers.extract_nn_inputs(minbias, input_fields_tag='ext7', nconstit=16, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -238,13 +206,15 @@ def derive_btag_rate(model, minbias_path, n_entries=500000, target_rate=14, tree
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_08_17_v6_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
+    parser.add_argument('-m','--model', default='/eos/home-s/sewuchte/www/L1T/trainings_regression_weighted/2024_08_27_v4_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
+    parser.add_argument('--cmssw', action='store_true', help='Derive the btag rate for CMSSW')
     args = parser.parse_args()
 
     model=load_qmodel(args.model)
     print(model.summary())
 
     #These paths are default to evaluate some of the rate
-    minbias_path = '/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/MinBias_PU200.root'
+    minbias_path = '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_HW_260824/MinBias_PU200.root'
 
-    derive_btag_rate(model, minbias_path, n_entries=None)
+    if args.cmssw: derive_btag_rate_cmssw(minbias_path, n_entries=3000000)
+    else: derive_btag_rate(model, minbias_path, n_entries=3000000)

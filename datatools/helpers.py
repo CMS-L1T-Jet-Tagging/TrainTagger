@@ -14,9 +14,10 @@ def extract_array(tree, field, entry_stop):
     """
     return tree[field].array(entry_stop=entry_stop)
 
-def group_id_values(event_id, *arrays):
+def group_id_values(event_id, *arrays, num_elements = 2):
     '''
     Group values according to event id.
+    Filter out events that has less than num_elements
     '''
 
     # Use ak.argsort to sort based on event_id
@@ -31,18 +32,20 @@ def group_id_values(event_id, *arrays):
     grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
 
     #Filter out groups that don't have at least 2 elements
-    mask = ak.num(grouped_id) >= 2
+    mask = ak.num(grouped_id) >= num_elements
     filtered_grouped_arrays = [arr[mask] for arr in grouped_arrays]
 
     return grouped_id[mask], filtered_grouped_arrays
 
-def extract_nn_inputs(minbias, input_fields_tag='ext3', nconstit=16, n_entries=None):
+def extract_nn_inputs(minbias, input_fields_tag='ext7', nconstit=16, n_entries=None):
     """
     Extract NN inputs based on input_fields_tag
     """
 
     #The complete input sets are defined in utils/createDataset.py
     features = dict_fields[input_fields_tag]
+
+    print("Using the following features: ", features)
 
     #Concatenate all the inputs
     inputs_list = []
@@ -51,8 +54,15 @@ def extract_nn_inputs(minbias, input_fields_tag='ext3', nconstit=16, n_entries=N
     #https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
     #Also pad and fill them with 0 to the number of constituents we are using (nconstit)
     for i in range(len(features)):
-        field = f"jet_pfcand_{features[i]}"
-        field_array = extract_array(minbias, field, n_entries)
+
+        if features[i] != "dxySqrt":
+            field = f"jet_pfcand_{features[i]}"
+            field_array = extract_array(minbias, field, n_entries)
+        else:
+            field = f"jet_pfcand_dxy_custom"
+            dxy_custom = extract_array(minbias, field, n_entries)
+            field_array = np.nan_to_num(np.sqrt(dxy_custom), nan=0.0, posinf=0., neginf=0.)
+
         padded_filled_array = pad_fill(field_array, nconstit)
         inputs_list.append(padded_filled_array[:, np.newaxis])
 

@@ -63,7 +63,7 @@ def get_model_prediction(signal, model, l1_pt_raw, n_entries, uncorrect_pt=False
     tau_score = pred_score[:,tau_index[0]] + pred_score[:,tau_index[1]]
 
     if uncorrect_pt: tau_pt = l1_pt_raw
-    else: tau_pt = l1_pt_raw*ratio.flatten()
+    else: tau_pt = np.multiply(l1_pt_raw, ratio.flatten())
     
 
     return tau_score, tau_pt
@@ -240,7 +240,7 @@ def eff_sc_and_tau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/trainings_regression_weighted/2024_08_17_v6_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5', help = 'Input model for plotting')    
+    parser.add_argument('-m','--model', default='/eos/home-s/sewuchte/www/L1T/trainings_regression_weighted/2024_08_27_v4_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5', help = 'Input model for plotting')    
     parser.add_argument('--uncorrect_pt', action='store_true', help='Enable pt correction in plot_bkg_rate_tau')
     parser.add_argument('--eta_region', choices=['barrel', 'endcap','none'], default='none', help='Select the eta region: "barrel", "endcap" or "none"')
 
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     model=load_qmodel(args.model)
 
     #These paths are default to evaluate some of the efficiency
-    tau_eff_filepath = '/eos/user/s/sewuchte/L1Trigger/ForDuc/nTuples/VBFHtt_PU200.root'
+    tau_eff_filepath = '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_HW_260824/VBFHtt_PU200.root'
 
     #Barrel
-    eff_pt_tau(model, tau_eff_filepath, eta_region=args.eta_region, n_entries=100000)
+    eff_pt_tau(model, tau_eff_filepath, uncorrect_pt=args.uncorrect_pt, eta_region=args.eta_region, n_entries=100000)

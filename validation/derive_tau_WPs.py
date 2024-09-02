@@ -55,7 +55,7 @@ def find_rate(rate_list, target_rate = 28):
             
     return idx_list
 
-def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
+def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True, mult=False):
     
     fig, ax = plt.subplots()
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
@@ -69,8 +69,12 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
     plt.ylabel(r"Min reco $p_T$ [GeV]")
     plt.xlabel(r"Min NN Score")
     
-    plt.xlim([0,0.6])
-    plt.ylim([10,100])
+    if mult:
+        plt.xlim([0,0.06])
+        plt.ylim([10,100])
+    else:
+        plt.xlim([0,0.6])
+        plt.ylim([10,100])
     
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate)
@@ -92,10 +96,13 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
         legend_count += 1
     
     plt.legend(loc='upper right')
-    plot_name = 'tau_rate_scan_ptcorrected.pdf' if correct_pt else 'tau_rate_scan_ptuncorrected.pdf' 
+    if mult:
+        plot_name = 'tau_rate_scan_ptcorrected_mult.pdf' if correct_pt else 'tau_rate_scan_ptuncorrected_mult.pdf' 
+    else:
+        plot_name = 'tau_rate_scan_ptcorrected.pdf' if correct_pt else 'tau_rate_scan_ptuncorrected.pdf' 
     plt.savefig(f'plots/{plot_name}', bbox_inches='tight')
 
-def derive_tau_rate(model, minbias_path, input_tag='ext7', tree='jetntuple/Jets', n_entries=500000, correct_pt=True):
+def derive_tau_rate(model, minbias_path, mult=True, input_tag='ext7', tree='jetntuple/Jets', n_entries=500000, correct_pt=True):
     '''
     Derive the tau rate, using n_entries minbias events 
     '''
@@ -148,8 +155,12 @@ def derive_tau_rate(model, minbias_path, input_tag='ext7', tree='jetntuple/Jets'
         pt1 = pt1_uncorrected
         pt2 = pt2_uncorrected
 
-    tau_score1=pred_score1[:,tau_index[0]] + pred_score1[:,tau_index[1]]
-    tau_score2=pred_score2[:,tau_index[0]] + pred_score2[:,tau_index[1]]
+    if mult:
+        tau_score1 = np.multiply(pred_score1[:,tau_index[0]], pred_score1[:,tau_index[1]])
+        tau_score2 = np.multiply(pred_score2[:,tau_index[0]], pred_score2[:,tau_index[1]])
+    else: #Just add them normally
+        tau_score1=pred_score1[:,tau_index[0]] + pred_score1[:,tau_index[1]]
+        tau_score2=pred_score2[:,tau_index[0]] + pred_score2[:,tau_index[1]]
     
     # #Put them together
     NN_score = np.vstack([tau_score1, tau_score2]).transpose()
@@ -160,7 +171,7 @@ def derive_tau_rate(model, minbias_path, input_tag='ext7', tree='jetntuple/Jets'
 
     #Define the histograms (pT edge and NN Score edge)
     pT_edges = list(np.arange(0,100,2)) + [1500] #Make sure to capture everything
-    NN_edges = list([round(i,2) for i in np.arange(0, 1.01, 0.01)])
+    NN_edges = list([round(i,3) for i in np.arange(0, 0.1, 0.001)]) if mult else list([round(i,2) for i in np.arange(0, 1.01, 0.01)])
 
     RateHist = Hist(hist.axis.Variable(pT_edges, name="pt", label="pt"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
@@ -184,12 +195,15 @@ def derive_tau_rate(model, minbias_path, input_tag='ext7', tree='jetntuple/Jets'
             pt_list.append(pt)
             nn_list.append(NN)
 
-    plot_rate(rate_list, pt_list, nn_list, target_rate=28, correct_pt=correct_pt)
+    plot_rate(rate_list, pt_list, nn_list, target_rate=28, correct_pt=correct_pt, mult=mult)
 
 if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='/eos/home-s/sewuchte/www/L1T/trainings_regression_weighted/2024_08_27_v4_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
+    parser.add_argument('--uncorrect_pt', action='store_true', help='Enable pt correction in plot_bkg_rate_tau')
+    parser.add_argument('--mult', action='store_true', help='whether to multiply the tau probablity together or not')
+
     args = parser.parse_args()
 
     model=load_qmodel(args.model)
@@ -198,4 +212,8 @@ if __name__ == "__main__":
     #These paths are default to evaluate some of the rate
     minbias_path = '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_HW_260824/MinBias_PU200.root'
 
-    derive_tau_rate(model, minbias_path, n_entries=2000000, input_tag='ext7')
+    #Parse the options a bit here
+    correct_pt = not args.uncorrect_pt
+    prob_multiply=args.mult
+
+    derive_tau_rate(model, minbias_path, mult=prob_multiply, n_entries=3000000, input_tag='ext7', correct_pt=correct_pt)

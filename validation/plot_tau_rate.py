@@ -26,7 +26,7 @@ pylab.rcParams.update(params)
 import matplotlib as mpl
 mpl.rcParams['lines.linewidth'] = 5
 
-def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, tree='jetntuple/Jets', n_entries=500000):
+def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, mult=False, tree='jetntuple/Jets', n_entries=500000):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
@@ -43,7 +43,7 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, tree='jetntuple/J
     #Get the NN predictions
     tau_index = [2,3]
     pred_score, ratio = model.predict(nn_inputs)
-    model_tau = pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
+    model_tau = np.multiply(pred_score[:, tau_index[0]], pred_score[:, tau_index[1]]) if mult else pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
 
     #Emulator tau score
     cmssw_tau = helpers.extract_array(minbias, 'jet_tauscore', n_entries)
@@ -51,14 +51,28 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, tree='jetntuple/J
     #Use event id to track which jets belong to which event.
     event_id = helpers.extract_array(minbias, 'event', n_entries)
     event_id_cmssw = event_id[cmssw_tau > WPs_CMSSW["tau"]]
-    event_id_model = event_id[model_tau > WPs["tau_ptCorrected"]]
+
+    if mult:
+        if uncorrect_pt: event_id_model = event_id[model_tau > WPs["tau_ptUncorrected_mult"]]
+        else:  event_id_model = event_id[model_tau > WPs["tau_ptCorrected_mult"]]
+    else:
+        if uncorrect_pt: event_id_model = event_id[model_tau > WPs["tau_ptUncorrected"]]
+        else:  event_id_model = event_id[model_tau > WPs["tau_ptCorrected"]]
 
     #Cut on jet pT to extract the rate
     jet_pt = helpers.extract_array(minbias, 'jet_pt', n_entries)
     jet_pt_cmssw = helpers.extract_array(minbias, 'jet_taupt', n_entries)[cmssw_tau > WPs_CMSSW["tau"]]
 
-    if uncorrect_pt: jet_pt_model=jet_pt[model_tau > WPs["tau_ptUncorrected"]]
-    else: jet_pt_model = (jet_pt*ratio.flatten())[model_tau > WPs["tau_ptCorrected"]]
+    if mult:
+        if uncorrect_pt: jet_pt_model=jet_pt[model_tau > WPs["tau_ptUncorrected_mult"]]
+        else: jet_pt_model = (jet_pt*ratio.flatten())[model_tau > WPs["tau_ptCorrected_mult"]]
+
+    else:
+        if uncorrect_pt: jet_pt_model=jet_pt[model_tau > WPs["tau_ptUncorrected"]]
+        else: jet_pt_model = (jet_pt*ratio.flatten())[model_tau > WPs["tau_ptCorrected"]]
+
+    print("HERE", len(jet_pt_model))
+    print(len(event_id_model))
 
     #Total number of unique event
     n_event = len(np.unique(event_id))
@@ -106,7 +120,9 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, tree='jetntuple/J
     plt.ylabel(r"$\tau_h$ trigger rate [kHz]")
     plt.xlabel(r"L1 $p_T$ [GeV]")
     plt.legend(loc = 'upper right',fontsize = 15)
-    figname='bkg_rate_tau_ptUncorrected' if uncorrect_pt else 'bkg_rate_tau_ptCorrected'
+
+    if mult: figname='bkg_rate_tau_ptUncorrected_mult' if uncorrect_pt else 'bkg_rate_tau_ptCorrected_mult'
+    else: figname='bkg_rate_tau_ptUncorrected' if uncorrect_pt else 'bkg_rate_tau_ptCorrected'
     plt.savefig(f'plots/{figname}.pdf', bbox_inches='tight')
 
 
@@ -115,6 +131,8 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='/eos/home-s/sewuchte/www/L1T/trainings_regression_weighted/2024_08_27_v4_extendedAll200_btgc_ext7_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned/model_QDeepSets_PermutationInv_nconst_16_nfeatures_21_nbits_8_pruned.h5' , help = 'Input model for plotting')    
     parser.add_argument('--uncorrect_pt', action='store_true', help='Enable pt correction in plot_bkg_rate_tau')
+    parser.add_argument('--mult', action='store_true', help='whether to multiply the tau probablity together or not')
+
     args = parser.parse_args()
 
     model=load_qmodel(args.model)
@@ -123,4 +141,4 @@ if __name__ == "__main__":
     #These paths are default to evaluate some of the rate
     minbias_path = '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_HW_260824/MinBias_PU200.root'
 
-    plot_bkg_rate_tau(model, minbias_path, n_entries=600000, uncorrect_pt=args.uncorrect_pt)
+    plot_bkg_rate_tau(model, minbias_path, mult=args.mult, uncorrect_pt=args.uncorrect_pt)

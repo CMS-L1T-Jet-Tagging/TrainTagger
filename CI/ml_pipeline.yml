@@ -19,10 +19,10 @@ variables:
     - python $FOLDER/$SCRIPT $ARGS
   tags:
     - docker
-  # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
-  #   - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
-  #     when: on_success
-  #   - when: manual
+  rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
+     - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
+       when: on_success
+     - when: manual
 
 data:
   extends:
@@ -58,11 +58,8 @@ train:
   - cd TT
   - mkdir btgc
   - mv *.parquet btgc
-  - ls
-  - ls btgc/
   - cd ../..
   - source activate l1_training
-  - ls data/TT/btgc/
   - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2  --test
   artifacts:
     paths:
@@ -94,10 +91,14 @@ synth:
     - source /opt/Xilinx/Vivado/2022.2/settings64.sh
     - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
     - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
+    - mkdir data
     - cd data
     - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
     - tar -xvf convertedfiles_$Inputs.tgz
-    - cd ..
+    - cd TT
+    - mkdir btgc
+    - mv *.parquet btgc
+    - cd ../..
     - source activate l1_training
     - python synthesis/synthesis.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B
   artifacts:

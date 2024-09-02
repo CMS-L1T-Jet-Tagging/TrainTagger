@@ -7,7 +7,7 @@ DeepSet:all:
     Model: DeepSet
     Classes: btgc
     Inputs: all
-    Dataset: DYToLL_M10To50_PU200.root
+    Dataset: jetTuple_TT_PU200.131X_v9a.root
 
 DeepSet:minimal:
   extends: .ml_pipeline
@@ -15,4 +15,4 @@ DeepSet:minimal:
     Model: DeepSet
     Classes: btgc
     Inputs: minimal
-    Dataset: DYToLL_M10To50_PU200.root
+    Dataset: jetTuple_TT_PU200.131X_v9a.root

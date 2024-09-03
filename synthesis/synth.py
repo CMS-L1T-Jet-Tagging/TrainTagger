@@ -11,8 +11,6 @@ import pandas
 from histbook import *
 import sys, os, time
 import hls4ml
-import graphviz
-import pydot
 import pickle
 from pathlib import Path
 import numpy as np
@@ -27,6 +25,9 @@ __tf_profiling_enabled__ = True
 __torch_profiling_enabled__ = True
 
 from datatools.createDataset import *
+
+import pydot
+pydot.Dot.create(pydot.Dot())
 
 modelnamesDict = {
     "DeepSet": "QDeepSets_PermutationInv",

@@ -11,6 +11,8 @@ import pandas
 from histbook import *
 import sys, os, time
 import hls4ml
+import graphviz
+import pydot
 import pickle
 from pathlib import Path
 import numpy as np

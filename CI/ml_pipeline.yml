@@ -12,7 +12,7 @@ variables:
 .template:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
-    - export PYTHONPATH=/builds/cebrown/l1-vertex-finding:$PYTHONPATH
+    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
     - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
     - mc admin info $ARTIFACTS_ALIAS
   script:
@@ -28,10 +28,10 @@ data:
   extends:
     - .template
   stage: data
-  # rules:
-  #   - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-  #       - datatools/**
-  #     when: manual
+  rules:
+     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+         - datatools/**
+       when: manual
   script:
   - source activate l1_training
   - mkdir data
@@ -100,7 +100,9 @@ synth:
     - mv *.parquet btgc
     - cd ../..
     - source activate l1_training
-    - python synthesis/synthesis.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B
+    - pwd
+    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
+    - python synthesis/synth.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B
   artifacts:
     paths:
       - outputSynthesis/*

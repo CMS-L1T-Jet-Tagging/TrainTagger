@@ -61,13 +61,11 @@ def readDataFromFile(filename, filter = "jet_*", applyBaseCut = True):
         filter_name = filter, 
         how = "zip")
     if applyBaseCut:
-        # jet_ptmin =   (data['jet_pt'] > 15.) & (np.abs(data['jet_eta']) < 2.4)
-        # jet_ptmin =   (data['jet_pt_phys'] > 15.) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_genmatch_pt'] > 0)
-        jet_ptmin =   (data['jet_pt_phys'] > 15.) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_genmatch_pt'] > 0) & (data['jet_reject'] < 1)
+        jet_ptmin =   (data['jet_pt_phys'] > 15.) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] < 1)
         data = data[jet_ptmin]
     return data
 
-def splitFlavors(data, splitTau = True, splitGluon = True, splitCharm = True):
+def splitFlavors(data, splitTau = True, splitGluon = True, splitCharm = True, doLeptons = True):
     condition_b = (
         (data['jet_genmatch_pt'] > 0) &
         (data['jet_muflav'] == 0) &
@@ -135,26 +133,51 @@ def splitFlavors(data, splitTau = True, splitGluon = True, splitCharm = True):
         )
     data['label_uds'] = condition_uds
 
-    condition_muon = (
-            (data['jet_genmatch_pt'] > 0) &
-            (data['jet_muflav'] == 1) &
-            (data['jet_tauflav'] == 0) &
-            (data['jet_elflav'] == 0)
-        )
-    data['label_muon'] = condition_muon
+    if doLeptons:
+        condition_muon = (
+                (data['jet_genmatch_pt'] > 0) &
+                (data['jet_muflav'] == 1) &
+                (data['jet_tauflav'] == 0) &
+                (data['jet_elflav'] == 0)
+            )
+        data['label_muon'] = condition_muon
 
-    condition_electron = (
-            (data['jet_genmatch_pt'] > 0) &
-            (data['jet_muflav'] == 0) &
-            (data['jet_tauflav'] == 0) &
-            (data['jet_elflav'] == 1)
-        )
-    data['label_electron'] = condition_electron
+        condition_electron = (
+                (data['jet_genmatch_pt'] > 0) &
+                (data['jet_muflav'] == 0) &
+                (data['jet_tauflav'] == 0) &
+                (data['jet_elflav'] == 1)
+            )
+        data['label_electron'] = condition_electron
 
-    # data['target_pt'] = np.clip(((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_pt"]/data["jet_pt_phys"],nan=0,posinf=0,neginf=0)+((data["label_tau"]) | (data["label_muon"]) | (data["label_electron"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0),0.3,2)
-    # data['target_pt'] = np.clip(((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_pt"]/data["jet_pt_phys"],nan=0,posinf=0,neginf=0)+((data["label_tau"]) | (data["label_taup"]) | (data["label_taum"]) | (data["label_muon"]) | (data["label_electron"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0),0.3,2)
-    data['target_pt'] = np.clip(((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_pt"]/data["jet_pt_phys"],nan=0,posinf=0,neginf=0)+((data["label_taup"]) | (data["label_taum"]) | (data["label_muon"]) | (data["label_electron"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0),0.3,2)
-    print(data['target_pt'])
+    if doLeptons:
+        data['target_pt'] = np.clip(((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_pt"]/data["jet_pt_phys"],nan=0,posinf=0,neginf=0)+((data["label_taup"]) | (data["label_taum"]) | (data["label_muon"]) | (data["label_electron"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0),0.3,2)
+        # data['target_mass'] = np.clip(((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_mass"]/data["jet_pt_phys"],nan=0,posinf=0,neginf=0)+((data["label_taup"]) | (data["label_taum"]) | (data["label_muon"]) | (data["label_electron"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0),0.3,2)
+        data['target_pt_phys'] = ((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_pt"],nan=0,posinf=0,neginf=0)+((data["label_taup"]) | (data["label_taum"]) | (data["label_muon"]) | (data["label_electron"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]),nan=0,posinf=0,neginf=0)
+    else:
+        data['target_pt'] = np.clip(((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_pt"]/data["jet_pt_phys"],nan=0,posinf=0,neginf=0)+((data["label_taup"]) | (data["label_taum"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0),0.3,2)
+        # data['target_mass'] = np.clip(((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_mass"]/data["jet_pt_phys"],nan=0,posinf=0,neginf=0)+((data["label_taup"]) | (data["label_taum"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0),0.3,2)
+        data['target_pt_phys'] = ((data["label_b"]) | (data["label_c"]) | (data["label_uds"]) | (data["label_g"]))*ak.nan_to_num(data["jet_genmatch_pt"],nan=0,posinf=0,neginf=0)+((data["label_taup"]) | (data["label_taum"]))*ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]),nan=0,posinf=0,neginf=0)
+    print('jet_genmatch_pt', data['jet_genmatch_pt'])
+    print('jet_genmatch_lep_vis_pt', data['jet_genmatch_lep_vis_pt'])
+    print('target_pt', data['target_pt'])
+    print('target_pt_phys', data['target_pt_phys'])
+
+    print("Length of data before gen cut:", len(data))
+    jet_ptmin_gen =   (data['target_pt_phys'] > 5.)
+    print("Length of data after gen cut:", len(data[jet_ptmin_gen]))
+
+    condition_b = condition_b & jet_ptmin_gen
+    if splitTau:
+        condition_taup = condition_taup & jet_ptmin_gen
+        condition_taum = condition_taum & jet_ptmin_gen
+    if splitGluon:
+        condition_gluon = condition_gluon & jet_ptmin_gen
+    if splitCharm:
+        condition_charm = condition_charm & jet_ptmin_gen
+    if doLeptons:
+        condition_electron = condition_electron & jet_ptmin_gen
+        condition_muon = condition_muon & jet_ptmin_gen
 
     data_b = data[(condition_b)]
     # data['label_b'] = (data[(condition_b)] > 0)
@@ -173,8 +196,9 @@ def splitFlavors(data, splitTau = True, splitGluon = True, splitCharm = True):
     else:
         data_charm = None
     
-    data_muon = data[(condition_muon)]
-    data_electron = data[(condition_electron)]
+    if doLeptons:
+        data_muon = data[(condition_muon)]
+        data_electron = data[(condition_electron)]
 
     # Definition of background (non-b jets)
     # if splitTau and splitGluon and splitCharm:
@@ -193,7 +217,7 @@ def splitFlavors(data, splitTau = True, splitGluon = True, splitCharm = True):
 
     # Sanity check
     print("Sanity check:")
-    print("Length of data:", len(data))
+    print("Length of data:", len(data[jet_ptmin_gen]))
     sum = 0
     print("Length of data_b:", len(data_b))
     sum = sum + len(data_b)
@@ -211,17 +235,20 @@ def splitFlavors(data, splitTau = True, splitGluon = True, splitCharm = True):
         sum = sum + len(data_charm)
     print("Length of data_bkg:", len(data_bkg))
     sum = sum + len(data_bkg)
-    print("Length of data_muon:", len(data_muon))
-    sum = sum + len(data_muon)
-    print("Length of data_electron:", len(data_electron))
-    sum = sum + len(data_electron)
+    if doLeptons:
+        print("Length of data_muon:", len(data_muon))
+        sum = sum + len(data_muon)
+        print("Length of data_electron:", len(data_electron))
+        sum = sum + len(data_electron)
     print("Sum:", sum)
 
-    if not len(data) == sum:
+    if not len(data[jet_ptmin_gen]) == sum:
         print ("ERROR: Data splitting does not match!!")
 
-    # return {"b": data_b, "tau": data_tau, "gluon": data_gluon, "charm": data_charm, "bkg": data_bkg, "muon": data_muon, "electron": data_electron, "taup": data_taup, "taum": data_taum}
-    return {"b": data_b, "taup": data_taup, "taum": data_taum, "gluon": data_gluon, "charm": data_charm, "bkg": data_bkg, "muon": data_muon, "electron": data_electron}
+    if doLeptons:
+        return {"b": data_b, "taup": data_taup, "taum": data_taum, "gluon": data_gluon, "charm": data_charm, "bkg": data_bkg, "muon": data_muon, "electron": data_electron}
+    else:
+        return {"b": data_b, "taup": data_taup, "taum": data_taum, "gluon": data_gluon, "charm": data_charm, "bkg": data_bkg}
 
 def reduceDatasetToMin(dataJson):
     # lenghts = [len(dataJson[key]) for key in dataJson]

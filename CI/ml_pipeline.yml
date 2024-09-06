@@ -55,10 +55,7 @@ train:
   - cd data
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
   - tar -xvf convertedfiles_$Inputs.tgz
-  - cd TT
-  - mkdir btgc
-  - mv *.parquet btgc
-  - cd ../..
+  - cd ..
   - source activate l1_training
   - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2  --test
   artifacts:
@@ -95,10 +92,7 @@ synth:
     - cd data
     - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
     - tar -xvf convertedfiles_$Inputs.tgz
-    - cd TT
-    - mkdir btgc
-    - mv *.parquet btgc
-    - cd ../..
+    - cd ..
     - source activate l1_training
     - pwd
     - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH

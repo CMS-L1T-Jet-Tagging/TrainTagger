@@ -633,7 +633,7 @@ from tensorflow.python.ops.ragged import ragged_util
 from tensorflow.python.util import dispatch
 from tensorflow.python.util.tf_export import keras_export
 from tensorflow.tools.docs import doc_controls
-from keras.losses import *
+from tensorflow.python.keras.losses import *
 
 @keras_export("keras.losses.nll", v1=[])
 @tf.__internal__.dispatch.add_dispatch_support

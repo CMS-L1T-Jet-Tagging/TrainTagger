@@ -51,7 +51,7 @@ def synthesize(
         workdir = "./", build=False, trace=True):
 
     tempflav = "btgc"
-    PATH = workdir + filetag + "/" + tempflav + "/"
+    PATH = workdir + filetag  + "/"
     outFolder = "outputSynthesis/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)

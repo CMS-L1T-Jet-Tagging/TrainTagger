@@ -64,6 +64,7 @@ modelnamesDict = {
 nconstit = 16
 
 def doPlots(
+        test_data_dir,
         filetag,
         timestamp,
         flav,
@@ -81,16 +82,16 @@ def doPlots(
 
     # tempflav = "btgc"
     # PATH_load = workdir + '/datasets_050924/' + filetag + "/" + tempflav + "/"
-    PATH_load = workdir + '/datasets_050924/'
+    PATH_load = f"{test_data_dir}/"
+    print("Loading data from: ", PATH_load)
+    chunksmatching = glob.glob(f"{PATH_load}X_{inputSetTag}_test*.parquet")
+    chunksmatching = [chunksm.replace(f"{PATH_load}X_{inputSetTag}_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
+
     outFolder = "outputPlots/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)
 
     feature_names = dict_fields[inputSetTag]
-
-    chunksmatching = glob.glob(PATH_load+"X_"+inputSetTag+"_test*.parquet")
-    print (PATH_load+"X_"+inputSetTag+"_test*.parquet")
-    chunksmatching = [chunksm.replace(PATH_load+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
 
     if test:
         import random
@@ -946,9 +947,10 @@ def doPlots(
 
     # efficiency vs pT
     # x_bins_pt = np.array([0., 15., 20., 30., 40., 50., 75., 100., 125., 150., 175., 200., 300., 500., 750., 1000.])
+    '''
     x_bins_pt = np.array([15., 20., 30., 40., 50., 60., 70., 80., 90., 100., 125., 150., 175., 200., 250., 300., 400., 500., 750., 1000.])
-
-    data_ = ak.to_pandas(X_test_global[X_test_global["label_b"]>0])
+    test_array = X_test_global[X_test_global["label_b"]>0]
+    data_ = ak.to_dataframe(test_array)
     data_["wp1"] = data_["b_vs_udsg"] > wp_b_loose
     data_["wp2"] = data_["b_vs_udsg"] > wp_b_medium
     data_["wp3"] = data_["b_vs_udsg"] > wp_b_tight
@@ -1055,7 +1057,7 @@ def doPlots(
     # efficiency vs pT for taus
     x_bins_pt = np.array([0., 15., 20., 30., 40., 50., 75., 100., 125., 150., 175., 200., 300., 500., 750., 1000.])
 
-    data_ = ak.to_pandas(X_test_global[X_test_global["label_tau"]>0])
+    data_ = ak.to_dataframe(X_test_global[X_test_global["label_tau"]>0])
     data_["wp1"] = data_["tau_vs_all"] > wp_tau_loose
     data_["wp2"] = data_["tau_vs_all"] > wp_tau_medium
     data_["wp3"] = data_["tau_vs_all"] > wp_tau_tight
@@ -1155,6 +1157,8 @@ def doPlots(
     plt.savefig(outFolder+"/eff_tau_eta"+".png")
     plt.savefig(outFolder+"/eff_tau_eta"+".pdf")
     plt.cla()
+
+    '''
 
 
     # get response and resolution plots
@@ -1999,8 +2003,9 @@ def doPlots(
 if __name__ == "__main__":
     from args import get_common_parser, handle_common_args
     parser = get_common_parser()
-    parser.add_argument('-f','--file', help = 'input file name part')
-    parser.add_argument('-o','--outname', help = 'output file name part')
+    parser.add_argument('-t','--testDataDir', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/datasetsNewComplete/extendedAll200/' , help = 'input testing data directory')
+    parser.add_argument('-f','--file', help = 'input model file path')
+    parser.add_argument('-o','--outname', help = 'output file path')
     parser.add_argument('-c','--flav', help = 'Which flavor to run, options are b, bt, btg.')
     parser.add_argument('-i','--input', help = 'Which input to run, options are baseline, ext1, all.')
     parser.add_argument('-m','--model', help = 'Which model to evaluate, options are DeepSet, DeepSet-MHA.')
@@ -2021,6 +2026,7 @@ if __name__ == "__main__":
 
 
     doPlots(
+        args.testDataDir,
         args.file,
         args.timestamp,
         args.flav,

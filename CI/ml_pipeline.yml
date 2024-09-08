@@ -28,10 +28,10 @@ data:
   extends:
     - .template
   stage: data
-  # rules:
-  #    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-  #        - datatools/**
-  #      when: manual
+  rules:
+     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+         - datatools/**
+       when: manual
   script:
   - source activate l1_training
   - mkdir data
@@ -70,11 +70,20 @@ evaluate:
   needs: [train]
   dependencies: [train]
   script:
-  - echo evaluate
-  # artifacts:
-  #   paths:
-  #     - Eval/FullPlots/*
-  #   expire_in: 1 day
+  - mkdir data
+  - cd data
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
+  - tar -xvf convertedfiles_$Inputs.tgz
+  - cd ..
+  - source activate l1_training
+  - python evaluation/makeResultPlot.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_22_08_vTEST --pruning
+  - python evaluation/makeInputPlots.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs
+  artifacts:
+    paths:
+      - trainings_regression_weighted
+      - outputPlots
+      - inputFeaturePlots
+    expire_in: 1 day
 
 synth:
   extends:

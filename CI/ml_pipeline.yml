@@ -8,6 +8,8 @@ variables:
     Model: DeepSet
     Classes: btgc
     Inputs: minimal
+    TrainDataset: TT_PU200.root
+    TestDataset: TT_PU200.root
 
 .template:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
@@ -36,12 +38,16 @@ data:
   - source activate l1_training
   - mkdir data
   - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$Dataset ./
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$TrainDataset ./
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$TestDataset ./
   - cd ..
-  - python datatools/createDataset.py -i data/$Dataset -o data/TT -t $Inputs
+  - python datatools/createDataset.py -i data/$TrainDataset -o data/TTtrain -t $Inputs
+  - python datatools/createDataset.py -i data/$TestDataset -o data/TTtest -t $Inputs
   - cd data 
-  - tar -cvf convertedfiles_$Inputs.tgz TT
-  - mc cp convertedfiles_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
+  - tar -cvf convertedfiles_train_$Inputs.tgz TTtrain
+  - tar -cvf convertedfiles_test_$Inputs.tgz TTtest
+  - mc cp convertedfiles_train_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
+  - mc cp convertedfiles_test_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
 
 train:
   extends:
@@ -75,6 +81,8 @@ evaluate:
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
   - tar -xvf convertedfiles_$Inputs.tgz
   - cd ..
+  - ls -lh
+  - ls trainings_regression_weighted
   - source activate l1_training
   - python evaluation/makeResultPlot.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_22_08_vTEST --pruning
   - python evaluation/makeInputPlots.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs

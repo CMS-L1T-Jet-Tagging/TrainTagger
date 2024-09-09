@@ -7,7 +7,8 @@ DeepSet:all:
     Model: DeepSet
     Classes: btgc
     Inputs: all
-    Dataset: TT_PU200.root
+    TrainDataset: TT_PU200.root
+    TestDataset: TT_PU200.root
 
 DeepSet:minimal:
   extends: .ml_pipeline
@@ -15,4 +16,5 @@ DeepSet:minimal:
     Model: DeepSet
     Classes: btgc
     Inputs: minimal
-    Dataset: TT_PU200.root
+    TrainDataset: TT_PU200.root
+    TestDataset: TT_PU200.root

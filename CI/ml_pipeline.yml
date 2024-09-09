@@ -63,7 +63,7 @@ train:
   - tar -xvf convertedfiles_$Inputs.tgz
   - cd ..
   - source activate l1_training
-  - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2  --test
+  - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2 --pruning
   artifacts:
     paths:
       - trainings_regression_weighted

@@ -1,7 +1,11 @@
+include:
+    - cmssw.yml
+
 stages:
   - data
   - train
   - evaluate
+  - cmssw-setup
   - synth
    
 variables:
@@ -113,7 +117,7 @@ synth:
     - source activate l1_training
     - pwd
     - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
-    - python synthesis/synth.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B
+    - python synthesis/synth.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B --pruning
   artifacts:
     paths:
       - outputSynthesis/*

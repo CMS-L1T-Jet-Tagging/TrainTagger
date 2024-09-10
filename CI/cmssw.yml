@@ -1,0 +1,77 @@
+cmssw-setup:
+  tags: [ k8s-cvmfs ]
+  image: gitlab-registry.cern.ch/ci-tools/ci-worker:cs8
+  stage: cmssw-setup 
+  before_script:
+    - yum install -q -y python3 python3-virtualenv mesa-libGL-devel mesa-libGLU-devel libXpm-devel openssl-devel ncurses-compat-libs 
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+  script:
+    - .setup_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${CMSSW_L1CT_TAG} ${CMSSW_PR}
+    - test -d ${CI_PROJECT_DIR}/packages || mkdir ${CI_PROJECT_DIR}/packages
+    - tar cJf ${CI_PROJECT_DIR}/packages/${CMSSW_VERSION}.tar.xz --exclude '.git' --exclude 'tmp' --exclude '__pycache__' --exclude '*.pyc' --exclude '*.txt.gz' --exclude 'inputs*.root' ${CMSSW_VERSION}
+  timeout: 2h
+  artifacts:
+    when: always
+    paths:
+      - ${CMSSW_VERSION}/src/DataFormats/L1TParticleFlow
+      - ${CMSSW_VERSION}/src/L1Trigger/Phase2L1ParticleFlow/interface
+      - ${CMSSW_VERSION}/src/L1Trigger/Phase2L1ParticleFlow/src
+      - ${CMSSW_VERSION}/src/L1Trigger/Phase2L1ParticleFlow/data/
+      - ${CMSSW_VERSION}/src/L1Trigger/DemonstratorTools
+      - ${CMSSW_VERSION}/src/nlohmann/
+      - ${CMSSW_VERSION}/src/*.h
+      - ${CMSSW_VERSION}/cmsRun.log
+      - ${CMSSW_VERSION}/compilation.log
+      - dumpfiles/*.dump
+      - patternfiles/*.txt*
+      - ${CI_PROJECT_DIR}/packages/${CMSSW_VERSION}.tar.xz
+
+.cmssw-setup:
+  tags: [ k8s-cvmfs ]
+  image: gitlab-registry.cern.ch/ci-tools/ci-worker:cc7
+  stage: cmssw-setup 
+  before_script:
+    - yum install -q -y python3 python3-virtualenv mesa-libGL-devel mesa-libGLU-devel libXpm-devel openssl-devel ncurses-compat-libs 
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+  script:
+    - wget http://gpetrucc.web.cern.ch/gpetrucc/drop/artifacts.zip
+    - unzip artifacts.zip
+  artifacts:
+    when: always
+    paths:
+      - ${CMSSW_VERSION}/src/DataFormats/L1TParticleFlow
+      - ${CMSSW_VERSION}/src/L1Trigger/Phase2L1ParticleFlow/interface
+      - ${CMSSW_VERSION}/src/L1Trigger/Phase2L1ParticleFlow/src
+      - ${CMSSW_VERSION}/src/L1Trigger/DemonstratorTools
+      - ${CMSSW_VERSION}/src/nlohmann/
+      - ${CMSSW_VERSION}/src/*.h
+      - dumpfiles/*.dump
+
+code-checks:
+  tags: [ k8s-cvmfs ]
+  image: gitlab-registry.cern.ch/ci-tools/ci-worker:c8
+  stage: cmssw-setup 
+  before_script:
+    - yum install -q -y python3 python3-virtualenv mesa-libGL-devel mesa-libGLU-devel libXpm-devel openssl-devel ncurses-compat-libs 
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+  script:
+    - .setup_cmssw.sh -checkout ${CMSSW_VERSION} ${CMSSW_L1CT} ${CMSSW_L1CT_TAG} ${CMSSW_PR}
+    - cd ${CMSSW_VERSION}/src
+    - eval $(scram runtime -sh)
+    - scram b -k -j 4 code-checks > code-checks.log 2> code-checks.err || true;
+    - echo "CODE CHECKS"
+    - perl -ne 'm{ParticleFlow/.*(warning|error):} and print;' code-checks.log
+    - perl -e '$errs=0; while(<>) { m{ParticleFlow/.*error:} and $errs=1}; exit $errs;' code-checks.log
+    - scram b -k -j 4 code-format > /dev/null || true;
+    - git diff -- DataFormats/L1TParticleFlow L1Trigger/Phase2L1ParticleFlow > code-format.patch
+    - echo "SUMMARY OF CODE FORMAT CHANGES"
+    - git diff --exit-code --numstat -- DataFormats/L1TParticleFlow L1Trigger/Phase2L1ParticleFlow 
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - ${CMSSW_VERSION}/src/code-checks.*
+      - ${CMSSW_VERSION}/src/code-format.*

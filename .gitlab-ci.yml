@@ -9,6 +9,10 @@ DeepSet:all:
     Inputs: all
     TrainDataset: TT_PU200.root
     TestDataset: TT_PU200.root
+    SCRAM_ARCH: 'el8_amd64_gcc11'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
+    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
 
 DeepSet:minimal:
   extends: .ml_pipeline
@@ -18,3 +22,8 @@ DeepSet:minimal:
     Inputs: minimal
     TrainDataset: TT_PU200.root
     TestDataset: TT_PU200.root
+    SCRAM_ARCH: 'el8_amd64_gcc11'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
+    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+

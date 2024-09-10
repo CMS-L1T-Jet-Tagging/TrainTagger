@@ -7,7 +7,7 @@ cmssw-setup:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
   script:
-    - .CI/setup_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${CMSSW_L1CT_TAG} ${CMSSW_PR}
+    - ./CI/setup_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${CMSSW_L1CT_TAG} ${CMSSW_PR}
     - test -d ${CI_PROJECT_DIR}/packages || mkdir ${CI_PROJECT_DIR}/packages
     - tar cJf ${CI_PROJECT_DIR}/packages/${CMSSW_VERSION}.tar.xz --exclude '.git' --exclude 'tmp' --exclude '__pycache__' --exclude '*.pyc' --exclude '*.txt.gz' --exclude 'inputs*.root' ${CMSSW_VERSION}
   timeout: 2h
@@ -58,7 +58,7 @@ code-checks:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
   script:
-    - .CI/setup_cmssw.sh -checkout ${CMSSW_VERSION} ${CMSSW_L1CT} ${CMSSW_L1CT_TAG} ${CMSSW_PR}
+    - ./CI/setup_cmssw.sh -checkout ${CMSSW_VERSION} ${CMSSW_L1CT} ${CMSSW_L1CT_TAG} ${CMSSW_PR}
     - cd ${CMSSW_VERSION}/src
     - eval $(scram runtime -sh)
     - scram b -k -j 4 code-checks > code-checks.log 2> code-checks.err || true;

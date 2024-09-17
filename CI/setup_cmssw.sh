@@ -70,7 +70,7 @@ ls ..
 ls ../..
 pwd
 
-ls ../../
+ls ../../outputSynthesis/regression/
 # Deal with Emulator
 mv ../../emulation/CMSSW/L1MultiJetProducer_cff.py L1Trigger/Phase2L1ParticleFlow/python
 mv ../../emulation/CMSSW/L1MultiJetProducer.cc L1Trigger/Phase2L1ParticleFlow/plugins
@@ -78,7 +78,7 @@ mv ../../emulation/CMSSW/MultiJetId.cc L1Trigger/Phase2L1ParticleFlow/src
 mv ../../emulation/CMSSW/MultiJetId.h L1Trigger/Phase2L1ParticleFlow/interface
 mv ../../emulation/CMSSW/SimL1Emulator_cff.py L1Trigger/Configuration/python
 mv ../../emulation/MultiJetTaggerMinimal .
-mv ../../OutputSynthesis/regression/Training_2024_22_08_vTEST/firmware MultiJetTaggerMinimal/MultiJetMinimal_test
+mv ../../outputSynthesis/regression/Training_2024_22_08_vTEST/firmware MultiJetTaggerMinimal/MultiJetMinimal_test
 cd MultiJetTaggerMinimal
 ./setup.sh
 cd ..

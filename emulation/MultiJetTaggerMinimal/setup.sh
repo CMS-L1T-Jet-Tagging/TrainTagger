@@ -1,5 +1,5 @@
 mkdir -p MultiJetMinimal_test/NN
-SRC=OutputSynthesis/regression/Training_2024_22_08_vTEST/firmware/
+SRC=MultiJetMinimal_test/firmware
 
 cp -r $SRC/defines.h   MultiJetMinimal_test/NN/
 cp    $SRC/myproject.cpp   MultiJetMinimal_test/NN/MultiJetMinimal_test.cpp

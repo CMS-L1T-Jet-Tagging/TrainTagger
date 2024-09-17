@@ -141,7 +141,7 @@ process.jetntuple = cms.EDAnalyzer("JetNTuplizer",
     genJetsFlavour = cms.InputTag("genFlavourInfo"),
     vtx = cms.InputTag("l1tVertexFinderEmulator","L1VerticesEmulation"),
     bjetIDs = cms.InputTag("l1tBJetProducerPuppiCorrectedEmulator", "L1PFBJets"),
-    multijetIDs = cms.InputTag("l1tMultiJetProducerPuppi", "L1PFMultiJets"),
+    multijetIDs = cms.InputTag("l1tMultiJetProducerPuppiCorrectedEmulator", "L1PFMultiJets"),
     # bjetIDs = cms.InputTag("l1tBJetProducerPuppiEmulator", "L1PFBJets"),
 
     electrons = cms.InputTag("l1tLayer2EG","L1CtTkElectron"),

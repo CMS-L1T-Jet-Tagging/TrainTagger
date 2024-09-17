@@ -37,22 +37,24 @@ void MultiJetId::setNNVectorVar() {
   }
 }
 
-ap_fixed<20, 9> MultiJetId::EvaluateNNFixed() {
-  ap_fixed<20, 9> modelInput[110] = {};   // Do somet
+ap_fixed<20, 9, AP_RND, AP_SAT> MultiJetId::EvaluateNNFixed() {
+  ap_fixed<20, 9, AP_RND, AP_SAT> modelInput[176] = {};   // Do something
   for (unsigned int i = 0; i < NNvectorVar_.size(); i++) {
     modelInput[i] = NNvectorVar_[i];
   }
-  ap_fixed<20, 9> modelResult[1] = {-1};
+  
+  ap_fixed<20, 9, AP_RND, AP_SAT> modelResult[9] = {-1,-1,-1,-1,-1,-1,-1,-1,-1};
 
   modelRef_->prepare_input(modelInput);
   modelRef_->predict();
   modelRef_->read_result(modelResult);
-  ap_fixed<20, 9> modelResult_ = modelResult[0];
+  ap_fixed<20, 9, AP_RND, AP_SAT> modelResult_ = modelResult[0];
+  std::cout << modelResult[0] << std::endl;
   return modelResult_;
 }  //end EvaluateNNFixed
 
 
-ap_fixed<20, 9> MultiJetId::computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt) {
+ap_fixed<20, 9, AP_RND, AP_SAT> MultiJetId::computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt) {
   for (int i0 = 0; i0 < fNParticles_; i0++) {
     fPt_.get()[i0] = 0;
     fEta_.get()[i0] = 0;

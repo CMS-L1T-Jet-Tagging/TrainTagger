@@ -65,6 +65,12 @@ done
 perl -ne 'm/Calibration|DQM|Ntuples|HLTrigger|EventFilter.L1TRawToDigi/ or print' -i .git/info/sparse-checkout
 git read-tree -mu HEAD
 
+ls 
+ls ..
+ls ../..
+pwd
+
+ls ../../
 # Deal with Emulator
 mv ../../emulation/CMSSW/L1MultiJetProducer_cff.py L1Trigger/Phase2L1ParticleFlow/python
 mv ../../emulation/CMSSW/L1MultiJetProducer.cc L1Trigger/Phase2L1ParticleFlow/plugins

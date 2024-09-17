@@ -25,10 +25,7 @@ echo "git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CM
 git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f 2>&1 | grep -v 'new tag.*CMSSW'
 [[ "$CMSSW_L1CT_TAG" != "" ]] && echo git checkout -b latest_tag ${CMSSW_L1CT_TAG}
 [[ "$CMSSW_L1CT_TAG" != "" ]] && git checkout -b latest_tag ${CMSSW_L1CT_TAG}
-if [[ "${CI_JOB_ID}" != "" ]]; then
-    git config user.email gpetrbot@cern.ch
-    git config user.name "CI bot"
-fi;
+
 if [[ "$CMSSW_PR" != "" ]]; then 
     echo "Including CMSSW PR ${CMSSW_PR}"
     if echo ${CMSSW_PR} | grep -q ":"; then
@@ -105,6 +102,10 @@ fi;
 scram b 2>&1 || exit 1
 
 if [[ "$RUN" == "false" ]]; then exit 0; fi
+
+
+git config user.email chris.brown@fpsl.net
+git config user.name "Chriisbrown"
 
 git clone git@github.com:CMS-L1T-Jet-Tagging/FastPUPPI.git -b dev/14_0_X-leptons
 

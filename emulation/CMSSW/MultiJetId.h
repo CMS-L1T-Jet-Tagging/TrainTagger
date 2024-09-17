@@ -18,8 +18,8 @@ public:
   ~MultiJetId() = default;
 
   void setNNVectorVar();
-  ap_fixed<20, 9, AP_RND, AP_SAT> EvaluateNNFixed();
-  ap_fixed<20, 9, AP_RND, AP_SAT> computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt);
+  std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> EvaluateNNFixed();
+  std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt);
 
 private:
   std::vector<float> NNvectorVar_;

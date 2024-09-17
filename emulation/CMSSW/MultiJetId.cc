@@ -37,7 +37,7 @@ void MultiJetId::setNNVectorVar() {
   }
 }
 
-ap_fixed<20, 9, AP_RND, AP_SAT> MultiJetId::EvaluateNNFixed() {
+std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::EvaluateNNFixed() {
   ap_fixed<20, 9, AP_RND, AP_SAT> modelInput[176] = {};   // Do something
   for (unsigned int i = 0; i < NNvectorVar_.size(); i++) {
     modelInput[i] = NNvectorVar_[i];
@@ -48,13 +48,25 @@ ap_fixed<20, 9, AP_RND, AP_SAT> MultiJetId::EvaluateNNFixed() {
   modelRef_->prepare_input(modelInput);
   modelRef_->predict();
   modelRef_->read_result(modelResult);
-  ap_fixed<20, 9, AP_RND, AP_SAT> modelResult_ = modelResult[0];
-  std::cout << modelResult[0] << std::endl;
+  std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> modelResult_;
+  for (unsigned int i = 0; i < 9; i++) {
+    modelResult_.push_back(modelResult[i]);
+  }
+  // std::cout << "ID 1:" << modelResult[0]
+  //           << "ID 2:" << modelResult[1] 
+  //           << "ID 3:" << modelResult[2] 
+  //           << "ID 4:" << modelResult[3] 
+  //           << "ID 5:" << modelResult[4] 
+  //           << "ID 6:" << modelResult[5] 
+  //           << "ID 7:" << modelResult[6] 
+  //           << "ID 8:" << modelResult[7] 
+  //           << "PT Regression:" << modelResult[8] 
+  //           << std::endl;
   return modelResult_;
 }  //end EvaluateNNFixed
 
 
-ap_fixed<20, 9, AP_RND, AP_SAT> MultiJetId::computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt) {
+std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt) {
   for (int i0 = 0; i0 < fNParticles_; i0++) {
     fPt_.get()[i0] = 0;
     fEta_.get()[i0] = 0;

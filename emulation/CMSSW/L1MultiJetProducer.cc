@@ -56,7 +56,7 @@ L1MultiJetProducer::L1MultiJetProducer(const edm::ParameterSet& cfg)
       loader(hls4mlEmulator::ModelLoader(cfg.getParameter<string>("MultiJetPath"))) {
   model = loader.load_model();
   fJetId_ = std::make_unique<MultiJetId>(model, fNParticles_);
-  produces<edm::ValueMap<float>>("L1PFMultiJets");
+  produces<edm::ValueMap<std::vector<float>>>("L1PFMultiJets");
 }
 
 void L1MultiJetProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -74,23 +74,27 @@ void L1MultiJetProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   }
 
 
-  std::vector<float> jetScores;
+  std::vector<std::vector<float>> jetScores;
 
   for (const auto& srcjet : *jets) {
     if (((fUseRawPt_ ? srcjet.rawPt() : srcjet.pt()) < fMinPt_) || std::abs(srcjet.eta()) > fMaxEta_ ||
         jetScores.size() >= fMaxJets_) {
-      jetScores.push_back(-1.);
+      jetScores.push_back({-1.,-1.,-1.,-1.,-1.,-1.,-1.,-1.,-1.});
       continue;
     }
-    ap_fixed<20, 9> JetScore = fJetId_->computeFixed(srcjet, vz, fUseRawPt_);
-    jetScores.push_back(JetScore);
+    std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> JetScore_ap_fixed = fJetId_->computeFixed(srcjet, vz, fUseRawPt_);
+    std::vector<float> JetScore_float;
+    for (unsigned int i = 0; i < JetScore_ap_fixed.size(); i++) {
+       JetScore_float.push_back(JetScore_ap_fixed[i]);
+    }
+
+    jetScores.push_back(JetScore_float);
   }
 
-  auto outT = std::make_unique<edm::ValueMap<float>>();
-  edm::ValueMap<float>::Filler fillerT(*outT);
+  auto outT = std::make_unique<edm::ValueMap<std::vector<float>>>();
+  edm::ValueMap<std::vector<float>>::Filler fillerT(*outT);
   fillerT.insert(jets, jetScores.begin(), jetScores.end());
   fillerT.fill();
-
   iEvent.put(std::move(outT), "L1PFMultiJets");
 }
 

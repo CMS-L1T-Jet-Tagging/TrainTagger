@@ -168,7 +168,7 @@ class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,edm::
         edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> genJetsFlavour_;
         edm::EDGetTokenT<std::vector<l1t::VertexWord>> const fVtxEmu_;
         edm::EDGetTokenT<edm::ValueMap<float>> const bjetids_;
-        edm::EDGetTokenT<edm::ValueMap<float>> const multijetids_;
+        edm::EDGetTokenT<edm::ValueMap<std::vector<float>>> const multijetids_;
         // const edm::InputTag pileupInfoTag_;
         TTree *tree_;
         uint32_t run_, lumi_; uint64_t event_;
@@ -252,7 +252,17 @@ class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,edm::
     // float jet_pz_;
 
     float jet_bjetscore_;
-    float jet_multijetscore_;
+
+    float jet_multijetscore1_;
+    float jet_multijetscore2_;
+    float jet_multijetscore3_;
+    float jet_multijetscore4_;
+    float jet_multijetscore5_;
+    float jet_multijetscore6_;
+    float jet_multijetscore7_;
+    float jet_multijetscore8_;
+    float jet_multijetscoreRegression_;
+
     float jet_tauscore_;
     float jet_eletkiso_;
     float jet_elepfiso_;
@@ -378,7 +388,7 @@ JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig) :
     genJetsFlavour_   (consumes<reco::JetFlavourInfoMatchingCollection >    (iConfig.getParameter<edm::InputTag>("genJetsFlavour"))),
     fVtxEmu_(consumes<std::vector<l1t::VertexWord>>(iConfig.getParameter<edm::InputTag>("vtx"))),
     bjetids_(consumes<edm::ValueMap<float>>(iConfig.getParameter<edm::InputTag>("bjetIDs"))),
-    multijetids_(consumes<edm::ValueMap<float>>(iConfig.getParameter<edm::InputTag>("multijetIDs")))
+    multijetids_(consumes<edm::ValueMap<std::vector<float>>>(iConfig.getParameter<edm::InputTag>("multijetIDs")))
 {
     usesResource("TFileService");
     edm::Service<TFileService> fs;
@@ -401,7 +411,15 @@ JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig) :
     // tree_->Branch("jet_pz", &jet_pz_);
 
     tree_->Branch("jet_bjetscore", &jet_bjetscore_);
-    tree_->Branch("jet_multijetscore", &jet_multijetscore_);
+    tree_->Branch("jet_multijetscore1", &jet_multijetscore1_);
+    tree_->Branch("jet_multijetscore2", &jet_multijetscore2_);
+    tree_->Branch("jet_multijetscore3", &jet_multijetscore3_);
+    tree_->Branch("jet_multijetscore4", &jet_multijetscore4_);
+    tree_->Branch("jet_multijetscore5", &jet_multijetscore5_);
+    tree_->Branch("jet_multijetscore6", &jet_multijetscore6_);
+    tree_->Branch("jet_multijetscore7", &jet_multijetscore7_);
+    tree_->Branch("jet_multijetscore8", &jet_multijetscore8_);
+    tree_->Branch("jet_multijetscoreRegression", &jet_multijetscoreRegression_);
     tree_->Branch("jet_tauscore", &jet_tauscore_);
     tree_->Branch("jet_eletkiso", &jet_eletkiso_);
     tree_->Branch("jet_elepfiso", &jet_elepfiso_);
@@ -595,7 +613,7 @@ JetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     edm::Handle<edm::ValueMap<float>> bjetIDhandle;
     iEvent.getByToken(bjetids_, bjetIDhandle);
 
-    edm::Handle<edm::ValueMap<float>> multijetIDhandle;
+    edm::Handle<edm::ValueMap<std::vector<float>>> multijetIDhandle;
     iEvent.getByToken(multijetids_, multijetIDhandle);
 
     // gen jets
@@ -678,7 +696,17 @@ JetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         // jet_pz_ = jetv_l1[i]->pz();
 
         jet_bjetscore_ = (*bjetIDhandle)[jetv_l1[i]];
-        jet_multijetscore_ = (*multijetIDhandle)[jetv_l1[i]];
+        std::vector<float> jetscores = (*multijetIDhandle)[jetv_l1[i]];
+        jet_multijetscore1_ = jetscores[0];
+        jet_multijetscore2_ = jetscores[1];
+        jet_multijetscore3_ = jetscores[2];
+        jet_multijetscore4_ = jetscores[3];
+        jet_multijetscore5_ = jetscores[4];
+        jet_multijetscore6_ = jetscores[5];
+        jet_multijetscore7_ = jetscores[6];
+        jet_multijetscore8_ = jetscores[7];
+        jet_multijetscoreRegression_ = jetscores[8];
+        
 
         // match to GEN
         int   pos_matched = -1;

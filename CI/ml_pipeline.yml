@@ -5,8 +5,8 @@ stages:
   - data
   - train
   - evaluate
-  - cmssw-setup
   - synth
+  - cmssw-setup
    
 variables:
     Model: DeepSet

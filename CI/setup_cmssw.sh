@@ -65,6 +65,30 @@ done
 perl -ne 'm/Calibration|DQM|Ntuples|HLTrigger|EventFilter.L1TRawToDigi/ or print' -i .git/info/sparse-checkout
 git read-tree -mu HEAD
 
+# Deal with Emulator
+mv ../../emulation/CMSSW/L1MultiJetProducer_cff.py L1Trigger/Phase2L1ParticleFlow/python
+mv ../../emulation/CMSSW/L1MultiJetProducer.cc L1Trigger/Phase2L1ParticleFlow/plugins
+mv ../../emulation/CMSSW/MultiJetId.cc L1Trigger/Phase2L1ParticleFlow/src
+mv ../../emulation/CMSSW/MultiJetId.h L1Trigger/Phase2L1ParticleFlow/interface
+mv ../../emulation/CMSSW/SimL1Emulator_cff.py L1Trigger/Configuration/python
+mv ../../emulation/MultiJetTaggerMinimal .
+mv ../../OutputSynthesis/regression/Training_2024_22_08_vTEST/firmware MultiJetTaggerMinimal/MultiJetMinimal_test
+cd MultiJetTaggerMinimal
+./setup.sh
+cd ..
+
+git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
+  cd hls4mlEmulatorExtras &&
+  git checkout -b v1.1.1 tags/v1.1.1
+make 
+make install
+cd ..
+git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
+cd MultiJetTaggerMinimal 
+make 
+make install
+cd ..
+
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
 scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'
 if grep -q 'out of memory' ../compilation.log; then
@@ -76,10 +100,16 @@ scram b 2>&1 || exit 1
 
 if [[ "$RUN" == "false" ]]; then exit 0; fi
 
-test -d ../../dumpfiles || mkdir ../../dumpfiles
-test -d ../../patternfiles || mkdir ../../patternfiles
+git clone git@github.com:CMS-L1T-Jet-Tagging/FastPUPPI.git -b dev/14_0_X-leptons
 
-cd L1Trigger/Phase2L1ParticleFlow/test
+cd FastPUPPI/NtupleProducer/
+
+mv ../../../../emulation/CMSSW/JetNTuplizer.cc plugins
+mv ../../../../emulation/CMSSW/runPerformanceNTuple.py python
+
+cd python
+
+cmsenv
 
 ## See if can read from EOS
 if [[ "$(id -gn)" == "zh" ]] && test -d /eos/cms/store/cmst3 ; then
@@ -87,10 +117,8 @@ if [[ "$(id -gn)" == "zh" ]] && test -d /eos/cms/store/cmst3 ; then
 else
     echo "Temporary workaround to get the input files"
     curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
-    echo 'process.source.fileNames = ["file:inputs131X_1.root"]' >> make_l1ct_binaryFiles_cfg.py
+    echo 'process.source.fileNames = ["file:inputs131X_1.root"]' >> runPerformanceNTuple.py
 fi
-cmsRun make_l1ct_binaryFiles_cfg.py --tm18 2>&1 | tee cmsRun.log
+cmsRun runPerformanceNTuple.py --tm18 2>&1 | tee cmsRun.log
 mv -v cmsRun.log  ../../../..
 mv -v *.dump  ../../../../../dumpfiles/
-# for now we only copy the first few pattern files (as a test)
-mv -v *_{0,1,2,3,4}.txt*  ../../../../../patternfiles/

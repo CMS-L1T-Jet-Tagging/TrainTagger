@@ -86,17 +86,6 @@ make
 make install
 cd ..
 
-if [[ "$COMPILE" == "false" ]]; then exit 0; fi
-scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'
-if grep -q 'out of memory' ../compilation.log; then
-    for retry in 1 2 3; do
-        scram b -j 2 -k 2>&1 | tee -a ../compilation.log | grep '^>>\|[Ee]rror\|out of memory' | grep -v 'Compiling python3 modules\|Package\|Product Rules\|symlink'
-    done;
-fi;
-scram b 2>&1 || exit 1
-
-if [[ "$RUN" == "false" ]]; then exit 0; fi
-
 
 git config user.email chris.brown@fpsl.net
 git config user.name "Chriisbrown"
@@ -108,7 +97,20 @@ cd FastPUPPI/NtupleProducer/
 mv ../../../../emulation/CMSSW/JetNTuplizer.cc plugins
 mv ../../../../emulation/CMSSW/runPerformanceNTuple.py python
 
-cd python
+cd ../.. 
+
+if [[ "$COMPILE" == "false" ]]; then exit 0; fi
+scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'
+if grep -q 'out of memory' ../compilation.log; then
+    for retry in 1 2 3; do
+        scram b -j 2 -k 2>&1 | tee -a ../compilation.log | grep '^>>\|[Ee]rror\|out of memory' | grep -v 'Compiling python3 modules\|Package\|Product Rules\|symlink'
+    done;
+fi;
+scram b 2>&1 || exit 1
+
+if [[ "$RUN" == "false" ]]; then exit 0; fi
+
+cd FastPUPPI/NtupleProducer/python
 
 cmsenv
 

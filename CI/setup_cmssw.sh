@@ -107,7 +107,7 @@ if [[ "$RUN" == "false" ]]; then exit 0; fi
 git config user.email chris.brown@fpsl.net
 git config user.name "Chriisbrown"
 
-git clone git@github.com:CMS-L1T-Jet-Tagging/FastPUPPI.git -b dev/14_0_X-leptons
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b dev/14_0_X-leptons
 
 cd FastPUPPI/NtupleProducer/
 

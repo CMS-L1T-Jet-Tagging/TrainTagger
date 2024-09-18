@@ -65,12 +65,6 @@ done
 perl -ne 'm/Calibration|DQM|Ntuples|HLTrigger|EventFilter.L1TRawToDigi/ or print' -i .git/info/sparse-checkout
 git read-tree -mu HEAD
 
-ls 
-ls ..
-ls ../..
-pwd
-
-ls ../../outputSynthesis/regression/
 # Deal with Emulator
 mv ../../emulation/CMSSW/L1MultiJetProducer_cff.py L1Trigger/Phase2L1ParticleFlow/python
 mv ../../emulation/CMSSW/L1MultiJetProducer.cc L1Trigger/Phase2L1ParticleFlow/plugins
@@ -118,13 +112,10 @@ cd python
 cmsenv
 
 ## See if can read from EOS
-if [[ "$(id -gn)" == "zh" ]] && test -d /eos/cms/store/cmst3 ; then
-    echo "Will read input files from CMS T3 system"
-else
-    echo "Temporary workaround to get the input files"
-    curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
-    echo 'process.source.fileNames = ["file:inputs131X_1.root"]' >> runPerformanceNTuple.py
-fi
+
+echo "Temporary workaround to get the input files"
+curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
+
 cmsRun runPerformanceNTuple.py --tm18 2>&1 | tee cmsRun.log
 mv -v cmsRun.log  ../../../..
 mv -v *.dump  ../../../../../dumpfiles/

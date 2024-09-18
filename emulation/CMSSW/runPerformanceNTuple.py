@@ -305,7 +305,7 @@ def addMultitagging(): #extended TRK
     process.load("L1Trigger.Phase2L1ParticleFlow.L1MultiJetProducer_cff")
     process.l1tMultiJetProducerPuppiCorrectedEmulator.jets = cms.InputTag("l1tSC4PFL1PuppiExtendedEmulator")
     process.l1tMultiJetProducerPuppiCorrectedEmulator.maxJets = cms.int32(500)
-    process.l1tMultiJetProducerPuppiCorrectedEmulator.MultiJetPath = cms.string("../../../MultiJetTagger/MultiJetMinimal_test")
+    process.l1tMultiJetProducerPuppiCorrectedEmulator.MultiJetPath = cms.string("/builds/cebrown/TrainTagger/CMSSW_14_0_0_pre3/src/MultiJetTaggerMinimal/MultiJetMinimal_test")
     process.extraPFStuff.add(process.L1TMultiJetsTask)
     #process.l1pfjetTable.jets.scPuppiBJet = cms.InputTag('l1tBJetProducerPuppiCorrectedEmulator')    
 

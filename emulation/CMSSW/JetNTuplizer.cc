@@ -411,15 +411,15 @@ JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig) :
     // tree_->Branch("jet_pz", &jet_pz_);
 
     tree_->Branch("jet_bjetscore", &jet_bjetscore_);
-    tree_->Branch("jet_multijetscore1", &jet_multijetscore1_);
-    tree_->Branch("jet_multijetscore2", &jet_multijetscore2_);
-    tree_->Branch("jet_multijetscore3", &jet_multijetscore3_);
-    tree_->Branch("jet_multijetscore4", &jet_multijetscore4_);
-    tree_->Branch("jet_multijetscore5", &jet_multijetscore5_);
-    tree_->Branch("jet_multijetscore6", &jet_multijetscore6_);
-    tree_->Branch("jet_multijetscore7", &jet_multijetscore7_);
-    tree_->Branch("jet_multijetscore8", &jet_multijetscore8_);
-    tree_->Branch("jet_multijetscoreRegression", &jet_multijetscoreRegression_);
+    tree_->Branch("jet_multijetscore_b", &jet_multijetscore1_);
+    tree_->Branch("jet_multijetscore_uds", &jet_multijetscore2_);
+    tree_->Branch("jet_multijetscore_g", &jet_multijetscore3_);
+    tree_->Branch("jet_multijetscore_c", &jet_multijetscore4_);
+    tree_->Branch("jet_multijetscore_taup", &jet_multijetscore5_);
+    tree_->Branch("jet_multijetscore_taum", &jet_multijetscore6_);
+    tree_->Branch("jet_multijetscore_muon", &jet_multijetscore7_);
+    tree_->Branch("jet_multijetscore_electron", &jet_multijetscore8_);
+    tree_->Branch("jet_multijetscore_regression", &jet_multijetscoreRegression_);
     tree_->Branch("jet_tauscore", &jet_tauscore_);
     tree_->Branch("jet_eletkiso", &jet_eletkiso_);
     tree_->Branch("jet_elepfiso", &jet_elepfiso_);

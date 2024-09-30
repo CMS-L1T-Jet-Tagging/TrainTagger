@@ -8,14 +8,27 @@ MultiJetId::MultiJetId(const std::shared_ptr<hls4mlEmulator::Model> model,
   NNvectorVar_.clear();
   fNParticles_ = iNParticles;
 
-  fPt_ = std::make_unique<float[]>(fNParticles_);
-  fEta_ = std::make_unique<float[]>(fNParticles_);
-  fPhi_ = std::make_unique<float[]>(fNParticles_);
-  fId_ = std::make_unique<float[]>(fNParticles_);
-  fCharge_ = std::make_unique<int[]>(fNParticles_);
-  fDZ_ = std::make_unique<float[]>(fNParticles_);
-  fDX_ = std::make_unique<float[]>(fNParticles_);
-  fDY_ = std::make_unique<float[]>(fNParticles_);
+  fPt_rel_phys_ = std::make_unique<float[]>(fNParticles_);
+  fDEta_phys_ = std::make_unique<float[]>(fNParticles_);
+  fDPhi_phys_ = std::make_unique<float[]>(fNParticles_);
+  fPt_log_ = std::make_unique<float[]>(fNParticles_);
+  fEta_phys_ = std::make_unique<float[]>(fNParticles_);
+  fPhi_phys_ = std::make_unique<float[]>(fNParticles_);
+  fMass_ = std::make_unique<float[]>(fNParticles_);
+  fIs_photon_ = std::make_unique<int[]>(fNParticles_);
+  fIs_electron_plus_ = std::make_unique<int[]>(fNParticles_);
+  fIs_electron_minus_ = std::make_unique<int[]>(fNParticles_);
+  fIs_muon_plus_ = std::make_unique<int[]>(fNParticles_);
+  fIs_muon_minus_ = std::make_unique<int[]>(fNParticles_);
+  fIs_neutral_hadron_ = std::make_unique<int[]>(fNParticles_);
+  fIs_charged_hadron_plus_ = std::make_unique<int[]>(fNParticles_);
+  fIs_charged_hadron_minus_ = std::make_unique<int[]>(fNParticles_);
+  fZ0_ = std::make_unique<float[]>(fNParticles_);
+  fDxy_phys_ = std::make_unique<float[]>(fNParticles_);
+  fIs_filled_ = std::make_unique<int[]>(fNParticles_);
+  fPuppi_weight_ = std::make_unique<float[]>(fNParticles_);
+  fEmID_ = std::make_unique<int[]>(fNParticles_);
+  fQuality_ = std::make_unique<int[]>(fNParticles_);
 
 }
 
@@ -23,9 +36,13 @@ MultiJetId::MultiJetId(const std::shared_ptr<hls4mlEmulator::Model> model,
 void MultiJetId::setNNVectorVar() {
   NNvectorVar_.clear();
   for (int i0 = 0; i0 < fNParticles_; i0++) {
-    NNvectorVar_.push_back(fPt_.get()[i0]); //pT as a fraction of jet pT
-    NNvectorVar_.push_back(fEta_.get()[i0]);  //dEta from jet axis
-    NNvectorVar_.push_back(fPhi_.get()[i0]);  //dPhi from jet axis
+    NNvectorVar_.push_back(fPt_rel_phys_.get()[i0]); //pT as a fraction of jet pT
+    NNvectorVar_.push_back(fDEta_phys_.get()[i0]);  //dEta from jet axis
+    NNvectorVar_.push_back(fDPhi_phys_.get()[i0]);  //dPhi from jet axis
+    NNvectorVar_.push_back(fPt_log_.get()[i0]);  // pt log 
+    NNvectorVar_.push_back(fEta_phys_.get()[i0]);  // eta
+    NNvectorVar_.push_back(fPhi_phys_.get()[i0]);  // phi
+    NNvectorVar_.push_back(fMass_.get()[i0]);  // Mass
     NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::Photon);  // Photon
     NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::Electron && fCharge_.get()[i0] > 0);       // Positron
     NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::Electron && fCharge_.get()[i0] < 0);       // Electron
@@ -33,12 +50,18 @@ void MultiJetId::setNNVectorVar() {
     NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::Muon && fCharge_.get()[i0] < 0);           // Muon
     NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::NeutralHadron);                            // Neutral Had
     NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::ChargedHadron && fCharge_.get()[i0] > 0);  // Anti-Pion
-    NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::ChargedHadron && fCharge_.get()[i0] < 0);  // Pion    
+    NNvectorVar_.push_back(fId_.get()[i0] == l1t::PFCandidate::ChargedHadron && fCharge_.get()[i0] < 0);  // Pion 
+    NNvectorVar_.push_back((fZ0_.get())[i0]);  // z0  
+    NNvectorVar_.push_back((fDxy_phys_.get())[i0]);  // dxy
+    NNvectorVar_.push_back((fIs_filled_.get())[i0]);  // isfilled
+    NNvectorVar_.push_back((fPuppi_weight_.get())[i0]);  // puppi weight
+    NNvectorVar_.push_back((fEmID_.get())[i0]);  // emID
+    NNvectorVar_.push_back((fQuality_.get())[i0]);  // quality
   }
 }
 
 std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::EvaluateNNFixed() {
-  ap_fixed<20, 9, AP_RND, AP_SAT> modelInput[176] = {};   // Do something
+  ap_fixed<20, 9, AP_RND, AP_SAT> modelInput[336] = {};   // Do something
   for (unsigned int i = 0; i < NNvectorVar_.size(); i++) {
     modelInput[i] = NNvectorVar_[i];
   }
@@ -68,14 +91,27 @@ std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::EvaluateNNFixed() {
 
 std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt) {
   for (int i0 = 0; i0 < fNParticles_; i0++) {
-    fPt_.get()[i0] = 0;
-    fEta_.get()[i0] = 0;
-    fPhi_.get()[i0] = 0;
-    fId_.get()[i0] = 0;
-    fCharge_.get()[i0] = 0;
-    fDZ_.get()[i0] = 0;
-    fDX_.get()[i0] = 0;
-    fDY_.get()[i0] = 0;
+    fPt_rel_phys_.get()[i0] = 0;
+    fDEta_phys_.get()[i0] = 0;
+    fDPhi_phys_.get()[i0] = 0;
+    fPt_log_.get()[i0] = 0;
+    fEta_phys_.get()[i0] = 0;
+    fPhi_phys_.get()[i0] = 0;
+    fMass_.get()[i0] = 0;
+    fIs_photon_.get()[i0] = 0;
+    fIs_electron_plus_.get()[i0] = 0;
+    fIs_electron_minus_.get()[i0] = 0;
+    fIs_muon_plus_.get()[i0] = 0;
+    fIs_neutral_hadron_.get()[i0] = 0;
+    fIs_charged_hadron_plus_.get()[i0] = 0;
+    fIs_charged_hadron_minus_.get()[i0] = 0;
+    fZ0_.get()[i0] = 0;
+    fDxy_phys_.get()[i0] = 0;
+    fIs_filled_.get()[i0] = 0;
+    fPuppi_weight_.get()[i0] = 0;
+    fEmID_.get()[i0] = 0;
+    fQuality_.get()[i0] = 0;
+
   }
   auto iParts = iJet.constituents();
   std::sort(iParts.begin(), iParts.end(), [](edm::Ptr<l1t::PFCandidate> i, edm::Ptr<l1t::PFCandidate> j) {
@@ -85,16 +121,37 @@ std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::computeFixed(const l1t:
   for (unsigned int i0 = 0; i0 < iParts.size(); i0++) {
     if (i0 >= (unsigned int)fNParticles_)
       break;
-    fPt_.get()[i0] = iParts[i0]->pt() / jetpt;
-    fEta_.get()[i0] = iParts[i0]->eta() - iJet.eta();
-    fPhi_.get()[i0] = deltaPhi(iParts[i0]->phi(), iJet.phi());
-    fId_.get()[i0] = iParts[i0]->id();
-    fCharge_.get()[i0] = iParts[i0]->charge();
-    if (iParts[i0]->pfTrack().isNonnull()) {
-      fDX_.get()[i0] = iParts[i0]->pfTrack()->vx();
-      fDY_.get()[i0] = iParts[i0]->pfTrack()->vy();
-      fDZ_.get()[i0] = iParts[i0]->pfTrack()->vz() - vz;
+    fPt_rel_phys_.get()[i0] = iParts[i0]->pt() / jetpt;
+    fDEta_phys_.get()[i0] = iParts[i0]->eta() - iJet.eta();
+    fDPhi_phys_.get()[i0] = deltaPhi(iParts[i0]->phi(), iJet.phi());
+
+    fPt_log_.get()[i0] = std::log(iParts[i0]->pt());
+
+    fEta_phys_.get()[i0] = iParts[i0]->eta();
+    fPhi_phys_.get()[i0] = iParts[i0]->phi();
+
+    float massCand = 0.13f;
+    if (abs(iParts[i0]->charge())) {
+      if ((iParts[i0]->id() == l1t::PFCandidate::Muon)) {
+        massCand = 0.105;
+      } else if ((iParts[i0]->id() == l1t::PFCandidate::Electron)) {
+        massCand = 0.005;
+      } 
+    } else {
+      massCand = iParts[i0]->id() == l1t::PFCandidate::Photon ? 0.0 : 0.5;
     }
+
+    fMass_.get()[i0] = massCand;
+    fZ0_.get()[i0] = iParts[i0]->z0();
+    fDxy_phys_.get()[i0] = iParts[i0]->dxy();
+    fIs_filled_.get()[i0] = iParts[i0]->pfTrack().isNonnull();
+    fPuppi_weight_.get()[i0] = iParts[i0]->puppiWeight();
+    fEmID_.get()[i0] = iParts[i0]->hwEmID();
+    fQuality_.get()[i0] = iParts[i0]->hwTkQuality();
+
+    fCharge_.get()[i0] = iParts[i0]->charge();
+    fId_.get()[i0] = iParts[i0]->id();
+
   }
   setNNVectorVar();
   return EvaluateNNFixed();

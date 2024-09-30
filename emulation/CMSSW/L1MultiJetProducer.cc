@@ -103,7 +103,7 @@ void L1MultiJetProducer::fillDescriptions(edm::ConfigurationDescriptions& descri
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("jets", edm::InputTag("scPFL1Puppi"));
   desc.add<bool>("useRawPt", true);
-  desc.add<std::string>("MultiJetPath", std::string("L1Trigger/Phase2L1ParticleFlow/data/MultiJetMinimal_test"));
+  desc.add<std::string>("MultiJetPath", std::string("L1Trigger/Phase2L1ParticleFlow/data/MultiJetBaseline"));
   desc.add<int>("maxJets", 16);
   desc.add<int>("nParticles", 16);
   desc.add<double>("minPt", 20);

@@ -68,9 +68,9 @@ mv ../../emulation/CMSSW/L1MultiJetProducer.cc L1Trigger/Phase2L1ParticleFlow/pl
 mv ../../emulation/CMSSW/MultiJetId.cc L1Trigger/Phase2L1ParticleFlow/src
 mv ../../emulation/CMSSW/MultiJetId.h L1Trigger/Phase2L1ParticleFlow/interface
 mv ../../emulation/CMSSW/SimL1Emulator_cff.py L1Trigger/Configuration/python
-mv ../../emulation/MultiJetTaggerMinimal .
-mv ../../outputSynthesis/regression/Training_2024_22_08_vTEST/firmware MultiJetTaggerMinimal/MultiJetMinimal_test
-cd MultiJetTaggerMinimal
+mv ../../emulation/MultiJetTaggerBaseline .
+mv ../../outputSynthesis/regression/Training_2024_22_08_vTEST/firmware MultiJetTaggerBaseline/MultiJetBaseline
+cd MultiJetTaggerBaseline
 ./setup.sh
 cd ..
 
@@ -81,7 +81,7 @@ make
 make install
 cd ..
 git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
-cd MultiJetTaggerMinimal 
+cd MultiJetTaggerBaseline
 make 
 make install
 cd ..

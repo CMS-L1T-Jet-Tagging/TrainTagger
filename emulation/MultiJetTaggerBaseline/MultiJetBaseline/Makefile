@@ -1,6 +1,6 @@
 .PHONY: clean
 
-MultiJetMinimal_test.so: MultiJetMinimal_emulator_test.o MultiJetMinimal_test.o
+MultiJetBaseline.so: MultiJetMinimal_emulator_test.o MultiJetBaseline.o
 	$(CXX) $(CXXFLAGS) $(LD_FLAGS) -shared $^ -o $@
 
 %.o: NN/%.cpp
@@ -10,4 +10,4 @@ MultiJetMinimal_test.so: MultiJetMinimal_emulator_test.o MultiJetMinimal_test.o
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm MultiJetMinimal_emulator_test.o MultiJetMinimal_test.o MultiJetMinimal_test.so
+	rm MultiJetMinimal_emulator_test.o MultiJetBaseline.o MultiJetBaseline.so

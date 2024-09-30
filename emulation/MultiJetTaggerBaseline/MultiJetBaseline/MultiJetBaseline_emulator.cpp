@@ -1,9 +1,9 @@
-#include "NN/MultiJetMinimal_test.h" //include of the top level of HLS model
+#include "NN/MultiJetBaseline.h" //include of the top level of HLS model
 #include "emulator.h" //include of emulator modeling
 #include <any>
 #include "ap_fixed.h"
 
-class MultiJetMinimal_emulator_test : public hls4mlEmulator::Model{
+class MultiJetBaseline_emulator : public hls4mlEmulator::Model{
     private:
         input_t _input[N_INPUT_1_1*N_INPUT_2_1];
         layer24_t _layer24_out[N_LAYER_20];
@@ -18,7 +18,7 @@ class MultiJetMinimal_emulator_test : public hls4mlEmulator::Model{
 
         virtual void predict()
         {
-            MultiJetMinimal_test(_input, _layer24_out, _layer25_out);
+            MultiJetBaseline(_input, _layer24_out, _layer25_out);
         }
 
         virtual void read_result(std::any result)

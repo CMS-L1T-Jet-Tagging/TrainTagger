@@ -24,14 +24,30 @@ public:
 private:
   std::vector<float> NNvectorVar_;
   int fNParticles_;
-  unique_ptr<float[]> fPt_;
-  unique_ptr<float[]> fEta_;
-  unique_ptr<float[]> fPhi_;
-  unique_ptr<float[]> fId_;
+  unique_ptr<float[]> fPt_rel_phys_;
+  unique_ptr<float[]> fDEta_phys_;
+  unique_ptr<float[]> fDPhi_phys_;
+  unique_ptr<float[]> fPt_log_;
+  unique_ptr<float[]> fEta_phys_;
+  unique_ptr<float[]> fPhi_phys_;
+  unique_ptr<float[]> fMass_;
+  unique_ptr<int[]> fIs_photon_;
+  unique_ptr<int[]> fIs_electron_plus_;
+  unique_ptr<int[]> fIs_electron_minus_;
+  unique_ptr<int[]> fIs_muon_plus_;
+  unique_ptr<int[]> fIs_muon_minus_;
+  unique_ptr<int[]> fIs_neutral_hadron_;
+  unique_ptr<int[]> fIs_charged_hadron_plus_;
+  unique_ptr<int[]> fIs_charged_hadron_minus_;
+  unique_ptr<float[]> fZ0_;
+  unique_ptr<float[]> fDxy_phys_;
+  unique_ptr<int[]> fIs_filled_;
+  unique_ptr<float[]> fPuppi_weight_;
+  unique_ptr<int[]> fEmID_;
+  unique_ptr<float[]> fQuality_;
+
   unique_ptr<int[]> fCharge_;
-  unique_ptr<float[]> fDZ_;
-  unique_ptr<float[]> fDX_;
-  unique_ptr<float[]> fDY_;
+  unique_ptr<int[]> fId_;
   std::shared_ptr<hls4mlEmulator::Model> modelRef_;
 };
 #endif

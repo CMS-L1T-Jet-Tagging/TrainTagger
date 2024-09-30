@@ -8,7 +8,7 @@ HLS4ML_INCLUDE := $(EMULATOR_EXTRAS)/include/hls4ml
 INCLUDES := -I$(HLS4ML_INCLUDE) -I$(AP_TYPES) -I$(HLS_ROOT)/include
 #LD_FLAGS := -L$(EMULATOR_EXTRAS)/lib64 -
 LD_FLAGS := -L$(EMULATOR_EXTRAS)/lib64 -lemulator_interface
-ALL_VERSIONS:=MultiJetMinimal_test/MultiJetMinimal_test.so
+ALL_VERSIONS:=MultiJetBaseline/MultiJetBaseline.so
 
 
 .DEFAULT_GOAL := all
@@ -21,10 +21,10 @@ all: $(ALL_VERSIONS)
 install: all
 	@rm -rf $(PREFIX)/lib64
 	@mkdir -p $(PREFIX)/lib64
-	cp MultiJetMinimal_*.so $(PREFIX)/lib64
+	cp MultiJetBaseline*.so $(PREFIX)/lib64
 
 %.so:
 	$(MAKE) -C $(@D) INCLUDES="$(INCLUDES)" LD_FLAGS="$(LD_FLAGS)" CXXFLAGS="$(CXXFLAGS)"
 
 clean:
-	rm MultiJetMinimal_*.so
+	rm MultiJetBaseline*.so

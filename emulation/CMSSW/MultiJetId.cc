@@ -15,20 +15,15 @@ MultiJetId::MultiJetId(const std::shared_ptr<hls4mlEmulator::Model> model,
   fEta_phys_ = std::make_unique<float[]>(fNParticles_);
   fPhi_phys_ = std::make_unique<float[]>(fNParticles_);
   fMass_ = std::make_unique<float[]>(fNParticles_);
-  fIs_photon_ = std::make_unique<int[]>(fNParticles_);
-  fIs_electron_plus_ = std::make_unique<int[]>(fNParticles_);
-  fIs_electron_minus_ = std::make_unique<int[]>(fNParticles_);
-  fIs_muon_plus_ = std::make_unique<int[]>(fNParticles_);
-  fIs_muon_minus_ = std::make_unique<int[]>(fNParticles_);
-  fIs_neutral_hadron_ = std::make_unique<int[]>(fNParticles_);
-  fIs_charged_hadron_plus_ = std::make_unique<int[]>(fNParticles_);
-  fIs_charged_hadron_minus_ = std::make_unique<int[]>(fNParticles_);
   fZ0_ = std::make_unique<float[]>(fNParticles_);
   fDxy_phys_ = std::make_unique<float[]>(fNParticles_);
   fIs_filled_ = std::make_unique<int[]>(fNParticles_);
   fPuppi_weight_ = std::make_unique<float[]>(fNParticles_);
   fEmID_ = std::make_unique<int[]>(fNParticles_);
-  fQuality_ = std::make_unique<int[]>(fNParticles_);
+  fQuality_ = std::make_unique<float[]>(fNParticles_);
+
+  fId_ = std::make_unique<int[]>(fNParticles_);
+  fCharge_ = std::make_unique<int[]>(fNParticles_);
 
 }
 
@@ -75,16 +70,16 @@ std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::EvaluateNNFixed() {
   for (unsigned int i = 0; i < 9; i++) {
     modelResult_.push_back(modelResult[i]);
   }
-  // std::cout << "ID 1:" << modelResult[0]
-  //           << "ID 2:" << modelResult[1] 
-  //           << "ID 3:" << modelResult[2] 
-  //           << "ID 4:" << modelResult[3] 
-  //           << "ID 5:" << modelResult[4] 
-  //           << "ID 6:" << modelResult[5] 
-  //           << "ID 7:" << modelResult[6] 
-  //           << "ID 8:" << modelResult[7] 
-  //           << "PT Regression:" << modelResult[8] 
-  //           << std::endl;
+  std::cout << "ID 1:" << modelResult[0]
+            << "ID 2:" << modelResult[1] 
+            << "ID 3:" << modelResult[2] 
+            << "ID 4:" << modelResult[3] 
+            << "ID 5:" << modelResult[4] 
+            << "ID 6:" << modelResult[5] 
+            << "ID 7:" << modelResult[6] 
+            << "ID 8:" << modelResult[7] 
+            << "PT Regression:" << modelResult[8] 
+            << std::endl;
   return modelResult_;
 }  //end EvaluateNNFixed
 
@@ -98,19 +93,15 @@ std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::computeFixed(const l1t:
     fEta_phys_.get()[i0] = 0;
     fPhi_phys_.get()[i0] = 0;
     fMass_.get()[i0] = 0;
-    fIs_photon_.get()[i0] = 0;
-    fIs_electron_plus_.get()[i0] = 0;
-    fIs_electron_minus_.get()[i0] = 0;
-    fIs_muon_plus_.get()[i0] = 0;
-    fIs_neutral_hadron_.get()[i0] = 0;
-    fIs_charged_hadron_plus_.get()[i0] = 0;
-    fIs_charged_hadron_minus_.get()[i0] = 0;
     fZ0_.get()[i0] = 0;
     fDxy_phys_.get()[i0] = 0;
     fIs_filled_.get()[i0] = 0;
     fPuppi_weight_.get()[i0] = 0;
     fEmID_.get()[i0] = 0;
     fQuality_.get()[i0] = 0;
+
+    fId_.get()[i0] = 0;
+    fCharge_.get()[i0] = 0;
 
   }
   auto iParts = iJet.constituents();
@@ -151,6 +142,22 @@ std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> MultiJetId::computeFixed(const l1t:
 
     fCharge_.get()[i0] = iParts[i0]->charge();
     fId_.get()[i0] = iParts[i0]->id();
+
+    // std::cout << "pT: " << fPt_rel_phys_.get()[i0]
+    //           << "dEta: " <<fDEta_phys_.get()[i0] 
+    //           << "dPhi: " << fDPhi_phys_.get()[i0]
+    //           << "pT log: " << fPt_log_.get()[i0]
+    //           << "eta: " << fEta_phys_.get()[i0]
+    //           << "phi: " << fPhi_phys_.get()[i0]
+    //           << "mass: " << fMass_.get()[i0]
+    //           << "ID: " << fId_.get()[i0]
+    //           << "z0: " << fZ0_.get()[i0]
+    //           << "dxy: " << fDxy_phys_.get()[i0]
+    //           << "Puppi weight: " << fPuppi_weight_.get()[i0]
+    //           << "EM ID: " << fEmID_.get()[i0]
+    //           << "Quality: " << fQuality_.get()[i0]
+    //           << "Charge: " << fCharge_.get()[i0]
+    //           << std::endl;
 
   }
   setNNVectorVar();

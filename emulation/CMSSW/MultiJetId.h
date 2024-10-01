@@ -31,14 +31,6 @@ private:
   unique_ptr<float[]> fEta_phys_;
   unique_ptr<float[]> fPhi_phys_;
   unique_ptr<float[]> fMass_;
-  unique_ptr<int[]> fIs_photon_;
-  unique_ptr<int[]> fIs_electron_plus_;
-  unique_ptr<int[]> fIs_electron_minus_;
-  unique_ptr<int[]> fIs_muon_plus_;
-  unique_ptr<int[]> fIs_muon_minus_;
-  unique_ptr<int[]> fIs_neutral_hadron_;
-  unique_ptr<int[]> fIs_charged_hadron_plus_;
-  unique_ptr<int[]> fIs_charged_hadron_minus_;
   unique_ptr<float[]> fZ0_;
   unique_ptr<float[]> fDxy_phys_;
   unique_ptr<int[]> fIs_filled_;

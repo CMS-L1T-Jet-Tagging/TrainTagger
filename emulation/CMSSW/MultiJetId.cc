@@ -28,7 +28,7 @@ MultiJetId::MultiJetId(const std::shared_ptr<hls4mlEmulator::Model> model,
   fIs_filled_ = std::make_unique<int[]>(fNParticles_);
   fPuppi_weight_ = std::make_unique<float[]>(fNParticles_);
   fEmID_ = std::make_unique<int[]>(fNParticles_);
-  fQuality_ = std::make_unique<int[]>(fNParticles_);
+  fQuality_ = std::make_unique<float[]>(fNParticles_);
 
 }
 

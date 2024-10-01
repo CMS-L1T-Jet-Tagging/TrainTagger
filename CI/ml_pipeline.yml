@@ -67,7 +67,7 @@ train:
   - tar -xvf convertedfiles_train_$Inputs.tgz
   - cd ..
   - source activate l1_training
-  - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2 --pruning
+  - python train/training.py -t data/TTtrain -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2 --pruning
   artifacts:
     paths:
       - trainings_regression_weighted
@@ -88,8 +88,8 @@ evaluate:
   - ls -lh
   - ls trainings_regression_weighted
   - source activate l1_training
-  - python evaluation/makeResultPlot.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_22_08_vTEST --pruning
-  - python evaluation/makeInputPlots.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs
+  - python evaluation/makeResultPlot.py -t data/TTtest -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_22_08_vTEST --pruning
+  - python evaluation/makeInputPlots.py -t data/TTtest -f trainings_regression_weighted -c $Classes -i $Inputs
   artifacts:
     paths:
       - trainings_regression_weighted
@@ -117,7 +117,7 @@ synth:
     - source activate l1_training
     - pwd
     - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
-    - python synthesis/synth.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B --pruning
+    - python synthesis/synth.py -f data/TTtest -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B --pruning
   artifacts:
     paths:
       - outputSynthesis/*

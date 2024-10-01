@@ -35,7 +35,7 @@ class MultiJetBaseline_emulator : public hls4mlEmulator::Model{
 
 extern "C" hls4mlEmulator::Model* create_model()
 {
-    return new MultiJetMinimal_emulator_test;
+    return new MultiJetBaseline_emulator;
 }
 
 extern "C" void destroy_model(hls4mlEmulator::Model* m)

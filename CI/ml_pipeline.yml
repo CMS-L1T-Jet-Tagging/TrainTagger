@@ -114,7 +114,7 @@ synth:
     - git clone https://github.com/jmduarte/hls4ml.git 
     - cd hls4ml
     - git checkout split_pointwise_conv_by_rf_codegen
-    - pip install -y .[profiling]
+    - pip install .[profiling] --quiet
     - cd ..
     - python synthesis/synth.py -f data/All -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_10_10_vTEST -B --pruning
   artifacts:

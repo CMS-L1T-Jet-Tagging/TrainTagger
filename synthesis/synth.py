@@ -56,8 +56,14 @@ def synthesize(
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)
 
-    feature_names = dict_fields[inputSetTag]
-
+    feature_names = ['pt_rel_phys','deta_phys','dphi_phys',
+                        'pt_log','eta_phys','phi_phys', 'mass',
+                        'isPhoton', 'isElectronPlus', 'isElectronMinus', 'isMuonPlus', 'isMuonMinus', 'isNeutralHadron', 'isChargedHadronPlus', 'isChargedHadronMinus',
+                        'z0', 'dxy_phys',
+                        'isfilled',
+                        'puppiweight', 'emid', 'quality',
+                        ]
+    inputSetTag = "VBF"
     chunksmatching = glob.glob(PATH+"X_"+inputSetTag+"_test*.parquet")
     print (PATH+"X_"+inputSetTag+"_test*.parquet")
     chunksmatching = [chunksm.replace(PATH+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
@@ -189,7 +195,7 @@ def synthesize(
 
     # Get inference of model
     if regression:
-        trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + flav + "_" + inputSetTag + "_"
+        trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + flav + "_" + "baseline" + "_"
     else:
         trainingBasePath = "trainings_notreduced/" + filetag + "_" + flav + "_" + inputSetTag + "_"
     modelpath = modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
@@ -250,10 +256,11 @@ def synthesize(
     # inputPrecision = "ap_fixed<18,8,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<12,9,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<14,6,AP_RND,AP_SAT>" #DeepSet
-    # inputPrecision = "ap_fixed<16,6,AP_RND,AP_SAT>"
+    inputPrecision = "ap_fixed<16,6,AP_RND,AP_SAT>"
+    #inputPrecision = "ap_fixed<16,6,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<16,7,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<16,9,AP_RND,AP_SAT>"
-    inputPrecision = "ap_fixed<20,9,AP_RND,AP_SAT>"
+    #inputPrecision = "ap_fixed<20,9,AP_RND,AP_SAT>"
 
     print ("Default generated config")
     print (config)
@@ -285,7 +292,7 @@ def synthesize(
             config["LayerName"][layer.name]["Trace"] = trace
 
     for layerName in config["LayerName"]:
-        config["LayerName"][layerName]["Trace"] = True
+         config["LayerName"][layerName]["Trace"] = True
 
     config["LayerName"]["output_class"]["Precision"]["result"] = inputPrecision
     config["LayerName"]["output_reg"]["Precision"]["result"] = inputPrecision
@@ -320,7 +327,7 @@ def synthesize(
         # config["LayerName"]["qDense_rho1"]["ReuseFactor"] = 1
 
     for layer in model.layers:
-        config["LayerName"][layer.name]["Strategy"] = "latency"
+         config["LayerName"][layer.name]["Strategy"] = "latency"
 
     print("Converting the Keras Model !")
 
@@ -339,18 +346,53 @@ def synthesize(
 
     hls_model.compile()
 
-    # Do plots
-    hls4ml.utils.plot_model(
-        hls_model,
-        show_shapes=True,
-        show_precision=True,
-        to_file=f"{outFolder}/hls4ml_in_plot_{modelname}.png",
-    )
-    tf.keras.utils.plot_model(model, to_file=f"{outFolder}/keras_in_plot_{modelname}.png")
-    tf.keras.utils.plot_model(model, to_file=f"{outFolder}/keras_in_plot_{modelname}.pdf")
+    print( ['pt_rel_phys','deta_phys','dphi_phys','pt_log',
+             'eta_phys','phi_phys', 'mass', 'isPhoton',
+              'isElectronPlus', 'isElectronMinus', 'isMuonPlus', 'isMuonMinus',
+               'isNeutralHadron', 'isChargedHadronPlus', 'isChargedHadronMinus','z0', 
+               'dxy_phys', 'isfilled', 'puppiweight', 'emid', 
+               'quality',
+                        ])
+    #print(X_test[0])
+    test = np.array([[
+                        [0.359498,0.0085562,-0.0521383,4.04743,-0.0959931,2.81871,0,1,0,0,0,0,0,0,0,0,0,1,1,0,0,],
+                        [0.263736,-0.0525303,0.170391,3.73767,-0.0349066,3.04124,0.5,0,0,0,0,0,1,0,0,0,0,1,0.949219,0,0,],
+                        [0.191523,0.0434628,-0.0695918,3.41773,-0.1309,2.80125,0,1,0,0,0,0,0,0,0,0,0,1,0.972656,0,0,],
+                        [0.11617,0.0216462,-0.0346851,2.91777,-0.109083,2.83616,0.5,0,0,0,0,0,1,0,0,0,0,1,0.53125,0,0,],
+                        [0.0690738,-0.0438037,-0.0695918,2.3979,-0.0436332,2.80125,0,1,0,0,0,0,0,0,0,0,0,1,0.546875,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+                        ],],dtype=float)
+
+    print(test.shape)
+
+    test = test
+    y_keras , y_ptreg_keras= model.predict(test)
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(test))
+
+    print(y_keras,y_ptreg_keras)
+    print(y_hls,y_ptreg_hls)
+
+    y_hls, hls4ml_trace = hls_model.trace(test)
+    keras_trace = get_ymodel_keras(model, test, ignoreLayer = False)
+
+    for layer in hls4ml_trace.keys():
+        print(layer)
+        print(hls4ml_trace[layer].flatten())
+        #print(keras_trace[layer].flatten())
 
     y_keras , y_ptreg_keras= model.predict(X_test)
     y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
+
 
     accuracy_keras = float(
         accuracy_score(np.argmax(Y_test, axis=-1), np.argmax(y_keras, axis=-1))
@@ -415,6 +457,8 @@ def synthesize(
 
         y_hls, hls4ml_trace = hls_model.trace(X_test_small)
         keras_trace = get_ymodel_keras(model, X_test_small, ignoreLayer = False)
+
+            
 
         for layer in hls4ml_trace.keys():
             print ("Doing profiling 2d for layer", layer)

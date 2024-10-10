@@ -17,12 +17,14 @@ public:
              int iNParticles);
   ~MultiJetId() = default;
 
+  typedef ap_fixed<16,6> inputtype;
+
   void setNNVectorVar();
-  std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> EvaluateNNFixed();
-  std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> computeFixed(const l1t::PFJet &iJet, float vz, bool useRawPt);
+  std::vector<float> EvaluateNNFixed();
+  std::vector<float>  computeFixed(const l1t::PFJet &iJet, bool useRawPt);
 
 private:
-  std::vector<float> NNvectorVar_;
+  std::vector<inputtype> NNvectorVar_;
   int fNParticles_;
   unique_ptr<float[]> fPt_rel_phys_;
   unique_ptr<float[]> fDEta_phys_;

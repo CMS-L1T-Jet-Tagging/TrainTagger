@@ -39,7 +39,6 @@ private:
   double const fMaxEta_;
   unsigned int const fMaxJets_;
   int const fNParticles_;
-  edm::EDGetTokenT<std::vector<l1t::VertexWord>> const fVtxEmu_;
 
   hls4mlEmulator::ModelLoader loader;
   std::shared_ptr<hls4mlEmulator::Model> model;
@@ -52,7 +51,6 @@ L1MultiJetProducer::L1MultiJetProducer(const edm::ParameterSet& cfg)
       fMaxEta_(cfg.getParameter<double>("maxEta")),
       fMaxJets_(cfg.getParameter<int>("maxJets")),
       fNParticles_(cfg.getParameter<int>("nParticles")),
-      fVtxEmu_(consumes<std::vector<l1t::VertexWord>>(cfg.getParameter<edm::InputTag>("vtx"))),
       loader(hls4mlEmulator::ModelLoader(cfg.getParameter<string>("MultiJetPath"))) {
   model = loader.load_model();
   fJetId_ = std::make_unique<MultiJetId>(model, fNParticles_);
@@ -62,17 +60,6 @@ L1MultiJetProducer::L1MultiJetProducer(const edm::ParameterSet& cfg)
 void L1MultiJetProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   edm::Handle<edm::View<l1t::PFJet>> jets;
   iEvent.getByToken(jets_, jets);
-  float vz = 0.;
-  double ptsum = 0;
-  edm::Handle<std::vector<l1t::VertexWord>> vtxEmuHandle;
-  iEvent.getByToken(fVtxEmu_, vtxEmuHandle);
-  for (const auto& vtx : *vtxEmuHandle) {
-    if (ptsum == 0 || vtx.pt() > ptsum) {
-      ptsum = vtx.pt();
-      vz = vtx.z0();
-    }
-  }
-
 
   std::vector<std::vector<float>> jetScores;
 
@@ -82,12 +69,7 @@ void L1MultiJetProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
       jetScores.push_back({-1.,-1.,-1.,-1.,-1.,-1.,-1.,-1.,-1.});
       continue;
     }
-    std::vector<ap_fixed<20, 9, AP_RND, AP_SAT>> JetScore_ap_fixed = fJetId_->computeFixed(srcjet, vz, fUseRawPt_);
-    std::vector<float> JetScore_float;
-    for (unsigned int i = 0; i < JetScore_ap_fixed.size(); i++) {
-       JetScore_float.push_back(JetScore_ap_fixed[i]);
-    }
-
+    std::vector<float> JetScore_float = fJetId_->computeFixed(srcjet, fUseRawPt_);
     jetScores.push_back(JetScore_float);
   }
 

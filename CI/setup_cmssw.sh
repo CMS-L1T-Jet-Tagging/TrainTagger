@@ -76,7 +76,7 @@ cd ..
 
 git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
   cd hls4mlEmulatorExtras &&
-  git checkout -b v1.1.1 tags/v1.1.1
+  git checkout -b v1.1.3 tags/v1.1.3
 make 
 make install
 cd ..

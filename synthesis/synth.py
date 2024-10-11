@@ -8,7 +8,6 @@ from sklearn.metrics import roc_curve, auc,precision_recall_curve
 import matplotlib.pyplot as plt
 import glob
 import pandas
-from histbook import *
 import sys, os, time
 import hls4ml
 import pickle

@@ -62,7 +62,7 @@ def synthesize(
                         'isfilled',
                         'puppiweight', 'emid', 'quality',
                         ]
-    inputSetTag = "VBF"
+    inputSetTag = "baseline"
     chunksmatching = glob.glob(PATH+"X_"+inputSetTag+"_test*.parquet")
     print (PATH+"X_"+inputSetTag+"_test*.parquet")
     chunksmatching = [chunksm.replace(PATH+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
@@ -301,29 +301,9 @@ def synthesize(
     print ("Changed  config")
     print (config)
 
-    # for layer in model.layers:
-    #     if "qDense_phi" in layer.name:
-    #         if modelArchName in ["DeepSet"]:
-    #             print ("Add custom pointwise implementation for layer", layer.name)
-    #             config["LayerName"][layer.name]["ConvImplementation"] = "Pointwise"
-    #         config["LayerName"][layer.name]["Strategy"] = "Latency"
-
 
     layerNames = [layer.name for layer in model.layers]
 
-
-    # if "qDense_phi1" in layerNames: config["LayerName"]["qDense_phi1"]["ReuseFactor"] = 2
-    # if "qDense_phi2" in layerNames: config["LayerName"]["qDense_phi2"]["ReuseFactor"] = 2
-    # if "qDense_phi3" in layerNames: config["LayerName"]["qDense_phi3"]["ReuseFactor"] = 6
-    # if "qDense_phi4" in layerNames: config["LayerName"]["qDense_phi4"]["ReuseFactor"] = 6
-
-        # config["LayerName"]["qDense_phi1"]["ConvImplementation"] = "Pointwise"
-        # config["LayerName"]["qDense_phi2"]["ConvImplementation"] = "Pointwise"
-        # config["LayerName"]["qDense_phi3"]["ConvImplementation"] = "Pointwise"
-        # config["LayerName"]["qDense_phi1"]["ReuseFactor"] = 2
-        # config["LayerName"]["qDense_phi2"]["ReuseFactor"] = 4
-        # config["LayerName"]["qDense_phi3"]["ReuseFactor"] = 4
-        # config["LayerName"]["qDense_rho1"]["ReuseFactor"] = 1
 
     for layer in model.layers:
          config["LayerName"][layer.name]["Strategy"] = "latency"
@@ -344,50 +324,6 @@ def synthesize(
     print("Compiling the Model !")
 
     hls_model.compile()
-
-    print( ['pt_rel_phys','deta_phys','dphi_phys','pt_log',
-             'eta_phys','phi_phys', 'mass', 'isPhoton',
-              'isElectronPlus', 'isElectronMinus', 'isMuonPlus', 'isMuonMinus',
-               'isNeutralHadron', 'isChargedHadronPlus', 'isChargedHadronMinus','z0', 
-               'dxy_phys', 'isfilled', 'puppiweight', 'emid', 
-               'quality',
-                        ])
-    #print(X_test[0])
-    test = np.array([[
-                        [0.359498,0.0085562,-0.0521383,4.04743,-0.0959931,2.81871,0,1,0,0,0,0,0,0,0,0,0,1,1,0,0,],
-                        [0.263736,-0.0525303,0.170391,3.73767,-0.0349066,3.04124,0.5,0,0,0,0,0,1,0,0,0,0,1,0.949219,0,0,],
-                        [0.191523,0.0434628,-0.0695918,3.41773,-0.1309,2.80125,0,1,0,0,0,0,0,0,0,0,0,1,0.972656,0,0,],
-                        [0.11617,0.0216462,-0.0346851,2.91777,-0.109083,2.83616,0.5,0,0,0,0,0,1,0,0,0,0,1,0.53125,0,0,],
-                        [0.0690738,-0.0438037,-0.0695918,2.3979,-0.0436332,2.80125,0,1,0,0,0,0,0,0,0,0,0,1,0.546875,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-                        ],],dtype=float)
-
-    print(test.shape)
-
-    test = test
-    y_keras , y_ptreg_keras= model.predict(test)
-    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(test))
-
-    print(y_keras,y_ptreg_keras)
-    print(y_hls,y_ptreg_hls)
-
-    y_hls, hls4ml_trace = hls_model.trace(test)
-    keras_trace = get_ymodel_keras(model, test, ignoreLayer = False)
-
-    for layer in hls4ml_trace.keys():
-        print(layer)
-        print(hls4ml_trace[layer].flatten())
-        #print(keras_trace[layer].flatten())
 
     y_keras , y_ptreg_keras= model.predict(X_test)
     y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))

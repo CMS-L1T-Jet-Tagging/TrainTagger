@@ -57,13 +57,7 @@ void MultiJetId::setNNVectorVar() {
 }
 
 std::vector<float> MultiJetId::EvaluateNNFixed() {
-
   const int NInputs = 336;
-  
-  typedef std::array<ap_fixed<16,6>, 8> classtype; 
-  typedef std::array<ap_fixed<16,6>, 1> regressiontype;
-  typedef std::pair<regressiontype, classtype> pairtype;
-
   classtype classresult;
   regressiontype regressionresult;
 
@@ -89,7 +83,6 @@ std::vector<float> MultiJetId::EvaluateNNFixed() {
   for (unsigned int i = 0; i < 8; i++) {
     modelResult_.push_back(classresult[i].to_float());
   }
-  std::cout << regressionresult[0] << std::endl;
   modelResult_.push_back(regressionresult[0].to_float());
 
   return modelResult_;

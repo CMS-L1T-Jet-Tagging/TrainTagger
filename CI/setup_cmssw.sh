@@ -121,4 +121,3 @@ curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar
 
 cmsRun runPerformanceNTuple.py --tm18 2>&1 | tee cmsRun.log
 mv -v cmsRun.log  ../../../..
-mv -v *.dump  ../../../../../dumpfiles/

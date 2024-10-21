@@ -41,7 +41,6 @@ data:
   - ls /opt/Xilinx
   - source activate l1_training
   - mkdir data
-  - ls /eos/user/c/cebrown
   - python datatools/createDataset.py -i $EOSdir/$Dataset -o data/All -t $Inputs
   - cd data 
   - tar -cvf convertedfiles_$Inputs.tgz All

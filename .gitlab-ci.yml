@@ -1,15 +1,58 @@
 include:
   - local: "CI/template.yml"
 
-DeepSet:baseline:
+DeepSet:baseline_4param:
   extends: .ml_pipeline
   variables:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
+    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/'
+    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/baselineTRK_4param_021024'
     Dataset: All200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
     CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
 
+DeepSet:baseline_5param:
+  extends: .ml_pipeline
+  variables:
+    Model: DeepSet
+    Classes: btgc
+    Inputs: baseline
+    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_5param_021024/'
+    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/baselineTRK_5param_021024/'
+    Dataset: All200.root
+    SCRAM_ARCH: 'el8_amd64_gcc11'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
+    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+
+DeepSet:baseline_4param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Model: DeepSet
+    Classes: btgc
+    Inputs: baseline
+    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_021024/'
+    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/extendedTRK_4param_021024/'
+    Dataset: All200.root
+    SCRAM_ARCH: 'el8_amd64_gcc11'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
+    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+
+DeepSet:baseline_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Model: DeepSet
+    Classes: btgc
+    Inputs: baseline
+    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_021024/'
+    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/extendedTRK_5param_021024/'
+    Dataset: All200.root
+    SCRAM_ARCH: 'el8_amd64_gcc11'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
+    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'

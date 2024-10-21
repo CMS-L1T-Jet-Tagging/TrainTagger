@@ -18,8 +18,7 @@ variables:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
     - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
-    - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
-    - mc admin info $ARTIFACTS_ALIAS
+    - printf ${PASSWORD} | base64 -d | kinit ${USERNAME}@CERN.CH
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags:
@@ -40,13 +39,11 @@ data:
   script:
   - source activate l1_training
   - mkdir data
-  - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$Dataset ./
-  - cd ..
-  - python datatools/createDataset.py -i data/$Dataset -o data/All -t $Inputs
+  - python datatools/createDataset.py -i $EOSdir/$Dataset -o data/All -t $Inputs
   - cd data 
   - tar -cvf convertedfiles_$Inputs.tgz All
-  - mc cp convertedfiles_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
+  - mkdir $ConvertedDir
+  - cp convertedfiles_$Inputs.tgz $ConvertedDir
 train:
   extends:
     - .template
@@ -57,7 +54,7 @@ train:
   script:
   - mkdir data
   - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
+  - cp $ConvertedDir/convertedfiles_$Inputs.tgz ./
   - tar -xvf convertedfiles_$Inputs.tgz
   - cd ..
   - source activate l1_training
@@ -76,7 +73,7 @@ evaluate:
   script:
   - mkdir data
   - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
+  - cp $ConvertedDir/convertedfiles_$Inputs.tgz ./
   - tar -xvf convertedfiles_$Inputs.tgz
   - cd ..
   - ls -lh
@@ -106,7 +103,7 @@ synth:
     - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
     - mkdir data
     - cd data
-    - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
+    - cp $ConvertedDir/convertedfiles_$Inputs.tgz ./
     - tar -xvf convertedfiles_$Inputs.tgz
     - cd ..
     - source activate l1_training

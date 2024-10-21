@@ -7,8 +7,8 @@ DeepSet:baseline_4param:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/fp_ntuples_v131Xv9/baselineTRK_4param_021024/'
-    ConvertedDir: '/baselineTRK_4param_021024'
+    EOSdir: 'eosdata/fp_ntuples_v131Xv9/baselineTRK_4param_021024/'
+    ConvertedDir: 'eosupload/baselineTRK_4param_021024'
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
@@ -21,8 +21,8 @@ DeepSet:baseline_5param:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/fp_ntuples_v131Xv9/baselineTRK_5param_021024/'
-    ConvertedDir: '/baselineTRK_5param_021024/'
+    EOSdir: 'eosdata/fp_ntuples_v131Xv9/baselineTRK_5param_021024/'
+    ConvertedDir: 'eosupload/baselineTRK_5param_021024/'
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
@@ -35,8 +35,8 @@ DeepSet:baseline_4param_extended_trk:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/fp_ntuples_v131Xv9/extendedTRK_4param_021024/'
-    ConvertedDir: '/extendedTRK_4param_021024/'
+    EOSdir: 'eosdata/fp_ntuples_v131Xv9/extendedTRK_4param_021024/'
+    ConvertedDir: 'eosupload/extendedTRK_4param_021024/'
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
@@ -49,8 +49,8 @@ DeepSet:baseline_5param_extended_trk:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/fp_ntuples_v131Xv9/extendedTRK_5param_021024/'
-    ConvertedDir: '/extendedTRK_5param_021024/'
+    EOSdir: 'eosdata/fp_ntuples_v131Xv9/extendedTRK_5param_021024/'
+    ConvertedDir: 'eosupload/extendedTRK_5param_021024/'
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'

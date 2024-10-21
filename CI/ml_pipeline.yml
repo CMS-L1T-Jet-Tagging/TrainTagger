@@ -18,7 +18,7 @@ variables:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
     - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
-    - printf ${PASSWORD} | base64 -d | kinit ${USERNAME}@CERN.CH
+    - printf $PASSWORD | base64 -d | kinit $USERNAME@CERN.CH
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags:

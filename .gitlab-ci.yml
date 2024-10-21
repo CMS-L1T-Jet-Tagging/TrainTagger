@@ -7,13 +7,11 @@ DeepSet:baseline_4param:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: 'eosdata/fp_ntuples_v131Xv9/baselineTRK_4param_021024/'
-    ConvertedDir: 'eosupload/baselineTRK_4param_021024'
+    DataDir: baselineTRK_4param_021024
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
-    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
 
 DeepSet:baseline_5param:
   extends: .ml_pipeline
@@ -21,13 +19,10 @@ DeepSet:baseline_5param:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: 'eosdata/fp_ntuples_v131Xv9/baselineTRK_5param_021024/'
-    ConvertedDir: 'eosupload/baselineTRK_5param_021024/'
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
-    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
 
 DeepSet:baseline_4param_extended_trk:
   extends: .ml_pipeline
@@ -35,13 +30,10 @@ DeepSet:baseline_4param_extended_trk:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: 'eosdata/fp_ntuples_v131Xv9/extendedTRK_4param_021024/'
-    ConvertedDir: 'eosupload/extendedTRK_4param_021024/'
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
-    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
 
 DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline
@@ -49,10 +41,7 @@ DeepSet:baseline_5param_extended_trk:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: 'eosdata/fp_ntuples_v131Xv9/extendedTRK_5param_021024/'
-    ConvertedDir: 'eosupload/extendedTRK_5param_021024/'
     Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
-    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'

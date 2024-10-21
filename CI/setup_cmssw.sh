@@ -11,8 +11,6 @@ if [[ "$1" == "-run" ]]; then RUN=true; shift; fi;
 
 CMSSW_VERSION=$1
 CMSSW_L1CT=$2
-CMSSW_L1CT_TAG=$3
-CMSSW_PR=$4
 
 scram p CMSSW ${CMSSW_VERSION}
 cd ${CMSSW_VERSION}/src
@@ -23,19 +21,7 @@ echo "git cms-checkout-topic -u ${CMSSW_L1CT}"
 git cms-checkout-topic -u ${CMSSW_L1CT}
 echo "git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f"
 git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f 2>&1 | grep -v 'new tag.*CMSSW'
-[[ "$CMSSW_L1CT_TAG" != "" ]] && echo git checkout -b latest_tag ${CMSSW_L1CT_TAG}
-[[ "$CMSSW_L1CT_TAG" != "" ]] && git checkout -b latest_tag ${CMSSW_L1CT_TAG}
 
-if [[ "$CMSSW_PR" != "" ]]; then 
-    echo "Including CMSSW PR ${CMSSW_PR}"
-    if echo ${CMSSW_PR} | grep -q ":"; then
-        echo "git cms-merge-topic -u ${CMSSW_PR}"
-        git cms-merge-topic -u ${CMSSW_PR}
-    else
-        echo "git cms-merge-topic -u cms-l1t-offline:${CMSSW_PR}"
-        git cms-merge-topic -u cms-l1t-offline:${CMSSW_PR}
-    fi;
-fi;
 git cms-addpkg DataFormats/L1TParticleFlow
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/DemonstratorTools
@@ -62,17 +48,6 @@ done
 perl -ne 'm/Calibration|DQM|Ntuples|HLTrigger|EventFilter.L1TRawToDigi/ or print' -i .git/info/sparse-checkout
 git read-tree -mu HEAD
 
-# Deal with Emulator
-mv ../../emulation/CMSSW/L1MultiJetProducer_cff.py L1Trigger/Phase2L1ParticleFlow/python
-mv ../../emulation/CMSSW/L1MultiJetProducer.cc L1Trigger/Phase2L1ParticleFlow/plugins
-mv ../../emulation/CMSSW/MultiJetId.cc L1Trigger/Phase2L1ParticleFlow/src
-mv ../../emulation/CMSSW/MultiJetId.h L1Trigger/Phase2L1ParticleFlow/interface
-mv ../../emulation/CMSSW/SimL1Emulator_cff.py L1Trigger/Configuration/python
-mv ../../emulation/MultiJetTaggerBaseline .
-mv ../../outputSynthesis/regression/Training_2024_22_08_vTEST/firmware MultiJetTaggerBaseline/MultiJetBaseline
-cd MultiJetTaggerBaseline
-./setup.sh
-cd ..
 
 git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
   cd hls4mlEmulatorExtras &&
@@ -81,7 +56,9 @@ make
 make install
 cd ..
 git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
-cd MultiJetTaggerBaseline
+
+git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git && \
+  cd hls4ml-jettagger &&
 make 
 make install
 cd ..
@@ -90,14 +67,8 @@ cd ..
 git config user.email chris.brown@fpsl.net
 git config user.name "Chriisbrown"
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b dev/14_0_X-leptons
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b addMultiJet
 
-cd FastPUPPI/NtupleProducer/
-
-mv ../../../../emulation/CMSSW/JetNTuplizer.cc plugins
-mv ../../../../emulation/CMSSW/runPerformanceNTuple.py python
-
-cd ../.. 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
 scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'
@@ -114,10 +85,8 @@ cd FastPUPPI/NtupleProducer/python
 
 cmsenv
 
-## See if can read from EOS
-
 echo "Temporary workaround to get the input files"
 curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
-
+echo process.source.fileNames = ["file:inputs131X_1.root"] > runPerformanceNTuple.py
 cmsRun runPerformanceNTuple.py --tm18 2>&1 | tee cmsRun.log
 mv -v cmsRun.log  ../../../..

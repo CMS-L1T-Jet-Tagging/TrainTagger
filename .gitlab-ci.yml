@@ -7,9 +7,9 @@ DeepSet:baseline_4param:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/'
-    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/baselineTRK_4param_021024'
-    Dataset: CDPt600_PU200.root
+    EOSdir: '/fp_ntuples_v131Xv9/baselineTRK_4param_021024/'
+    ConvertedDir: '/baselineTRK_4param_021024'
+    Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
@@ -21,9 +21,9 @@ DeepSet:baseline_5param:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_5param_021024/'
-    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/baselineTRK_5param_021024/'
-    Dataset: CDPt600_PU200.root
+    EOSdir: '/fp_ntuples_v131Xv9/baselineTRK_5param_021024/'
+    ConvertedDir: '/baselineTRK_5param_021024/'
+    Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
@@ -35,9 +35,9 @@ DeepSet:baseline_4param_extended_trk:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_021024/'
-    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/extendedTRK_4param_021024/'
-    Dataset: CDPt600_PU200.root
+    EOSdir: '/fp_ntuples_v131Xv9/extendedTRK_4param_021024/'
+    ConvertedDir: '/extendedTRK_4param_021024/'
+    Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
@@ -49,9 +49,9 @@ DeepSet:baseline_5param_extended_trk:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
-    EOSdir: '/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_021024/'
-    ConvertedDir: '/eos/user/c/cebrown/TrainTagger/extendedTRK_5param_021024/'
-    Dataset: CDPt600_PU200.root
+    EOSdir: '/fp_ntuples_v131Xv9/extendedTRK_5param_021024/'
+    ConvertedDir: '/extendedTRK_5param_021024/'
+    Dataset: QCDPt600_PU200.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'

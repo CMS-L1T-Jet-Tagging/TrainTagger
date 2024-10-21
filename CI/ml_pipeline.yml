@@ -37,7 +37,9 @@ data:
   #        - datatools/**
   when: manual
   script:
-  - mamba activate l1_training
+  - ls /eos/user/c/cebrown
+  - ls /opt/
+  - source activate l1_training
   - mkdir data
   - ls /eos/user/c/cebrown
   - python datatools/createDataset.py -i $EOSdir/$Dataset -o data/All -t $Inputs

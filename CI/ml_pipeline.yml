@@ -12,6 +12,7 @@ variables:
     Model: DeepSet
     Classes: btgc
     Inputs: baseline
+    DataDir: ./
     Dataset: All200.root
 
 .template:

@@ -18,7 +18,7 @@ variables:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
     - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
-    - printf $PASSWORD | base64 -d | kinit $USERNAME@CERN.CH
+    # - printf $PASSWORD | base64 -d | kinit $USERNAME@CERN.CH
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags:
@@ -39,6 +39,7 @@ data:
   script:
   - source activate l1_training
   - mkdir data
+  - ls /eos/user/c/cebrown
   - python datatools/createDataset.py -i $EOSdir/$Dataset -o data/All -t $Inputs
   - cd data 
   - tar -cvf convertedfiles_$Inputs.tgz All

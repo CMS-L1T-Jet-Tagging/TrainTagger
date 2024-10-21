@@ -42,6 +42,7 @@ data:
   - source activate l1_training
   - mkdir data
   - cd data
+  - echo $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/$Dataset 
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/$Dataset ./
   - cd ..
   - python datatools/createDataset.py -i data/$Dataset -o data/All -t $Inputs

@@ -37,8 +37,8 @@ data:
   #        - datatools/**
   when: manual
   script:
-  - ls /eos/user/c/cebrown
-  - ls /opt/
+  - ls /eosdata
+  - ls /opt/Xilinx
   - source activate l1_training
   - mkdir data
   - ls /eos/user/c/cebrown

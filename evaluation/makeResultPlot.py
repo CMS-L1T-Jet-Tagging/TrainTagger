@@ -30,7 +30,6 @@ def shapPlot(shap_values, feature_names, class_names, isMLP = False):
     axis_color="#333333"
 
     class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
-
     for i, ind in enumerate(class_inds):
         global_shap_values = np.abs(shap_values[ind]).mean(0)
         label = class_names[ind]
@@ -1983,6 +1982,7 @@ def doPlots(
                 labels.append("Charm")
                 labels.append("Muon")
                 labels.append("Electron")
+                new = np.transpose(new, (2, 0, 1))
                 shapPlot(new, feature_names, labels)
                 plt.savefig(outFolder+"/shap_summary_class_"+inputSetTag+"_{0}.pdf".format(name))
                 plt.savefig(outFolder+"/shap_summary_class_"+inputSetTag+"_{0}.png".format(name))
@@ -1994,6 +1994,7 @@ def doPlots(
                 print("... shap summary_plot regression")
                 plt.clf()
                 labels = ["Regression"]
+                new = np.transpose(new, (2, 0, 1))
                 shapPlot(new, feature_names, labels)
                 plt.savefig(outFolder+"/shap_summary_reg_"+inputSetTag+"_{0}.pdf".format(name))
                 plt.savefig(outFolder+"/shap_summary_reg_"+inputSetTag+"_{0}.png".format(name))

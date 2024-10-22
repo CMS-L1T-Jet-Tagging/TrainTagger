@@ -1,21 +1,24 @@
 name: l1_training
 dependencies:
-  - python=3.8
+  - python=3.10
   - pip
   - ipykernel
   - pip:
+    - mplhep
+    - qkeras==0.9.0
+    - uproot4==4.0.0
+    - keras==2.15.0
+    - tensorflow
+    - pyarrow==17.0.0
     - numpy
     - matplotlib
-    - mplhep
-    - tensorflow
-    - keras
     - scikit-learn==1.3.2
     - pandas==2.0.3
-    - uproot4==4.0.0
     - xxhash
-    - pyarrow==17.0.0
-    - qkeras==0.9.0
     - hist==2.7.3
-    - hls4ml[profiling]
+    - histbook
+    - mlflow
+    - graphviz
+    - pydot
     - shap
-    - awkward-pandas
+    - seaborn

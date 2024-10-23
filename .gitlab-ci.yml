@@ -11,7 +11,7 @@ DeepSet:baseline_4param:
     Dataset: All200_part0.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'
 
 DeepSet:baseline_5param:
   extends: .ml_pipeline
@@ -23,7 +23,7 @@ DeepSet:baseline_5param:
     Dataset: All200_part0.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'
 
 DeepSet:baseline_4param_extended_trk:
   extends: .ml_pipeline
@@ -35,7 +35,7 @@ DeepSet:baseline_4param_extended_trk:
     Dataset: All200_part0.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'
 
 DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline
@@ -47,4 +47,4 @@ DeepSet:baseline_5param_extended_trk:
     Dataset: All200_part0.root
     SCRAM_ARCH: 'el8_amd64_gcc11'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'

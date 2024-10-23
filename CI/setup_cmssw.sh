@@ -22,31 +22,29 @@ git cms-checkout-topic -u ${CMSSW_L1CT}
 echo "git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f"
 git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f 2>&1 | grep -v 'new tag.*CMSSW'
 
-git cms-addpkg DataFormats/L1TParticleFlow
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
-git cms-addpkg L1Trigger/DemonstratorTools
-git cms-addpkg L1Trigger/TrackTrigger
-git cms-addpkg SimTracker/TrackTriggerAssociation
-# local copy of the json external to avoid tracking the version in all tcl scripts
-eval `scram tool info json | grep INCLUDE`; cp -r ${INCLUDE}/nlohmann/ .
-eval `scram tool info conifer | grep INCLUDE`; cp  ${INCLUDE}/* .
+git cms-addpkg L1Trigger/Configuration
 
-# local copy data files from externals area if not found (e.g. compositeID json)
-RELDATA=$CMSSW_RELEASE_BASE/external/$SCRAM_ARCH/data
-for DATAFILE in \
-      L1Trigger/Phase2L1ParticleFlow/data/compositeID.json \
-      L1Trigger/Phase2L1ParticleFlow/data/jecs/jecs_20220308.root \
-; do
-    if [ $RELDATA/$DATAFILE -nt $DATAFILE ]; then # includes the case where $DATAFILE is only in the release
-        test -d $(dirname $DATAFILE) || mkdir -p $(dirname $DATAFILE) 
-        cp -v $RELDATA/$DATAFILE $DATAFILE
-    else
-        echo "$DATAFILE is newer than the one from the CMSSW release"
-    fi;
-done
-# remove unnecessary packages
-perl -ne 'm/Calibration|DQM|Ntuples|HLTrigger|EventFilter.L1TRawToDigi/ or print' -i .git/info/sparse-checkout
-git read-tree -mu HEAD
+# # local copy of the json external to avoid tracking the version in all tcl scripts
+# eval `scram tool info json | grep INCLUDE`; cp -r ${INCLUDE}/nlohmann/ .
+# eval `scram tool info conifer | grep INCLUDE`; cp  ${INCLUDE}/* .
+
+# # local copy data files from externals area if not found (e.g. compositeID json)
+# RELDATA=$CMSSW_RELEASE_BASE/external/$SCRAM_ARCH/data
+# for DATAFILE in \
+#       L1Trigger/Phase2L1ParticleFlow/data/compositeID.json \
+#       L1Trigger/Phase2L1ParticleFlow/data/jecs/jecs_20220308.root \
+# ; do
+#     if [ $RELDATA/$DATAFILE -nt $DATAFILE ]; then # includes the case where $DATAFILE is only in the release
+#         test -d $(dirname $DATAFILE) || mkdir -p $(dirname $DATAFILE) 
+#         cp -v $RELDATA/$DATAFILE $DATAFILE
+#     else
+#         echo "$DATAFILE is newer than the one from the CMSSW release"
+#     fi;
+# done
+# # remove unnecessary packages
+# perl -ne 'm/Calibration|DQM|Ntuples|HLTrigger|EventFilter.L1TRawToDigi/ or print' -i .git/info/sparse-checkout
+# git read-tree -mu HEAD
 
 
 git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \

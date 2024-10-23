@@ -55,15 +55,14 @@ make install
 cd ..
 git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
 
+git config user.email chris.brown@fpsl.net
+git config user.name "Chriisbrown"
+
 git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git && \
   cd hls4ml-jettagger &&
 make 
 make install
 cd ..
-
-
-git config user.email chris.brown@fpsl.net
-git config user.name "Chriisbrown"
 
 git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b addMultiJet
 

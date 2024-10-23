@@ -1,6 +1,6 @@
 cmssw-setup:
   tags: [ k8s-cvmfs ]
-  image: gitlab-registry.cern.ch/ci-tools/ci-worker:el8
+  image: gitlab-registry.cern.ch/ci-tools/ci-worker:cs8
   stage: cmssw-setup 
   needs : [synth]
   dependencies : [synth]

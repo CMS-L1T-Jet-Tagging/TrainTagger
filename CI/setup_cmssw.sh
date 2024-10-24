@@ -59,7 +59,7 @@ git config user.email chris.brown@fpsl.net
 git config user.name "Chriisbrown"
 
 git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git && \
-  cd hls4ml-jettagger &&
+  cd hls4ml-jettagger
 make 
 make install
 cd ..
@@ -84,6 +84,4 @@ cmsenv
 
 echo "Temporary workaround to get the input files"
 curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
-echo process.source.fileNames = ["file:inputs131X_1.root"] > runPerformanceNTuple.py
 cmsRun runPerformanceNTuple.py --tm18 2>&1 | tee cmsRun.log
-mv -v cmsRun.log  ../../../..

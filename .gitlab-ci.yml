@@ -9,7 +9,7 @@ DeepSet:baseline_4param:
     Inputs: baseline
     DataDir: baselineTRK_4param_021024
     Dataset: All200_part0.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
+    SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'
 
@@ -21,7 +21,7 @@ DeepSet:baseline_5param:
     Inputs: baseline
     DataDir: baselineTRK_5param_021024
     Dataset: All200_part0.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
+    SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'
 
@@ -33,7 +33,7 @@ DeepSet:baseline_4param_extended_trk:
     Inputs: baseline
     DataDir: extendedTRK_4param_021024
     Dataset: All200_part0.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
+    SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'
 
@@ -45,6 +45,6 @@ DeepSet:baseline_5param_extended_trk:
     Inputs: baseline
     DataDir: extendedTRK_5param_021024
     Dataset: All200_part0.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
+    SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2'

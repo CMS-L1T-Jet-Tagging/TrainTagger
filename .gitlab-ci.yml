@@ -8,10 +8,10 @@ DeepSet:baseline_4param:
     Classes: btgc
     Inputs: baseline
     DataDir: baselineTRK_4param_021024
-    Dataset: All200.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    Dataset: All200_part0.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3'
 
 DeepSet:baseline_5param:
   extends: .ml_pipeline
@@ -20,10 +20,10 @@ DeepSet:baseline_5param:
     Classes: btgc
     Inputs: baseline
     DataDir: baselineTRK_5param_021024
-    Dataset: All200.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    Dataset: All200_part0.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3'
 
 DeepSet:baseline_4param_extended_trk:
   extends: .ml_pipeline
@@ -32,10 +32,10 @@ DeepSet:baseline_4param_extended_trk:
     Classes: btgc
     Inputs: baseline
     DataDir: extendedTRK_4param_021024
-    Dataset: All200.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    Dataset: All200_part0.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3'
 
 DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline
@@ -44,7 +44,7 @@ DeepSet:baseline_5param_extended_trk:
     Classes: btgc
     Inputs: baseline
     DataDir: extendedTRK_5param_021024
-    Dataset: All200.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
-    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_14_2_0_pre2-P2CTL2-MultiJet'
+    Dataset: All200_part0.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3'

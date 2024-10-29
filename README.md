@@ -80,6 +80,12 @@ python synthesis/synthesis.py -f extendedAll200 -c btgc -i minimal -m DeepSet -o
 
 
 ## Things to fix / questions
-Pruning
-Dataset creation sanity check failing
+- makeComp plot?
+- makeMatching plot?
+- validation plots?
+- Dataset creation sanity check failing
+- input file options consistent or just replace with a file
+- commented out code? remove?
+- to_pandas doesn't exist in awkward? l951 makeResultPlot
+- difference between validation plot and makeResultPlot?
 

@@ -1,5 +1,5 @@
-from utils.imports import *
-from utils.dataset import *
+from datatools.imports import *
+from datatools.dataset import *
 import argparse
 from train.models import *
 import tensorflow_model_optimization as tfmot
@@ -7,7 +7,7 @@ from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks, pruning_wrapper,  pruning_schedule
 from tensorflow_model_optimization.sparsity.keras import strip_pruning
 
-from utils.createDataset import *
+from datatools.createDataset import *
 
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 import matplotlib.pyplot as plt
@@ -93,6 +93,88 @@ def plotInputFeatures(Xb, Xuds, Xtau, Xtaum, Xgluon, Xcharm, Xmuon, Xelectron, f
             hep.cms.label("Private Work", data = False, rlabel = "14 TeV (PU 200)")
             plt.savefig(outFolder+"/inputFeature_"+name+outputAddName+"_close.png")
             plt.savefig(outFolder+"/inputFeature_"+name+outputAddName+"_close.pdf")
+            plt.cla()
+
+            b_sqrt = np.sqrt(np.abs(b_))
+            uds_sqrt  = np.sqrt(np.abs(uds_))
+            g_sqrt  = np.sqrt(np.abs(g_))
+            tau_sqrt  = np.sqrt(np.abs(tau_))
+            taum_sqrt  = np.sqrt(np.abs(taum_))
+            charm_sqrt  = np.sqrt(np.abs(charm_))
+            muon_sqrt  = np.sqrt(np.abs(muon_))
+            electron_sqrt  = np.sqrt(np.abs(electron_))
+            min_ = min(min(b_sqrt), min(uds_sqrt))
+            max_ = max(max(b_sqrt), max(uds_sqrt))
+            min_ = min(min_, min(tau_sqrt))
+            max_ = max(max_, max(tau_sqrt))
+            min_ = min(min_, min(taum_sqrt))
+            max_ = max(max_, max(taum_sqrt))
+            min_ = min(min_, min(g_sqrt))
+            max_ = max(max_, max(g_sqrt))
+            min_ = min(min_, min(charm_sqrt))
+            max_ = max(max_, max(charm_sqrt))
+            min_ = min(min_, min(muon_sqrt))
+            max_ = max(max_, max(muon_sqrt))
+            min_ = min(min_, min(electron_sqrt))
+            max_ = max(max_, max(electron_sqrt))
+            range = (min_, max_)
+            print (name, range)
+            plt.hist(b_sqrt, label='b', bins = 200, density = True, log = True, histtype = "step", range = range, color="blue")
+            plt.hist(uds_sqrt, label='uds', bins = 200, density = True, log = True, histtype = "step", range = range, color="orange")
+            plt.hist(g_sqrt, label='Gluon', bins = 200, density = True, log = True, histtype = "step", range = range, color="green")
+            plt.hist(tau_sqrt, label='Tau p', bins = 200, density = True, log = True, histtype = "step", range = range, color="red")
+            if Xtaum is not None:
+                plt.hist(taum_sqrt, label='Tau m', bins = 200, density = True, log = True, histtype = "step", range = range, color="purple")
+            plt.hist(charm_sqrt, label='Charm', bins = 200, density = True, log = True, histtype = "step", range = range, color="black")
+            plt.hist(muon_sqrt, label='Muon', bins = 200, density = True, log = True, histtype = "step", range = range, color="yellow")
+            plt.hist(electron_sqrt, label='Electron', bins = 200, density = True, log = True, histtype = "step", range = range, color="cyan")
+            plt.legend(loc = "upper right")
+            plt.xlabel(f"{name}")
+            plt.ylabel('Jets (Normalized to 1)')
+            hep.cms.label("Private Work", data = False, rlabel = "14 TeV (PU 200)")
+            plt.savefig(outFolder+"/inputFeature_"+name+outputAddName+"_transformSqrt.png")
+            plt.savefig(outFolder+"/inputFeature_"+name+outputAddName+"_transformSqrt.pdf")
+            plt.cla()
+
+            b_sqrt = np.log(1+np.abs(b_))
+            uds_sqrt  = np.log(1+np.abs(uds_))
+            g_sqrt  = np.log(1+np.abs(g_))
+            tau_sqrt  = np.log(1+np.abs(tau_))
+            taum_sqrt  = np.log(1+np.abs(taum_))
+            charm_sqrt  = np.log(1+np.abs(charm_))
+            muon_sqrt  = np.log(1+np.abs(muon_))
+            electron_sqrt  = np.log(1+np.abs(electron_))
+            min_ = min(min(b_sqrt), min(uds_sqrt))
+            max_ = max(max(b_sqrt), max(uds_sqrt))
+            min_ = min(min_, min(tau_sqrt))
+            max_ = max(max_, max(tau_sqrt))
+            min_ = min(min_, min(taum_sqrt))
+            max_ = max(max_, max(taum_sqrt))
+            min_ = min(min_, min(g_sqrt))
+            max_ = max(max_, max(g_sqrt))
+            min_ = min(min_, min(charm_sqrt))
+            max_ = max(max_, max(charm_sqrt))
+            min_ = min(min_, min(muon_sqrt))
+            max_ = max(max_, max(muon_sqrt))
+            min_ = min(min_, min(electron_sqrt))
+            max_ = max(max_, max(electron_sqrt))
+            range = (min_, max_)
+            print (name, range)
+            plt.hist(b_sqrt, label='b', bins = 200, density = True, log = True, histtype = "step", range = range, color="blue")
+            plt.hist(uds_sqrt, label='uds', bins = 200, density = True, log = True, histtype = "step", range = range, color="orange")
+            plt.hist(g_sqrt, label='Gluon', bins = 200, density = True, log = True, histtype = "step", range = range, color="green")
+            plt.hist(tau_sqrt, label='Tau p', bins = 200, density = True, log = True, histtype = "step", range = range, color="red")
+            if Xtaum is not None:
+                plt.hist(taum_sqrt, label='Tau m', bins = 200, density = True, log = True, histtype = "step", range = range, color="purple")
+            plt.hist(charm_sqrt, label='Charm', bins = 200, density = True, log = True, histtype = "step", range = range, color="black")
+            plt.hist(muon_sqrt, label='Muon', bins = 200, density = True, log = True, histtype = "step", range = range, color="yellow")
+            plt.hist(electron_sqrt, label='Electron', bins = 200, density = True, log = True, histtype = "step", range = range, color="cyan")
+            plt.legend(loc = "upper right")
+            plt.xlabel(f"{name}")
+            plt.ylabel('Jets (Normalized to 1)')
+            hep.cms.label("Private Work", data = False, rlabel = "14 TeV (PU 200)")
+            plt.savefig(outFolder+"/inputFeature_"+name+outputAddName+"_transformLog.png")
+            plt.savefig(outFolder+"/inputFeature_"+name+outputAddName+"_transformLog.pdf")
             plt.cla()
 
 
@@ -181,6 +263,7 @@ def plotInputFeatures(Xb, Xuds, Xtau, Xtaum, Xgluon, Xcharm, Xmuon, Xelectron, f
 
 
 def doTraining(
+        test_data_dir,
         filetag,
         flavs,
         inputSetTag,
@@ -196,10 +279,10 @@ def doTraining(
     feature_names = dict_fields[inputSetTag]
     nconstit = 16
 
-    PATH_load = workdir + '/datasetsNewComplete_plotting/' + filetag + "/" + flavs + "/"
-    print (PATH_load)
-    chunksmatching = glob.glob(PATH_load+"X_"+inputSetTag+"_test*.parquet")
-    chunksmatching = [chunksm.replace(PATH_load+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
+    PATH_load = f"{test_data_dir}/"
+    print("Loading data from: ", PATH_load)
+    chunksmatching = glob.glob(f"{PATH_load}X_{inputSetTag}_test*.parquet")
+    chunksmatching = [chunksm.replace(f"{PATH_load}X_{inputSetTag}_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
 
     import random
     if test:
@@ -307,7 +390,8 @@ def doTraining(
 if __name__ == "__main__":
     from args import get_common_parser, handle_common_args
     parser = get_common_parser()
-    parser.add_argument('-f','--file', help = 'input file name part')
+    parser.add_argument('-t','--testDataDir', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/datasetsNewComplete/extendedAll200/' , help = 'input testing data directory')
+    parser.add_argument('-f','--file', help = 'input model file path')
     parser.add_argument('-c','--classes', help = 'Which flavors to run, options are b, bt, btg, btgc.')
     parser.add_argument('-i','--inputs', help = 'Which inputs to run, options are baseline, ext1, ext2, all.')
     parser.add_argument('--inputQuant', dest = 'inputQuant', default = False, action='store_true')
@@ -322,17 +406,18 @@ if __name__ == "__main__":
     print('#'*30)
 
     allowedClasses = ["b", "bt", "btg", "btgc"]
-    allowedFiles = ["All200", "extendedAll200", "baselineAll200", "AllHIG200", "AllQCD200", "AllTT200", "TT_PU200", "TT1L_PU200", "TT2L_PU200", "ggHtt_PU200"]
+    #allowedFiles = ["All200", "extendedAll200", "baselineAll200", "AllHIG200", "AllQCD200", "AllTT200", "TT_PU200", "TT1L_PU200", "TT2L_PU200", "ggHtt_PU200"]
     allowedInputs = dict_fields.keys()
 
     if args.classes not in allowedClasses:
         raise ValueError("args.classes not in allowed classes! Options are", allowedClasses)
-    if args.file not in allowedFiles:
-        raise ValueError("args.file not in allowed file! Options are", allowedFiles)
+    #if args.file not in allowedFiles:
+    #    raise ValueError("args.file not in allowed file! Options are", allowedFiles)
     if args.inputs not in allowedInputs:
         raise ValueError("args.inputs not in allowed inputs! Options are", allowedInputs)
 
     doTraining(
+        args.testDataDir,
         args.file,
         args.classes,
         args.inputs,

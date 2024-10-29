@@ -1,13 +1,18 @@
 include:
   - local: "CI/template.yml"
 
-DeepSet:all:
-  extends: .ml_pipeline
-  variables:
-    Model: DeepSet
-    Classes: btgc
-    Inputs: all
-    Dataset: jetTuple_TT_PU200.131X_v9a.root
+# DeepSet:all:
+#   extends: .ml_pipeline
+#   variables:
+#     Model: DeepSet
+#     Classes: btgc
+#     Inputs: all
+#     TrainDataset: TT_PU200.root
+#     TestDataset: TT_PU200.root
+#     SCRAM_ARCH: 'el8_amd64_gcc11'
+#     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+#     CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
+#     CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
 
 DeepSet:minimal:
   extends: .ml_pipeline
@@ -15,4 +20,10 @@ DeepSet:minimal:
     Model: DeepSet
     Classes: btgc
     Inputs: minimal
-    Dataset: jetTuple_TT_PU200.131X_v9a.root
+    TrainDataset: TT_PU200.root
+    TestDataset: TT_PU200.root
+    SCRAM_ARCH: 'el8_amd64_gcc11'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
+    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+

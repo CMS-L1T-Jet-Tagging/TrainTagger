@@ -26,6 +26,9 @@ __torch_profiling_enabled__ = True
 
 from datatools.createDataset import *
 
+import pydot
+pydot.Dot.create(pydot.Dot())
+
 modelnamesDict = {
     "DeepSet": "QDeepSets_PermutationInv",
     "DeepSet-MHA": "QDeepSetsWithAttention_PermutationInv",
@@ -48,7 +51,7 @@ def synthesize(
         workdir = "./", build=False, trace=True):
 
     tempflav = "btgc"
-    PATH = workdir + filetag + "/" + tempflav + "/"
+    PATH = workdir + filetag  + "/"
     outFolder = "outputSynthesis/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)

@@ -1,5 +1,6 @@
-from utils.imports import *
-from utils.dataset import *
+from datatools.imports import *
+from datatools.dataset import *
+from datatools.createDataset import *
 import argparse
 from train.models import *
 import tensorflow_model_optimization as tfmot
@@ -17,7 +18,6 @@ import pandas
 import numpy
 from histbook import *
 
-from utils.createDataset import *
 
 
 def shapPlot(shap_values, feature_names, class_names, isMLP = False):
@@ -64,6 +64,7 @@ modelnamesDict = {
 nconstit = 16
 
 def doPlots(
+        test_data_dir,
         filetag,
         timestamp,
         flav,
@@ -79,22 +80,22 @@ def doPlots(
 
     modelsAndNames = {}
 
-    tempflav = "btgc"
-    PATH_load = workdir + '/datasetsNewComplete2/' + filetag + "/" + tempflav + "/"
+    # tempflav = "btgc"
+    # PATH_load = workdir + '/datasets_050924/' + filetag + "/" + tempflav + "/"
+    PATH_load = f"{test_data_dir}/"
+    print("Loading data from: ", PATH_load)
+    chunksmatching = glob.glob(f"{PATH_load}X_{inputSetTag}_test*.parquet")
+    chunksmatching = [chunksm.replace(f"{PATH_load}X_{inputSetTag}_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
+
     outFolder = "outputPlots/"+outname+"/Training_" + timestamp + "/"
     if not os.path.exists(outFolder):
         os.makedirs(outFolder, exist_ok=True)
 
     feature_names = dict_fields[inputSetTag]
 
-    chunksmatching = glob.glob(PATH_load+"X_"+inputSetTag+"_test*.parquet")
-    print (PATH_load+"X_"+inputSetTag+"_test*.parquet")
-    chunksmatching = [chunksm.replace(PATH_load+"X_"+inputSetTag+"_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
-
     if test:
         import random
-        # chunksmatching = random.sample(chunksmatching, 5)
-        chunksmatching = random.sample(chunksmatching, 15)
+        chunksmatching = random.sample(chunksmatching, 5)
 
     print ("Loading data in all",len(chunksmatching),"chunks.")
 
@@ -274,7 +275,8 @@ def doPlots(
         "quantized_bits": quantized_bits,
         "ternary": ternary,
         "binary": binary,
-        "QBatchNormalization": QBatchNormalization
+        "QBatchNormalization": QBatchNormalization,
+        "myNLL": myNLL
         }
 
     ncands = 16
@@ -291,7 +293,8 @@ def doPlots(
 
     # Get inference of model
     if regression:
-        trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + filetag + "_" + flav + "_" + inputSetTag + "_"
+        # trainingBasePath = "trainings_regression_weighted/" + timestamp + "_" + filetag + "_" + flav + "_" + inputSetTag + "_"
+        trainingBasePath = "trainings_regression_weighted/" + timestamp  + "_" + flav + "_" + inputSetTag + "_"
     else:
         trainingBasePath = "trainings_notreduced/" + filetag + "_" + flav + "_" + inputSetTag + "_"
 
@@ -309,7 +312,7 @@ def doPlots(
 
 
 
-    modelsAndNames["model"] = tf.keras.models.load_model(trainingBasePath+""+modelpath+"/"+modelname+'.h5', custom_objects=custom_objects_)
+    modelsAndNames["model"] = tf.keras.models.load_model(trainingBasePath+""+modelpath+"/"+modelname+'.h5', custom_objects = custom_objects_)
     
     if regression:
         y_ =  modelsAndNames["model"].predict(X_test)
@@ -944,9 +947,10 @@ def doPlots(
 
     # efficiency vs pT
     # x_bins_pt = np.array([0., 15., 20., 30., 40., 50., 75., 100., 125., 150., 175., 200., 300., 500., 750., 1000.])
+    '''
     x_bins_pt = np.array([15., 20., 30., 40., 50., 60., 70., 80., 90., 100., 125., 150., 175., 200., 250., 300., 400., 500., 750., 1000.])
-
-    data_ = ak.to_pandas(X_test_global[X_test_global["label_b"]>0])
+    test_array = X_test_global[X_test_global["label_b"]>0]
+    data_ = ak.to_dataframe(test_array)
     data_["wp1"] = data_["b_vs_udsg"] > wp_b_loose
     data_["wp2"] = data_["b_vs_udsg"] > wp_b_medium
     data_["wp3"] = data_["b_vs_udsg"] > wp_b_tight
@@ -1053,7 +1057,7 @@ def doPlots(
     # efficiency vs pT for taus
     x_bins_pt = np.array([0., 15., 20., 30., 40., 50., 75., 100., 125., 150., 175., 200., 300., 500., 750., 1000.])
 
-    data_ = ak.to_pandas(X_test_global[X_test_global["label_tau"]>0])
+    data_ = ak.to_dataframe(X_test_global[X_test_global["label_tau"]>0])
     data_["wp1"] = data_["tau_vs_all"] > wp_tau_loose
     data_["wp2"] = data_["tau_vs_all"] > wp_tau_medium
     data_["wp3"] = data_["tau_vs_all"] > wp_tau_tight
@@ -1154,6 +1158,8 @@ def doPlots(
     plt.savefig(outFolder+"/eff_tau_eta"+".pdf")
     plt.cla()
 
+    '''
+
 
     # get response and resolution plots
     if regression:
@@ -1161,6 +1167,10 @@ def doPlots(
         X_test_global["response_cor"] = X_test_global["jet_pt_corr"] / X_test_global["jet_genmatch_pt"]
         X_test_global["response_tau"] = X_test_global["jet_taupt"] / X_test_global["jet_genmatch_pt"]
         X_test_global["response_reg"] = X_test_global["jet_pt_cor_reg"] / X_test_global["jet_genmatch_pt"]
+        X_test_global["response_lep"] = np.nan_to_num(X_test_global["jet_pt_phys"] / X_test_global["jet_genmatch_lep_vis_pt"], nan=0., posinf=0., neginf=0.)
+        X_test_global["response_cor_lep"] = np.nan_to_num(X_test_global["jet_pt_corr"] / X_test_global["jet_genmatch_lep_vis_pt"], nan=0., posinf=0., neginf=0.)
+        X_test_global["response_tau"] = X_test_global["jet_taupt"] / X_test_global["jet_genmatch_lep_vis_pt"]
+        X_test_global["response_reg_lep"] = np.nan_to_num(X_test_global["jet_pt_cor_reg"] / X_test_global["jet_genmatch_lep_vis_pt"], nan=0., posinf=0., neginf=0.)
 
         mean_uncor = np.median(np.array(X_test_global["response"]))
         std_uncor = rms(X_test_global["response"])
@@ -1168,6 +1178,12 @@ def doPlots(
         std_cor = rms(X_test_global["response_cor"])
         mean_reg = np.median(X_test_global["response_reg"])
         std_reg = rms(X_test_global["response_reg"])
+        mean_uncor_lep = np.median(np.array(X_test_global["response_lep"][X_test_global["response_lep"]>0.]))
+        std_uncor_lep = rms(X_test_global["response_lep"][X_test_global["response_lep"]>0.])
+        mean_cor_lep = np.median(X_test_global["response_cor_lep"][X_test_global["response_cor_lep"]>0.])
+        std_cor_lep = rms(X_test_global["response_cor_lep"][X_test_global["response_cor_lep"]>0.])
+        mean_reg_lep = np.median(X_test_global["response_reg_lep"][X_test_global["response_reg_lep"]>0.])
+        std_reg_lep = rms(X_test_global["response_reg_lep"][X_test_global["response_reg_lep"]>0.])
         X = np.linspace(0.0, 2.0, 100)
         histo = plt.hist(X_test_global["response"], bins=X, label='Uncorrected' ,histtype='step', density=True, color = '#1f77b4')
         histo = plt.hist(X_test_global["response_cor"], bins=X, label='JEC LOT' ,histtype='step', density=True, color = '#ff7f0e')
@@ -1185,6 +1201,23 @@ def doPlots(
         plt.savefig(outFolder+"/response_all"+".pdf")
         plt.cla()
 
+        X = np.linspace(0.0, 2.0, 100)
+        histo = plt.hist(X_test_global["response_lep"][X_test_global["response_lep"]>0.], bins=X, label='Uncorrected' ,histtype='step', density=True, color = '#1f77b4')
+        histo = plt.hist(X_test_global["response_cor_lep"][X_test_global["response_cor_lep"]>0.], bins=X, label='JEC LOT' ,histtype='step', density=True, color = '#ff7f0e')
+        histo = plt.hist(X_test_global["response_reg_lep"][X_test_global["response_reg_lep"]>0.], bins=X, label='Regression' ,histtype='step', density=True, color = '#2ca02c')
+        plt.xlabel('Jet response (reco/gen)')
+        plt.ylabel('Jets')
+        plt.xlim(0.,2.)
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        plt.text(1.3, 1.4, "median: "+str(np.round(mean_uncor_lep,3))+" rms: "+str(np.round(std_uncor_lep,3)), color = '#1f77b4', fontsize = 14)
+        plt.text(1.3, 1.3, "median: "+str(np.round(mean_cor_lep,3))+" rms: "+str(np.round(std_cor_lep,3)), color = '#ff7f0e', fontsize = 14)
+        plt.text(1.3, 1.2, "median: "+str(np.round(mean_reg_lep,3))+" rms: "+str(np.round(std_reg_lep,3)), color = '#2ca02c', fontsize = 14)
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_all_lep"+".png")
+        plt.savefig(outFolder+"/response_all_lep"+".pdf")
+        plt.cla()
+
         def getMedianError(ar):
             if len(ar)!=0:
                 return 1.253 * rms(ar) / len(ar)
@@ -1194,19 +1227,19 @@ def doPlots(
         # now make it for several pT bins
         # pt_bins = [15., 20., 30., 50., 75., 100., 150., 200., 300., 400., 500., 1000.]
         pt_bins = [15., 17., 20., 23., 27., 30., 35., 40., 45., 57., 72., 90., 120., 150., 200., 300., 400., 550., 750., 1000.]
-        means_cor, means_cor_b, means_cor_c, means_cor_uds, means_cor_g, means_cor_tau = [],[],[],[],[],[]
-        means_cor_err, means_cor_err_b, means_cor_err_c, means_cor_err_uds, means_cor_err_g, means_cor_err_tau = [],[],[],[],[],[]
-        means_uncor, means_uncor_b, means_uncor_c, means_uncor_uds, means_uncor_g, means_uncor_tau = [],[],[],[],[],[]
-        means_uncor_err, means_uncor_err_b, means_uncor_err_c, means_uncor_err_uds, means_uncor_err_g, means_uncor_err_tau = [],[],[],[],[],[]
-        means_reg, means_reg_b, means_reg_c, means_reg_uds, means_reg_g, means_reg_tau = [],[],[],[],[],[]
+        means_cor, means_cor_b, means_cor_c, means_cor_uds, means_cor_g, means_cor_tau, means_cor_mu, means_cor_ele = [],[],[],[],[],[], [], []
+        means_cor_err, means_cor_err_b, means_cor_err_c, means_cor_err_uds, means_cor_err_g, means_cor_err_tau, means_cor_err_mu, means_cor_err_ele = [],[],[],[],[],[], [], []
+        means_uncor, means_uncor_b, means_uncor_c, means_uncor_uds, means_uncor_g, means_uncor_tau, means_uncor_mu, means_uncor_ele = [],[],[],[],[],[], [], []
+        means_uncor_err, means_uncor_err_b, means_uncor_err_c, means_uncor_err_uds, means_uncor_err_g, means_uncor_err_tau,means_uncor_err_mu,means_uncor_err_ele = [],[],[],[],[],[], [], []
+        means_reg, means_reg_b, means_reg_c, means_reg_uds, means_reg_g, means_reg_tau,means_reg_mu,means_reg_ele = [],[],[],[],[],[], [], []
         means_refReg_tau, means_refReg_err_tau = [], []
-        means_reg_err, means_reg_err_b, means_reg_err_c, means_reg_err_uds, means_reg_err_g, means_reg_err_tau = [],[],[],[],[],[]
-        stds_cor, stds_cor_b, stds_cor_c, stds_cor_uds, stds_cor_g, stds_cor_tau = [],[],[],[],[],[]
-        stds_cor_err, stds_cor_err_b, stds_cor_err_c, stds_cor_err_uds, stds_cor_err_g, stds_cor_err_tau = [],[],[],[],[],[]
-        stds_uncor, stds_uncor_b, stds_uncor_c, stds_uncor_uds, stds_uncor_g, stds_uncor_tau = [],[],[],[],[],[]
-        stds_uncor_err, stds_uncor_err_b, stds_uncor_err_c, stds_uncor_err_uds, stds_uncor_err_g, stds_uncor_err_tau = [],[],[],[],[],[]
-        stds_reg, stds_reg_b, stds_reg_c, stds_reg_uds, stds_reg_g, stds_reg_tau = [],[],[],[],[],[]
-        stds_reg_err, stds_reg_err_b, stds_reg_err_c, stds_reg_err_uds, stds_reg_err_g, stds_reg_err_tau = [],[],[],[],[],[]
+        means_reg_err, means_reg_err_b, means_reg_err_c, means_reg_err_uds, means_reg_err_g, means_reg_err_tau,means_reg_err_mu,means_reg_err_ele = [],[],[],[],[],[], [], []
+        stds_cor, stds_cor_b, stds_cor_c, stds_cor_uds, stds_cor_g, stds_cor_tau,stds_cor_mu,stds_cor_ele = [],[],[],[],[],[], [], []
+        stds_cor_err, stds_cor_err_b, stds_cor_err_c, stds_cor_err_uds, stds_cor_err_g, stds_cor_err_tau,stds_cor_err_mu,stds_cor_err_ele = [],[],[],[],[],[], [], []
+        stds_uncor, stds_uncor_b, stds_uncor_c, stds_uncor_uds, stds_uncor_g, stds_uncor_tau,stds_uncor_mu,stds_uncor_ele = [],[],[],[],[],[], [], []
+        stds_uncor_err, stds_uncor_err_b, stds_uncor_err_c, stds_uncor_err_uds, stds_uncor_err_g, stds_uncor_err_tau,stds_uncor_err_mu,stds_uncor_err_ele = [],[],[],[],[],[], [], []
+        stds_reg, stds_reg_b, stds_reg_c, stds_reg_uds, stds_reg_g, stds_reg_tau, stds_refReg_tau,stds_reg_mu,stds_reg_ele = [],[],[],[],[],[], [], [], []
+        stds_reg_err, stds_reg_err_b, stds_reg_err_c, stds_reg_err_uds, stds_reg_err_g, stds_reg_err_tau,stds_refReg_err_tau,stds_reg_err_mu,stds_reg_err_ele = [],[],[],[],[],[], [], [],[]
         centers = []
         for ptIdx in range(len(pt_bins)-1):
             ptLowEdge = pt_bins[ptIdx]
@@ -1218,23 +1251,29 @@ def doPlots(
             resp_c = np.array(X_test_global[((X_test_global["label_c"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response"] > 0.  )& (X_test_global["response"] < 2. ))]["response"])
             resp_uds = np.array(X_test_global[((X_test_global["label_uds"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response"] > 0.  )& (X_test_global["response"] < 2. ))]["response"])
             resp_g = np.array(X_test_global[((X_test_global["label_g"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response"] > 0.  )& (X_test_global["response"] < 2. ))]["response"])
-            resp_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response"] > 0.  )& (X_test_global["response"] < 2. ))]["response"])
+            resp_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_lep"] > 0.  )& (X_test_global["response_lep"] < 2. ))]["response_lep"])
+            resp_mu = np.array(X_test_global[((X_test_global["label_muon"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_lep"] > 0.  )& (X_test_global["response_lep"] < 2. ))]["response_lep"])
+            resp_ele = np.array(X_test_global[((X_test_global["label_electron"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_lep"] > 0.  )& (X_test_global["response_lep"] < 2. ))]["response_lep"])
             
             resp_cor_ = np.array(X_test_global[((X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_cor"] > 0.  )& (X_test_global["response_cor"] < 2. ))]["response_cor"])
             resp_cor_b = np.array(X_test_global[((X_test_global["label_b"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_cor"] > 0.  )& (X_test_global["response_cor"] < 2. ))]["response_cor"])
             resp_cor_c = np.array(X_test_global[((X_test_global["label_c"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_cor"] > 0.  )& (X_test_global["response_cor"] < 2. ))]["response_cor"])
             resp_cor_uds = np.array(X_test_global[((X_test_global["label_uds"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_cor"] > 0.  )& (X_test_global["response_cor"] < 2. ))]["response_cor"])
             resp_cor_g = np.array(X_test_global[((X_test_global["label_g"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_cor"] > 0.  )& (X_test_global["response_cor"] < 2. ))]["response_cor"])
-            resp_cor_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_cor"] > 0.  )& (X_test_global["response_cor"] < 2. ))]["response_cor"])
+            resp_cor_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_cor_lep"] > 0.  )& (X_test_global["response_cor_lep"] < 2. ))]["response_cor_lep"])
+            resp_cor_mu = np.array(X_test_global[((X_test_global["label_muon"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_cor_lep"] > 0.  )& (X_test_global["response_cor_lep"] < 2. ))]["response_cor_lep"])
+            resp_cor_ele = np.array(X_test_global[((X_test_global["label_electron"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_cor_lep"] > 0.  )& (X_test_global["response_cor_lep"] < 2. ))]["response_cor_lep"])
             
             resp_reg_ = np.array(X_test_global[((X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_reg"] > 0.  )& (X_test_global["response_reg"] < 2. ))]["response_reg"])
             resp_reg_b = np.array(X_test_global[((X_test_global["label_b"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_reg"] > 0.  )& (X_test_global["response_reg"] < 2. ))]["response_reg"])
             resp_reg_c = np.array(X_test_global[((X_test_global["label_c"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_reg"] > 0.  )& (X_test_global["response_reg"] < 2. ))]["response_reg"])
             resp_reg_uds = np.array(X_test_global[((X_test_global["label_uds"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_reg"] > 0.  )& (X_test_global["response_reg"] < 2. ))]["response_reg"])
             resp_reg_g = np.array(X_test_global[((X_test_global["label_g"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_reg"] > 0.  )& (X_test_global["response_reg"] < 2. ))]["response_reg"])
-            resp_reg_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_reg"] > 0.  )& (X_test_global["response_reg"] < 2. ))]["response_reg"])
+            resp_reg_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_reg_lep"] > 0.  )& (X_test_global["response_reg_lep"] < 2. ))]["response_reg_lep"])
+            resp_reg_mu = np.array(X_test_global[((X_test_global["label_muon"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_reg_lep"] > 0.  )& (X_test_global["response_reg_lep"] < 2. ))]["response_reg_lep"])
+            resp_reg_ele = np.array(X_test_global[((X_test_global["label_electron"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_reg_lep"] > 0.  )& (X_test_global["response_reg_lep"] < 2. ))]["response_reg_lep"])
 
-            resp_refReg_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_pt"] < ptHighEdge) & (X_test_global["response_tau"] > 0.  )& (X_test_global["response_tau"] < 2. ))]["response"])
+            resp_refReg_tau = np.array(X_test_global[((X_test_global["label_tau"] > 0) & (X_test_global["jet_genmatch_lep_vis_pt"] > ptLowEdge) & (X_test_global["jet_genmatch_lep_vis_pt"] < ptHighEdge) & (X_test_global["response_tau"] > 0.  )& (X_test_global["response_tau"] < 2. ))]["response"])
 
             mean_uncor = np.median(resp_)
             mean_uncor_b = np.median(resp_b)
@@ -1248,9 +1287,27 @@ def doPlots(
             mean_uncor_err_uds = getMedianError(resp_uds)
             mean_uncor_err_g = getMedianError(resp_g)
             mean_uncor_err_tau = getMedianError(resp_tau)
+            mean_uncor_mu = np.median(resp_mu)
+            mean_uncor_ele = np.median(resp_ele)
+            mean_uncor_err_mu = getMedianError(resp_mu)
+            mean_uncor_err_ele = getMedianError(resp_ele)
 
             std_uncor = rms(resp_)
             std_uncor_err = rms(resp_)
+            std_uncor_b = rms(resp_b)
+            std_uncor_c = rms(resp_c)
+            std_uncor_uds = rms(resp_uds)
+            std_uncor_g = rms(resp_g)
+            std_uncor_tau = rms(resp_tau)
+            std_uncor_mu = rms(resp_mu)
+            std_uncor_ele = rms(resp_ele)
+            std_uncor_err_b = rms(resp_b)
+            std_uncor_err_c = rms(resp_c)
+            std_uncor_err_uds = rms(resp_uds)
+            std_uncor_err_g = rms(resp_g)
+            std_uncor_err_tau = rms(resp_tau)
+            std_uncor_err_mu = rms(resp_mu)
+            std_uncor_err_ele = rms(resp_ele)
 
             mean_cor = np.median(resp_cor_)
             mean_cor_b = np.median(resp_cor_b)
@@ -1264,9 +1321,27 @@ def doPlots(
             mean_cor_err_uds = getMedianError(resp_cor_uds)
             mean_cor_err_g = getMedianError(resp_cor_g)
             mean_cor_err_tau = getMedianError(resp_cor_tau)
+            mean_cor_mu = np.median(resp_cor_mu)
+            mean_cor_ele = np.median(resp_cor_ele)
+            mean_cor_err_mu = getMedianError(resp_cor_mu)
+            mean_cor_err_ele = getMedianError(resp_cor_ele)
 
             std_cor = rms(resp_cor_)
             std_cor_err = rms(resp_cor_)
+            std_cor_b = rms(resp_cor_b)
+            std_cor_c = rms(resp_cor_c)
+            std_cor_uds = rms(resp_cor_uds)
+            std_cor_g = rms(resp_cor_g)
+            std_cor_tau = rms(resp_cor_tau)
+            std_cor_mu = rms(resp_cor_mu)
+            std_cor_ele = rms(resp_cor_ele)
+            std_cor_err_b = rms(resp_cor_b)
+            std_cor_err_c = rms(resp_cor_c)
+            std_cor_err_uds = rms(resp_cor_uds)
+            std_cor_err_g = rms(resp_cor_g)
+            std_cor_err_tau = rms(resp_cor_tau)
+            std_cor_err_mu = rms(resp_cor_mu)
+            std_cor_err_ele = rms(resp_cor_ele)
 
             mean_reg = np.median(resp_reg_)
             mean_reg_b = np.median(resp_reg_b)
@@ -1275,6 +1350,8 @@ def doPlots(
             mean_reg_g = np.median(resp_reg_g)
             mean_reg_tau = np.median(resp_reg_tau)
             mean_refReg_tau = np.median(resp_refReg_tau)
+            mean_reg_mu = np.median(resp_reg_mu)
+            mean_reg_ele = np.median(resp_reg_ele)
             mean_reg_err = getMedianError(resp_reg_)
             mean_reg_err_b = getMedianError(resp_reg_b)
             mean_reg_err_c = getMedianError(resp_reg_c)
@@ -1282,9 +1359,27 @@ def doPlots(
             mean_reg_err_g = getMedianError(resp_reg_g)
             mean_reg_err_tau = getMedianError(resp_reg_tau)
             mean_refReg_err_tau = getMedianError(resp_refReg_tau)
+            mean_reg_err_mu = getMedianError(resp_reg_mu)
+            mean_reg_err_ele = getMedianError(resp_reg_ele)
 
             std_reg = rms(resp_reg_)
+            std_reg_b = rms(resp_reg_b)
+            std_reg_c = rms(resp_reg_c)
+            std_reg_g = rms(resp_reg_g)
+            std_reg_uds = rms(resp_reg_uds)
+            std_reg_tau = rms(resp_reg_tau)
+            std_refReg_tau = rms(resp_refReg_tau)
+            std_reg_mu = rms(resp_reg_mu)
+            std_reg_ele = rms(resp_reg_ele)
             std_reg_err = rms(resp_reg_)
+            std_reg_err_b = rms(resp_reg_b)
+            std_reg_err_c = rms(resp_reg_c)
+            std_reg_err_uds = rms(resp_reg_uds)
+            std_reg_err_g = rms(resp_reg_g)
+            std_reg_err_tau = rms(resp_reg_tau)
+            std_refReg_err_tau = rms(resp_refReg_tau)
+            std_reg_err_mu = rms(resp_reg_mu)
+            std_reg_err_ele = rms(resp_reg_ele)
 
             means_cor.append(mean_cor)
             means_cor_b.append(mean_cor_b)
@@ -1292,6 +1387,8 @@ def doPlots(
             means_cor_uds.append(mean_cor_uds)
             means_cor_g.append(mean_cor_g)
             means_cor_tau.append(mean_cor_tau)
+            means_cor_mu.append(mean_cor_mu)
+            means_cor_ele.append(mean_cor_ele)
 
             means_cor_err.append(mean_cor_err)
             means_cor_err_b.append(mean_cor_err_b)
@@ -1299,6 +1396,8 @@ def doPlots(
             means_cor_err_uds.append(mean_cor_err_uds)
             means_cor_err_g.append(mean_cor_err_g)
             means_cor_err_tau.append(mean_cor_err_tau)
+            means_cor_err_mu.append(mean_cor_err_mu)
+            means_cor_err_ele.append(mean_cor_err_ele)
 
             means_uncor.append(mean_uncor)
             means_uncor_b.append(mean_uncor_b)
@@ -1306,6 +1405,8 @@ def doPlots(
             means_uncor_uds.append(mean_uncor_uds)
             means_uncor_g.append(mean_uncor_g)
             means_uncor_tau.append(mean_uncor_tau)
+            means_uncor_mu.append(mean_uncor_mu)
+            means_uncor_ele.append(mean_uncor_ele)
 
             means_uncor_err.append(mean_uncor_err)
             means_uncor_err_b.append(mean_uncor_err_b)
@@ -1313,6 +1414,8 @@ def doPlots(
             means_uncor_err_uds.append(mean_uncor_err_uds)
             means_uncor_err_g.append(mean_uncor_err_g)
             means_uncor_err_tau.append(mean_uncor_err_tau)
+            means_uncor_err_mu.append(mean_uncor_err_mu)
+            means_uncor_err_ele.append(mean_uncor_err_ele)
 
             means_reg.append(mean_reg)
             means_reg_b.append(mean_reg_b)
@@ -1321,6 +1424,8 @@ def doPlots(
             means_reg_g.append(mean_reg_g)
             means_reg_tau.append(mean_reg_tau)
             means_refReg_tau.append(mean_refReg_tau)
+            means_reg_mu.append(mean_reg_mu)
+            means_reg_ele.append(mean_reg_ele)
 
             means_reg_err.append(mean_reg_err)
             means_reg_err_b.append(mean_reg_err_b)
@@ -1329,6 +1434,8 @@ def doPlots(
             means_reg_err_g.append(mean_reg_err_g)
             means_reg_err_tau.append(mean_reg_err_tau)
             means_refReg_err_tau.append(mean_refReg_err_tau)
+            means_reg_err_mu.append(mean_reg_err_mu)
+            means_reg_err_ele.append(mean_reg_err_ele)
 
             stds_cor.append(std_cor)
             stds_cor_err.append(std_cor_err)
@@ -1336,6 +1443,55 @@ def doPlots(
             stds_uncor_err.append(std_uncor_err)
             stds_reg.append(std_reg)
             stds_reg_err.append(std_reg_err)
+            stds_cor_b.append(std_cor_b)
+            stds_cor_c.append(std_cor_c)
+            stds_cor_uds.append(std_cor_uds)
+            stds_cor_g.append(std_cor_g)
+            stds_cor_tau.append(std_cor_tau)
+            stds_cor_mu.append(std_cor_mu)
+            stds_cor_ele.append(std_cor_ele)
+
+            stds_cor_err_b.append(std_cor_err_b)
+            stds_cor_err_c.append(std_cor_err_c)
+            stds_cor_err_uds.append(std_cor_err_uds)
+            stds_cor_err_g.append(std_cor_err_g)
+            stds_cor_err_tau.append(std_cor_err_tau)
+            stds_cor_err_mu.append(std_cor_err_mu)
+            stds_cor_err_ele.append(std_cor_err_ele)
+
+            stds_uncor_b.append(std_uncor_b)
+            stds_uncor_c.append(std_uncor_c)
+            stds_uncor_uds.append(std_uncor_uds)
+            stds_uncor_g.append(std_uncor_g)
+            stds_uncor_tau.append(std_uncor_tau)
+            stds_uncor_mu.append(std_uncor_mu)
+            stds_uncor_ele.append(std_uncor_ele)
+
+            stds_uncor_err_b.append(std_uncor_err_b)
+            stds_uncor_err_c.append(std_uncor_err_c)
+            stds_uncor_err_uds.append(std_uncor_err_uds)
+            stds_uncor_err_g.append(std_uncor_err_g)
+            stds_uncor_err_tau.append(std_uncor_err_tau)
+            stds_uncor_err_mu.append(std_uncor_err_mu)
+            stds_uncor_err_ele.append(std_uncor_err_ele)
+
+            stds_reg_b.append(std_reg_b)
+            stds_reg_c.append(std_reg_c)
+            stds_reg_uds.append(std_reg_uds)
+            stds_reg_g.append(std_reg_g)
+            stds_reg_tau.append(std_reg_tau)
+            stds_refReg_tau.append(std_refReg_tau)
+            stds_reg_mu.append(std_reg_mu)
+            stds_reg_ele.append(std_reg_ele)
+
+            stds_reg_err_b.append(std_reg_err_b)
+            stds_reg_err_c.append(std_reg_err_c)
+            stds_reg_err_uds.append(std_reg_err_uds)
+            stds_reg_err_g.append(std_reg_err_g)
+            stds_reg_err_tau.append(std_reg_err_tau)
+            stds_refReg_err_tau.append(std_refReg_err_tau)
+            stds_reg_err_mu.append(std_reg_err_mu)
+            stds_reg_err_ele.append(std_reg_err_ele)
 
             X = np.linspace(0.0, 2.0, 100)
             histo = plt.hist(resp_, bins=X, label='Uncorrected' ,histtype='step', density=True, color = '#1f77b4')
@@ -1370,9 +1526,9 @@ def doPlots(
         stds_reg = np.array(stds_reg)
         stds_reg_err = np.array(stds_reg_err)
         centers = np.array(centers)
-        plt.errorbar(centers, means_uncor, yerr = means_uncor_err, label='Uncorrected', linestyle = "-", marker = "o")
-        plt.errorbar(centers, means_cor, yerr = means_cor_err, label='JEC LOT', linestyle = "-", marker = "o")
-        plt.errorbar(centers, means_reg, yerr = means_reg_err, label='Regression', linestyle = "-", marker = "o")
+        plt.errorbar(centers, means_uncor, yerr = means_uncor_err, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.errorbar(centers, means_cor, yerr = means_cor_err, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.errorbar(centers, means_reg, yerr = means_reg_err, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
         plt.xlabel('Jet gen $p_T$')
         plt.ylabel('Response (reco/gen)')
         plt.legend(prop={'size': 10})
@@ -1485,6 +1641,144 @@ def doPlots(
         plt.savefig(outFolder+"/response_vs_gen_pT_tau"+".pdf")
         plt.cla()
 
+        # now plot the response vs gen pT - for muon
+        means_cor = np.array(means_cor_mu)
+        means_cor_err = np.array(means_cor_err_mu)
+        means_uncor = np.array(means_uncor_mu)
+        means_uncor_err = np.array(means_uncor_err_mu)
+        means_reg = np.array(means_reg_mu)
+        # means_refReg = np.array(means_refReg_mu)
+        means_reg_err = np.array(means_reg_err_mu)
+        # means_refReg_err = np.array(means_refReg_err_mu)
+        centers = np.array(centers)
+        plt.errorbar(centers, means_uncor, yerr = means_uncor_err, label='Uncorrected - muon', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.errorbar(centers, means_cor, yerr = means_cor_err, label='JEC LOT - muon', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.errorbar(centers, means_reg, yerr = means_reg_err, label='Regression - muon', linestyle = "-", marker = "o", color = '#2ca02c')
+        # plt.errorbar(centers, means_refReg, yerr = means_refReg_err, label='Baseline-regression - tau', linestyle = "-", marker = "o", color = 'violet')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('Response (reco/gen)')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_vs_gen_pT_muon"+".png")
+        plt.savefig(outFolder+"/response_vs_gen_pT_muon"+".pdf")
+        plt.cla()
+
+        # now plot the response vs gen pT - for electron
+        means_cor = np.array(means_cor_ele)
+        means_cor_err = np.array(means_cor_err_ele)
+        means_uncor = np.array(means_uncor_ele)
+        means_uncor_err = np.array(means_uncor_err_ele)
+        means_reg = np.array(means_reg_ele)
+        # means_refReg = np.array(means_refReg_ele)
+        means_reg_err = np.array(means_reg_err_ele)
+        # means_refReg_err = np.array(means_refReg_err_ele)
+        centers = np.array(centers)
+        plt.errorbar(centers, means_uncor, yerr = means_uncor_err, label='Uncorrected - electron', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.errorbar(centers, means_cor, yerr = means_cor_err, label='JEC LOT - electron', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.errorbar(centers, means_reg, yerr = means_reg_err, label='Regression - electron', linestyle = "-", marker = "o", color = '#2ca02c')
+        # plt.errorbar(centers, means_refReg, yerr = means_refReg_err, label='Baseline-regression - tau', linestyle = "-", marker = "o", color = 'violet')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('Response (reco/gen)')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_vs_gen_pT_electron"+".png")
+        plt.savefig(outFolder+"/response_vs_gen_pT_electron"+".pdf")
+        plt.cla()
+
+        # now plot the resolution vs gen pT (for b)
+        plt.plot(centers, stds_uncor_b, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.plot(centers, stds_cor_b, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.plot(centers, stds_reg_b, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('RMS (Response (reco/gen))')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_b"+".png")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_b"+".pdf")
+        plt.cla()
+
+        # now plot the resolution vs gen pT (for c)
+        plt.plot(centers, stds_uncor_c, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.plot(centers, stds_cor_c, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.plot(centers, stds_reg_c, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('RMS (Response (reco/gen))')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_c"+".png")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_c"+".pdf")
+        plt.cla()
+
+        # now plot the resolution vs gen pT (for uds)
+        plt.plot(centers, stds_uncor_uds, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.plot(centers, stds_cor_uds, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.plot(centers, stds_reg_uds, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('RMS (Response (reco/gen))')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_uds"+".png")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_uds"+".pdf")
+        plt.cla()
+
+        # now plot the resolution vs gen pT (for g)
+        plt.plot(centers, stds_uncor_g, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.plot(centers, stds_cor_g, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.plot(centers, stds_reg_g, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('RMS (Response (reco/gen))')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_g"+".png")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_g"+".pdf")
+        plt.cla()
+
+        # now plot the resolution vs gen pT (for tau)
+        plt.plot(centers, stds_uncor_tau, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.plot(centers, stds_cor_tau, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.plot(centers, stds_reg_tau, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
+        plt.plot(centers, stds_refReg_tau, label='Baseline-Regression', linestyle = "-", marker = "o", color = 'violet')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('RMS (Response (reco/gen))')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_tau"+".png")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_tau"+".pdf")
+        plt.cla()
+
+        # now plot the resolution vs gen pT (for muon)
+        plt.plot(centers, stds_uncor_mu, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.plot(centers, stds_cor_mu, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.plot(centers, stds_reg_mu, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('RMS (Response (reco/gen))')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_muon"+".png")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_muon"+".pdf")
+        plt.cla()
+
+        # now plot the resolution vs gen pT (for electron)
+        plt.plot(centers, stds_uncor_ele, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
+        plt.plot(centers, stds_cor_ele, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
+        plt.plot(centers, stds_reg_ele, label='Regression', linestyle = "-", marker = "o", color = '#2ca02c')
+        plt.xlabel('Jet gen $p_T$')
+        plt.ylabel('RMS (Response (reco/gen))')
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_electron"+".png")
+        plt.savefig(outFolder+"/response_rms_vs_gen_pT_electron"+".pdf")
+        plt.cla()
+
         # now plot the resolution vs gen pT
         plt.plot(centers, stds_uncor, label='Uncorrected', linestyle = "-", marker = "o", color = '#1f77b4')
         plt.plot(centers, stds_cor, label='JEC LOT', linestyle = "-", marker = "o", color = '#ff7f0e')
@@ -1595,18 +1889,18 @@ def doPlots(
         plt.cla()
 
         # for tau
-        mean_uncor = np.median(np.array(X_test_global[X_test_global["label_tau"]>0]["response"]))
-        std_uncor = rms(X_test_global[X_test_global["label_tau"]>0]["response"])
-        mean_cor = np.median(X_test_global[X_test_global["label_tau"]>0]["response_cor"])
-        std_cor = rms(X_test_global[X_test_global["label_tau"]>0]["response_cor"])
-        mean_reg = np.median(X_test_global[X_test_global["label_tau"]>0]["response_reg"])
+        mean_uncor = np.median(np.array(X_test_global[X_test_global["label_tau"]>0]["response_lep"]))
+        std_uncor = rms(X_test_global[X_test_global["label_tau"]>0]["response_lep"])
+        mean_cor = np.median(X_test_global[X_test_global["label_tau"]>0]["response_cor_lep"])
+        std_cor = rms(X_test_global[X_test_global["label_tau"]>0]["response_cor_lep"])
+        mean_reg = np.median(X_test_global[X_test_global["label_tau"]>0]["response_reg_lep"])
         mean_refReg = np.median(X_test_global[X_test_global["label_tau"]>0]["response_tau"])
-        std_reg = rms(X_test_global[X_test_global["label_tau"]>0]["response_reg"])
+        std_reg = rms(X_test_global[X_test_global["label_tau"]>0]["response_reg_lep"])
         std_refReg = rms(X_test_global[X_test_global["label_tau"]>0]["response_tau"])
         X = np.linspace(0.0, 2.0, 100)
-        histo = plt.hist(X_test_global[X_test_global["label_tau"]>0]["response"], bins=X, label='Uncorrected' ,histtype='step', density=True, color = '#1f77b4')
-        histo = plt.hist(X_test_global[X_test_global["label_tau"]>0]["response_cor"], bins=X, label='JEC LOT' ,histtype='step', density=True, color = '#ff7f0e')
-        histo = plt.hist(X_test_global[X_test_global["label_tau"]>0]["response_reg"], bins=X, label='Regression' ,histtype='step', density=True, color = '#2ca02c')
+        histo = plt.hist(X_test_global[X_test_global["label_tau"]>0]["response_lep"], bins=X, label='Uncorrected' ,histtype='step', density=True, color = '#1f77b4')
+        histo = plt.hist(X_test_global[X_test_global["label_tau"]>0]["response_cor_lep"], bins=X, label='JEC LOT' ,histtype='step', density=True, color = '#ff7f0e')
+        histo = plt.hist(X_test_global[X_test_global["label_tau"]>0]["response_reg_lep"], bins=X, label='Regression' ,histtype='step', density=True, color = '#2ca02c')
         histo = plt.hist(X_test_global[X_test_global["label_tau"]>0]["response_tau"], bins=X, label='Baseline-regression' ,histtype='step', density=True, color = 'violet')
         plt.xlabel('Jet response (reco/gen)')
         plt.ylabel('Jets')
@@ -1620,6 +1914,56 @@ def doPlots(
         hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
         plt.savefig(outFolder+"/response_tau"+".png")
         plt.savefig(outFolder+"/response_tau"+".pdf")
+        plt.cla()
+
+        # for muon
+        mean_uncor = np.median(np.array(X_test_global[X_test_global["label_muon"]>0]["response_lep"]))
+        std_uncor = rms(X_test_global[X_test_global["label_muon"]>0]["response_lep"])
+        mean_cor = np.median(X_test_global[X_test_global["label_muon"]>0]["response_cor_lep"])
+        std_cor = rms(X_test_global[X_test_global["label_muon"]>0]["response_cor_lep"])
+        mean_reg = np.median(X_test_global[X_test_global["label_muon"]>0]["response_reg_lep"])
+        std_reg = rms(X_test_global[X_test_global["label_muon"]>0]["response_reg_lep"])
+        X = np.linspace(0.0, 2.0, 100)
+        histo = plt.hist(X_test_global[X_test_global["label_muon"]>0]["response_lep"], bins=X, label='Uncorrected' ,histtype='step', density=True, color = '#1f77b4')
+        histo = plt.hist(X_test_global[X_test_global["label_muon"]>0]["response_cor_lep"], bins=X, label='JEC LOT' ,histtype='step', density=True, color = '#ff7f0e')
+        histo = plt.hist(X_test_global[X_test_global["label_muon"]>0]["response_reg_lep"], bins=X, label='Regression' ,histtype='step', density=True, color = '#2ca02c')
+        plt.xlabel('Jet response (reco/gen)')
+        plt.ylabel('Jets')
+        plt.xlim(0.,2.)
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        plt.text(1.3, 1.4, "median: "+str(np.round(mean_uncor,3))+" rms: "+str(np.round(std_uncor,3)), color = '#1f77b4', fontsize = 14)
+        plt.text(1.3, 1.3, "median: "+str(np.round(mean_cor,3))+" rms: "+str(np.round(std_cor,3)), color = '#ff7f0e', fontsize = 14)
+        plt.text(1.3, 1.2, "median: "+str(np.round(mean_reg,3))+" rms: "+str(np.round(std_reg,3)), color = '#2ca02c', fontsize = 14)
+        # plt.text(1.3, 1.1, "median: "+str(np.round(mean_refReg,3))+" rms: "+str(np.round(std_refReg,3)), color = 'violet', fontsize = 14)
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_muon"+".png")
+        plt.savefig(outFolder+"/response_muon"+".pdf")
+        plt.cla()
+
+        # for electron
+        mean_uncor = np.median(np.array(X_test_global[X_test_global["label_electron"]>0]["response_lep"]))
+        std_uncor = rms(X_test_global[X_test_global["label_electron"]>0]["response_lep"])
+        mean_cor = np.median(X_test_global[X_test_global["label_electron"]>0]["response_cor_lep"])
+        std_cor = rms(X_test_global[X_test_global["label_electron"]>0]["response_cor_lep"])
+        mean_reg = np.median(X_test_global[X_test_global["label_electron"]>0]["response_reg_lep"])
+        std_reg = rms(X_test_global[X_test_global["label_electron"]>0]["response_reg_lep"])
+        X = np.linspace(0.0, 2.0, 100)
+        histo = plt.hist(X_test_global[X_test_global["label_electron"]>0]["response_lep"], bins=X, label='Uncorrected' ,histtype='step', density=True, color = '#1f77b4')
+        histo = plt.hist(X_test_global[X_test_global["label_electron"]>0]["response_cor_lep"], bins=X, label='JEC LOT' ,histtype='step', density=True, color = '#ff7f0e')
+        histo = plt.hist(X_test_global[X_test_global["label_electron"]>0]["response_reg_lep"], bins=X, label='Regression' ,histtype='step', density=True, color = '#2ca02c')
+        plt.xlabel('Jet response (reco/gen)')
+        plt.ylabel('Jets')
+        plt.xlim(0.,2.)
+        plt.legend(prop={'size': 10})
+        plt.legend(loc='upper right')
+        plt.text(1.3, 1.4, "median: "+str(np.round(mean_uncor,3))+" rms: "+str(np.round(std_uncor,3)), color = '#1f77b4', fontsize = 14)
+        plt.text(1.3, 1.3, "median: "+str(np.round(mean_cor,3))+" rms: "+str(np.round(std_cor,3)), color = '#ff7f0e', fontsize = 14)
+        plt.text(1.3, 1.2, "median: "+str(np.round(mean_reg,3))+" rms: "+str(np.round(std_reg,3)), color = '#2ca02c', fontsize = 14)
+        # plt.text(1.3, 1.1, "median: "+str(np.round(mean_refReg,3))+" rms: "+str(np.round(std_refReg,3)), color = 'violet', fontsize = 14)
+        hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+        plt.savefig(outFolder+"/response_electron"+".png")
+        plt.savefig(outFolder+"/response_electron"+".pdf")
         plt.cla()
 
         if modelArchName in ["DeepSet", "DeepSet-MHA"]:
@@ -1659,8 +2003,9 @@ def doPlots(
 if __name__ == "__main__":
     from args import get_common_parser, handle_common_args
     parser = get_common_parser()
-    parser.add_argument('-f','--file', help = 'input file name part')
-    parser.add_argument('-o','--outname', help = 'output file name part')
+    parser.add_argument('-t','--testDataDir', default='/eos/user/s/sewuchte/L1Trigger/ForDuc/datasetsNewComplete/extendedAll200/' , help = 'input testing data directory')
+    parser.add_argument('-f','--file', help = 'input model file path')
+    parser.add_argument('-o','--outname', help = 'output file path')
     parser.add_argument('-c','--flav', help = 'Which flavor to run, options are b, bt, btg.')
     parser.add_argument('-i','--input', help = 'Which input to run, options are baseline, ext1, all.')
     parser.add_argument('-m','--model', help = 'Which model to evaluate, options are DeepSet, DeepSet-MHA.')
@@ -1681,6 +2026,7 @@ if __name__ == "__main__":
 
 
     doPlots(
+        args.testDataDir,
         args.file,
         args.timestamp,
         args.flav,

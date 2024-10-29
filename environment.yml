@@ -17,3 +17,5 @@ dependencies:
     - qkeras==0.9.0
     - hist==2.7.3
     - hls4ml[profiling]
+    - shap
+    - awkward-pandas

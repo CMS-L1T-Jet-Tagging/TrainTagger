@@ -19,11 +19,13 @@ from tensorflow.keras.regularizers import l1
 import tensorflow_model_optimization as tfmot
 from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow_model_optimization.sparsity.keras import strip_pruning
+from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks, pruning_wrapper,  pruning_schedule
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
 
 #Data set related
 from datatools.dataset import *
 from datatools.createDataset import *
+from models import *
 import models
 
 # Set environment variables and styles
@@ -137,13 +139,18 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
     nconstit = 16 #Number of constituents
 
     #Set data loading path
-    PATH_load = f"{train_data_dir}/{flavs}/"
+    # PATH_load = f"{train_data_dir}/{flavs}/"
+    PATH_load = f"{train_data_dir}/"
     print("Loading data from: ", PATH_load)
     chunksmatching = glob.glob(f"{PATH_load}X_{inputSetTag}_test*.parquet")
     chunksmatching = [chunksm.replace(f"{PATH_load}X_{inputSetTag}_test","").replace(".parquet","").replace("_","") for chunksm in chunksmatching]
 
-    if test: chunksmatching = random.sample(chunksmatching, 10)
-    else: chunksmatching = random.sample(chunksmatching, len(chunksmatching))
+    if test:
+        chunksmatching = random.sample(chunksmatching, 10)
+    elif nnConfig["limitedChunks"] > -1:
+        chunksmatching = random.sample(chunksmatching, int(len(chunksmatching) * nnConfig["limitedChunks"]))
+    else:
+        chunksmatching = random.sample(chunksmatching, len(chunksmatching))
 
     print (f"Loading data in all {len(chunksmatching)} chunks.")
 
@@ -302,7 +309,8 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
     if nnConfig["model"] == "DeepSet":
         model, modelname, custom_objects = models.getDeepSet(nclasses = len(Y_train_val[0]), input_shape = (nconstit, nfeat),
                                                       nnodes_phi = nnConfig["nNodes"], nnodes_rho = nnConfig["nNodes"],
-                                                      nbits = nbits, integ = integ, addRegression = nnConfig["regression"], nLayers = nnConfig["nLayers"])
+                                                      nbits = nbits, integ = integ, addRegression = nnConfig["regression"], nLayers = nnConfig["nLayers"],
+                                                      addNLL = nnConfig["NLL"], regl = nnConfig["l2_rate"])
     elif nnConfig["model"] == "MLP":
         model, modelname, custom_objects = models.getMLP(nclasses = len(Y_train_val[0]), input_shape = (nconstit*nfeat)+4,
                                                       nnodes_phi = nnConfig["nNodes"], nnodes_rho = nnConfig["nNodes"],
@@ -320,16 +328,16 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
         x_electron = np.reshape(x_electron, (x_electron.shape[0],x_electron.shape[1]*x_electron.shape[2]))
 
         # append global features
-        X_train_val_global = np.stack((X_train_global["jet_pt_raw"],X_train_global["jet_eta"],X_train_global["jet_phi"],X_train_global["jet_npfcand"]), axis=1)
-        X_b_global = np.stack((x_b_global["jet_pt_raw"],x_b_global["jet_eta"],x_b_global["jet_phi"],x_b_global["jet_npfcand"]), axis=1)
-        X_bkg_global = np.stack((x_bkg_global["jet_pt_raw"],x_bkg_global["jet_eta"],x_bkg_global["jet_phi"],x_bkg_global["jet_npfcand"]), axis=1)
-        X_taup_global = np.stack((x_taup_global["jet_pt_raw"],x_taup_global["jet_eta"],x_taup_global["jet_phi"],x_taup_global["jet_npfcand"]), axis=1)
-        X_taum_global = np.stack((x_taum_global["jet_pt_raw"],x_taum_global["jet_eta"],x_taum_global["jet_phi"],x_taum_global["jet_npfcand"]), axis=1)
-        X_gluon_global = np.stack((x_gluon_global["jet_pt_raw"],x_gluon_global["jet_eta"],x_gluon_global["jet_phi"],x_gluon_global["jet_npfcand"]), axis=1)
-        X_charm_global = np.stack((x_charm_global["jet_pt_raw"],x_charm_global["jet_eta"],x_charm_global["jet_phi"],x_charm_global["jet_npfcand"]), axis=1)
-        X_muon_global = np.stack((x_muon_global["jet_pt_raw"],x_muon_global["jet_eta"],x_muon_global["jet_phi"],x_muon_global["jet_npfcand"]), axis=1)
-        X_electron_global = np.stack((x_electron_global["jet_pt_raw"],x_electron_global["jet_eta"],x_electron_global["jet_phi"],x_electron_global["jet_npfcand"]), axis=1)
-        X_test_val_global = np.stack((X_test_global["jet_pt_raw"],X_test_global["jet_eta"],X_test_global["jet_phi"],X_test_global["jet_npfcand"]), axis=1)
+        X_train_val_global = np.stack((X_train_global["jet_pt_raw"],X_train_global["jet_eta_phys"],X_train_global["jet_phi_phys"],X_train_global["jet_npfcand"]), axis=1)
+        X_b_global = np.stack((x_b_global["jet_pt_raw"],x_b_global["jet_eta_phys"],x_b_global["jet_phi_phys"],x_b_global["jet_npfcand"]), axis=1)
+        X_bkg_global = np.stack((x_bkg_global["jet_pt_raw"],x_bkg_global["jet_eta_phys"],x_bkg_global["jet_phi_phys"],x_bkg_global["jet_npfcand"]), axis=1)
+        X_taup_global = np.stack((x_taup_global["jet_pt_raw"],x_taup_global["jet_eta_phys"],x_taup_global["jet_phi_phys"],x_taup_global["jet_npfcand"]), axis=1)
+        X_taum_global = np.stack((x_taum_global["jet_pt_raw"],x_taum_global["jet_eta_phys"],x_taum_global["jet_phi_phys"],x_taum_global["jet_npfcand"]), axis=1)
+        X_gluon_global = np.stack((x_gluon_global["jet_pt_raw"],x_gluon_global["jet_eta_phys"],x_gluon_global["jet_phi_phys"],x_gluon_global["jet_npfcand"]), axis=1)
+        X_charm_global = np.stack((x_charm_global["jet_pt_raw"],x_charm_global["jet_eta_phys"],x_charm_global["jet_phi_phys"],x_charm_global["jet_npfcand"]), axis=1)
+        X_muon_global = np.stack((x_muon_global["jet_pt_raw"],x_muon_global["jet_eta_phys"],x_muon_global["jet_phi_phys"],x_muon_global["jet_npfcand"]), axis=1)
+        X_electron_global = np.stack((x_electron_global["jet_pt_raw"],x_electron_global["jet_eta_phys"],x_electron_global["jet_phi_phys"],x_electron_global["jet_npfcand"]), axis=1)
+        X_test_val_global = np.stack((X_test_global["jet_pt_raw"],X_test_global["jet_eta_phys"],X_test_global["jet_phi_phys"],X_test_global["jet_npfcand"]), axis=1)
 
         X_train_val = np.concatenate((np.array(X_train_val_global),X_train_val), axis=-1)
         x_b = np.concatenate((np.array(X_b_global),x_b), axis=-1)
@@ -427,18 +435,19 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
 
     # print (w_uds)
 
-    # do it flat in pt and overwrite the other one
-    # enable this for tests - if we can do a flat pT weighting and if it helps
-    # otherwise just comment this for loop block
-    # for iBin in range(0, len(counts_b)):
-    #     w_b[iBin] = np.nan_to_num(counts_b[0] / counts_b[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_uds[iBin] = np.nan_to_num(counts_b[0] / counts_uds[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_g[iBin] = np.nan_to_num(counts_b[0] / counts_g[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_c[iBin] = np.nan_to_num(counts_b[0] / counts_c[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_taup[iBin] = np.nan_to_num(counts_b[0] / counts_taup[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_taum[iBin] = np.nan_to_num(counts_b[0] / counts_taum[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_muon[iBin] = np.nan_to_num(counts_b[0] / counts_muon[iBin], nan = 1., posinf = 1., neginf = 1.)
-    #     w_electron[iBin] = np.nan_to_num(counts_b[0] / counts_electron[iBin], nan = 1., posinf = 1., neginf = 1.)
+    if nnConfig["flatWeighting"]:
+        # do it flat in pt and overwrite the other one
+        # enable this for tests - if we can do a flat pT weighting and if it helps
+        # otherwise just comment this for loop block
+        for iBin in range(0, len(counts_b)):
+            w_b[iBin] = np.nan_to_num(counts_b[0] / counts_b[iBin], nan = 1., posinf = 1., neginf = 1.)
+            w_uds[iBin] = np.nan_to_num(counts_b[0] / counts_uds[iBin], nan = 1., posinf = 1., neginf = 1.)
+            w_g[iBin] = np.nan_to_num(counts_b[0] / counts_g[iBin], nan = 1., posinf = 1., neginf = 1.)
+            w_c[iBin] = np.nan_to_num(counts_b[0] / counts_c[iBin], nan = 1., posinf = 1., neginf = 1.)
+            w_taup[iBin] = np.nan_to_num(counts_b[0] / counts_taup[iBin], nan = 1., posinf = 1., neginf = 1.)
+            w_taum[iBin] = np.nan_to_num(counts_b[0] / counts_taum[iBin], nan = 1., posinf = 1., neginf = 1.)
+            w_muon[iBin] = np.nan_to_num(counts_b[0] / counts_muon[iBin], nan = 1., posinf = 1., neginf = 1.)
+            w_electron[iBin] = np.nan_to_num(counts_b[0] / counts_electron[iBin], nan = 1., posinf = 1., neginf = 1.)
 
     # print (w_uds)
 
@@ -542,19 +551,26 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
         model = tf.keras.models.clone_model(model, clone_function=pruneFunction)
 
 
+    if nnConfig["regression"] == True and nnConfig["NLL"] == True:
+        loss_weights_ = [1., nnConfig["alpha"]*1., nnConfig["alpha"]*1.]
+    elif nnConfig["regression"] == True:
+        loss_weights_ = [1., nnConfig["alpha"]*1.]
+    else:
+        loss_weights_ = [1.]
 
-    if nnConfig["regression"] == True:
-        # model.compile(optimizer = optim, loss = ['categorical_crossentropy', 'mean_squared_error'],
-        #             #   metrics = ['categorical_accuracy', 'mae'],
-        #               loss_weights=[1., 1.]
-        # #               )
-        # model.compile(optimizer=optim, loss={'output_class': 'categorical_crossentropy', 'output_reg': 'mean_squared_error'},
-        #               metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']}, loss_weights=[1., 1.])
-        model.compile(optimizer=optim, loss={'output_class': 'categorical_crossentropy', 'output_reg': 'log_cosh'},
-                      metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
-                      weighted_metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
-                      loss_weights=[1., 2.])
-                    #   loss_weights=[1., 50.])
+    if nnConfig["regression"] == True and nnConfig["NLL"] == True:
+        model.compile(optimizer = optim,
+                      loss = {'output_class': 'categorical_crossentropy', 'output_reg': tf.keras.losses.Huber(), 'output_regNLL': myNLL()},
+                      metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                      weighted_metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                      loss_weights = loss_weights_)
+    elif nnConfig["regression"] == True:
+        model.compile(optimizer = optim,
+                    #   loss = {'output_class': 'categorical_crossentropy', 'output_reg': 'log_cosh'},
+                      loss = {'output_class': 'categorical_crossentropy', 'output_reg': tf.keras.losses.Huber()},
+                      metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                      weighted_metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                      loss_weights = loss_weights_)
     else:
         model.compile(optimizer=optim, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
@@ -590,31 +606,23 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
     # Run training
     # Figure o merit to monitor during training
     merit = 'val_loss'
-
     # early stopping callback
     es = tf.keras.callbacks.EarlyStopping(monitor=merit, patience = 10)
     # Learning rate scheduler 
-    # ls = ReduceLROnPlateau(monitor=merit, factor=0.2, patience=10)
-    ls = tf.keras.callbacks.ReduceLROnPlateau(monitor=merit, factor=0.2, patience=5, min_lr=0.00001)
+    ls = tf.keras.callbacks.ReduceLROnPlateau(monitor = merit, factor = 0.5, patience = 10, min_lr = 0.00001, verbose = True)
     # model checkpoint callback
     # this saves our model architecture + parameters into mlp_model.h5
-    chkp = tf.keras.callbacks.ModelCheckpoint(outFolder+'/model_'+modelname+'.h5', monitor = merit, 
-                                    verbose = 0, save_best_only = True, 
-                                    save_weights_only = False, mode = 'auto', 
-                                    save_freq = 'epoch')
+    chkp = tf.keras.callbacks.ModelCheckpoint(outFolder+'/model_'+modelname+'.h5',
+                                            monitor = merit, 
+                                            verbose = 0, save_best_only = True, 
+                                            save_weights_only = False, mode = 'auto', 
+                                            save_freq = 'epoch')
 
-    # callbacks_=[es,ls,chkp])
-    # callbacks_=[es,chkp])
-    callbacks_ = [chkp]
-    # callbacks_ = [chkp, ls]
+    callbacks_=[es,ls,chkp]
     if nnConfig["pruning"]:
         # Prunning callback
         pr = pruning_callbacks.UpdatePruningStep()
         callbacks_.append(pr)
-
-    # print ("sample_weights",min(sample_weights),max(sample_weights))
-    # print ("Y_train_val",min(Y_train_val),max(Y_train_val))
-    # print ("Y_train_val_reg",min(Y_train_val_reg),max(Y_train_val_reg))
 
     if nnConfig["inputQuant"]:
         input_quantizer = quantized_bits(bits=16, integer=6, symmetric=0, alpha=1)
@@ -622,7 +630,17 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
         X_test = input_quantizer(X_test.astype(np.float32)).numpy()
 
     # Train classifier
-    if nnConfig["regression"] == True:
+    if nnConfig["regression"] == True and nnConfig["NLL"] == True:
+        history = model.fit(x = X_train_val,
+                            y = [Y_train_val, Y_train_val_reg, Y_train_val_reg], 
+                            epochs = nnConfig["epochs"], 
+                            batch_size = nnConfig["batch_size"], 
+                            verbose = 1,
+                            validation_split = nnConfig["validation_split"],
+                            callbacks = callbacks_,
+                            sample_weight = sample_weights,
+                            shuffle = True)
+    elif nnConfig["regression"] == True:
         history = model.fit(x = X_train_val,
                             y = [Y_train_val, Y_train_val_reg], 
                             epochs = nnConfig["epochs"], 
@@ -649,6 +667,9 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
 
     if nnConfig["pruning"]:
         custom_objects_["PruneLowMagnitude"] = pruning_wrapper.PruneLowMagnitude
+    if nnConfig["NLL"] == True:
+        # custom_objects_["nll_gaussian_loss"] = models.nll_gaussian_loss
+        custom_objects_["myNLL"] = myNLL
 
     model = tf.keras.models.load_model(outFolder+'/model_'+modelname+'.h5', custom_objects=custom_objects_)
 
@@ -656,16 +677,23 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
     if nnConfig["pruning"]:
         # Strip the model 
         pmodel = strip_pruning(model)
-        if nnConfig["regression"] == True:
-            # pmodel.compile(optimizer=optim, loss={'output_class': 'categorical_crossentropy', 'output_reg': 'mean_squared_error'},
-            #           metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']}, loss_weights=[1., 1.])
-            pmodel.compile(optimizer=optim, loss={'output_class': 'categorical_crossentropy', 'output_reg': 'log_cosh'},
-                        metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
-                        weighted_metrics={'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
-                        loss_weights=[1., 2.])
-                        # loss_weights=[1., 50.])
+        if nnConfig["regression"] == True and nnConfig["NLL"] == True:
+            pmodel.compile(optimizer=optim,
+                        loss = {'output_class': 'categorical_crossentropy', 'output_reg': tf.keras.losses.Huber(), 'output_regNLL': myNLL()},
+                        metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                        weighted_metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                        loss_weights = loss_weights_)
+        elif nnConfig["regression"] == True:
+            pmodel.compile(optimizer=optim,
+                        # loss = {'output_class': 'categorical_crossentropy', 'output_reg': 'log_cosh'},
+                        loss = {'output_class': 'categorical_crossentropy', 'output_reg': tf.keras.losses.Huber()},
+                        metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                        weighted_metrics = {'output_class': 'categorical_accuracy', 'output_reg': ['mae', 'mean_squared_error']},
+                        loss_weights = loss_weights_)
         else:
             pmodel.compile(optimizer=optim, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
+
+
         # Print the stripped model summary
         print ("pmodel")
         pmodel.summary()
@@ -704,6 +732,17 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
         plt.savefig(outFolder+"/acc_"+inputSetTag+".png")
         plt.savefig(outFolder+"/acc_"+inputSetTag+".pdf")
         plt.cla()
+
+    if nnConfig["NLL"]:
+         plt.plot(history.history['output_regNLL_loss'], label='Regression NLL loss')
+         plt.plot(history.history['val_output_regNLL_loss'], label='Validation regression NLL loss')
+         plt.legend(loc="upper left")
+         plt.xlabel('epoch')
+         plt.ylabel('acc')
+         hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+         plt.savefig(outFolder+"/loss_regNLL_"+inputSetTag+".png")
+         plt.savefig(outFolder+"/loss_regNLL_"+inputSetTag+".pdf")
+         plt.cla()
 
     if nnConfig["regression"]:
         # Plot loss vs epoch
@@ -966,12 +1005,13 @@ if __name__ == "__main__":
     parser.add_argument('--train-epochs', dest = 'epochs', default = 15)
     parser.add_argument('--train-validation-split', dest = 'validation_split', default = .25)
     parser.add_argument('--learning-rate', dest = 'learning_rate', default = 0.001)
+    parser.add_argument('--l2-rate', dest = 'l2_rate', default = 0.0001)
     parser.add_argument('--optimizer', dest = 'optimizer', default = "adam")
     parser.add_argument('--classweights', dest = 'classweights', default = True, action='store_true')
     parser.add_argument('--regression', dest = 'regression', default = True, action='store_true')
     parser.add_argument('--pruning', dest = 'pruning', default = False, action='store_true')
     parser.add_argument('--inputQuant', dest = 'inputQuant', default = False, action='store_true')
-    parser.add_argument('--test', dest = 'test', default = True, action='store_true')
+    parser.add_argument('--test', dest = 'test', default = False, action='store_true')
     parser.add_argument('--plotFeatures', dest = 'plotFeatures', default = False, action='store_true')
     parser.add_argument('--nbits', dest = 'nbits', default = 8)
     parser.add_argument('--integ', dest = 'integ', default = 0)
@@ -980,6 +1020,10 @@ if __name__ == "__main__":
     parser.add_argument('--nHeads', dest = 'nHeads', default = 3)
     parser.add_argument('--nNodesHead', dest = 'nNodesHead', default = 12)
     parser.add_argument('--strstamp', dest = 'strstamp', default = "2024_07_22_vTEST_all")
+    parser.add_argument('--flatWeighting', dest = 'flatWeighting', default = False, action='store_true')
+    parser.add_argument('--alpha', dest = 'alpha', default = 2)
+    parser.add_argument('--limitedChunks', dest = 'limitedChunks', default = -1)
+    parser.add_argument('--NLL', dest = 'NLL', default = False, action='store_true')
 
     args = parser.parse_args()
     handle_common_args(args)
@@ -1004,6 +1048,7 @@ if __name__ == "__main__":
         "validation_split": float(args.validation_split),
         "model": args.model,
         "learning_rate": float(args.learning_rate),
+        "l2_rate": float(args.l2_rate),
         "optimizer": args.optimizer,
         "classweights": args.classweights,
         "regression": args.regression,
@@ -1015,6 +1060,10 @@ if __name__ == "__main__":
         "nLayers": int(args.nLayers),
         "nHeads": int(args.nHeads),
         "nNodesHead": int(args.nNodesHead),
+        "flatWeighting": bool(args.flatWeighting),
+        "alpha": float(args.alpha),
+        "limitedChunks": float(args.limitedChunks),
+        "NLL": float(args.NLL),
     }
 
     doTraining(

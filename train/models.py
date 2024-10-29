@@ -9,7 +9,7 @@ from tensorflow.keras import utils, regularizers
 from tensorflow.keras.layers import Layer
 from qkeras import *
 import tensorflow.keras.layers as KL
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
+# from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 # import tensorflow_addons as tfa
 from tensorflow import math, matmul, reshape, shape, transpose, cast, float32
 from tensorflow.keras.layers import Dense, Layer
@@ -343,7 +343,7 @@ def getMLPWAttention(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nb
     return model, fname, custom_objects
 
 
-def getDeepSet(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nbits = 8, integ = 0, addRegression = False, nLayers = 3):
+def getDeepSet(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nbits = 8, integ = 0, addRegression = False, addNLL = False, nLayers = 3, regl = 0.0001):
 
     # Define DeepSet Permutation Invariant Model
 
@@ -393,7 +393,7 @@ def getDeepSet(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nbits = 
     print("Quantization of integer part =",integ)
 
     #############################################################################
-    REGL = regularizers.l2(0.00001)
+    REGL = regularizers.l2(regl)
 
     dense_kwargs = dict(
         kernel_initializer = 'glorot_normal',
@@ -450,9 +450,19 @@ def getDeepSet(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nbits = 
         h_reg = QDense(1, name='qDense_out_reg', **dense_kwargs_out)(h_reg)
         out_reg = Activation('linear', name='output_reg')(h_reg)
 
+    if addNLL and addRegression:
+        h_regNLL = QDense(nnodes_rho, name='qDense_'+str(nLayers)+'_regNLL', **dense_kwargs)(h)
+        h_regNLL = QActivation(qact,name='qActivation_'+str(nLayers)+'_regNLL')(h_regNLL)
+        # h_reg = QDense(nnodes_rho, name='qDense_'+str(nLayers)+'_reg_2', **dense_kwargs)(h_reg)
+        # h_reg = QActivation(qact,name='qActivation_'+str(nLayers)+'_reg_2')(h_reg)
+        h_regNLL = QDense(2, name='qDense_out_regNLL', **dense_kwargs_out)(h_regNLL)
+        out_regNLL = Activation('linear', name='output_regNLL')(h_regNLL)
+
     # Build the model
     
-    if addRegression:
+    if addRegression and addNLL:
+        model = Model(inputs=inp, outputs=[out, out_reg, out_regNLL])
+    elif addRegression:
         model = Model(inputs=inp, outputs=[out, out_reg])
     else:
         model = Model(inputs=inp, outputs=out)
@@ -521,24 +531,21 @@ def getMLP(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nbits = 8, i
     print("Quantization of integer part =",integ)
 
     #############################################################################
-    # REGL = regularizers.l2(0.0001)
+    REGL = regularizers.l2(0.0001)
     # kernel_initializer_=tf.keras.initializers.glorot_normal()
     # kernel_constraint = tf.keras.constraints.max_norm(5)
 
     dense_kwargs = dict(
         # kernel_initializer = tf.keras.initializers.glorot_normal(),
         # kernel_initializer = 'glorot_normal',
-        # kernel_regularizer = REGL,
-        # bias_regularizer = REGL,
-        # kernel_constraint = tf.keras.constraints.max_norm(5),
+        kernel_regularizer = REGL,
+        bias_regularizer = REGL,
+        kernel_constraint = tf.keras.constraints.max_norm(5),
         kernel_quantizer = qbits,
         bias_quantizer = qbits,
         # dropout=0.1,
     )
     dense_kwargs_out = dict(
-        # kernel_initializer = tf.keras.initializers.glorot_normal(),
-        # kernel_initializer = 'glorot_normal',
-        # kernel_regularizer = REGL,
         # bias_regularizer = REGL,
         # kernel_constraint = tf.keras.constraints.max_norm(5),
         kernel_quantizer = 'quantized_bits(16,6,alpha=1)',
@@ -617,3 +624,34 @@ def getMLP(nclasses, input_shape, nnodes_phi = 16, nnodes_rho = 16, nbits = 8, i
 
 
     return model, fname, custom_objects
+
+
+
+# ----------------------------
+from tensorflow.python.ops.ragged import ragged_map_ops
+from tensorflow.python.ops.ragged import ragged_util
+from tensorflow.python.util import dispatch
+from tensorflow.python.util.tf_export import keras_export
+from tensorflow.tools.docs import doc_controls
+from tensorflow.python.keras.losses import *
+
+@keras_export("keras.losses.nll", v1=[])
+@tf.__internal__.dispatch.add_dispatch_support
+def nll(y_true, y_pred):
+    square = tf.square(y_pred[0] - y_true)
+    ms = tf.add(tf.divide(square, y_pred[0]), tf.math.log(y_pred[1]))
+    ms = tf.reduce_mean(ms)
+    return ms
+
+@keras_export("keras.losses.myNLL")
+class myNLL(LossFunctionWrapper):
+
+    def __init__(
+        self,
+        reduction="sum_over_batch_size",
+        name="nll_loss",
+    ):
+        super().__init__(nll, name=name, reduction=reduction)
+
+    def get_config(self):
+        return Loss.get_config(self)

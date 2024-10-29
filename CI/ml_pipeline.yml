@@ -1,18 +1,24 @@
+include:
+    - CI/cmssw.yml
+
 stages:
   - data
   - train
   - evaluate
   - synth
+  - cmssw-setup
    
 variables:
     Model: DeepSet
     Classes: btgc
     Inputs: minimal
+    TrainDataset: TT_PU200.root
+    TestDataset: TT_PU200.root
 
 .template:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
-    - export PYTHONPATH=/builds/cebrown/l1-vertex-finding:$PYTHONPATH
+    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
     - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
     - mc admin info $ARTIFACTS_ALIAS
   script:
@@ -28,20 +34,24 @@ data:
   extends:
     - .template
   stage: data
-  # rules:
-  #   - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-  #       - datatools/**
-  #     when: manual
+  rules:
+     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+         - datatools/**
+       when: manual
   script:
   - source activate l1_training
   - mkdir data
   - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$Dataset ./
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$TrainDataset ./
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$TestDataset ./
   - cd ..
-  - python datatools/createDataset.py -i data/$Dataset -o data/TT -t $Inputs
+  - python datatools/createDataset.py -i data/$TrainDataset -o data/TTtrain -t $Inputs
+  - python datatools/createDataset.py -i data/$TestDataset -o data/TTtest -t $Inputs
   - cd data 
-  - tar -cvf convertedfiles_$Inputs.tgz TT
-  - mc cp convertedfiles_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
+  - tar -cvf convertedfiles_train_$Inputs.tgz TTtrain
+  - tar -cvf convertedfiles_test_$Inputs.tgz TTtest
+  - mc cp convertedfiles_train_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
+  - mc cp convertedfiles_test_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
 
 train:
   extends:
@@ -55,12 +65,9 @@ train:
   - cd data
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
   - tar -xvf convertedfiles_$Inputs.tgz
-  - cd TT
-  - mkdir btgc
-  - mv *.parquet btgc
-  - cd ../..
+  - cd ..
   - source activate l1_training
-  - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2  --test
+  - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2 --pruning
   artifacts:
     paths:
       - trainings_regression_weighted
@@ -73,11 +80,22 @@ evaluate:
   needs: [train]
   dependencies: [train]
   script:
-  - echo evaluate
-  # artifacts:
-  #   paths:
-  #     - Eval/FullPlots/*
-  #   expire_in: 1 day
+  - mkdir data
+  - cd data
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
+  - tar -xvf convertedfiles_$Inputs.tgz
+  - cd ..
+  - ls -lh
+  - ls trainings_regression_weighted
+  - source activate l1_training
+  - python evaluation/makeResultPlot.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_22_08_vTEST --pruning
+  - python evaluation/makeInputPlots.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs
+  artifacts:
+    paths:
+      - trainings_regression_weighted
+      - outputPlots
+      - inputFeaturePlots
+    expire_in: 1 day
 
 synth:
   extends:
@@ -95,12 +113,11 @@ synth:
     - cd data
     - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
     - tar -xvf convertedfiles_$Inputs.tgz
-    - cd TT
-    - mkdir btgc
-    - mv *.parquet btgc
-    - cd ../..
+    - cd ..
     - source activate l1_training
-    - python synthesis/synthesis.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B
+    - pwd
+    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
+    - python synthesis/synth.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B --pruning
   artifacts:
     paths:
       - outputSynthesis/*

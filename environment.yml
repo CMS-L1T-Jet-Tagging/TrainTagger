@@ -1,21 +1,23 @@
-name: l1_training
+name: tagger
+channels:
+  - conda-forge
 dependencies:
-  - python=3.8
+  - python=3.11
   - pip
-  - ipykernel
   - pip:
     - numpy
     - matplotlib
     - mplhep
-    - tensorflow
-    - keras
     - scikit-learn==1.3.2
     - pandas==2.0.3
     - uproot4==4.0.0
     - xxhash
     - pyarrow==17.0.0
-    - qkeras==0.9.0
     - hist==2.7.3
-    - hls4ml[profiling]
     - shap
     - awkward-pandas
+    # For hardware synthesis
+    - tensorflow==2.14
+    - pyparsing
+    - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git
+    - git+https://github.com/jmitrevs/qkeras.git@qrecurrent_unstack

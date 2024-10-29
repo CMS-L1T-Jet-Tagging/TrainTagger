@@ -20,7 +20,7 @@ conda-env create -f environment.yml
 Activate the environment:
 
 ```
-conda activate l1_training
+conda activate tagger
 ```
 
 And then do whatever you want in this environment (edit files, open notebooks, etc.). To deactivate the environment:

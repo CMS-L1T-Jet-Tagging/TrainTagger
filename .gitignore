@@ -8,6 +8,7 @@ matchingPlots*
 outputSynthesis*
 trainings*
 *__pycache__*
+condaenv*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

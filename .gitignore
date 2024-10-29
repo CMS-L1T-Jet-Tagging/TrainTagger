@@ -7,7 +7,6 @@ outputPlots*
 matchingPlots*
 outputSynthesis*
 trainings*
-data/
 *__pycache__*
 
 # Byte-compiled / optimized / DLL files

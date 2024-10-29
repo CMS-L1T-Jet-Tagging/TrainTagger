@@ -1,6 +1,4 @@
 #To store the models' official calulated working points
-from types import SimpleNamespace
-
 WPs = {
     #Working points when pT is corrected
     'tau_ptCorrected': 0.17,
@@ -8,6 +6,9 @@ WPs = {
 
     'tau_ptCorrected_mult': 0.008,
     'tau_l1_pt_ptCorrected_mult': 26, #GeV
+
+    'tau_topo': 0.019,
+    'tau_pt_topo': 28,
 
     #Working points when pT is not corrected
     'tau_ptUncorrected': 0.12,

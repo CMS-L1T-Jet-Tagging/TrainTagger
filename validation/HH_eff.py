@@ -131,7 +131,10 @@ def HH_eff_HT(model, hh_file_path, input_tag='ext7', n_entries=100000, tree='jet
 
 
 
-def HH_eff_mass(model, hh_file_path, n_entries=100000, tree='jetntuple/Jets'):
+def HH_eff_mass(model, hh_file_path, input_tag='ext7', n_entries=100000, tree='jetntuple/Jets'):
+
+    #Calculate gen Di-higgs mass
+    
     return
 
 if __name__ == "__main__":

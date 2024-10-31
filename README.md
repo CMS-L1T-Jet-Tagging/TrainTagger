@@ -22,18 +22,23 @@ python datatools/createDataset.py -i <input ntuple root file> -o <output directo
 
 The -i and -o values are optional, see the script for the default values.
 
-## Training
+## Setup & Training
 
-The model can be trained using this command:
+After setting up the conda environment (see conda setup below), the model can be trained using this command:
 
 ```
-python train/training.py -t extendedAll200 -c btgc -i minimal --train-epochs 15 --model DeepSet --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_07_22_vTEST --nLayers 2 --pruning --test
-```
+#Set up
+source setup.sh
 
+python tagger/train/train.py -n <model-name>
+```
 
 ## Synthesize the model to HDL Codes
+
+The train models would then be saved in `tagger/models`, and the jet tagger can be synthesized with its hls wrapper using
+
 ```
-python synthesis/synthesis.py -f extendedAll200 -c btgc -i minimal -m DeepSet -o regression --regression --timestamp 2024_07_22_vTEST --pruning -B
+python tagger/firmware/hls4ml_convert.py
 ```
 
 ## Conda environment

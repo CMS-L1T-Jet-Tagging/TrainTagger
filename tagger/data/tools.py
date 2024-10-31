@@ -3,6 +3,7 @@ import numpy as np
 import awkward as ak
 import uproot
 import yaml
+import tensorflow as tf
 
 #Dataset configuration
 from .config import FILTER_PATTERN, N_PARTICLES, INPUT_TAG
@@ -26,9 +27,6 @@ def _split_flavor(data):
     """
 
     genmatch_pt_base = data['jet_genmatch_pt'] > 0
-
-    # Get unique values
-    unique_values = np.unique(data['jet_genmatch_pflav'])
 
     # Define conditions for each label
     conditions = {
@@ -90,6 +88,16 @@ def _split_flavor(data):
         ),
     }
 
+    # Automatically generate class labels based on the order of keys in conditions
+    class_labels = {label: idx for idx, label in enumerate(conditions)}
+
+    # Initialize the new array in data for numeric labels with default -1 for unmatched entries
+    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], -1)
+
+    # Assign numeric values based on conditions using awkward's where function
+    for label, condition in conditions.items():
+        data['class_label'] = ak.where(condition, class_labels[label], data['class_label'])
+
     #Set pt regression target
     hadrons = (conditions["b"] | conditions["charm"] | conditions["light"] | conditions["gluon"])
     leptons = (conditions["taup"] | conditions["taum"] | conditions["muon"] | conditions["electron"])
@@ -107,15 +115,95 @@ def _split_flavor(data):
     jet_ptmin_gen = (data['target_pt_phys'] > 5.)
     for key in conditions: conditions[key] = conditions[key] & jet_ptmin_gen
 
-    # Split data based on conditions
-    split_data = {label: data[condition] for label, condition in conditions.items()}
-
     # Sanity check for data consistency
-    total_entries = sum(len(split_data[label]) for label in split_data)
-    if total_entries != len(data[jet_ptmin_gen]):
+    split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
+    if split_data_sum != len(data[jet_ptmin_gen]):
         raise ValueError(f"Data splitting error: Total entries ({total_entries}) do not match the filtered data length ({len(data[jet_ptmin_gen])}).")
 
-    return split_data
+    return data[jet_ptmin_gen]
+
+def _get_pfcand_fields(tag):
+    
+    # Get the directory of the current file (tools.py)
+    current_dir = os.path.dirname(__file__)
+
+    # Construct the path to pfcand_fields.yml relative to tools.py
+    pfcand_fields_path = os.path.join(current_dir, "pfcand_fields.yml")
+
+    # Load the YAML file as a dictionary
+    with open(pfcand_fields_path, "r") as file: pfcand_fields = yaml.safe_load(file)
+
+    return pfcand_fields
+
+
+    """
+    Extracts an array from the tree with a limit on the number of entries.
+    """
+    return tree[field].array(entry_stop=entry_stop)
+
+def _create_data(data_split, tag, n_parts):
+    """
+    Create training/testing data for the model from data_split and pfcand_fields
+    """
+
+    features = _get_pfcand_fields(tag)
+
+    #Create X, concatenate all the inputs
+    inputs_list = []
+
+    #Vertically stacked them to create input sets
+    #https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
+    #Also pad and fill them with 0 to the number of constituents we are using (n_parts)
+    for i in range(len(features)):
+
+        field = f"jet_pfcand_{features[i]}"
+        field_array = data_split[field]
+
+        padded_filled_array = pad_fill(field_array, n_parts)
+        inputs_list.append(padded_filled_array[:, np.newaxis])
+
+    X = ak.concatenate(inputs_list, axis=1)
+
+    #Create y (the classes)
+    y = tf.keras.utils.to_categorical(data_split['class_label'])
+
+    #Create pt_target
+
+    #Create 
+
+    return X, y, 
+    
+
+def _process_chunk(data_split, tag, n_parts, chunk, outdir):
+    """
+    Process chunk of data_split to save/parse it for training datasets
+    """
+
+    #Create the classes, x, y
+    # X, y, pt_target, classes, jet_features = _create_data(data_split, tag, n_parts)
+
+    #Reshape the arrays for training
+
+
+    #Save them to parquet
+
+    #Delete the variables to save memory
+    gc.collect()
+
+    return
+
+########### Functions that should/can be use externally!
+def pad_fill(array, target):
+    '''
+    pad an array to target length and then fill it with 0s
+    '''
+    return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
+
+def extract_array(tree, field, entry_stop):
+    """
+    Extracts an array from the tree with a limit on the number of entries.
+    """
+    return tree[field].array(entry_stop=entry_stop)
 
 def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root', 
               outdir='../training_data/',
@@ -131,15 +219,6 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         n_parts (int): Number of constituent particles to use for tagging.
     """
 
-    # Get the directory of the current file (tools.py)
-    current_dir = os.path.dirname(__file__)
-
-    # Construct the path to pfcand_fields.yml relative to tools.py
-    pfcand_fields_path = os.path.join(current_dir, "pfcand_fields.yml")
-
-    # Load the YAML file as a dictionary
-    with open(pfcand_fields_path, "r") as file: pfcand_fields = yaml.safe_load(file)
-
     #Create output training dataset
     os.makedirs(outdir, exist_ok=True)
     print("Output directory:", outdir)
@@ -151,7 +230,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
 
     for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=5000):
         num_entries_done += len(data)
-        print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
+        print(f"Processing {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
         
         #Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
@@ -163,6 +242,8 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         #Split data into all the training classes
         data_split = _split_flavor(data)
 
+        #Process and save training data for a given feature set
+        _process_chunk(data_split, tag=tag, n_parts=n_parts, chunk=chunk, outdir=outdir)
 
         chunk += 1
         if chunk == 3: break

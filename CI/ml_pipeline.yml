@@ -129,6 +129,8 @@ emulation-evaluate:
     - cb_vivado
   needs: [emulate]
   dependencies: [emulate]
+  tags:
+    - cb_vivado
   script:
   - mkdir data
   - cd data

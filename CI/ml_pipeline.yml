@@ -6,7 +6,8 @@ stages:
   - train
   - evaluate
   - synth
-  - cmssw-setup
+  - emulate
+  - emulation-evaluate
    
 variables:
     Model: DeepSet
@@ -118,4 +119,25 @@ synth:
     paths:
       - outputSynthesis/*
     expire_in: 1 day
+
+
+emulation-evaluate:
+  extends:
+    - .template
+  stage: emulation-evaluate
+  needs: [emulate]
+  dependencies: [emulate]
+  script:
+  - mkdir data
+  - cd data
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple.root .
+  - cd ..
+  - source activate l1_training
+  - python datatools/createDataset.py -i data/jetTuple.root -o data/Emu -t $Inputs
+  - python evaluation/makeResultPlot.py -t data/Emu -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_10_10_vTEST --pruning
+  artifacts:
+    paths:
+      - emulationPlots
+    expire_in: 1 day
+  
 

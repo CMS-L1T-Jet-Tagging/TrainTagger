@@ -58,8 +58,16 @@ git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hl
 git config user.email chris.brown@fpsl.net
 git config user.name "Chriisbrown"
 
+
+
 git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git && \
   cd hls4ml-jettagger
+  git checkout -b hls4ml-v081
+
+mv ../outputSynthesis/regression/Training_2024_10_10_vTEST/firmware MultiJetBaseline/
+./setup.sh
+cd ..
+
 make 
 make install
 cd ..

@@ -58,7 +58,7 @@ def synthesize(
     feature_names = ['pt_rel_phys','deta_phys','dphi_phys',
                         'pt_log','eta_phys','phi_phys', 'mass',
                         'isPhoton', 'isElectronPlus', 'isElectronMinus', 'isMuonPlus', 'isMuonMinus', 'isNeutralHadron', 'isChargedHadronPlus', 'isChargedHadronMinus',
-                        'z0', 'dxy_phys',
+                        'z0', 'dxy',
                         'isfilled',
                         'puppiweight', 'emid', 'quality',
                         ]

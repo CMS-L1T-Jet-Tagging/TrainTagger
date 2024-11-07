@@ -4,6 +4,8 @@ from datatools.createDataset import *
 import argparse
 from train.models import *
 import tensorflow_model_optimization as tfmot
+from hls_node_edge_projection import *
+import hls4ml
 
 from array import array
 
@@ -259,6 +261,21 @@ def doPlots(
 
     print ("Get performance for", inputSetTag, flav, modelname)
 
+
+        # Get inference of model
+    trainingBasePath = "trainings_regression_weighted/" + timestamp  + "_" + flav + "_" + inputSetTag + "_"
+
+    modelpath = modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
+    modelname = 'model_'+modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
+
+    modelpath = modelpath + "_pruned"
+    modelname = modelname + "_pruned"
+
+    print ("Load model", trainingBasePath+""+modelpath+'.h5')
+
+    modelsAndNames["model"] = tf.keras.models.load_model(trainingBasePath+""+modelpath+"/"+modelname+'.h5', custom_objects = custom_objects_)
+    
+
     custom_objects_ = {
         "AAtt": AAtt,
         "QDense": QDense,
@@ -274,6 +291,55 @@ def doPlots(
     nfeatures = len(feature_names)
     nbits = 8
 
+    register_custom_layer()
+
+    config = hls4ml.utils.config_from_keras_model(
+        modelsAndNames["model"], granularity="name",
+    )
+    config["Model"]["Strategy"] = "Latency"
+
+    inputPrecision = "ap_fixed<16,6,AP_RND,AP_SAT>"
+
+    for layer in modelsAndNames["model"].layers:
+        if layer.__class__.__name__ in ["BatchNormalization", "InputLayer"]:
+            config["LayerName"][layer.name]["Precision"] = inputPrecision
+            config["LayerName"][layer.name]["result"] = inputPrecision
+        elif layer.__class__.__name__ in [
+            "Permute",
+            "Concatenate",
+            "Flatten",
+            "Reshape",
+            "UpSampling1D",
+            "Add",
+        ]:
+            print("Skipping trace for:", layer.name)
+
+    config["LayerName"]["output_class"]["Precision"]["result"] = inputPrecision
+    config["LayerName"]["output_reg"]["Precision"]["result"] = inputPrecision
+    config["LayerName"]["output_class"]["Implementation"] = "latency"
+    config["LayerName"]["output_reg"]["Implementation"] = "latency"
+
+    layerNames = [layer.name for layer in modelsAndNames["model"].layers]
+
+    for layer in modelsAndNames["model"].layers:
+         config["LayerName"][layer.name]["Strategy"] = "latency"
+
+    print("Converting the Keras Model !")
+
+    hls_model = hls4ml.converters.convert_from_keras_model(
+        modelsAndNames["model"],
+        hls_config=config,
+        output_dir="temp",
+        io_type="io_parallel",
+        part="xcvu13p-flga2577-2-e", #real one
+        clock_period=2.777777778,
+        backend='Vitis',
+    )
+
+    print("Compiling the Model !")
+
+    hls_model.compile()
+
     labels = ["Bkg", "b"]
     labels.append("Tau p")
     labels.append("Tau m")
@@ -282,65 +348,83 @@ def doPlots(
     labels.append("Muon")
     labels.append("Electron")
 
-    # Get inference of model
-    trainingBasePath = "trainings_regression_weighted/" + timestamp  + "_" + flav + "_" + inputSetTag + "_"
-
-    modelpath = modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
-    modelname = 'model_'+modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
-
-    modelpath = modelpath + "_pruned"
-    modelname = modelname + "_pruned"
-
-    print ("Load model", trainingBasePath+""+modelpath+'.h5')
-
-    modelsAndNames["model"] = tf.keras.models.load_model(trainingBasePath+""+modelpath+"/"+modelname+'.h5', custom_objects = custom_objects_)
-    
     y_ =  modelsAndNames["model"].predict(X_test)
     modelsAndNames["Y_predict"] = y_[0]
     modelsAndNames["Y_predict_reg"] = y_[1]
 
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
+    modelsAndNames["Y_hls_predict"] = y_hls
+    modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
+
     y_ = modelsAndNames["model"].predict(x_b)
     modelsAndNames["Y_predict_b"] = y_[0]
     modelsAndNames["Y_predict_reg_b"] = y_[1]
-    X_test_global["out_b"] = modelsAndNames["Y_predict"][:,labels.index("b")]
+
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_b))
+    modelsAndNames["Y_hls_predict_b"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_b"] = y_ptreg_hls
 
     y_ = modelsAndNames["model"].predict(x_bkg)
     modelsAndNames["Y_predict_bkg"] = y_[0]
     modelsAndNames["Y_predict_reg_bkg"] = y_[1]
-    X_test_global["out_bkg"] = modelsAndNames["Y_predict"][:,labels.index("Bkg")]
+
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_bkg))
+    modelsAndNames["Y_hls_predict_b"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_bkg"] = y_ptreg_hls
 
     y_ = modelsAndNames["model"].predict(x_taup)
     modelsAndNames["Y_predict_taup"] = y_[0]
     modelsAndNames["Y_predict_reg_taup"] = y_[1]
-    X_test_global["out_taup"] = modelsAndNames["Y_predict"][:,labels.index("Tau p")]
+
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_taup))
+    modelsAndNames["Y_hls_predict_taup"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_taup"] = y_ptreg_hls
 
     y_ = modelsAndNames["model"].predict(x_taum)
     modelsAndNames["Y_predict_taum"] = y_[0]
     modelsAndNames["Y_predict_reg_taum"] = y_[1]
-    X_test_global["out_taum"] = modelsAndNames["Y_predict"][:,labels.index("Tau m")]
+
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_taum))
+    modelsAndNames["Y_hls_predict_taum"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_taum"] = y_ptreg_hls
 
     y_ = modelsAndNames["model"].predict(x_gluon)
     modelsAndNames["Y_predict_gluon"] = y_[0]
     modelsAndNames["Y_predict_reg_gluon"] = y_[1]
-    X_test_global["out_gluon"] = modelsAndNames["Y_predict"][:,labels.index("Gluon")]
-
+    
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_gluon))
+    modelsAndNames["Y_hls_predict_gluon"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_gluon"] = y_ptreg_hls
+    
     y_ = modelsAndNames["model"].predict(x_charm)
     modelsAndNames["Y_predict_charm"] = y_[0]
     modelsAndNames["Y_predict_reg_charm"] = y_[1]
-    X_test_global["out_charm"] = modelsAndNames["Y_predict"][:,labels.index("Charm")]
+
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_charm))
+    modelsAndNames["Y_hls_predict_charm"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_charm"] = y_ptreg_hls
 
     y_ = modelsAndNames["model"].predict(x_muon)
     modelsAndNames["Y_predict_muon"] = y_[0]
     modelsAndNames["Y_predict_reg_muon"] = y_[1]
-    X_test_global["out_muon"] = modelsAndNames["Y_predict"][:,labels.index("Muon")]
+
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_muon))
+    modelsAndNames["Y_hls_predict_muon"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_muon"] = y_ptreg_hls
 
     y_ = modelsAndNames["model"].predict(x_electron)
     modelsAndNames["Y_predict_electron"] = y_[0]
     modelsAndNames["Y_predict_reg_electron"] = y_[1]
-    X_test_global["out_electron"] = modelsAndNames["Y_predict"][:,labels.index("Electron")]
+
+    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_electron))
+    modelsAndNames["Y_hls_predict_electron"] = y_hls
+    modelsAndNames["Y_hls_predict_reg_electron"] = y_ptreg_hls
 
     X_test_global["jet_pt_reg"] = modelsAndNames["Y_predict_reg"][:,0]
     X_test_global["jet_pt_cor_reg"] = X_test_global["jet_pt_phys"] * X_test_global["jet_pt_reg"]
+
+    X_test_global["jet_pt_reg_hls"] = modelsAndNames["Y_hls_predict_reg"][:,0]
+    X_test_global["jet_pt_cor_reg_hls"] = X_test_global["jet_pt_phys"] * X_test_global["jet_pt_reg_hls"]
     X_test_global["jet_pt_cor_reg_emu"] = X_test_global["jet_pt_phys"] * X_test_global["jet_multijetscore_regression"]
 
     plt.close()
@@ -405,6 +489,17 @@ def doPlots(
     modelsAndNames["ROCs"]["fpr"] = fpr
     modelsAndNames["ROCs"]["auc"] = auc1
 
+
+    for i, label in enumerate(labels):
+        fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,i], modelsAndNames["Y_hls_predict"][:,i])
+        auc1[label] = auc(fpr[label], tpr[label])
+
+    modelsAndNames["hls4ml"] = {}
+    modelsAndNames["hls4ml"]["ROCs"] = {}
+    modelsAndNames["hls4ml"]["ROCs"]["tpr"] = tpr
+    modelsAndNames["hls4ml"]["ROCs"]["fpr"] = fpr
+    modelsAndNames["hls4ml"]["ROCs"]["auc"] = auc1
+
     modelsAndNames["Emulation"] = {}
     fpr = {}
     tpr = {}
@@ -463,6 +558,11 @@ def doPlots(
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
     plt.ylabel("Mistag rate")
@@ -488,6 +588,11 @@ def doPlots(
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
     plt.ylabel("Mistag rate")
@@ -511,6 +616,11 @@ def doPlots(
     fpr = modelsAndNames["ROCs"]["fpr"]
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
@@ -536,6 +646,11 @@ def doPlots(
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
     plt.ylabel("Mistag rate")
@@ -559,6 +674,11 @@ def doPlots(
     fpr = modelsAndNames["ROCs"]["fpr"]
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
@@ -584,6 +704,11 @@ def doPlots(
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
     plt.ylabel("Mistag rate")
@@ -608,6 +733,11 @@ def doPlots(
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
     plt.ylabel("Mistag rate")
@@ -633,6 +763,11 @@ def doPlots(
     auc1 = modelsAndNames["ROCs"]["auc"]
     plotlabel = "Tensorflow"
     plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
+    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
+    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
+    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
+    plotlabel = "hls4ml"
+    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
     plt.semilogy()
     plt.xlabel("Signal efficiency")
     plt.ylabel("Mistag rate")
@@ -647,15 +782,20 @@ def doPlots(
 
     X_test_global["response_reg"] = X_test_global["jet_pt_cor_reg"] / X_test_global["jet_genmatch_pt"]
     X_test_global["response_emu"] = X_test_global["jet_pt_cor_reg_emu"] / X_test_global["jet_genmatch_pt"]
+    X_test_global["response_hls"] = X_test_global["jet_pt_cor_reg_hls"] / X_test_global["jet_genmatch_pt"]
 
     mean_reg = np.median(X_test_global["response_reg"])
     std_reg = rms(X_test_global["response_reg"])
     mean_emu = np.median(X_test_global["response_emu"])
     std_emu = rms(X_test_global["response_emu"])
+    mean_hls = np.median(X_test_global["response_hls"])
+    std_hls = rms(X_test_global["response_hls"])
 
     X = np.linspace(0.0, 2.0, 100)
     histo = plt.hist(X_test_global["response_emu"], bins=X, label='Regression Emulation' ,histtype='step', density=True, color = '#ff7f0e')
     histo = plt.hist(X_test_global["response_reg"], bins=X, label='Regression Tensorflow' ,histtype='step', density=True, color = '#2ca02c')
+    histo = plt.hist(X_test_global["response_hls"], bins=X, label='Regression hls4ml' ,histtype='step', density=True, color = '#2ca01c')
+
     plt.xlabel('Jet response (reco/gen)')
     plt.ylabel('Jets')
     plt.xlim(0.,2.)
@@ -663,6 +803,7 @@ def doPlots(
     plt.legend(loc='upper right')
     plt.text(1.3, 1.3, "median: "+str(np.round(mean_emu,3))+" rms: "+str(np.round(std_emu,3)), color = '#ff7f0e', fontsize = 14)
     plt.text(1.3, 1.2, "median: "+str(np.round(mean_reg,3))+" rms: "+str(np.round(std_reg,3)), color = '#2ca02c', fontsize = 14)
+    plt.text(1.3, 1.2, "median: "+str(np.round(mean_hls,3))+" rms: "+str(np.round(std_hls,3)), color = '#2ca01c', fontsize = 14)
     hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
     plt.savefig(outFolder+"/response_emulation"+".png")
     plt.savefig(outFolder+"/response_emulation"+".pdf")

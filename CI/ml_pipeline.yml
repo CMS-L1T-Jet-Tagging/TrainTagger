@@ -125,6 +125,8 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
+  tags:
+    - cb_vivado
   needs: [emulate]
   dependencies: [emulate]
   script:

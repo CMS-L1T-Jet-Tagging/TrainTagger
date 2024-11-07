@@ -4,6 +4,7 @@ error*
 out/
 out_*
 outputPlots*
+emulationPlots*
 matchingPlots*
 outputSynthesis*
 trainings*

@@ -1,5 +1,9 @@
 include:
     - CI/cmssw.yml
+    - project: cms-cactus/ops/auto-devops
+      ref: 0.4.1
+      file: templates/upload-eos.yml
+
 
 stages:
   - data

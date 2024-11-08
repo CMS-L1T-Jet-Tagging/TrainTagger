@@ -8,6 +8,7 @@ stages:
   - synth
   - emulate
   - emulation-evaluate
+  - upload
    
 variables:
     Model: DeepSet
@@ -143,5 +144,28 @@ emulation-evaluate:
     paths:
       - emulationPlots
     expire_in: 1 day
-  
+
+
+.publish:
+  extends: .auto_devops_upload_eos_template
+  image: gitlab-registry.cern.ch/cms-cactus/ops/auto-devops/eos:tag-0.4.1
+  stage: upload
+  tags: [ k8s-eos ]
+  needs: [emulation-evaluate,synth,train,evaluate]
+  dependencies: [emulation-evaluate,synth,train,evaluate]
+  variables:
+    CERNBOX_FOLDER: /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME}
+  script:
+    - | 
+      export EOS_MGM_URL=eosuser.cern.ch
+      echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+      eos cp emulationPlots/ $CERNBOX_FOLDER
+      eos cp outputSynthesis/ $CERNBOX_FOLDER
+      eos cp trainings_regression_weighted/ $CERNBOX_FOLDER
+      eos cp outputPlots/ $CERNBOX_FOLDER
+      eos cp inputFeaturePlots/ $CERNBOX_FOLDER
+      export PATH="${PATH}:/eos/user/c/cebrown/php-plots/bin"
+      cd /eos/user/c/cebrown/www
+      pb_copy_index.py JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME} --recursive
+      pb_pdf_to_png.py JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME} --recursive
 

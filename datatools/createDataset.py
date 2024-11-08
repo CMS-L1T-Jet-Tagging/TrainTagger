@@ -17,7 +17,6 @@ baseline_features = [
     'puppiweight', 'emid', 'quality',
 ]
 
-
 dict_fields = {
     "baseline" : baseline_features,
 }

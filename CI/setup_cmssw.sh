@@ -66,7 +66,7 @@ git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git &&
 
 
 ls ../../..
-mv ../../../outputSynthesis/regression/Training_2024_10_10_vTEST/firmware MultiJetBaseline/
+cp -r ../../../outputSynthesis/regression/Training_2024_10_10_vTEST/firmware MultiJetBaseline/
 ./setup.sh
 cd ..
 

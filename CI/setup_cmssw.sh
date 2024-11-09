@@ -68,12 +68,12 @@ git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git &&
 ls ../../..
 cp -r ../../../outputSynthesis/regression/Training_2024_10_10_vTEST/firmware MultiJetBaseline/
 ./setup.sh
-cd ..
-
+cat setup.sh
+pwd
 make 
 make install
 cd ..
-
+pwd
 git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b addMultiJet
 
 

@@ -261,6 +261,10 @@ def doPlots(
 
     print ("Get performance for", inputSetTag, flav, modelname)
 
+    ncands = 16
+    nfeatures = len(feature_names)
+    nbits = 8
+
 
         # Get inference of model
     trainingBasePath = "trainings_regression_weighted/" + timestamp  + "_" + flav + "_" + inputSetTag + "_"
@@ -287,9 +291,7 @@ def doPlots(
         "myNLL": myNLL
         }
 
-    ncands = 16
-    nfeatures = len(feature_names)
-    nbits = 8
+
 
     register_custom_layer()
 

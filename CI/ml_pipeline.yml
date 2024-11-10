@@ -142,6 +142,7 @@ emulation-evaluate:
   - cd ..
   - source activate l1_training
   - python datatools/createDataset.py -i data/jetTuple.root -o data/Emu -t $Inputs
+  - cp synthesis/* evaluation
   - python evaluation/makeEmulationPlot.py -t data/Emu -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_10_10_vTEST --pruning
   artifacts:
     paths:

@@ -142,7 +142,7 @@ emulation-evaluate:
   - cd ..
   - source activate l1_training
   - python datatools/createDataset.py -i data/jetTuple.root -o data/Emu -t $Inputs
-  - python evaluation/makeResultPlot.py -t data/Emu -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_10_10_vTEST --pruning
+  - python evaluation/makeEmulationPlot.py -t data/Emu -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_10_10_vTEST --pruning
   artifacts:
     paths:
       - emulationPlots
@@ -162,13 +162,16 @@ upload:
     - | 
       export EOS_MGM_URL=eosuser.cern.ch
       echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-      eos cp emulationPlots/ $CERNBOX_FOLDER
-      eos cp outputSynthesis/ $CERNBOX_FOLDER
-      eos cp trainings_regression_weighted/ $CERNBOX_FOLDER
-      eos cp outputPlots/ $CERNBOX_FOLDER
-      eos cp inputFeaturePlots/ $CERNBOX_FOLDER
-      export PATH="${PATH}:/eos/user/c/cebrown/php-plots/bin"
-      cd /eos/user/c/cebrown/www
-      pb_copy_index.py JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME} --recursive
-      pb_pdf_to_png.py JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME} --recursive
+      cd ..
+      git clone https://gitlab.cern.ch/cms-analysis/general/php-plots.git
+      pwd
+      export PATH="${PATH}:/builds/cebrown/php-plots/bin"
+      pb_copy_index.py TrainTagger/ --recursive
+      pb_pdf_to_png.py TrainTagger/ --recursive
+      cd TrainTagger
+      eos cp -r emulationPlots/ $CERNBOX_FOLDER
+      eos cp -r outputSynthesis/ $CERNBOX_FOLDER
+      eos cp -r trainings_regression_weighted/ $CERNBOX_FOLDER
+      eos cp -r outputPlots/ $CERNBOX_FOLDER
+      eos cp -r inputFeaturePlots/ $CERNBOX_FOLDER
 

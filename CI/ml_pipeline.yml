@@ -131,8 +131,8 @@ emulation-evaluate:
   stage: emulation-evaluate
   tags:
     - cb_vivado
-  needs: [emulate]
-  dependencies: [emulate]
+  needs: [emulate,train,synth]
+  dependencies: [emulate,train,synth]
   tags:
     - cb_vivado
   script:
@@ -149,7 +149,7 @@ emulation-evaluate:
     expire_in: 1 day
 
 
-.publish:
+upload:
   extends: .auto_devops_upload_eos_template
   image: gitlab-registry.cern.ch/cms-cactus/ops/auto-devops/eos:tag-0.4.1
   stage: upload

@@ -264,22 +264,6 @@ def doPlots(
     ncands = 16
     nfeatures = len(feature_names)
     nbits = 8
-
-
-        # Get inference of model
-    trainingBasePath = "trainings_regression_weighted/" + timestamp  + "_" + flav + "_" + inputSetTag + "_"
-
-    modelpath = modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
-    modelname = 'model_'+modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
-
-    modelpath = modelpath + "_pruned"
-    modelname = modelname + "_pruned"
-
-    print ("Load model", trainingBasePath+""+modelpath+'.h5')
-
-    modelsAndNames["model"] = tf.keras.models.load_model(trainingBasePath+""+modelpath+"/"+modelname+'.h5', custom_objects = custom_objects_)
-    
-
     custom_objects_ = {
         "AAtt": AAtt,
         "QDense": QDense,
@@ -295,6 +279,19 @@ def doPlots(
 
     register_custom_layer()
 
+        # Get inference of model
+    trainingBasePath = "trainings_regression_weighted/" + timestamp  + "_" + flav + "_" + inputSetTag + "_"
+
+    modelpath = modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
+    modelname = 'model_'+modelnamesDict[modelname]+"_nconst_"+str(ncands)+"_nfeatures_"+str(nfeatures)+"_nbits_"+str(nbits)
+
+    modelpath = modelpath + "_pruned"
+    modelname = modelname + "_pruned"
+
+    print ("Load model", trainingBasePath+""+modelpath+'.h5')
+
+    modelsAndNames["model"] = tf.keras.models.load_model(trainingBasePath+""+modelpath+"/"+modelname+'.h5', custom_objects = custom_objects_)
+    
     config = hls4ml.utils.config_from_keras_model(
         modelsAndNames["model"], granularity="name",
     )

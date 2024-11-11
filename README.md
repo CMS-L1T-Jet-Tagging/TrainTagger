@@ -27,9 +27,13 @@ The -i and -o values are optional, see the script for the default values.
 After setting up the conda environment (see conda setup below), the model can be trained using this command:
 
 ```
-#Set up
-source setup.sh
+#If using conda environment
+conda activate tagger
 
+#Add the path so you can use the tagger module
+export PYTHONPATH=$PYTHONPATH:$PWD
+
+#Train a model
 python tagger/train/train.py -n <model-name>
 ```
 

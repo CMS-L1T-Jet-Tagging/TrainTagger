@@ -17,7 +17,7 @@ def _add_response_vars(data):
 
 def _split_flavor(data):
     """
-    Splits data by particle flavor and applies conditions for each category.
+    Splits data by particle flavor and applies conditions for each category. Also creates the pT target.
 
     Parameters:
         data (awkward array): The input data to split.
@@ -164,14 +164,20 @@ def _create_data(data_split, tag, n_parts):
 
     X = ak.concatenate(inputs_list, axis=1)
 
+    print(X.shape)
+
     #Create y (the classes)
     y = tf.keras.utils.to_categorical(data_split['class_label'])
 
+    print(y)
+    print(y.shape)
+
     #Create pt_target
+    pt_target = data_split['target_pt']
 
-    #Create 
+    #
 
-    return X, y, 
+    return X, y, pt_target,  ,features
     
 
 def _process_chunk(data_split, tag, n_parts, chunk, outdir):
@@ -179,8 +185,8 @@ def _process_chunk(data_split, tag, n_parts, chunk, outdir):
     Process chunk of data_split to save/parse it for training datasets
     """
 
-    #Create the classes, x, y
-    # X, y, pt_target, classes, jet_features = _create_data(data_split, tag, n_parts)
+    # Create the classes, x, y
+    X, y, pt_target, classes, jet_features = _create_data(data_split, tag, n_parts)
 
     #Reshape the arrays for training
 
@@ -192,7 +198,7 @@ def _process_chunk(data_split, tag, n_parts, chunk, outdir):
 
     return
 
-########### Functions that should/can be use externally!
+# >>>>>>Functions that should be used externally!<<<<<<<
 def pad_fill(array, target):
     '''
     pad an array to target length and then fill it with 0s

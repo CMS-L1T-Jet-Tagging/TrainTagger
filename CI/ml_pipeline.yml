@@ -12,6 +12,7 @@ stages:
   - synth
   - emulate
   - emulation-evaluate
+  - pre-upload
   - upload
    
 variables:
@@ -150,13 +151,40 @@ emulation-evaluate:
     expire_in: 1 day
 
 
+pre-upload:
+    extends:
+        - .template
+      stage: pre-upload
+      tags:
+        - cb_vivado
+      needs: [emulation-evaluate,synth,train,evaluate]
+      dependencies: [emulation-evaluate,synth,train,evaluate]
+      tags:
+        - cb_vivado
+      script:
+        - cd ..
+        - git clone https://gitlab.cern.ch/cms-analysis/general/php-plots.git
+        - pwd
+        - export PATH="${PATH}:/builds/cebrown/php-plots/bin"
+        - pb_copy_index.py TrainTagger/ --recursive
+        - pb_pdf_to_png.py TrainTagger/ --recursive
+        - cd TrainTagger
+      artifacts:
+        paths:
+          - emulationPlots
+          - outputSynthesis
+          - trainings_regression_weighted
+          - outputPlots
+          - inputFeaturePlots
+        expire_in: 1 day
+
 upload:
   extends: .auto_devops_upload_eos_template
   image: gitlab-registry.cern.ch/cms-cactus/ops/auto-devops/eos:tag-0.4.1
   stage: upload
   tags: [ k8s-eos ]
-  needs: [emulation-evaluate,synth,train,evaluate]
-  dependencies: [emulation-evaluate,synth,train,evaluate]
+  needs: [pre-upload]
+  dependencies: [pre-upload]
   before_script:
     - yum install -q -y git
   variables:
@@ -165,16 +193,8 @@ upload:
     - |
       export EOS_MGM_URL=eosuser.cern.ch
       echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-      cd ..
-      git clone https://gitlab.cern.ch/cms-analysis/general/php-plots.git
-      pwd
-      export PATH="${PATH}:/builds/cebrown/php-plots/bin"
-      pb_copy_index.py TrainTagger/ --recursive
-      pb_pdf_to_png.py TrainTagger/ --recursive
-      cd TrainTagger
       eos cp -r emulationPlots/ $CERNBOX_FOLDER
       eos cp -r outputSynthesis/ $CERNBOX_FOLDER
       eos cp -r trainings_regression_weighted/ $CERNBOX_FOLDER
       eos cp -r outputPlots/ $CERNBOX_FOLDER
       eos cp -r inputFeaturePlots/ $CERNBOX_FOLDER
-

@@ -157,10 +157,12 @@ upload:
   tags: [ k8s-eos ]
   needs: [emulation-evaluate,synth,train,evaluate]
   dependencies: [emulation-evaluate,synth,train,evaluate]
+  before_script:
+    - yum install -q -y git
   variables:
     CERNBOX_FOLDER: /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME}
   script:
-    - | 
+    - |
       export EOS_MGM_URL=eosuser.cern.ch
       echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
       cd ..

@@ -163,7 +163,7 @@ pre-upload:
   script:
     - cd ..
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - git clone https://gitlab.cern.ch/cms-analysis/general/php-plots.git
+    - git clone https://:@gitlab.cern.ch:8443/cms-analysis/general/php-plots.git
     - pwd
     - export PATH="${PATH}:/builds/cebrown/php-plots/bin"
     - pb_copy_index.py TrainTagger/ --recursive

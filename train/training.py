@@ -390,7 +390,7 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
         plotInputFeatures(x_b, x_bkg, x_taup, x_taum, x_gluon, x_charm, x_muon, x_electron, feature_names, outFolder, outputAddName = "")
 
     if nnConfig["inputQuant"]:
-        input_quantizer = quantized_bits(bits=16, integer=6, symmetric=0, alpha=1)
+        input_quantizer = quantized_bits(bits=15, integer=12, symmetric=0, alpha=1)
         x_b = input_quantizer(x_b.astype(np.float32)).numpy()
         x_bkg = input_quantizer(x_bkg.astype(np.float32)).numpy()
         x_taup = input_quantizer(x_taup.astype(np.float32)).numpy()
@@ -625,7 +625,7 @@ def doTraining(train_data_dir, flavs, inputSetTag, nnConfig, save = True, strsta
         callbacks_.append(pr)
 
     if nnConfig["inputQuant"]:
-        input_quantizer = quantized_bits(bits=16, integer=6, symmetric=0, alpha=1)
+        input_quantizer = quantized_bits(bits=15, integer=12, symmetric=0, alpha=1)
         X_train_val = input_quantizer(X_train_val.astype(np.float32)).numpy()
         X_test = input_quantizer(X_test.astype(np.float32)).numpy()
 

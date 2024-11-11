@@ -234,6 +234,7 @@ def doPlots(
                 x_electron =ak.concatenate((x_electron, x_electron_))
                 x_electron_global =ak.concatenate((x_electron_global, x_electron_global_))
 
+    
     x_b = ak.to_numpy(x_b)
     x_bkg = ak.to_numpy(x_bkg)
     x_taup = ak.to_numpy(x_taup)
@@ -297,7 +298,7 @@ def doPlots(
     )
     config["Model"]["Strategy"] = "Latency"
 
-    inputPrecision = "ap_fixed<16,6,AP_RND,AP_SAT>"
+    inputPrecision = "ap_fixed<15,12,AP_RND,AP_SAT>"
 
     for layer in modelsAndNames["model"].layers:
         if layer.__class__.__name__ in ["BatchNormalization", "InputLayer"]:
@@ -346,6 +347,10 @@ def doPlots(
     labels.append("Charm")
     labels.append("Muon")
     labels.append("Electron")
+
+    print(np.ascontiguousarray(X_test))
+    print(X_test.shape)
+    np.savetxt("out.csv", X_test[0], delimiter=",")
 
     y_ =  modelsAndNames["model"].predict(X_test)
     modelsAndNames["Y_predict"] = y_[0]

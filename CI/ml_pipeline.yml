@@ -162,6 +162,7 @@ pre-upload:
     - cb_vivado
   script:
     - cd ..
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - git clone https://gitlab.cern.ch/cms-analysis/general/php-plots.git
     - pwd
     - export PATH="${PATH}:/builds/cebrown/php-plots/bin"

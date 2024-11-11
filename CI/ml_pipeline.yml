@@ -150,33 +150,32 @@ emulation-evaluate:
       - emulationPlots
     expire_in: 1 day
 
-
 pre-upload:
-    extends:
-        - .template
-      stage: pre-upload
-      tags:
-        - cb_vivado
-      needs: [emulation-evaluate,synth,train,evaluate]
-      dependencies: [emulation-evaluate,synth,train,evaluate]
-      tags:
-        - cb_vivado
-      script:
-        - cd ..
-        - git clone https://gitlab.cern.ch/cms-analysis/general/php-plots.git
-        - pwd
-        - export PATH="${PATH}:/builds/cebrown/php-plots/bin"
-        - pb_copy_index.py TrainTagger/ --recursive
-        - pb_pdf_to_png.py TrainTagger/ --recursive
-        - cd TrainTagger
-      artifacts:
-        paths:
-          - emulationPlots
-          - outputSynthesis
-          - trainings_regression_weighted
-          - outputPlots
-          - inputFeaturePlots
-        expire_in: 1 day
+  extends:
+    - .template
+  stage: pre-upload
+  tags:
+    - cb_vivado
+  needs: [emulation-evaluate,synth,train,evaluate]
+  dependencies: [emulation-evaluate,synth,train,evaluate]
+  tags:
+    - cb_vivado
+  script:
+    - cd ..
+    - git clone https://gitlab.cern.ch/cms-analysis/general/php-plots.git
+    - pwd
+    - export PATH="${PATH}:/builds/cebrown/php-plots/bin"
+    - pb_copy_index.py TrainTagger/ --recursive
+    - pb_pdf_to_png.py TrainTagger/ --recursive
+    - cd TrainTagger
+  artifacts:
+    paths:
+      - emulationPlots
+      - outputSynthesis
+      - trainings_regression_weighted
+      - outputPlots
+      - inputFeaturePlots
+    expire_in: 1 day
 
 upload:
   extends: .auto_devops_upload_eos_template

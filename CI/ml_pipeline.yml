@@ -25,7 +25,7 @@ variables:
 .template:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
-    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
+    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
     - mc admin info $ARTIFACTS_ALIAS
   script:
@@ -112,7 +112,7 @@ synth:
     - source /opt/Xilinx/Vivado/2022.2/settings64.sh
     - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
     - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
+    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - mkdir data
     - cd data
     - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/convertedfiles_$Inputs.tgz ./
@@ -165,7 +165,7 @@ pre-upload:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git
     - pwd
-    - export PATH="${PATH}:/builds/cebrown/php-plots/bin"
+    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/ --recursive
     - pb_pdf_to_png.py TrainTagger/ --recursive
     - cd TrainTagger

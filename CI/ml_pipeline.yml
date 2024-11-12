@@ -185,8 +185,6 @@ upload:
   tags: [ k8s-eos ]
   needs: [pre-upload]
   dependencies: [pre-upload]
-  before_script:
-    - yum install -q -y git
   variables:
     CERNBOX_FOLDER: /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME}
   script:

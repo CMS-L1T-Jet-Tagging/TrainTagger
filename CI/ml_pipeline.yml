@@ -163,6 +163,7 @@ pre-upload:
   script:
     - cd ..
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git
     - pwd
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"

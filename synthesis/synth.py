@@ -255,7 +255,7 @@ def synthesize(
     # inputPrecision = "ap_fixed<18,8,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<12,9,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<14,6,AP_RND,AP_SAT>" #DeepSet
-    inputPrecision = "ap_fixed<15,12,AP_RND,AP_SAT>"
+    inputPrecision = "ap_fixed<24,12,AP_RND,AP_SAT>"
     #inputPrecision = "ap_fixed<16,6,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<16,7,AP_RND,AP_SAT>"
     # inputPrecision = "ap_fixed<16,9,AP_RND,AP_SAT>"

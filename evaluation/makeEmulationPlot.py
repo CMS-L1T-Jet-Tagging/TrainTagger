@@ -298,7 +298,7 @@ def doPlots(
     )
     config["Model"]["Strategy"] = "Latency"
 
-    inputPrecision = "ap_fixed<15,12,AP_RND,AP_SAT>"
+    inputPrecision = "ap_fixed<24,12,AP_RND,AP_SAT>"
 
     for layer in modelsAndNames["model"].layers:
         if layer.__class__.__name__ in ["BatchNormalization", "InputLayer"]:

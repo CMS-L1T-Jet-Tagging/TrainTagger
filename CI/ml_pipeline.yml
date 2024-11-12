@@ -179,21 +179,54 @@ pre-upload:
       - inputFeaturePlots
     expire_in: 1 day
 
-upload:
+
+.publish:
   extends: .auto_devops_upload_eos_template
   image: gitlab-registry.cern.ch/cms-cactus/ops/auto-devops/eos:tag-0.4.1
   stage: upload
-  tags: [ k8s-eos ]
-  needs: [pre-upload]
-  dependencies: [pre-upload]
+  tags: [ k8s-cvmfs ]
   variables:
-    CERNBOX_FOLDER: /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME}
-  script:
-    - |
-      export EOS_MGM_URL=eosuser.cern.ch
-      echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-      eos cp -r emulationPlots/ $CERNBOX_FOLDER
-      eos cp -r outputSynthesis/ $CERNBOX_FOLDER
-      eos cp -r trainings_regression_weighted/ $CERNBOX_FOLDER
-      eos cp -r outputPlots/ $CERNBOX_FOLDER
-      eos cp -r inputFeaturePlots/ $CERNBOX_FOLDER
+    CERNBOX_FOLDER:  /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${CI_JOB_NAME}
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: always
+      variables:
+        EOS_PIPELINE_SUBDIR: tags/${CI_COMMIT_REF_NAME}
+    - when: always
+      variables:
+        EOS_PIPELINE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/pipeline${CI_PIPELINE_ID}
+
+publish-emulationPlots:
+  extends: .publish
+  needs : [pre-upload]
+  variables:
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/emulationPlots
+    REMOTE_FOLDER: emulationPlots
+
+publish-synthesis:
+  extends: .publish
+  needs : [pre-upload]
+  variables:
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/outputSynthesis
+    REMOTE_FOLDER: outputSynthesis
+
+publish-modelfiles:
+  extends: .publish
+  needs : [pre-upload]
+  variables:
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/trainings_regression_weighted
+    REMOTE_FOLDER: trainings_regression_weighted
+
+publish-evaluationPlots:
+  extends: .publish
+  needs : [pre-upload]
+  variables:
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/outputPlots
+    REMOTE_FOLDER: outputPlots
+
+publish-inputPlots:
+  extends: .publish
+  needs : [pre-upload]
+  variables:
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/inputFeaturePlots
+    REMOTE_FOLDER: inputFeaturePlots

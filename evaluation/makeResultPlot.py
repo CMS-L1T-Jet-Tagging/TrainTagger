@@ -283,8 +283,8 @@ def doPlots(
     nbits = 8
 
     labels = ["Bkg", "b"]
-    labels.append("Tau p")
-    labels.append("Tau m")
+    labels.append("Taup")
+    labels.append("Taum")
     labels.append("Gluon")
     labels.append("Charm")
     labels.append("Muon")

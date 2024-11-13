@@ -9,6 +9,7 @@ outputSynthesis*
 trainings*
 *__pycache__*
 condaenv*
+training_data*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -23,19 +23,48 @@ The CI in this repository aims at building a pipeline that enables running all o
 
 [5. Implement the model in FPGA Firmware]()
 
-## 1. Produce Raw Training Dataset
-
-Creating the training datasets involve several steps: 
-
-1. Taking the RAW samples and pruning/sliming them. This can be done running the `runInputs_X_X.py` scripts in [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons), which also uses [submission](https://github.com/CMS-L1T-Jet-Tagging/submission) repo. This is currently done for all, and stored in here:
+Note that the instructions are assuming that you have access to the appropriate `eos` data spaces. If you are not interested in reading lengthy documentation like me, here is a ultra-short version to get started on running the code
 
 ```
-/eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_0_X/fpinputs_131X/v9a/
+#Activate the environment
+conda activate tagger
+
+#Run this to add the scripts in this directory to your python path
+export PYTHONPATH=$PYTHONPATH:$PWD
+
+#Prepare the data
+python tagger/train/train.py --make-data
+
+#Train the model
+python tagger/train/train.py
+
+#Make some basic validation plots
+python tagger/plots/basic.py
+
+#Make other plots for bbbb/bbtautau final state for example:
+python tagger/plot/bbbb.py
+python tagger/plot/bbtautau.py
+
+#OR vbf tautau
+python tagger/plot/vbf_tautau.py
+
+#Synthesize the model (with wrapper and CMMSSW)
+python tagger/firmware/hls4ml_convert.py
 ```
 
-2. These samples will then be processed by the nTuplizer, which is part of the [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons) repo. In particular the `runPerformanceNTuple.py`, which calls `jetNTuplizer.cc`. Note that to submit jobs as part of this setup, you also need the [submission](https://github.com/CMS-L1T-Jet-Tagging/submission/tree/dev/14_0_X-leptons) repo as well. 
+# 1. Produce Raw Training Dataset
+  
+  Creating the training datasets involve several steps: 
+  
+  1. Taking the RAW samples and pruning/sliming them. This can be done running the `runInputs_X_X.py` scripts in [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons), which also uses [submission](https://github.com/CMS-L1T-Jet-Tagging/submission) repo. This is currently done for all, and stored in here:
+  
+  ```
+  /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_0_X/fpinputs_131X/v9a/
+  ```
+  
+  2. These samples will then be processed by the nTuplizer, which is part of the [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons) repo. In particular the `runPerformanceNTuple.py`, which calls `jetNTuplizer.cc`. Note that to submit jobs as part of this setup, you also need the [submission](https://github.com/CMS-L1T-Jet-Tagging/submission/tree/dev/14_0_X-leptons) repo as well. 
 
-## 2. Prepare the data for training
+# 2. Prepare the data for training
 
 After creating the training ntuples, in our setup, they will then be shuffled and concatenate (`hadd`) into a big file, such as this one:
 
@@ -77,18 +106,18 @@ This automatically create a new directory: `training_data` (it will ask before r
 
 ## Setup & Training
 
-After setting up the conda environment (see conda setup below), the model can be trained using this command:
-
-```
-#If using conda environment
-conda activate tagger
-
-#Add the path so you can use the tagger module
-export PYTHONPATH=$PYTHONPATH:$PWD
-
-#Train a model
-python tagger/train/train.py -n <model-name>
-```
+  After setting up the conda environment (see conda setup below), the model can be trained using this command:
+  
+  ```
+  #If using conda environment
+  conda activate tagger
+  
+  #Add the path so you can use the tagger module
+  export PYTHONPATH=$PYTHONPATH:$PWD
+  
+  #Train a model
+  python tagger/train/train.py -n <model-name>
+  ```
 
 ## Synthesize the model to HDL Codes
 
@@ -98,21 +127,9 @@ The train models would then be saved in `tagger/models`, and the jet tagger can 
 python tagger/firmware/hls4ml_convert.py
 ```
 
-## Conda environment
+## Conda Environment Notes
 
-Create conda environment:
-
-```
-conda-env create -f environment.yml
-```
-
-Activate the environment:
-
-```
-conda activate tagger
-```
-
-And then do whatever you want in this environment (edit files, open notebooks, etc.). To deactivate the environment:
+To deactivate the environment:
 
 ```
 conda deactivate
@@ -126,12 +143,7 @@ conda env update --file environment.yml  --prune
 
 Reference on conda environment here: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
-Add train tagger to the python path to allow relative imports, from within TrainTagger:
-```
-export PYTHONPATH=$PYTHONPATH:$(pwd)
-```
-
-## Documentation
+## Related Materials
 
 Related talks and materials to the project can be found here, they are ordered chronologically. 
 

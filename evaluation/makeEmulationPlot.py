@@ -76,9 +76,49 @@ def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,titl
     plt.tight_layout()
     return fig
 
+def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
+    plt.clf()
+    fig,ax = plt.subplots(1,1,figsize=(18,15))
+    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+    for i,histo in enumerate(variable):
+
+        ax.hist(histo,bins=50,range=range,histtype="step",
+                    linewidth=LINEWIDTH,
+                    color = colours[i],
+                    label=name[i],
+                    density=True)    
+    ax.grid(True)
+    ax.set_xlabel(xlabel,ha="right",x=1)
+    ax.set_ylabel(ylabel,ha="right",y=1)
+    ax.legend(loc='best')
+
+    plt.suptitle(title)
+    plt.tight_layout()
+    return fig
+
+def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"],labels = ["CMSSW Emulation", "Tensorflow", "hls4ml"],title="None",colours=colours):
+    plt.clf()
+    fig,ax = plt.subplots(1,1,figsize=(18,15))
+    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+
+    for i,key in enumerate(keys):
+        tpr = modelsAndNames[key]["ROCs"]["tpr"]
+        fpr = modelsAndNames[key]["ROCs"]["fpr"]
+        auc1 = modelsAndNames[key]["ROCs"]["auc"]
+        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),linewidth=LINEWIDTH,color=colours[i])
+    ax.semilogy()
+    ax.set_xlabel("Signal efficiency")
+    ax.set_ylabel("Mistag rate")
+    ax.set_xlim(0.,1.)
+    ax.set_ylim(0.001,1)
+    ax.grid(True)
+    ax.legend(loc='best')
+    plt.suptitle(title)
+    plt.tight_layout()
+    return fig
+
 def rms(array):
    return np.sqrt(np.mean(array ** 2))
-
 
 modelnamesDict = {
     "DeepSet": "QDeepSets_PermutationInv",
@@ -250,12 +290,15 @@ def doPlots(
     modelArchName = modelname
 
     if inputQuant:
-        input_quantizer = quantized_bits(bits=16, integer=6, symmetric=0, alpha=1)
+        input_quantizer = quantized_bits(bits=24, integer=12, symmetric=0, alpha=1)
         x_b = input_quantizer(x_b.astype(np.float32)).numpy()
         x_bkg = input_quantizer(x_bkg.astype(np.float32)).numpy()
-        x_tau = input_quantizer(x_tau.astype(np.float32)).numpy()
+        x_taup = input_quantizer(x_taup.astype(np.float32)).numpy()
+        x_taum = input_quantizer(x_taum.astype(np.float32)).numpy()
         x_gluon = input_quantizer(x_gluon.astype(np.float32)).numpy()
         x_charm = input_quantizer(x_charm.astype(np.float32)).numpy()
+        x_muon = input_quantizer(x_muon.astype(np.float32)).numpy()
+        x_electron = input_quantizer(x_electron.astype(np.float32)).numpy()
 
     print("Loaded X_test      ----> shape:", X_test.shape)
     print("Loaded Y_test      ----> shape:", Y_test.shape)
@@ -275,8 +318,6 @@ def doPlots(
         "QBatchNormalization": QBatchNormalization,
         "myNLL": myNLL
         }
-
-
 
     register_custom_layer()
 
@@ -298,9 +339,10 @@ def doPlots(
     )
     config["Model"]["Strategy"] = "Latency"
 
-    inputPrecision = "ap_fixed<24,12,AP_RND,AP_SAT>"
+    inputPrecision = "ap_fixed<12,6,AP_RND,AP_SAT>"
 
     for layer in modelsAndNames["model"].layers:
+        #config['LayerName'][layer.name]['Trace'] = True
         if layer.__class__.__name__ in ["BatchNormalization", "InputLayer"]:
             config["LayerName"][layer.name]["Precision"] = inputPrecision
             config["LayerName"][layer.name]["result"] = inputPrecision
@@ -340,23 +382,20 @@ def doPlots(
 
     hls_model.compile()
 
-    labels = ["Bkg", "b"]
+    labels = ["bkg", "b"]
     labels.append("taup")
     labels.append("taum")
-    labels.append("Gluon")
-    labels.append("Charm")
-    labels.append("Muon")
-    labels.append("Electron")
+    labels.append("gluon")
+    labels.append("charm")
+    labels.append("muon")
+    labels.append("electron")
 
-    print(np.ascontiguousarray(X_test))
-    print(X_test.shape)
-    np.savetxt("out.csv", X_test[0], delimiter=",")
-
-    y_ =  modelsAndNames["model"].predict(X_test)
+    y_ =  modelsAndNames["model"].predict(np.ascontiguousarray(X_test))
     modelsAndNames["Y_predict"] = y_[0]
     modelsAndNames["Y_predict_reg"] = y_[1]
 
     y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
+
     modelsAndNames["Y_hls_predict"] = y_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
 
@@ -373,7 +412,7 @@ def doPlots(
     modelsAndNames["Y_predict_reg_bkg"] = y_[1]
 
     y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(x_bkg))
-    modelsAndNames["Y_hls_predict_b"] = y_hls
+    modelsAndNames["Y_hls_predict_bkg"] = y_hls
     modelsAndNames["Y_hls_predict_reg_bkg"] = y_ptreg_hls
 
     y_ = modelsAndNames["model"].predict(x_taup)
@@ -433,66 +472,38 @@ def doPlots(
 
     plt.close()
     plt.clf()
-    figure = plot_2d(np.array(X_test_global["jet_pt_reg"]) ,np.array(X_test_global["jet_multijetscore_regression"]) ,(0,2),(0,2),"Tensorflow","CMSSW Emulation","Jet Regression")
-    plt.savefig("%s/jetRegression_2D.png" % outFolder)
+    #figure = plot_2d(np.array(X_test_global["jet_pt_reg"]) ,np.array(X_test_global["jet_multijetscore_regression"]) ,(0,2),(0,2),"Tensorflow","CMSSW Emulation","Jet Regression")
+    figure = plot_histo([X_test_global["jet_pt_reg"],np.array(X_test_global["jet_multijetscore_regression"]),np.array(modelsAndNames["Y_hls_predict_reg"])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet Regression",'Regression Score','# Jets',range=(0,2))
+    plt.savefig("%s/jetRegression_1D.png" % outFolder)
 
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('b')]) ,np.array(X_test_global["jet_multijetscore_b"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","b score")
-    plt.savefig("%s/b_score_2D.png" % outFolder)
+    for i, label in enumerate(labels):
+        plt.clf()
+        figure = plot_histo([np.array(modelsAndNames["Y_predict"][:,labels.index(label)]),np.array(X_test_global["jet_multijetscore_"+label]),np.array(modelsAndNames["Y_hls_predict"][:,labels.index(label)])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet " + label + " Score",label+' Score','# Jets',range=(0,1))
+        plt.savefig("%s/%s_score_1D.png" % (outFolder,label))
 
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('Bkg')]) ,np.array(X_test_global["jet_multijetscore_uds"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Bkg score")
-    plt.savefig("%s/Bkg_score_2D.png" % outFolder)
-
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('taup')]) ,np.array(X_test_global["jet_multijetscore_taup"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Tau + score")
-    plt.savefig("%s/Taup_score_2D.png" % outFolder)
-
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('taum')]) ,np.array(X_test_global["jet_multijetscore_taum"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Tau - score")
-    plt.savefig("%s/Taum_score_2D.png" % outFolder)
-
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('Gluon')]) ,np.array(X_test_global["jet_multijetscore_g"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Gluon score")
-    plt.savefig("%s/gluon_score_2D.png" % outFolder)
-
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('Charm')]) ,np.array(X_test_global["jet_multijetscore_c"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Charm score")
-    plt.savefig("%s/charm_score_2D.png" % outFolder)
-
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('Electron')]) ,np.array(X_test_global["jet_multijetscore_electron"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Electron score")
-    plt.savefig("%s/electron_score_2D.png" % outFolder)
-
-    plt.close()
-    plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('Muon')]) ,np.array(X_test_global["jet_multijetscore_muon"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Muon score")
-    plt.savefig("%s/muon_score_2D.png" % outFolder)
-
+        # plt.clf()
+        # figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index(label)]) ,np.array(X_test_global["jet_multijetscore_"+label] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation",label+" score")
+        # plt.savefig("%s/%s_score_2D.png" % (outFolder,label))
 
     fpr = {}
     tpr = {}
     auc1 = {}
     tresholds = {}
-    wps = {}
 
+    print(Y_test[:,i])
+    print(modelsAndNames["Y_predict"][:,0])
+    print(modelsAndNames["Y_hls_predict"][:,0])
+    print(X_test_global["jet_multijetscore_b"])
     # Loop over classes (labels) to get metrics per class
     for i, label in enumerate(labels):
         fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,i], modelsAndNames["Y_predict"][:,i])
         auc1[label] = auc(fpr[label], tpr[label])
 
-    modelsAndNames["ROCs"] = {}
-    modelsAndNames["ROCs"]["tpr"] = tpr
-    modelsAndNames["ROCs"]["fpr"] = fpr
-    modelsAndNames["ROCs"]["auc"] = auc1
-
+    modelsAndNames["Tensorflow"] = {}
+    modelsAndNames["Tensorflow"]["ROCs"] = {}
+    modelsAndNames["Tensorflow"]["ROCs"]["tpr"] = tpr
+    modelsAndNames["Tensorflow"]["ROCs"]["fpr"] = fpr
+    modelsAndNames["Tensorflow"]["ROCs"]["auc"] = auc1
 
     for i, label in enumerate(labels):
         fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,i], modelsAndNames["Y_hls_predict"][:,i])
@@ -505,284 +516,23 @@ def doPlots(
     modelsAndNames["hls4ml"]["ROCs"]["auc"] = auc1
 
     modelsAndNames["Emulation"] = {}
-    fpr = {}
-    tpr = {}
-    auc1 = {}
-    tresholds = {}
-    # Get emulation ROCs
-    label = "b"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("b")], X_test_global["jet_multijetscore_b"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-    label = "Bkg"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Bkg")], 1.-X_test_global["jet_multijetscore_uds"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-    label = "taup"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("taup")], X_test_global["jet_multijetscore_taup"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-    label = "taum"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("taum")], X_test_global["jet_multijetscore_taum"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-    label = "Gluon"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Gluon")], X_test_global["jet_multijetscore_g"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-    label = "Charm"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Charm")], X_test_global["jet_multijetscore_c"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-    label = "Muon"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Muon")], X_test_global["jet_multijetscore_muon"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-    label = "Electron"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Electron")], X_test_global["jet_multijetscore_electron"])
-    auc1[label] = auc(fpr[label], tpr[label])
-
-
     modelsAndNames["Emulation"]["ROCs"] = {}
+    # Get emulation ROCs
+    for i, label in enumerate(labels):
+        fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,i], X_test_global["jet_multijetscore_"+label])
+        auc1[label] = auc(fpr[label], tpr[label])
+
     modelsAndNames["Emulation"]["ROCs"]["tpr"] = tpr
     modelsAndNames["Emulation"]["ROCs"]["fpr"] = fpr
     modelsAndNames["Emulation"]["ROCs"]["auc"] = auc1
 
     #===========================#
 
-    truthclass = "b"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
-
-
-    truthclass = "Bkg"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
-
-    truthclass = "taup"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
-
-    truthclass = "taum"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
-
-    truthclass = "Gluon"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
-
-    truthclass = "Charm"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
-
-    truthclass = "Muon"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
-
-
-    truthclass = "Electron"
-    plt.figure()
-    tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["Emulation"]["ROCs"]["auc"]
-    plotlabel ="CMSSW Emulation"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["ROCs"]["tpr"]
-    fpr = modelsAndNames["ROCs"]["fpr"]
-    auc1 = modelsAndNames["ROCs"]["auc"]
-    plotlabel = "Tensorflow"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    tpr = modelsAndNames["hls4ml"]["ROCs"]["tpr"]
-    fpr = modelsAndNames["hls4ml"]["ROCs"]["fpr"]
-    auc1 = modelsAndNames["hls4ml"]["ROCs"]["auc"]
-    plotlabel = "hls4ml"
-    plt.plot(tpr[truthclass],fpr[truthclass],label='%s tagger, AUC = %.2f%%'%(plotlabel, auc1[truthclass]*100.))
-    plt.semilogy()
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Mistag rate")
-    plt.xlim(0.,1.)
-    plt.ylim(0.001,1)
-    plt.grid(True)
-    plt.legend(loc='best')
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".png")
-    plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
-    plt.cla()
+    for i, label in enumerate(labels):
+        plt.figure()
+        plt.clf()
+        plot_roc(modelsAndNames,label,title=label+" ROC Comparison")
+        plt.savefig(outFolder+"/ROC_Emulation_comparison_"+label+".png")
 
     X_test_global["response_reg"] = X_test_global["jet_pt_cor_reg"] / X_test_global["jet_genmatch_pt"]
     X_test_global["response_emu"] = X_test_global["jet_pt_cor_reg_emu"] / X_test_global["jet_genmatch_pt"]
@@ -795,22 +545,12 @@ def doPlots(
     mean_hls = np.median(X_test_global["response_hls"])
     std_hls = rms(X_test_global["response_hls"])
 
-    X = np.linspace(0.0, 2.0, 100)
-    histo = plt.hist(X_test_global["response_emu"], bins=X, label='Regression Emulation' ,histtype='step', density=True, color = '#ff7f0e')
-    histo = plt.hist(X_test_global["response_reg"], bins=X, label='Regression Tensorflow' ,histtype='step', density=True, color = '#2ca02c')
-    histo = plt.hist(X_test_global["response_hls"], bins=X, label='Regression hls4ml' ,histtype='step', density=True, color = '#2ca01c')
-
-    plt.xlabel('Jet response (reco/gen)')
-    plt.ylabel('Jets')
-    plt.xlim(0.,2.)
-    plt.legend(prop={'size': 10})
-    plt.legend(loc='upper right')
-    plt.text(1.3, 1.3, "median: "+str(np.round(mean_emu,3))+" rms: "+str(np.round(std_emu,3)), color = '#ff7f0e', fontsize = 14)
-    plt.text(1.3, 1.2, "median: "+str(np.round(mean_reg,3))+" rms: "+str(np.round(std_reg,3)), color = '#2ca02c', fontsize = 14)
-    plt.text(1.3, 1.2, "median: "+str(np.round(mean_hls,3))+" rms: "+str(np.round(std_hls,3)), color = '#2ca01c', fontsize = 14)
-    hep.cms.label("Private Work", data=False, rlabel = "14 TeV (PU 200)")
+    figure = plot_histo([X_test_global["response_reg"],X_test_global["response_emu"],X_test_global["response_hls"]],
+                        ["Tensorflow" + " median: "+str(np.round(mean_reg,3))+" rms: "+str(np.round(std_reg,3)),
+                         "Emulation" + " median: "+str(np.round(mean_emu,3))+" rms: "+str(np.round(std_emu,3)),
+                         "hls4ml" + " median: "+str(np.round(mean_hls,3))+" rms: "+str(np.round(std_hls,3)),],
+                        "Jet Regression",'Jet Response (reco/gen)','# Jets',range=(0,2))
     plt.savefig(outFolder+"/response_emulation"+".png")
-    plt.savefig(outFolder+"/response_emulation"+".pdf")
     plt.cla()
 
 if __name__ == "__main__":
@@ -828,7 +568,6 @@ if __name__ == "__main__":
     parser.add_argument('--timestamp', dest = 'timestamp')
     parser.add_argument('--test', dest = 'test', default = False, action='store_true')
 
-
     args = parser.parse_args()
     handle_common_args(args)
 
@@ -836,7 +575,6 @@ if __name__ == "__main__":
     for arg in vars(args):
         print('%s: %s' %(arg, getattr(args, arg)))
     print('#'*30)
-
 
     doPlots(
         args.testDataDir,

@@ -162,24 +162,24 @@ pre-upload:
   tags:
     - cb_vivado
   script:
-    - mkdir ${CI_PIPELINE_NAME}
-    - mv emulationPlots ${CI_PIPELINE_NAME}
-    - mv outputSynthesis ${CI_PIPELINE_NAME}
-    - mv trainings_regression_weighted ${CI_PIPELINE_NAME}
-    - mv outputPlots ${CI_PIPELINE_NAME} 
-    - mv inputFeaturePlots ${CI_PIPELINE_NAME}
+    - mkdir $Name
+    - mv emulationPlots $Name
+    - mv outputSynthesis $Name
+    - mv trainings_regression_weighted $Name
+    - mv outputPlots $Name
+    - mv inputFeaturePlots $Name
     - cd ..
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git
     - pwd
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
-    - pb_copy_index.py TrainTagger/${CI_PIPELINE_NAME} --recursive
-    - pb_pdf_to_png.py TrainTagger/${CI_PIPELINE_NAME} --recursive
+    - pb_copy_index.py TrainTagger/$Name --recursive
+    - pb_pdf_to_png.py TrainTagger/$Name --recursive
     - cd TrainTagger
   artifacts:
     paths:
-      - ${CI_PIPELINE_NAME}
+      - $Name
     expire_in: 1 day
 
 .publish:
@@ -202,33 +202,33 @@ publish-emulationPlots:
   extends: .publish
   needs : [pre-upload]
   variables:
-    LOCAL_FOLDER: ${CI_PROJECT_DIR}/${Name}/emulationPlots
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/$Name/emulationPlots
     REMOTE_FOLDER: emulationPlots
 
 publish-synthesis:
   extends: .publish
   needs : [pre-upload]
   variables:
-    LOCAL_FOLDER: ${CI_PROJECT_DIR}/${Name}/outputSynthesis
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/$Name/outputSynthesis
     REMOTE_FOLDER: outputSynthesis
 
 publish-modelfiles:
   extends: .publish
   needs : [pre-upload]
   variables:
-    LOCAL_FOLDER: ${CI_PROJECT_DIR}/${Name}/trainings_regression_weighted
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/$Name/trainings_regression_weighted
     REMOTE_FOLDER: trainings_regression_weighted
 
 publish-evaluationPlots:
   extends: .publish
   needs : [pre-upload]
   variables:
-    LOCAL_FOLDER: ${CI_PROJECT_DIR}/${Name}/outputPlots
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/$Name/outputPlots
     REMOTE_FOLDER: outputPlots
 
 publish-inputPlots:
   extends: .publish
   needs : [pre-upload]
   variables:
-    LOCAL_FOLDER: ${CI_PROJECT_DIR}/${Name}/inputFeaturePlots
+    LOCAL_FOLDER: ${CI_PROJECT_DIR}/$Name/inputFeaturePlots
     REMOTE_FOLDER: inputFeaturePlots

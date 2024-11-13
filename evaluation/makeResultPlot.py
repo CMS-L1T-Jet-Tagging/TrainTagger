@@ -329,11 +329,11 @@ def doPlots(
         y_ = modelsAndNames["model"].predict(x_taup)
         modelsAndNames["Y_predict_taup"] = y_[0]
         modelsAndNames["Y_predict_reg_taup"] = y_[1]
-        X_test_global["out_taup"] = modelsAndNames["Y_predict"][:,labels.index("Tau p")]
+        X_test_global["out_taup"] = modelsAndNames["Y_predict"][:,labels.index("Taup")]
         y_ = modelsAndNames["model"].predict(x_taum)
         modelsAndNames["Y_predict_taum"] = y_[0]
         modelsAndNames["Y_predict_reg_taum"] = y_[1]
-        X_test_global["out_taum"] = modelsAndNames["Y_predict"][:,labels.index("Tau m")]
+        X_test_global["out_taum"] = modelsAndNames["Y_predict"][:,labels.index("Taum")]
         y_ = modelsAndNames["model"].predict(x_gluon)
         modelsAndNames["Y_predict_gluon"] = y_[0]
         modelsAndNames["Y_predict_reg_gluon"] = y_[1]
@@ -357,8 +357,8 @@ def doPlots(
         modelsAndNames["Y_predict_bkg"] = modelsAndNames["model"].predict(x_bkg)
         X_test_global["out_bkg"] = modelsAndNames["Y_predict"][:,labels.index("Bkg")]
         modelsAndNames["Y_predict_tau"] = modelsAndNames["model"].predict(x_tau)
-        X_test_global["out_taup"] = modelsAndNames["Y_predict"][:,labels.index("Tau p")]
-        X_test_global["out_taum"] = modelsAndNames["Y_predict"][:,labels.index("Tau m")]
+        X_test_global["out_taup"] = modelsAndNames["Y_predict"][:,labels.index("Taup")]
+        X_test_global["out_taum"] = modelsAndNames["Y_predict"][:,labels.index("Taum")]
         modelsAndNames["Y_predict_gluon"] = modelsAndNames["model"].predict(x_gluon)
         X_test_global["out_gluon"] = modelsAndNames["Y_predict"][:,labels.index("Gluon")]
         modelsAndNames["Y_predict_charm"] = modelsAndNames["model"].predict(x_charm)
@@ -636,11 +636,11 @@ def doPlots(
     fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Bkg")], 1.-X_test_global["jet_bjetscore"])
     auc1[label] = auc(fpr[label], tpr[label])
 
-    label = "Tau p"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Tau p")], X_test_global["jet_tauscore"])
+    label = "Taup"
+    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Taup")], X_test_global["jet_tauscore"])
     auc1[label] = auc(fpr[label], tpr[label])
-    label = "Tau m"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Tau m")], X_test_global["jet_tauscore"])
+    label = "Taum"
+    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Taum")], X_test_global["jet_tauscore"])
     auc1[label] = auc(fpr[label], tpr[label])
 
     modelsAndNames["Reference"]["ROCs"] = {}
@@ -700,7 +700,7 @@ def doPlots(
     plt.savefig(outFolder+"/ROC_comparison_"+truthclass+".pdf")
     plt.cla()
 
-    truthclass = "Tau p"
+    truthclass = "Taup"
     tpr = modelsAndNames["Reference"]["ROCs"]["tpr"]
     fpr = modelsAndNames["Reference"]["ROCs"]["fpr"]
     auc1 = modelsAndNames["Reference"]["ROCs"]["auc"]
@@ -723,7 +723,7 @@ def doPlots(
     plt.savefig(outFolder+"/ROC_comparison_"+truthclass+".pdf")
     plt.cla()
 
-    truthclass = "Tau m"
+    truthclass = "Taum"
     tpr = modelsAndNames["Reference"]["ROCs"]["tpr"]
     fpr = modelsAndNames["Reference"]["ROCs"]["fpr"]
     auc1 = modelsAndNames["Reference"]["ROCs"]["auc"]
@@ -930,8 +930,8 @@ def doPlots(
         X = np.linspace(0.0, 1.0, 100)
         histo = plt.hist(X_test_global[X_test_global["label_b"]>0][score_loop], bins=X, label='b' ,histtype='step', density = True)
         histo = plt.hist(X_test_global[X_test_global["label_uds"]>0][score_loop], bins=X, label='uds' ,histtype='step', density = True)
-        histo = plt.hist(X_test_global[X_test_global["label_taup"]>0][score_loop], bins=X, label='Tau p' ,histtype='step', density = True)
-        histo = plt.hist(X_test_global[X_test_global["label_taum"]>0][score_loop], bins=X, label='Tau m' ,histtype='step', density = True)
+        histo = plt.hist(X_test_global[X_test_global["label_taup"]>0][score_loop], bins=X, label='Taup' ,histtype='step', density = True)
+        histo = plt.hist(X_test_global[X_test_global["label_taum"]>0][score_loop], bins=X, label='Taum' ,histtype='step', density = True)
         histo = plt.hist(X_test_global[X_test_global["label_g"]>0][score_loop], bins=X, label='g' ,histtype='step', density = True)
         histo = plt.hist(X_test_global[X_test_global["label_c"]>0][score_loop], bins=X, label='c' ,histtype='step', density = True)
         histo = plt.hist(X_test_global[X_test_global["label_muon"]>0][score_loop], bins=X, label='muon' ,histtype='step', density = True)
@@ -1976,8 +1976,8 @@ def doPlots(
                 print("... shap summary_plot classification")
                 plt.clf()
                 labels = ["uds", "b"]
-                labels.append("Tau p")
-                labels.append("Tau m")
+                labels.append("Taup")
+                labels.append("Taum")
                 labels.append("Gluon")
                 labels.append("Charm")
                 labels.append("Muon")

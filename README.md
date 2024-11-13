@@ -1,8 +1,18 @@
+<img src="https://github.com/user-attachments/assets/9eb9833f-0672-4aa8-a66f-8920393bc8e1" alt="CERN-LOGO" width="102">
+<img src="https://github.com/user-attachments/assets/960d9384-529b-45c3-b965-301820271d65" alt="CMSlogo" width="99"> 
+<img src="https://github.com/user-attachments/assets/00fd895b-dd4a-4f84-91df-42bd229e8506" alt="MIT-social-media-logo-white" width="99">
+
 # Training Jet Taggers for CMS Phase 2 L1 Trigger
 
 Documentation for training a L1T Jet Tagging model for CMS Phase-2 L1 upgrades.
 
-## Produce Training Dataset
+To train the jet tagger, there are multiple steps that one need to follow, from creating the raw datasets, preprocessing them, train the model, synthesize it, make validation plots for different physics seeds. This README will describe all the steps in a sequential manner. 
+
+**A summary menu of all the steps is listed below**:
+
+[1. Produce Raw Training Datasets](#1-produce-training-dataset)
+
+## 1. Produce Training Dataset
 
 Creating the training datasets involve several steps: 
 

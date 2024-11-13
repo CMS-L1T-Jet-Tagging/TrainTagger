@@ -341,8 +341,8 @@ def doPlots(
     hls_model.compile()
 
     labels = ["Bkg", "b"]
-    labels.append("Tau p")
-    labels.append("Tau m")
+    labels.append("taup")
+    labels.append("taum")
     labels.append("Gluon")
     labels.append("Charm")
     labels.append("Muon")
@@ -448,12 +448,12 @@ def doPlots(
 
     plt.close()
     plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('Tau p')]) ,np.array(X_test_global["jet_multijetscore_taup"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Tau + score")
+    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('taup')]) ,np.array(X_test_global["jet_multijetscore_taup"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Tau + score")
     plt.savefig("%s/Taup_score_2D.png" % outFolder)
 
     plt.close()
     plt.clf()
-    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('Tau m')]) ,np.array(X_test_global["jet_multijetscore_taum"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Tau - score")
+    figure = plot_2d(np.array(modelsAndNames["Y_predict"][:,labels.index('taum')]) ,np.array(X_test_global["jet_multijetscore_taum"] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation","Tau - score")
     plt.savefig("%s/Taum_score_2D.png" % outFolder)
 
     plt.close()
@@ -518,12 +518,12 @@ def doPlots(
     fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Bkg")], 1.-X_test_global["jet_multijetscore_uds"])
     auc1[label] = auc(fpr[label], tpr[label])
 
-    label = "Tau p"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Tau p")], X_test_global["jet_multijetscore_taup"])
+    label = "taup"
+    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("taup")], X_test_global["jet_multijetscore_taup"])
     auc1[label] = auc(fpr[label], tpr[label])
 
-    label = "Tau m"
-    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("Tau m")], X_test_global["jet_multijetscore_taum"])
+    label = "taum"
+    fpr[label], tpr[label], tresholds[label] = roc_curve(Y_test[:,labels.index("taum")], X_test_global["jet_multijetscore_taum"])
     auc1[label] = auc(fpr[label], tpr[label])
 
     label = "Gluon"
@@ -609,7 +609,7 @@ def doPlots(
     plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
     plt.cla()
 
-    truthclass = "Tau p"
+    truthclass = "taup"
     plt.figure()
     tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
     fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]
@@ -638,7 +638,7 @@ def doPlots(
     plt.savefig(outFolder+"/ROC_Emulation_comparison_"+truthclass+".pdf")
     plt.cla()
 
-    truthclass = "Tau m"
+    truthclass = "taum"
     plt.figure()
     tpr = modelsAndNames["Emulation"]["ROCs"]["tpr"]
     fpr = modelsAndNames["Emulation"]["ROCs"]["fpr"]

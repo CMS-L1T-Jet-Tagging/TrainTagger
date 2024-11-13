@@ -39,7 +39,7 @@ python tagger/train/train.py --make-data
 python tagger/train/train.py
 
 #Make some basic validation plots
-python tagger/plots/basic.py
+python tagger/plot/basic.py
 
 #Make other plots for bbbb/bbtautau final state for example:
 python tagger/plot/bbbb.py

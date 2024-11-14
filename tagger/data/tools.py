@@ -227,6 +227,18 @@ def extract_array(tree, field, entry_stop):
     """
     return tree[field].array(entry_stop=entry_stop)
 
+def to_ML(data):
+    """
+    Take in the data from make_data (loaded by load_data) and make them ready for training.
+    """
+
+    X = np.asarray(data['nn_inputs'])
+    y = None
+
+    print(X.shape)
+
+    return X
+
 def load_data(outdir, percentage, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
@@ -257,8 +269,6 @@ def load_data(outdir, percentage, fields=None):
 
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
-
-    print(chunk_files)
     
     return data
 

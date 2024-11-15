@@ -3,14 +3,13 @@ import os, shutil
 
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
+from tagger.plot.basic import loss_history
 import models
 
 #Third parties
 import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
-
-from qkeras import lo
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 BATCH_SIZE = 1024
@@ -90,7 +89,12 @@ def train(out_dir, percent, model_name):
     model_export.save(export_path)
     print(f"Model saved to {export_path}")
 
-    #Produce some basic plots with the training
+    #Produce some basic plots with the training for diagnostics
+    plot_path = os.path.join(out_dir, "plots")
+    os.makedirs(plot_path, exist_ok=True)
+
+    #Plot
+    loss_history(plot_path, history)
 
     return
 

@@ -123,7 +123,7 @@ def _split_flavor(data):
     if split_data_sum != len(data[jet_ptmin_gen]):
         raise ValueError(f"Data splitting error: Total entries ({total_entries}) do not match the filtered data length ({len(data[jet_ptmin_gen])}).")
 
-    return data[jet_ptmin_gen]
+    return data[jet_ptmin_gen], class_labels
 
 def _get_pfcand_fields(tag):
     
@@ -168,7 +168,7 @@ def _make_nn_inputs(data_split, tag, n_parts):
 
     return
 
-def _save_metadata(metadata_file, chunk, entries, outfile):
+def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     chunk_info = {
         "chunk": chunk,
@@ -188,6 +188,17 @@ def _save_metadata(metadata_file, chunk, entries, outfile):
 
     with open(metadata_file, "w") as f:
         json.dump(metadata, f, indent=4)
+
+    return
+
+def _save_dataset_metadata(outdir, class_labels, tag):
+
+    dataset_metadata_file = os.path.join(outdir, 'variables.json')
+
+    metadata = {"outputs": class_labels,
+                "inputs": _get_pfcand_fields(tag)}
+
+    with open(dataset_metadata_file, "w") as f: json.dump(metadata, f, indent=4)
 
     return
 
@@ -213,7 +224,7 @@ def _process_chunk(data_split, tag, n_parts, chunk, outdir):
 
     # Log metadata
     metadata_file = os.path.join(outdir, "metadata.json")
-    _save_metadata(metadata_file, chunk, len(data_split), outfile) #Chunk, Entries, Outfile
+    _save_chunk_metadata(metadata_file, chunk, len(data_split), outfile) #Chunk, Entries, Outfile
 
     #Delete the variables to save memory
     gc.collect()
@@ -227,17 +238,16 @@ def extract_array(tree, field, entry_stop):
     """
     return tree[field].array(entry_stop=entry_stop)
 
-def to_ML(data):
+def to_ML(data, class_labels):
     """
     Take in the data from make_data (loaded by load_data) and make them ready for training.
     """
 
     X = np.asarray(data['nn_inputs'])
-    y = None
+    y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
+    pt_target = np.asarray(data['target_pt'])
 
-    print(X.shape)
-
-    return X
+    return X, y, pt_target
 
 def load_data(outdir, percentage, fields=None):
     """
@@ -269,8 +279,15 @@ def load_data(outdir, percentage, fields=None):
 
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
+
+    #Load corresponding metadata for classlabels/input variables
+    data_metadata_file  = os.path.join(outdir, "variables.json")
+    with open(data_metadata_file, "r") as f:
+        variables = json.load(f)
+        class_labels = variables['outputs']
+        input_vars = variables['inputs']
     
-    return data
+    return data, class_labels, input_vars
 
 def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root', 
               outdir='training_data/',
@@ -319,7 +336,10 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         # _add_response_vars(data)
 
         #Split data into all the training classes
-        data_split = _split_flavor(data)
+        data_split, class_labels = _split_flavor(data)
+
+        #If first chunk then save metadata of the dataset
+        if chunk == 0: _save_dataset_metadata(outdir, class_labels, tag)
 
         #Process and save training data for a given feature set
         _process_chunk(data_split, tag=tag, n_parts=n_parts, chunk=chunk, outdir=outdir)

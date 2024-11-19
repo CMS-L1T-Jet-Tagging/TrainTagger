@@ -15,15 +15,15 @@ The CI in this repository aims at building a pipeline that enables running all o
 
 [1. Produce Raw Training Datasets](#1-produce-raw-training-dataset)
 
-[2. Pre-process the data and train the model]()
+[2. Prepare the data and train the model](#2-prepare-the-data-and-train-the-model)
 
-[3. Physics Validation]()
+[3. Physics Validation](#3-physics-validation)
 
-[4. Synthesize the model (with wrapper and CMSSW)]()
+[4. Synthesize the model (with wrapper and CMSSW)](#4-synthesize-the-model-to-hdl-codes)
 
-[5. Implement the model in FPGA Firmware]()
+[5. Implement the model in FPGA Firmware](#5-implement-model-on-fpga-firmware)
 
-Note that the instructions are assuming that you have access to the appropriate `eos` data spaces. If you are not interested in reading lengthy documentation like me, here is a ultra-short version to get started on running the code
+Note that the instructions are assuming that you have access to the appropriate `eos` data spaces. If you are not interested in reading lengthy documentation like me, here is a ultra-short version to get started on running the code (more details in each specific command is provided in each section above, futher help can be found by looking into each script):
 
 ```
 #Activate the environment
@@ -64,7 +64,7 @@ python tagger/firmware/hls4ml_convert.py
   
   2. These samples will then be processed by the nTuplizer, which is part of the [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons) repo. In particular the `runPerformanceNTuple.py`, which calls `jetNTuplizer.cc`. Note that to submit jobs as part of this setup, you also need the [submission](https://github.com/CMS-L1T-Jet-Tagging/submission/tree/dev/14_0_X-leptons) repo as well. 
 
-# 2. Prepare the data for training
+# 2. Prepare the data and train the model
 
 After creating the training ntuples, in our setup, they will then be shuffled and concatenate (`hadd`) into a big file, such as this one:
 
@@ -98,14 +98,37 @@ This prepare the data using the default options(look into the script to see what
 python tagger/train/train.py --make-data -i <your-rootfile> -s <custom-step-size>
 ```
 
-This automatically create a new directory: `training_data` (it will ask before removing the exisiting one), and writes the data into it.
+This automatically create a new directory: `training_data` (it will ask before removing the exisiting one), and writes the data into it. Then, to train the model:
+
+```
+python tagger/train/train.py
+```
+
+The models are defined in `tagger/train/models.py` the `baseline` model is provided as default.
 
 # 3. Physics Validation
 
+Various physics validation plots can be make using the `tagger/plot` modules, the plots are divided into different final states, such as:
+
+```
+python tagger/plot/bbbb.py
+python tagger/plot/bbtautau.py
+```
+
 # 4. Synthesize the model to HDL Codes
+
+To synthesize the model into HDL codes, we first need use `hls4ml`:
+
+```
+python tagger/firmware/hls4ml_convert.py
+```
+
+Then, these codes are synthesize again with an hls wrapper, and CMSSW:
+
 
 # 5. Implement model on FPGA firmware
 
+------
 ## Conda Environment Notes
 
 To deactivate the environment:

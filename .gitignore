@@ -10,6 +10,9 @@ trainings*
 *__pycache__*
 condaenv*
 training_data*
+*.npy
+*.test
+hls4ml*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

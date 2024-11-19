@@ -64,6 +64,7 @@ pfcand_fields_all:
 
 baseline_hardware_inputs:
   - pt
+  - pt_rel
   - pt_log
   - deta
   - dphi

@@ -39,7 +39,7 @@ python tagger/train/train.py --make-data
 python tagger/train/train.py
 
 #Make some basic validation plots
-python tagger/plot/basic.py
+python tagger/train/train.py --plot-basic
 
 #Make other plots for bbbb/bbtautau final state for example:
 python tagger/plot/bbbb.py
@@ -100,32 +100,11 @@ python tagger/train/train.py --make-data -i <your-rootfile> -s <custom-step-size
 
 This automatically create a new directory: `training_data` (it will ask before removing the exisiting one), and writes the data into it.
 
-## 3. Train the model
+# 3. Physics Validation
 
+# 4. Synthesize the model to HDL Codes
 
-
-## Setup & Training
-
-  After setting up the conda environment (see conda setup below), the model can be trained using this command:
-  
-  ```
-  #If using conda environment
-  conda activate tagger
-  
-  #Add the path so you can use the tagger module
-  export PYTHONPATH=$PYTHONPATH:$PWD
-  
-  #Train a model
-  python tagger/train/train.py -n <model-name>
-  ```
-
-## Synthesize the model to HDL Codes
-
-The train models would then be saved in `tagger/models`, and the jet tagger can be synthesized with its hls wrapper using
-
-```
-python tagger/firmware/hls4ml_convert.py
-```
+# 5. Implement model on FPGA firmware
 
 ## Conda Environment Notes
 

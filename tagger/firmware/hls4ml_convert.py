@@ -24,6 +24,11 @@ def convert(model, outpath):
     config['IOType'] = 'io_parallel'
     config['LayerName']['model_input']['Precision']['result'] = input_precision
 
+    #Configuration for conv1d layers
+    #hls4ml automatically figures out the paralellization factor
+    config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 10
+    config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 10
+
     #Additional config
     for layer in model.layers:
         layer_name = layer.__class__.__name__
@@ -45,8 +50,8 @@ def convert(model, outpath):
     config["LayerName"]["pT_output"]["Implementation"] = "latency"
 
     #Save config  as json file
-    # print("Saving default config as config.json ...")
-    # with open('config.json', 'w') as fp: json.dump(config, fp)
+    print("Saving default config as config.json ...")
+    with open('config.json', 'w') as fp: json.dump(config, fp)
 
     #Write HLS
     hls_model = hls4ml.converters.convert_from_keras_model(model,

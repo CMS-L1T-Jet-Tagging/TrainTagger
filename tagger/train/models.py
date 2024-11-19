@@ -26,11 +26,11 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1):
     main = BatchNormalization(name='norm_input')(inputs)
     
     #First Conv1D
-    main = QConv1D(filters=20, kernel_size=5, name='Conv1D_1', **common_args)(main)
+    main = QConv1D(filters=10, kernel_size=1, name='Conv1D_1', **common_args)(main)
     main = QActivation(activation=quantized_relu(bits), name='relu_1')(main)
 
     #Second Conv1D
-    main = QConv1D(filters=10, kernel_size=5, name='Conv1D_2', **common_args)(main)
+    main = QConv1D(filters=10, kernel_size=2, strides=2, name='Conv1D_2', **common_args)(main)
     main = QActivation(activation=quantized_relu(bits), name='relu_2')(main)
 
     # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
@@ -60,5 +60,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1):
 
     #Define the model using both branches
     model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+
+    print(model.summary())
 
     return model

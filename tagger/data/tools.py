@@ -121,7 +121,7 @@ def _split_flavor(data):
     # Sanity check for data consistency
     split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
     if split_data_sum != len(data[jet_ptmin_gen]):
-        raise ValueError(f"Data splitting error: Total entries ({total_entries}) do not match the filtered data length ({len(data[jet_ptmin_gen])}).")
+        raise ValueError(f"Data splitting error: Total entries ({split_data_sum}) do not match the filtered data length ({len(data[jet_ptmin_gen])}).")
 
     return data[jet_ptmin_gen], class_labels
 
@@ -211,7 +211,7 @@ def _process_chunk(data_split, tag, n_parts, chunk, outdir):
     _make_nn_inputs(data_split, tag, n_parts)
 
     #Save them to a root file
-    save_fields=['nn_inputs', 'class_label', 'target_pt']
+    save_fields=['nn_inputs', 'class_label', 'target_pt', 'target_pt_phys']
 
     # Filter the data_split to only include save_fields
     filtered_data = {field: data_split[field] for field in save_fields}
@@ -246,16 +246,18 @@ def to_ML(data, class_labels):
     X = np.asarray(data['nn_inputs'])
     y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
     pt_target = np.asarray(data['target_pt'])
+    truth_pt = np.asarray(data['target_pt_phys'])
 
-    return X, y, pt_target
+    return X, y, pt_target, truth_pt
 
-def load_data(outdir, percentage, fields=None):
+def load_data(outdir, percentage, test_ratio=0.2, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
     Parameters:
         outdir (str): The output directory containing the data chunks.
-        percentage (float): The percentage of data to load (0-100).
+        percentage (float): The percentage of TOTAL data to load (0-100).
+        test_ratio (float): how much of the total data would be used for testing (0-1)
         fields (list, optional): Specific fields to load. If None, load all fields.
 
     Returns:
@@ -280,6 +282,19 @@ def load_data(outdir, percentage, fields=None):
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
 
+    # Shuffle the data indices
+    total_data_len = len(data)
+    indices = np.arange(total_data_len)
+    np.random.shuffle(indices)
+
+    # Split indices based on test_ratio
+    split_index = int((1 - test_ratio) * total_data_len)
+    train_indices, test_indices = indices[:split_index], indices[split_index:]
+
+    # Split the data into training and testing sets
+    train_data = data[train_indices]
+    test_data = data[test_indices]
+
     #Load corresponding metadata for classlabels/input variables
     data_metadata_file  = os.path.join(outdir, "variables.json")
     with open(data_metadata_file, "r") as f:
@@ -287,7 +302,7 @@ def load_data(outdir, percentage, fields=None):
         class_labels = variables['outputs']
         input_vars = variables['inputs']
     
-    return data, class_labels, input_vars
+    return train_data, test_data, class_labels, input_vars
 
 def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root', 
               outdir='training_data/',

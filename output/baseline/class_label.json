@@ -1,0 +1,10 @@
+{
+    "b": 0,
+    "charm": 1,
+    "light": 2,
+    "gluon": 3,
+    "taup": 4,
+    "taum": 5,
+    "muon": 6,
+    "electron": 7
+}

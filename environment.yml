@@ -20,5 +20,5 @@ dependencies:
     # For hardware synthesis
     - tensorflow==2.14
     - pyparsing
-    - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git
+    - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger
     - git+https://github.com/jmitrevs/qkeras.git@qrecurrent_unstack

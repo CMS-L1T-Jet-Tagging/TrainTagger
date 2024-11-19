@@ -13,6 +13,8 @@ training_data*
 *.npy
 *.test
 hls4ml*
+*adb*
+*.autopilot*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

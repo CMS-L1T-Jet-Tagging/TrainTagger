@@ -361,4 +361,3 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
 
         #Uncomment when testing
         chunk += 1
-        if chunk == 2: break

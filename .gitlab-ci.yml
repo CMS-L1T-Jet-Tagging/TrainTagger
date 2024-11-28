@@ -1,29 +1,46 @@
 include:
   - local: "CI/template.yml"
 
-# DeepSet:all:
-#   extends: .ml_pipeline
-#   variables:
-#     Model: DeepSet
-#     Classes: btgc
-#     Inputs: all
-#     TrainDataset: TT_PU200.root
-#     TestDataset: TT_PU200.root
-#     SCRAM_ARCH: 'el8_amd64_gcc11'
-#     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-#     CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
-#     CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
-
-DeepSet:minimal:
+DeepSet:baseline_4param:
   extends: .ml_pipeline
   variables:
-    Model: DeepSet
-    Classes: btgc
-    Inputs: minimal
-    TrainDataset: TT_PU200.root
-    TestDataset: TT_PU200.root
-    SCRAM_ARCH: 'el8_amd64_gcc11'
+    Name: baseline_4param
+    Inputs: baseline
+    DataDir: baselineTRK_4param_021024
+    Dataset: All200.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-    CMSSW_L1CT: 'cms-l1t-offline:phase2-l1t-integration-14_0_0_pre3'
-    CMSSW_L1CT_TAG: 'phase2-l1t-1400pre3_v9'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
 
+DeepSet:baseline_5param:
+  extends: .ml_pipeline
+  variables:
+    Name: baseline_5param
+    Inputs: baseline
+    DataDir: baselineTRK_5param_021024
+    Dataset: All200.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
+
+DeepSet:baseline_4param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: baseline_4param_extended_trk
+    Inputs: baseline
+    DataDir: extendedTRK_4param_021024
+    Dataset: All200.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
+
+DeepSet:baseline_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: baseline_5param_extended_trk
+    Inputs: baseline
+    DataDir: extendedTRK_5param_021024
+    Dataset: All200.root
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'

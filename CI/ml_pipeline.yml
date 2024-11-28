@@ -1,34 +1,40 @@
 include:
     - CI/cmssw.yml
+    - project: cms-cactus/ops/auto-devops
+      ref: 0.4.1
+      file: templates/upload-eos.yml
+
 
 stages:
   - data
   - train
   - evaluate
   - synth
-  - cmssw-setup
-   
+  - emulate
+  - emulation-evaluate
+  - upload
+
 variables:
+    Name:  baseline_4_params
     Model: DeepSet
     Classes: btgc
-    Inputs: minimal
-    TrainDataset: TT_PU200.root
-    TestDataset: TT_PU200.root
+    Inputs: baseline
+    DataDir: ./
+    Dataset: All200.root
 
 .template:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
-    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
+    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
     - mc admin info $ARTIFACTS_ALIAS
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags:
     - docker
-  rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
-     - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
-       when: on_success
-     - when: manual
+  # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
+  #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
+  #      when: on_success
 
 data:
   extends:
@@ -37,21 +43,16 @@ data:
   rules:
      - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
          - datatools/**
-       when: manual
+  when: manual
   script:
-  - source activate l1_training
+  - source activate tagger
   - mkdir data
   - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$TrainDataset ./
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$TestDataset ./
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/$Dataset ./
   - cd ..
-  - python datatools/createDataset.py -i data/$TrainDataset -o data/TTtrain -t $Inputs
-  - python datatools/createDataset.py -i data/$TestDataset -o data/TTtest -t $Inputs
-  - cd data 
-  - tar -cvf convertedfiles_train_$Inputs.tgz TTtrain
-  - tar -cvf convertedfiles_test_$Inputs.tgz TTtest
-  - mc cp convertedfiles_train_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
-  - mc cp convertedfiles_test_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/
+  - python tagger/train/train.py --make-data -i data/$Dataset
+  - tar -cf training_data_$Inputs.tgz training_data
+  - mc cp training_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
 
 train:
   extends:
@@ -61,16 +62,21 @@ train:
     - job : data
       optional: true
   script:
-  - mkdir data
-  - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
-  - tar -xvf convertedfiles_$Inputs.tgz
-  - cd ..
-  - source activate l1_training
-  - python train/training.py -t data/TT -c $Classes -i $Inputs --train-epochs 15 --model $Model --classweights --regression --learning-rate 0.001 --nNodes 16 --optimizer adam --train-batch-size 2048 --strstamp 2024_22_08_vTEST --nLayers 2 --pruning
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
+  - tar -xf training_data_$Inputs.tgz
+  - source activate tagger
+  - python tagger/train/train.py
+  - python tagger/train/train.py --plot-basic
+  - cd output/baseline
+  - mkdir testing_data
+  - mv *.npy testing_data
+  - tar -cf testing_data_$Inputs.tgz testing_data
+  - mc cp testing_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
   artifacts:
     paths:
-      - trainings_regression_weighted
+      - output
+    exclude:
+      - .npy
     expire_in: 1 day
 
 evaluate:
@@ -80,21 +86,18 @@ evaluate:
   needs: [train]
   dependencies: [train]
   script:
-  - mkdir data
-  - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
-  - tar -xvf convertedfiles_$Inputs.tgz
-  - cd ..
-  - ls -lh
-  - ls trainings_regression_weighted
-  - source activate l1_training
-  - python evaluation/makeResultPlot.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs --model $Model -o with_regression --regression --timestamp 2024_22_08_vTEST --pruning
-  - python evaluation/makeInputPlots.py -t data/TT -f trainings_regression_weighted -c $Classes -i $Inputs
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
+  - tar -xf training_data_$Inputs.tgz
+  - source activate tagger
+  - cd output/baseline
+  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/testing_data_$Inputs.tgz ./
+  - tar -xf testing_data_$Inputs.tgz
+  - cd ../..
   artifacts:
     paths:
-      - trainings_regression_weighted
-      - outputPlots
-      - inputFeaturePlots
+      - output
+    exclude:
+      - .npy
     expire_in: 1 day
 
 synth:
@@ -109,17 +112,61 @@ synth:
     - source /opt/Xilinx/Vivado/2022.2/settings64.sh
     - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
     - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
-    - mkdir data
-    - cd data
-    - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/convertedfiles_$Inputs.tgz ./
-    - tar -xvf convertedfiles_$Inputs.tgz
-    - cd ..
-    - source activate l1_training
-    - pwd
-    - export PYTHONPATH=/builds/cebrown/TrainTagger:$PYTHONPATH
-    - python synthesis/synth.py -f data/TT -c $Classes -i $Inputs -m $Model -o regression --regression --timestamp 2024_22_08_vTEST -B --pruning
+    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
+    - source activate tagger
+    - python tagger/firmware/hls4ml_convert.py
   artifacts:
     paths:
-      - outputSynthesis/*
+      - tagger/firmware
     expire_in: 1 day
 
+
+emulation-evaluate:
+  extends:
+    - .template
+  stage: emulation-evaluate
+  tags:
+    - cb_vivado
+  needs: [emulate,train,synth]
+  dependencies: [emulate,train,synth]
+  script:
+  - mkdir data
+  - cd data
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple.root .
+  - cd ..
+  - source activate tagger
+  - python tagger/plot/makeEmulationPlot.py -r True
+  artifacts:
+    paths:
+      - output/baseline
+    expire_in: 1 day
+
+upload:
+  tags: [k8s-gpu]
+  image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_CPU_REQUEST: 1
+  stage: upload
+  needs: [emulation-evaluate,synth,train,evaluate]
+  dependencies: [emulation-evaluate,synth,train,evaluate]
+  before_script:
+    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
+  script:
+    - mkdir $Name
+    - mv tagger/firmware $Name
+    - mv output/baseline/model $Name/model
+    - mv output/baseline/plots/emulation $Name/plots
+    - mv output/baseline/plots/training/ $Name/plots
+    #- mv output/baseline/plots/testing/ $Name/plots
+    - cd ..
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - rm -rf php-plots
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
+    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
+    - pb_copy_index.py TrainTagger/${Name} --recursive
+    - pb_deploy_plots.py TrainTagger/${Name} /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${Name}/${CI_COMMIT_REF_NAME} --recursive --extensions h5,cpp,h,yml,tcl,sh,png,pdf 
+  artifacts:
+    paths:
+      - $Name
+    expire_in: 1 day

@@ -8,15 +8,15 @@ from qkeras.utils import load_qmodel
 
 #----------------------------------------------
 
-def convert(model, outpath):
+def convert(model, outpath,build=True):
 
     #Remove the old directory if they exist
     os.system(f'rm -rf {outpath}')
 
     #Auxilary variables
-    input_precision = 'ap_fixed<15,12,AP_RND,AP_SAT>'
-    class_precision = 'ap_ufixed<8,0,AP_RND,AP_SAT>'
-    reg_precision = 'ap_fixed<10,6,AP_RND,AP_SAT>' 
+    input_precision = 'ap_fixed<24,12,AP_RND,AP_SAT>'
+    class_precision = 'ap_ufixed<24,12,AP_RND,AP_SAT>'
+    reg_precision = 'ap_fixed<16,6,AP_RND,AP_SAT>' 
     trace=True
 
     #Create default config
@@ -65,12 +65,16 @@ def convert(model, outpath):
 
     #Compile and build the project
     hls_model.compile()
-    hls_model.build(csim=False, reset = True)
+    if build == True:
+        hls_model.build(csim=False, reset = True)
+        return
+    else:
+        return hls_model
 
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/saved_model.h5' , help = 'Input model path for conversion')    
+    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')    
     parser.add_argument('-o','--outpath', default='tagger/firmware/JetTaggerNN' , help = 'Jet tagger synthesized output directory')    
 
     args = parser.parse_args()

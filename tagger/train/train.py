@@ -48,9 +48,9 @@ def prune_model(model, num_samples):
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, class_labels):
 
-    np.save(os.path.join(out_dir, "X_test.npy"), X_test)
-    np.save(os.path.join(out_dir, "y_test.npy"), y_test)
-    np.save(os.path.join(out_dir, "truth_pt_test.npy"), truth_pt_test)
+    np.save(os.path.join(out_dir, "testing_data/X_test.npy"), X_test)
+    np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
+    np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     with open(os.path.join(out_dir, "class_label.json"), "w") as f: json.dump(class_labels, f, indent=4) #Dump output variables
 
     print(f"Test data saved to {out_dir}")
@@ -165,12 +165,12 @@ def train(out_dir, percent, model_name):
     #Export the model
     model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
 
-    export_path = os.path.join(out_dir, "saved_model.h5")
+    export_path = os.path.join(out_dir, "model/saved_model.h5")
     model_export.save(export_path)
     print(f"Model saved to {export_path}")
 
     #Produce some basic plots with the training for diagnostics
-    plot_path = os.path.join(out_dir, "plots")
+    plot_path = os.path.join(out_dir, "plots/training")
     os.makedirs(plot_path, exist_ok=True)
 
     #Plot history
@@ -187,6 +187,7 @@ if __name__ == "__main__":
     parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root' , help = 'Path to input training data')
     parser.add_argument('-r','--ratio', default=1, type=float, help = 'Ratio (0-1) of the input data root file to process')
     parser.add_argument('-s','--step', default='100MB' , help = 'The maximum memory size to process input root file')
+    parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, defined in pfcand_fields.yml')
 
     #Training argument
     parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
@@ -200,7 +201,7 @@ if __name__ == "__main__":
 
     #Either make data or start the training
     if args.make_data:
-        make_data(infile=args.input, step_size=args.step, ratio=args.ratio) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
     elif args.plot_basic:
         model_dir = args.output
         

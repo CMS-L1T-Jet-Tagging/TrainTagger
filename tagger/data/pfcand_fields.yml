@@ -61,6 +61,17 @@ pfcand_fields_all:
   - isChargedHadronPlus
   - isChargedHadronMinus
   - isfilled
+  - jet_multijetscore_b
+  - jet_multijetscore_bkg
+  - jet_multijetscore_gluon
+  - jet_multijetscore_charm
+  - jet_multijetscore_taup
+  - jet_multijetscore_taum
+  - jet_multijetscore_muon
+  - jet_multijetscore_electron
+  - jet_multijetscore_regression
+  - jet_pt_phys
+  - jet_genmatch_pt
 
 baseline_hardware_inputs:
   - pt
@@ -83,3 +94,20 @@ baseline_hardware_inputs:
   - puppiweight
   - emid
   - quality
+
+extra_fields:
+  - jet_pt_phys
+  - jet_genmatch_pt
+
+extra_emulation_fields:
+  - jet_multijetscore_b
+  - jet_multijetscore_light
+  - jet_multijetscore_gluon
+  - jet_multijetscore_charm
+  - jet_multijetscore_taup
+  - jet_multijetscore_taum
+  - jet_multijetscore_muon
+  - jet_multijetscore_electron
+  - jet_multijetscore_regression
+  - jet_pt_phys
+  - jet_genmatch_pt

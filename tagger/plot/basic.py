@@ -45,11 +45,10 @@ def basic_ROC(model_dir):
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
 
     #Load the testing data & model
-    X_test = np.load(f"{model_dir}/X_test.npy")
-    y_test = np.load(f"{model_dir}/y_test.npy")
+    X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
+    y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
     
-    model = load_qmodel(f"{model_dir}/saved_model.h5")
-    model_outputs = model.predict(X_test)
+    model = load_qmodel(f"{model_dir}/model/saved_model.h5")
 
     #Get classification outputs
     y_pred = model_outputs[0]
@@ -60,7 +59,7 @@ def basic_ROC(model_dir):
     # Create a plot for ROC curves
     plt.figure(figsize=(16, 16))
     for i, class_label in enumerate(class_labels):
-        
+
         # Get true labels and predicted probabilities for the current class
         y_true = y_test[:, i]  # Extract the one-hot column for the current class
         y_score = y_pred[:, i] # Predicted probabilities for the current class

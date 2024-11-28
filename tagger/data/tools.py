@@ -8,7 +8,7 @@ import tensorflow as tf
 import uproot, yaml
 
 #Dataset configuration
-from .config import FILTER_PATTERN, N_PARTICLES, INPUT_TAG
+from .config import FILTER_PATTERN, N_PARTICLES, INPUT_TAG, EXTRA_FIELDS
 
 gc.set_threshold(0)
 
@@ -144,19 +144,19 @@ def _pad_fill(array, target):
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
-def _make_nn_inputs(data_split, tag, n_parts):
+def _make_nn_inputs(data_split, tag, extras, n_parts):
     
     features = _get_pfcand_fields(tag)
+    extra_features = _get_pfcand_fields(extras)
 
     #Concatenate all the inputs
     inputs_list = []
+    extras_list = []
 
     #Vertically stacked them to create input sets
     #https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
     #Also pad and fill them with 0 to the number of constituents we are using (nconstit)
-    for i in range(len(features)):
-
-        field = features[i]
+    for field in features:
         field_array = data_split["jet_pfcand"][field]
 
         padded_filled_array = _pad_fill(field_array, n_parts)
@@ -166,6 +166,17 @@ def _make_nn_inputs(data_split, tag, n_parts):
     inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
 
+    for extra in extra_features:
+        extra_array = data_split[extra]
+        print(extra_array)
+
+        #padded_filled_array = _pad_fill(extra_array, n_parts)
+        extras_list.append(extra_array[:, np.newaxis])
+
+    extra_inputs = ak.concatenate(extras_list, axis=1)
+
+    data_split['extra_inputs'] = extra_inputs
+    
     return
 
 def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
@@ -191,27 +202,28 @@ def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     return
 
-def _save_dataset_metadata(outdir, class_labels, tag):
+def _save_dataset_metadata(outdir, class_labels, tag,extras):
 
     dataset_metadata_file = os.path.join(outdir, 'variables.json')
 
     metadata = {"outputs": class_labels,
-                "inputs": _get_pfcand_fields(tag)}
+                "inputs": _get_pfcand_fields(tag),
+                "extras": _get_pfcand_fields(extras),}
 
     with open(dataset_metadata_file, "w") as f: json.dump(metadata, f, indent=4)
 
     return
 
-def _process_chunk(data_split, tag, n_parts, chunk, outdir):
+def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
     """
     Process chunk of data_split to save/parse it for training datasets
     """
 
     #Create the NN inputs
-    _make_nn_inputs(data_split, tag, n_parts)
+    _make_nn_inputs(data_split, tag, extras, n_parts)
 
     #Save them to a root file
-    save_fields=['nn_inputs', 'class_label', 'target_pt', 'target_pt_phys']
+    save_fields=['nn_inputs', 'extra_inputs', 'class_label', 'target_pt', 'target_pt_phys']
 
     # Filter the data_split to only include save_fields
     filtered_data = {field: data_split[field] for field in save_fields}
@@ -301,12 +313,14 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         variables = json.load(f)
         class_labels = variables['outputs']
         input_vars = variables['inputs']
+        extra_vars = variables['extras']
     
-    return train_data, test_data, class_labels, input_vars
+    return train_data, test_data, class_labels, input_vars, extra_vars
 
 def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root', 
               outdir='training_data/',
               tag=INPUT_TAG,
+              extras=EXTRA_FIELDS,
               n_parts=N_PARTICLES,
               ratio=1.0,
               step_size="100MB"):
@@ -317,6 +331,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         infile (str): The input file path.
         outdir (str): The output directory.
         tag (str): Input tags to use from pfcands, defined in pfcand_fields.yml.
+        extras (str): Extra fields to store for plotting, defined in pfcand_fields.yml
         n_parts (int): Number of constituent particles to use for tagging.
         fraction (float) : fraction from (0-1) of data to process for training/testing
         step_size (str): Step size for uproot iteration.
@@ -354,10 +369,10 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         data_split, class_labels = _split_flavor(data)
 
         #If first chunk then save metadata of the dataset
-        if chunk == 0: _save_dataset_metadata(outdir, class_labels, tag)
+        if chunk == 0: _save_dataset_metadata(outdir, class_labels, tag, extras)
 
         #Process and save training data for a given feature set
-        _process_chunk(data_split, tag=tag, n_parts=n_parts, chunk=chunk, outdir=outdir)
+        _process_chunk(data_split, tag=tag, extras=extras, n_parts=n_parts, chunk=chunk, outdir=outdir)
 
         #Number of chunk for indexing files
         chunk += 1

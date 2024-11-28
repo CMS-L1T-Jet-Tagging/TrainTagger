@@ -16,6 +16,9 @@ hls4ml*
 *adb*
 *.autopilot*
 *JetTaggerNN*
+output/*
+data/*
+emulation_data/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

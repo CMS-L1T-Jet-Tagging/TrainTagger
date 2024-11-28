@@ -160,10 +160,10 @@ def _make_nn_inputs(data_split, tag, n_parts):
         field_array = data_split["jet_pfcand"][field]
 
         padded_filled_array = _pad_fill(field_array, n_parts)
-        inputs_list.append(padded_filled_array[:, np.newaxis])
+        inputs_list.append(padded_filled_array[:,:,np.newaxis])
 
-    inputs = ak.concatenate(inputs_list, axis=1)
-
+    #batch_size, n_particles, n_features
+    inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
 
     return
@@ -250,7 +250,7 @@ def to_ML(data, class_labels):
 
     return X, y, pt_target, truth_pt
 
-def load_data(outdir, percentage, test_ratio=0.2, fields=None):
+def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -308,7 +308,8 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
               outdir='training_data/',
               tag=INPUT_TAG,
               n_parts=N_PARTICLES,
-              step_size='100MB'):
+              ratio=1.0,
+              step_size="100MB"):
     """
     Process the data set in chunks from the input ntuples file.
 
@@ -317,6 +318,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         outdir (str): The output directory.
         tag (str): Input tags to use from pfcands, defined in pfcand_fields.yml.
         n_parts (int): Number of constituent particles to use for tagging.
+        fraction (float) : fraction from (0-1) of data to process for training/testing
         step_size (str): Step size for uproot iteration.
     """
 
@@ -339,9 +341,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
     num_entries_done = 0
     chunk = 0
 
-    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=step_size):
-        num_entries_done += len(data)
-        print(f"Processing {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
+    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=step_size, max_workers=4):
         
         #Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
@@ -359,5 +359,8 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         #Process and save training data for a given feature set
         _process_chunk(data_split, tag=tag, n_parts=n_parts, chunk=chunk, outdir=outdir)
 
-        #Uncomment when testing
+        #Number of chunk for indexing files
         chunk += 1
+        num_entries_done += len(data)
+        print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
+        if num_entries_done / num_entries >= ratio: break

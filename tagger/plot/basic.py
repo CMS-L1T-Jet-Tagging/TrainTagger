@@ -60,8 +60,9 @@ def basic_ROC(model_dir):
     # Create a plot for ROC curves
     plt.figure(figsize=(16, 16))
     for i, class_label in enumerate(class_labels):
+        
         # Get true labels and predicted probabilities for the current class
-        y_true = y_test[:,i]  # Extract the one-hot column for the current class
+        y_true = y_test[:, i]  # Extract the one-hot column for the current class
         y_score = y_pred[:, i] # Predicted probabilities for the current class
 
         # Compute FPR, TPR, and AUC

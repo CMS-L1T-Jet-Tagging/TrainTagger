@@ -48,6 +48,8 @@ def prune_model(model, num_samples):
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, class_labels):
 
+    os.makedirs(os.path.join(out_dir,'testing_data'), exist_ok=True)
+
     np.save(os.path.join(out_dir, "testing_data/X_test.npy"), X_test)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
@@ -120,7 +122,11 @@ def train(out_dir, percent, model_name):
     os.makedirs(out_dir)
 
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars = load_data("training_data/", percentage=percent)
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+
+    #Save input variables and extra variables metadata
+    with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump output variables
+    with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
 
     #Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train = to_ML(data_train, class_labels)

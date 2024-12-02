@@ -68,8 +68,6 @@ train:
   - python tagger/train/train.py
   - python tagger/train/train.py --plot-basic
   - cd output/baseline
-  - mkdir testing_data
-  - mv *.npy testing_data
   - tar -cf testing_data_$Inputs.tgz testing_data
   - mc cp testing_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
   artifacts:

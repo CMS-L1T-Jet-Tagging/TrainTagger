@@ -39,7 +39,7 @@ def basic_ROC(model_dir):
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     """
 
-    plot_dir = os.path.join(model_dir, "plots")
+    plot_dir = os.path.join(model_dir, "plots/training")
 
     #Load the metada for class_label
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
@@ -49,6 +49,8 @@ def basic_ROC(model_dir):
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
     
     model = load_qmodel(f"{model_dir}/model/saved_model.h5")
+
+    model_outputs = model.predict(X_test)
 
     #Get classification outputs
     y_pred = model_outputs[0]

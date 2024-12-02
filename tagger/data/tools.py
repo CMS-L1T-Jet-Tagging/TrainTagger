@@ -166,11 +166,9 @@ def _make_nn_inputs(data_split, tag, extras, n_parts):
     inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
 
+    #Extra features to save
     for extra in extra_features:
         extra_array = data_split[extra]
-        print(extra_array)
-
-        #padded_filled_array = _pad_fill(extra_array, n_parts)
         extras_list.append(extra_array[:, np.newaxis])
 
     extra_inputs = ak.concatenate(extras_list, axis=1)
@@ -249,6 +247,10 @@ def extract_array(tree, field, entry_stop):
     Extracts an array from the tree with a limit on the number of entries.
     """
     return tree[field].array(entry_stop=entry_stop)
+
+def extract_nn_inputs(data):
+
+    return
 
 def to_ML(data, class_labels):
     """

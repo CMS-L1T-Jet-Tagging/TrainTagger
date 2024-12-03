@@ -92,6 +92,22 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
 
     return
 
+def plot_input_vars(X_test, input_vars, plot_dir):
+
+    save_dir = os.path.join(plot_dir,'inputs')
+
+    os.makedirs(save_dir, exist_ok=True)
+
+    for i in range(len(input_vars)):
+        plt.figure(figsize=(16, 16))
+        plt.hist(X_test[:,:,i].flatten(), bins=50, density=True, label=input_vars[i])
+        plt.ylabel('a.u.')
+        plt.legend()  
+
+        save_path = os.path.join(save_dir, input_vars[i])
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.close()
+
 def basic(model_dir):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
@@ -101,6 +117,7 @@ def basic(model_dir):
 
     #Load the metada for class_label
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
+    with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
@@ -118,8 +135,12 @@ def basic(model_dir):
 
     #Plot ROC curves
     ROC(y_pred, y_test, class_labels, plot_dir)
+
     #Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
+
+    #Plot input distributions
+    plot_input_vars(X_test, input_vars, plot_dir)
 
     return
 

@@ -42,7 +42,7 @@ data:
   stage: data
   rules:
      - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-         - datatools/**
+         - tagger/data/**
   when: manual
   script:
   - source activate tagger

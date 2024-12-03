@@ -1,38 +1,124 @@
-from qkeras.utils import load_qmodel
+import os, json
 from argparse import ArgumentParser
 
-#Imports from other modules
-from tagger.data.tools import extract_array
+from qkeras.utils import load_qmodel
+import awkward as ak
+import numpy as np
+import uproot
+import hist
+from hist import Hist
 
-def derive_bbbb_WPs(model, minbias_path, target_rate=14, n_entries=10000, tree='jetntuple/Jets'):
+#Plotting
+import matplotlib.pyplot as plt
+import matplotlib
+import mplhep as hep
+plt.style.use(hep.style.ROOT)
+import matplotlib.pylab as pylab
+params = {'legend.fontsize': 'medium',
+         'axes.labelsize': 'x-large',
+         'axes.titlesize':'x-large',
+         'xtick.labelsize':'medium',
+         'ytick.labelsize':'medium'}
+pylab.rcParams.update(params)
+color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+#Imports from other modules
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+
+def nn_bscore_sum(model, jet_nn_inputs, n_jets=4, b_index = 1):
+
+    #Get the inputs for the first n_jets
+    btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
+
+    #Get the nn outputs
+    nn_outputs = [model.predict(nn_input) for nn_input in btag_inputs]
+
+    #Sum them together
+    bscore_sum = sum([pred_score[0][:, b_index] for pred_score in nn_outputs])
+
+    return bscore_sum
+
+def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
+    """
+    Pick the working points and plot
+    """
+
+    plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
+    os.makedirs(plot_dir, exist_ok=True)
+    
+    fig, ax = plt.subplots()
+    im = ax.scatter(nn_list, ht_list, c=rate_list, s=500, marker='s',
+                    cmap='Spectral_r',
+                    linewidths=0,
+                    norm=matplotlib.colors.LogNorm())
+
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_label(r'4-b rate [kHZ]')
+
+    plt.ylabel(r"HT [GeV]")
+    plt.xlabel(r"$\sum_{4~leading~jets}$ b scores")
+    
+    plt.xlim([0,1.5])
+    plt.ylim([10,500])
+
+    #plus, minus range
+    RateRange = 0.5
+
+    #Find the target rate points, plot them and print out some info as well
+    target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
+
+    #Get the coordinates
+    target_rate_NN = [nn_list[i] for i in target_rate_idx] # NN cut dimension
+    target_rate_HT = [ht_list[i] for i in target_rate_idx] # HT cut dimension
+
+    #Export the WP
+    working_point = {"HT": WPs_CMSSW['btag_l1_ht'], "NN": target_rate_NN[target_rate_HT.index(WPs_CMSSW['btag_l1_ht'])]}
+    with open(os.path.join(plot_dir, "working_point.json"), "w") as f: json.dump(working_point, f, indent=4)
+        
+    plt.plot(target_rate_NN, target_rate_HT,
+                linewidth=5,
+                color ='firebrick',
+                label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
+    
+    plt.legend(loc='upper right')
+    plt.savefig(f"{plot_dir}/bbbb_rate.pdf", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/bbbb_rate.png", bbox_inches='tight')
+
+def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='jetntuple/Jets'):
     """
     Derive the HH->4b working points
     """
 
+    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+
+    #Load input/ouput variables of the NN
+    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
+    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+
     #Load the minbias data
-    minbias = uproot4.open(minbias_path)[tree]
+    minbias = uproot.open(minbias_path)[tree]
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, input_fields_tag='ext7', nconstit=16, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = helpers.group_id_values(raw_event_id, raw_jet_pt, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_nn_inputs = grouped_arrays
 
     #Btag input list for first 4 jets
-    btag_inputs = [np.asarray(jet_nn_inputs[:, i]).transpose(0, 2, 1) for i in range(0,4)]
-    nn_outputs = [model.predict(nn_input) for nn_input in btag_inputs]
+    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i])) for i in range(0,4)]
 
-    b_index = 1
-
+    #Calculate the output sum
+    b_index = class_labels['b']
     bscore_sum = sum([pred_score[0][:, b_index] for pred_score in nn_outputs])
     ht = ak.sum(jet_pt, axis=1)
 
@@ -58,46 +144,59 @@ def derive_bbbb_WPs(model, minbias_path, target_rate=14, n_entries=10000, tree='
             
             #Calculate the rate
             rate = RateHist[{"ht": slice(ht*1j, ht_edges[-1]*1.0j, sum)}][{"nn": slice(NN*1.0j,4.0j, sum)}]/n_events
-            rate_list.append(rate*minbias_rate)
+            rate_list.append(rate*MINBIAS_RATE)
 
             #Append the results   
             ht_list.append(ht)
             nn_list.append(NN)
 
-    plot_rate(rate_list, ht_list, nn_list, target_rate=target_rate,  plot_name="btag_rate_scan.pdf", correct_pt=False)
+    #Pick target rate and plot it
+    pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate=target_rate)
 
     return
 
-def bbbb_eff_HT(model, n_entries=100000):
-
-    return 
-
+def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
 
+    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+
     ht_egdes = list(np.arange(0,800,20))
     ht_axis = hist.axis.Variable(ht_egdes, name = r"$HT^{gen}$")
 
-    #Define working points
-    cmssw_btag_ht =  WPs_CMSSW['btag_l1_ht']
+    #Working points for CMSSW
     cmssw_btag = WPs_CMSSW['btag']
+    cmssw_btag_ht =  WPs_CMSSW['btag_l1_ht']
 
-    btag_wp = WPs['btag']
-    btag_ht_wp = WPs['btag_l1_ht']
-    
-    signal = uproot4.open(hh_file_path)[tree]
+    #Check if the working point have been derived
+    WP_path = os.path.join(model_dir, "plots/physics/bbbb/working_point.json")
 
-    #Calculate the truth HT
-    raw_event_id = helpers.extract_array(signal, 'event', n_entries)
-    raw_jet_genpt = helpers.extract_array(signal, 'jet_genmatch_pt', n_entries)
-    raw_jet_pt = helpers.extract_array(signal, 'jet_pt_phys', n_entries)
-    raw_cmssw_bscore = helpers.extract_array(signal, 'jet_bjetscore', n_entries)
+    #Get derived working points
+    if os.path.exists(WP_path):
+        with open(WP_path, "r") as f:  WPs = json.load(f)
+        btag_wp = WPs['NN']
+        btag_ht_wp = WPs['HT']
+    else:
+        raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
-    raw_inputs = helpers.extract_nn_inputs(signal, input_fields_tag=input_tag, nconstit=16, n_entries=n_entries)
+    #Load the signal data
+    signal = uproot.open(signal_path)[tree]
 
-    #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = helpers.group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_cmssw_bscore, raw_inputs, num_elements=4)
+    # Calculate the truth HT
+    raw_event_id = extract_array(signal, 'event', n_entries)
+    raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
+    raw_jet_pt = extract_array(signal, 'jet_pt_phys', n_entries)
+    raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
+
+    # Load the inputs
+    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
+    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+
+    raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
+
+    #Group these attributes by event id, and filter out groups that don't have at least 4 elements
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_cmssw_bscore, raw_inputs, num_elements=4)
     jet_genpt, jet_pt, cmssw_bscore, jet_nn_inputs = grouped_arrays
 
     #Calculate the ht
@@ -106,7 +205,7 @@ def bbbb_eff_HT(model, n_entries=100000):
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs)
+    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, b_index=class_labels['b'])
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp)
@@ -125,15 +224,14 @@ def bbbb_eff_HT(model, n_entries=100000):
     eff_cmssw = plot_ratio(all_events, cmssw_selected_events)
     eff_model = plot_ratio(all_events, model_selected_events)
 
-
     #Get data from handles
     cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
     model_x, model_y, model_err = get_bar_patch_data(eff_model)
 
     #Now plot all
     fig = plt.figure()
-    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[0], fmt='o', linewidth=2, label=r'Btag CMSSW Emulator (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
-    plt.errorbar(model_x, model_y, yerr=model_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Improved Btag (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, btag_wp))
+    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[0], fmt='o', linewidth=2, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
+    plt.errorbar(model_x, model_y, yerr=model_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, btag_wp))
 
     #Plot other labels
     plt.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=3)
@@ -144,7 +242,11 @@ def bbbb_eff_HT(model, n_entries=100000):
     plt.xlabel(r"$HT^{gen}$ [GeV]")
     plt.ylabel(r"$\epsilon$(HH $\to$ 4b trigger rate at 14 kHz)")
     plt.legend(loc='lower right', fontsize=15)
-    plt.savefig(f'plots/HH_eff_HT.pdf')
+
+    #Save plot
+    plot_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT")
+    plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
+    plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.show(block=False)
 
 
@@ -157,8 +259,8 @@ if __name__ == "__main__":
     """
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/saved_model.h5' , help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb') 
+    parser.add_argument('-m','--model_dir', default='output/baseline' , help = 'Input model')
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_HW_260824/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb') 
     parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
 
     #Different modes
@@ -166,13 +268,10 @@ if __name__ == "__main__":
     parser.add_argument('--eff', action='store_true', help='plot efficiency for HH->4b')
 
     #Other controls
-    parser.add_argument('-n','--n_entries', type=int, default=100000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
+    parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
     args = parser.parse_args()
 
-    model=load_qmodel(args.model)
-    print(model.summary())
-
     if args.deriveWPs:
-        derive_bbbb_WPs(model, args.minbias)
-    # elif args.eff:
-    #     bbbb_eff_HT(model, args.sample, n_entries=args.n_entries)
+        derive_bbbb_WPs(args.model_dir, args.minbias, n_entries=args.n_entries)
+    elif args.eff:
+        bbbb_eff_HT(args.model_dir, args.sample, n_entries=args.n_entries)

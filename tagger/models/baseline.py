@@ -94,6 +94,7 @@ class Baseline:
         jet_id = QActivation(activation=quantized_relu(self.bits), name='relu_2_jetID')(jet_id)
 
         jet_id = QDense(self.output_shape[0], name='Dense_3_jetID', **self.common_args)(jet_id)
+        jet_id = QActivation(activation='quantized_bits(18,8)', name='jet_id_preactivation_output')(jet_id)
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         #pT regression branch

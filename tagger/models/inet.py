@@ -136,7 +136,7 @@ class IntNet:
         self.activ = activ
 
         self.classification_loss =  'binary_crossentropy'
-        self.regression_loss =  'mean_squared_error'
+        self.regression_loss =  'mean_absolute_error'
         self.optimizer = keras.optimizers.Adam(learning_rate=1e-3)
 
         # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING

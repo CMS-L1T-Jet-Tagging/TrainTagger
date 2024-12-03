@@ -4,46 +4,15 @@ import os, shutil, json
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.plot.basic import loss_history, basic_ROC, pt_correction_hist, rms
-import models
+from tagger.models.baseline import Baseline
+from tagger.models.inet import IntNet
 
 #Third parties
 import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 
-# GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
-BATCH_SIZE = 1024
-EPOCHS = 100
 VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
-
-# Sparsity parameters
-I_SPARSITY = 0.0 #Initial sparsity
-F_SPARSITY = 0.6 #Final sparsity
-
-# Loss function parameters
-GAMMA = 0.3 #Loss weight for classification, 1-GAMMA for pt regression
-
-def prune_model(model, num_samples):
-    """
-    Pruning settings for the model. Return the pruned model
-    """
-
-    print("Begin pruning the model...")
-
-    #Calculate the ending step for pruning
-    end_step = np.ceil(num_samples / BATCH_SIZE).astype(np.int32) * EPOCHS
-
-    #Define the pruned model
-    pruning_params = {'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=I_SPARSITY, final_sparsity=F_SPARSITY, begin_step=0, end_step=end_step)}
-    pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
-
-    pruned_model.compile(optimizer='adam',
-                            loss={'prune_low_magnitude_jet_id_output': 'binary_crossentropy', 'prune_low_magnitude_pT_output': 'mean_squared_error'},
-                            loss_weights={'prune_low_magnitude_jet_id_output': GAMMA,  'prune_low_magnitude_pT_output': 1 - GAMMA}, metrics=['accuracy'])
-
-    print(pruned_model.summary())
-
-    return pruned_model
 
 def train(out_dir, percent, model_name):
 
@@ -51,6 +20,8 @@ def train(out_dir, percent, model_name):
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
         print(f"Removed existing directory: {out_dir}")
+    else:
+        os.makedirs(out_dir, exist_ok=True)
 
     #Load the data, class_labels and input variables name
     #not really using input variable names to be honest
@@ -64,30 +35,25 @@ def train(out_dir, percent, model_name):
     output_shape = y_train.shape[1:]
 
     #Dynamically get the model
-    try:
-        model_func = getattr(models, model_name)
-        model = model_func(input_shape, output_shape)  # Assuming the model function doesn't require additional arguments
-    except AttributeError:
-        raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")
+    if model_name == 'baseline':
+        model_class = Baseline(input_shape, output_shape)  # Assuming the model function doesn't require additional arguments
+    if model_name == 'IntNet':
+        model_class = IntNet(input_shape, output_shape)
+    
+    #try:
+    #except AttributeError:
+    #    raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")
 
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
-    pruned_model = prune_model(model, num_samples)
+    model_class.compile_model(num_samples)
+    print(model_class)
 
     #Now fit to the data
-    callbacks = [tfmot.sparsity.keras.UpdatePruningStep(),
-                tf.keras.callbacks.EarlyStopping(monitor='val_loss', verbose=2, patience=5)]
 
-    history = pruned_model.fit({'model_input': X_train},
-                            {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
-                            epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=2, validation_split=VALIDATION_SPLIT, callbacks = [callbacks])
+    history = model_class.fit(X_train,y_train,pt_target_train)
     
-    #Export the model
-    model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
-
-    export_path = os.path.join(out_dir, "model/saved_model.h5")
-    model_export.save(export_path)
-    print(f"Model saved to {export_path}")
+    model_class.save_model(out_dir)
 
     #Produce some basic plots with the training for diagnostics
     plot_path = os.path.join(out_dir, "plots/training")
@@ -97,14 +63,21 @@ def train(out_dir, percent, model_name):
     loss_history(plot_path, history)
 
     #Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test = to_ML(data_test, class_labels)
+    X_test, y_test, pt_target_test, truth_pt_test = to_ML(data_test, class_labels)
     
-    np.save(os.path.join(out_dir, "X_test.npy"), X_test)
-    np.save(os.path.join(out_dir, "y_test.npy"), y_test)
-    np.save(os.path.join(out_dir, "truth_pt_test.npy"), truth_pt_test)
+    data_path = os.path.join(out_dir, "testing_data")
+    os.makedirs(data_path, exist_ok=True)
+
+    np.save(os.path.join(data_path, "X_test.npy"), X_test)
+    np.save(os.path.join(data_path, "y_test.npy"), y_test)
+    np.save(os.path.join(data_path, "pt_target_test.npy"), pt_target_test)
     with open(os.path.join(out_dir, "class_label.json"), "w") as f: json.dump(class_labels, f, indent=4) #Dump output variables
 
     print(f"Test data saved to {out_dir}")
+
+    model_class.basic_ROC(out_dir)
+    model_class.basic_residual(out_dir)
+    model_class.basic_histo(out_dir)
 
     return
 

@@ -111,7 +111,7 @@ def _split_flavor(data):
     hadron_pt = ak.nan_to_num(data["jet_genmatch_pt"],nan=0,posinf=0,neginf=0)
     lepton_pt = ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]),nan=0,posinf=0,neginf=0)
 
-    data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
+    data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.0, 3)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons*lepton_pt
 
     # Apply pt_cut
@@ -259,6 +259,7 @@ def to_ML(data, class_labels):
     y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
+    X = np.swapaxes(X,1,2)
 
     return X, y, pt_target, truth_pt
 

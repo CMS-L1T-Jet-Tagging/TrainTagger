@@ -3,7 +3,7 @@ import os, shutil, json
 
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
-from tagger.plot.basic import loss_history, basic_ROC, pt_correction_hist, rms
+from tagger.plot.basic import loss_history, basic
 import models
 
 #Third parties
@@ -46,13 +46,14 @@ def prune_model(model, num_samples):
 
     return pruned_model
 
-def save_test_data(out_dir, X_test, y_test, truth_pt_test, class_labels):
+def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels):
 
     os.makedirs(os.path.join(out_dir,'testing_data'), exist_ok=True)
 
     np.save(os.path.join(out_dir, "testing_data/X_test.npy"), X_test)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
+    np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
     with open(os.path.join(out_dir, "class_label.json"), "w") as f: json.dump(class_labels, f, indent=4) #Dump output variables
 
     print(f"Test data saved to {out_dir}")
@@ -110,7 +111,6 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)
 
-
 def train(out_dir, percent, model_name):
 
     #Remove output dir if exists
@@ -129,11 +129,11 @@ def train(out_dir, percent, model_name):
     with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
 
     #Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
 
     #Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, class_labels)
+    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
+    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels)
 
     #Calculate the sample weights for training
     sample_weight = train_weights(y_train, truth_pt_train, class_labels)
@@ -212,7 +212,7 @@ if __name__ == "__main__":
         model_dir = args.output
         
         #All the basic plots!
-        basic_ROC(model_dir)
+        basic(model_dir)
     else:
         train(args.output, args.percent, model_name=args.model)
         

@@ -144,14 +144,12 @@ def _pad_fill(array, target):
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
-def _make_nn_inputs(data_split, tag, extras, n_parts):
+def _make_nn_inputs(data_split, tag, n_parts):
     
     features = _get_pfcand_fields(tag)
-    extra_features = _get_pfcand_fields(extras)
 
     #Concatenate all the inputs
     inputs_list = []
-    extras_list = []
 
     #Vertically stacked them to create input sets
     #https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
@@ -165,15 +163,6 @@ def _make_nn_inputs(data_split, tag, extras, n_parts):
     #batch_size, n_particles, n_features
     inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
-
-    #Extra features to save
-    for extra in extra_features:
-        extra_array = data_split[extra]
-        extras_list.append(extra_array[:, np.newaxis])
-
-    extra_inputs = ak.concatenate(extras_list, axis=1)
-
-    data_split['extra_inputs'] = extra_inputs
     
     return
 
@@ -200,7 +189,7 @@ def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     return
 
-def _save_dataset_metadata(outdir, class_labels, tag,extras):
+def _save_dataset_metadata(outdir, class_labels, tag, extras):
 
     dataset_metadata_file = os.path.join(outdir, 'variables.json')
 
@@ -218,10 +207,11 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
     """
 
     #Create the NN inputs
-    _make_nn_inputs(data_split, tag, extras, n_parts)
+    _make_nn_inputs(data_split, tag, n_parts)
+    extra_features = _get_pfcand_fields(extras)
 
     #Save them to a root file
-    save_fields=['nn_inputs', 'extra_inputs', 'class_label', 'target_pt', 'target_pt_phys']
+    save_fields=['nn_inputs', 'class_label', 'target_pt', 'target_pt_phys'] + extra_features
 
     # Filter the data_split to only include save_fields
     filtered_data = {field: data_split[field] for field in save_fields}
@@ -300,8 +290,9 @@ def to_ML(data, class_labels):
     y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
+    reco_pt = np.asarray(data['jet_pt_phys'])
 
-    return X, y, pt_target, truth_pt
+    return X, y, pt_target, truth_pt, reco_pt
 
 def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """

@@ -134,7 +134,7 @@ def doPlots(model,outputdir,inputdir):
     y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
     y_class, y_ptreg = model.predict(np.ascontiguousarray(X_test))
     
-    jet_pt_phys= np.array(data['extra_inputs'][:,extra_vars.index('jet_pt_phys')])
+    jet_pt_phys= np.array(data['jet_pt_phys'])
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg
@@ -144,23 +144,23 @@ def doPlots(model,outputdir,inputdir):
 
     jet_pt_cor_reg = jet_pt_phys * modelsAndNames["Y_predict_reg"][:,0]
     jet_pt_cor_reg_hls = jet_pt_phys * modelsAndNames["Y_hls_predict_reg"][:,0]
-    jet_pt_cor_reg_emu = jet_pt_phys * np.array(data['extra_inputs'][:,extra_vars.index('jet_multijetscore_regression')])
+    jet_pt_cor_reg_emu = jet_pt_phys * np.array(data['jet_multijetscore_regression'])
 
-    figure = plot_2d(np.array(modelsAndNames["Y_predict_reg"][:,0]) ,np.array(data['extra_inputs'][:,extra_vars.index('jet_multijetscore_regression')]) ,(0,2),(0,2),"Tensorflow","CMSSW Emulation","Jet Regression")
+    figure = plot_2d(np.array(modelsAndNames["Y_predict_reg"][:,0]) ,np.array(data['jet_multijetscore_regression']) ,(0,2),(0,2),"Tensorflow","CMSSW Emulation","Jet Regression")
     plt.savefig("%s/jetRegression_2D.png" % outputdir)
 
     plt.clf()
-    figure = plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['extra_inputs'][:,extra_vars.index('jet_multijetscore_regression')]),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet Regression",'Regression Score','# Jets',range=(0,2))
+    figure = plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_multijetscore_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet Regression",'Regression Score','# Jets',range=(0,2))
     plt.savefig("%s/jetRegression_1D.png" % outputdir)
 
     for i, label in enumerate(labels):
         plt.close()
         plt.clf()
-        figure = plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['extra_inputs'][:,extra_vars.index('jet_multijetscore_'+label)]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet " + label + " Score",label+' Score','# Jets',range=(0,1))
+        figure = plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet " + label + " Score",label+' Score','# Jets',range=(0,1))
         plt.savefig("%s/%s_score_1D.png" % (outputdir,label))
 
         plt.clf()
-        figure = plot_2d(np.array(modelsAndNames['Y_predict'][:,i]) ,np.array(data['extra_inputs'][:,extra_vars.index('jet_multijetscore_'+label)] ),(0,1),(0,1),"Tensorflow","CMSSW Emulation",label+" score")
+        figure = plot_2d(np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),(0,1),(0,1),"Tensorflow","CMSSW Emulation",label+" score")
         plt.savefig("%s/%s_score_2D.png" % (outputdir,label))
 
     fpr = {}
@@ -198,7 +198,7 @@ def doPlots(model,outputdir,inputdir):
     thresholds = {}
     # Get emulation ROCs
     for i, label in enumerate(labels):
-        fpr[label], tpr[label], thresholds[label] = roc_curve(Y_test[:,i], data['extra_inputs'][:,extra_vars.index('jet_multijetscore_'+label)])
+        fpr[label], tpr[label], thresholds[label] = roc_curve(Y_test[:,i], data['jet_multijetscore_'+label])
         auc1[label] = auc(fpr[label], tpr[label])
 
     modelsAndNames["Emulation"] = {}
@@ -215,9 +215,9 @@ def doPlots(model,outputdir,inputdir):
         plot_roc(modelsAndNames,label,title=label+" ROC Comparison")
         plt.savefig(outputdir+"/ROC_Emulation_comparison_"+label+".png")
 
-    response_reg = jet_pt_cor_reg / data['extra_inputs'][:,extra_vars.index('jet_genmatch_pt')]
-    response_emu = jet_pt_cor_reg_emu / data['extra_inputs'][:,extra_vars.index('jet_genmatch_pt')]
-    response_hls = jet_pt_cor_reg_hls / data['extra_inputs'][:,extra_vars.index('jet_genmatch_pt')]
+    response_reg = jet_pt_cor_reg / data['jet_genmatch_pt']
+    response_emu = jet_pt_cor_reg_emu / data['jet_genmatch_pt']
+    response_hls = jet_pt_cor_reg_hls / data['jet_genmatch_pt']
 
     figure = plot_histo([response_reg,response_emu,response_hls],
                         ["Tensorflow" + " median: "+str(np.round(np.median(response_reg),3))+" rms: "+str(np.round(rms(response_reg),3)),

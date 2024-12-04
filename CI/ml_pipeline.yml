@@ -92,6 +92,7 @@ evaluate:
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
+  - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   - ls /eos/
   - ls /eos/cms/
   - ls /eos/cms/store/

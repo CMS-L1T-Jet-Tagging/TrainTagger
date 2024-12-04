@@ -92,6 +92,7 @@ evaluate:
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
+  - ls eos
   - python tagger/plot/bbbb.py --deriveWPs -n 1000000
   - python tagger/plot/bbbb.py --eff -n 500000
   - cd output/baseline

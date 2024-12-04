@@ -1,4 +1,5 @@
 #Plotting
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
@@ -13,6 +14,13 @@ pylab.rcParams.update(params)
 
 #GLOBAL VARIABLES TO USE ACROSS PLOTTING TOOLS
 MINBIAS_RATE = 32e+3 #32 kHZ
+
+# Define pT bins
+PT_BINS = np.array([
+    15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
+    60, 76, 97, 122, 154, 195, 246, 311,
+    393, 496, 627, 792, 1000
+])
 
 WPs_CMSSW = {
     'tau': 0.22,

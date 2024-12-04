@@ -89,6 +89,9 @@ def _split_flavor(data):
             (data['jet_tauflav'] == 0) &
             (data['jet_elflav'] == 1)
         ),
+        "pileup":(
+            data['jet_genmatch_pt'] == 0
+        )
     }
 
     # Automatically generate class labels based on the order of keys in conditions
@@ -100,24 +103,24 @@ def _split_flavor(data):
     # Assign numeric values based on conditions using awkward's where function
     for label, condition in conditions.items():
         data['class_label'] = ak.where(condition, class_labels[label], data['class_label'])
-
+    print(sum(data['class_label']==-1))
     #Set pt regression target
     hadrons = (conditions["b"] | conditions["charm"] | conditions["light"] | conditions["gluon"])
     leptons = (conditions["taup"] | conditions["taum"] | conditions["muon"] | conditions["electron"])
 
     hadron_pt_ratio = ak.nan_to_num(data["jet_genmatch_pt"]/data["jet_pt_phys"], nan=0, posinf=0, neginf=0)
-    lepton_pt_ratio = ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0)
-
+    lepton_pt_ratio = ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]/data["jet_pt_phys"]),nan=0,posinf=0,neginf=0)   
+    
     hadron_pt = ak.nan_to_num(data["jet_genmatch_pt"],nan=0,posinf=0,neginf=0)
     lepton_pt = ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]),nan=0,posinf=0,neginf=0)
 
-    data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.0, 3)
+    data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio , 0.0,4)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons*lepton_pt
 
     # Apply pt_cut
-    jet_ptmin_gen = (data['target_pt_phys'] > 5.)
-    for key in conditions: conditions[key] = conditions[key] & jet_ptmin_gen
-
+    jet_ptmin_gen = (data['target_pt_phys'] > 5.) |  (data['target_pt_phys'] == 0.) 
+    for key in conditions: conditions[key] = conditions[key] & (data['target_pt_phys'] > 5.)
+    conditions['pileup'] =  (data['target_pt_phys'] == 0.) 
     # Sanity check for data consistency
     split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
     if split_data_sum != len(data[jet_ptmin_gen]):
@@ -160,10 +163,9 @@ def _make_nn_inputs(data_split, tag, extras, n_parts):
         field_array = data_split["jet_pfcand"][field]
 
         padded_filled_array = _pad_fill(field_array, n_parts)
-        inputs_list.append(padded_filled_array[:, np.newaxis])
+        inputs_list.append(padded_filled_array[:,:,np.newaxis])
 
-    inputs = ak.concatenate(inputs_list, axis=1)
-
+    inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
 
     for extra in extra_features:
@@ -259,11 +261,11 @@ def to_ML(data, class_labels):
     y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
-    X = np.swapaxes(X,1,2)
+    #X = np.swapaxes(X,1,2)
 
     return X, y, pt_target, truth_pt
 
-def load_data(outdir, percentage, test_ratio=0.2, fields=None):
+def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -355,9 +357,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
     num_entries_done = 0
     chunk = 0
 
-    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=step_size):
-        num_entries_done += len(data)
-        print(f"Processing {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
+    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=step_size, max_workers=4):
         
         #Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
@@ -376,5 +376,8 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         _process_chunk(data_split, tag=tag, extras=extras, n_parts=n_parts, chunk=chunk, outdir=outdir)
 
         #Uncomment when testing
+        #Number of chunk for indexing files
         chunk += 1
-        #if chunk == 2: break
+        num_entries_done += len(data)
+        print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
+        if num_entries_done / num_entries >= 1: break

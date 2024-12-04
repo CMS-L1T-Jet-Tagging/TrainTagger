@@ -43,7 +43,7 @@ class Baseline:
         self.alpha = alpha_val
 
         self.classification_loss =  'binary_crossentropy'
-        self.regression_loss = 'mean_absolute_error'
+        self.regression_loss = tf.keras.losses.Huber()
         self.optimizer = 'adam'
 
         # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
@@ -52,10 +52,10 @@ class Baseline:
         self.EPOCHS = 100
         # Sparsity parameters
         self.I_SPARSITY = 0.0 #Initial sparsity
-        self.F_SPARSITY = 0.6 #Final sparsity
+        self.F_SPARSITY = 0.1 #Final sparsity
 
         # Loss function parameters
-        self.GAMMA = 0.1 #Loss weight for classification, 1-GAMMA for pt regression
+        self.GAMMA = 0.3 #Loss weight for classification, 1-GAMMA for pt regression
 
         # Define a dictionary for common arguments
         self.common_args = common_args = {'kernel_quantizer': quantized_bits(self.bits, self.bits_int, alpha=self.alpha),
@@ -100,6 +100,8 @@ class Baseline:
         #pT regression branch
         pt_regress = QDense(10, name='Dense_1_pT', **self.common_args)(main)
         pt_regress = QActivation(activation=quantized_relu(self.bits), name='relu_1_pt')(pt_regress)
+        pt_regress = QDense(10, name='Dense_2_pT', **self.common_args)(main)
+        pt_regress = QActivation(activation=quantized_relu(self.bits), name='relu_2_pt')(pt_regress)
         
         pt_regress = QDense(1, name='pT_output',
                             kernel_quantizer=quantized_bits(16, 6, alpha=self.alpha),
@@ -125,14 +127,17 @@ class Baseline:
 
         self.model.compile(optimizer=self.optimizer,
                            loss={self.classificationOutputLayerName: self.classification_loss, self.regressionOutputLayerName: self.regression_loss},
-                           loss_weights={self.classificationOutputLayerName: self.GAMMA, self.regressionOutputLayerName: 1 - self.GAMMA}, metrics=['accuracy'])
+                           loss_weights={self.classificationOutputLayerName: self.GAMMA, self.regressionOutputLayerName: 1 - self.GAMMA}, metrics=['accuracy'],weighted_metrics=[])
 
-        self.callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss', verbose=2, patience=5))
+        self.callbacks.append([EarlyStopping(monitor='val_loss', patience=10),ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)])
 
 
-    def fit(self,X_train,y_train,pt_target_train):
+
+    def fit(self,X_train,y_train,pt_target_train,sample_weights):
+        regression_weight = np.ones_like(pt_target_train) * (pt_target_train != 0)
         history = self.model.fit({'model_input': X_train},
                             {self.classificationOutputLayerName: y_train, self.regressionOutputLayerName: pt_target_train},
+                            sample_weight = [sample_weights, regression_weight],
                             epochs=self.EPOCHS, batch_size=self.BATCH_SIZE, verbose=2, validation_split=self.VALIDATION_SPLIT, callbacks = [self.callbacks])
         return history
 

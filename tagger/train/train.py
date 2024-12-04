@@ -14,6 +14,60 @@ import tensorflow_model_optimization as tfmot
 
 VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
 
+def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True):
+    """
+    Re-balancing the class weights and then flatten them based on truth pT
+    """
+    num_samples = y_train.shape[0]
+    num_classes = y_train.shape[1]
+
+    sample_weights = np.ones(num_samples)
+
+    # Define pT bins
+    pt_bins = np.array([
+        15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
+        60, 76, 97, 122, 154, 195, 246, 311,
+        393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
+    ])
+    
+    # Initialize counts per class per pT bin
+    class_pt_counts = {}
+    
+    # Calculate counts per class per pT bin
+    for label, idx in class_labels.items():
+        class_mask = y_train[:, idx] == 1
+        class_pt_counts[idx], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
+    
+    # Compute the maximum counts per pT bin over all classes
+    max_counts_per_bin = np.zeros(len(pt_bins)-1)
+    for bin_idx in range(len(pt_bins)-1):
+        counts_in_bin = [class_pt_counts[idx][bin_idx] for idx in class_labels.values()]
+        max_counts_per_bin[bin_idx] = max(counts_in_bin)
+    
+    # Compute weights per class per pT bin
+    weights_per_class_pt_bin = {}
+    for idx in class_labels.values():
+        weights_per_class_pt_bin[idx] = np.zeros(len(pt_bins)-1)
+        for bin_idx in range(len(pt_bins)-1):
+            class_count = class_pt_counts[idx][bin_idx]
+            if class_count == 0:
+                weights_per_class_pt_bin[idx][bin_idx] = 0.
+            else:
+                weights_per_class_pt_bin[idx][bin_idx] = max_counts_per_bin[bin_idx] / class_count
+
+    # Assign weights to samples
+    for idx in class_labels.values():
+        class_mask = y_train[:, idx] == 1
+        class_truth_pt = truth_pt_train[class_mask]
+        sample_indices = np.where(class_mask)[0]
+        bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
+        bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
+        sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
+    
+    # Normalize sample weights
+    sample_weights = sample_weights / np.mean(sample_weights)
+
+
 def train(out_dir, percent, model_name):
 
     #Remove output dir if exists
@@ -46,12 +100,15 @@ def train(out_dir, percent, model_name):
 
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
+
+    sample_weight = train_weights(y_train, truth_pt_train, class_labels)
+
     model_class.compile_model(num_samples)
     print(model_class)
 
     #Now fit to the data
 
-    history = model_class.fit(X_train,y_train,pt_target_train)
+    history = model_class.fit(X_train,y_train,pt_target_train,sample_weight)
     
     model_class.save_model(out_dir)
 

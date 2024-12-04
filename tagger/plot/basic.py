@@ -4,6 +4,7 @@ import json
 import numpy as np
 from qkeras.utils import load_qmodel
 from sklearn.metrics import roc_curve, auc
+from itertools import combinations
 
 #For plotting
 import matplotlib.pyplot as plt
@@ -37,6 +38,53 @@ def loss_history(plot_dir, history):
     save_path = os.path.join(plot_dir, "loss_history")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
+
+def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
+    """
+    Generate ROC curves comparing between two specific class labels.
+    """
+
+    save_dir = os.path.join(plot_dir, 'roc_binary')
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Ensure class_pair exists in class_labels
+    assert class_pair[0] in class_labels and class_pair[1] in class_labels, \
+        "Both class_pair labels must exist in class_labels"
+
+    # Get indices of the classes to compare
+    idx1, idx2 = class_labels[class_pair[0]], class_labels[class_pair[1]]
+
+    # Select true labels and predicted probabilities for the selected classes
+    y_true1, y_true2 = y_test[:, idx1], y_test[:, idx2]
+    y_score1, y_score2 = y_pred[:, idx1], y_pred[:, idx2]
+
+    # Combine the labels and scores for binary classification
+    selection = (y_true1 == 1) | (y_true2 == 1)
+    y_true_binary = y_true1[selection] 
+    y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])  # Normalized probabilities
+
+    # Compute FPR, TPR, and AUC
+    fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
+    roc_auc = auc(fpr, tpr)
+
+    # Plot the ROC curve
+    plt.figure(figsize=(10, 10))
+    plt.plot(tpr, fpr, label=f'{class_pair[0]} vs {class_pair[1]} (AUC = {roc_auc:.2f})',
+             color='blue', linewidth=5)
+    plt.grid(True)
+    plt.ylabel('False Positive Rate')
+    plt.xlabel('True Positive Rate')
+    hep.cms.text("Phase 2 Simulation")
+    hep.cms.lumitext("PU 200 (14 TeV)")
+    plt.legend(loc='lower right')
+    plt.yscale('log')
+    plt.ylim([1e-3, 1.1])
+
+    # Save the plot
+    save_path = os.path.join(save_dir, f"ROC_{class_pair[0]}_vs_{class_pair[1]}")
+    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.close()
 
 def ROC(y_pred, y_test, class_labels, plot_dir):
 
@@ -199,6 +247,13 @@ def basic(model_dir):
 
     #Plot ROC curves
     ROC(y_pred, y_test, class_labels, plot_dir)
+
+    # Generate all possible pairs of classes
+    for i in class_labels.keys():
+        for j in class_labels.keys():
+            if i != j:
+                class_pair = (i,j)
+                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)        
 
     #Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)

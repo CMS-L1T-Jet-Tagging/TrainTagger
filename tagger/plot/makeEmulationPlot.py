@@ -3,7 +3,6 @@ import os, shutil, json
 
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
-from tagger.plot.basic import loss_history, basic_ROC, pt_correction_hist, rms
 from tagger.firmware.hls4ml_convert import convert
 import tagger.train.models
 

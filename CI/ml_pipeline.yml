@@ -84,7 +84,7 @@ evaluate:
   tags: [k8s-gpu]
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 1
   needs: [train]
   dependencies: [train]

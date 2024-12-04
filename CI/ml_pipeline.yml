@@ -6,13 +6,13 @@ include:
 
 
 stages:
-  # - data
-  # - train
+  - data
+  - train
   - evaluate
-  # - synth
-  # - emulate
-  # - emulation-evaluate
-  # - upload
+  - synth
+  - emulate
+  - emulation-evaluate
+  - upload
 
 variables:
     Name:  baseline_4_params

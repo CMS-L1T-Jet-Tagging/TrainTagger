@@ -12,6 +12,10 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 
+from sklearn.utils.class_weight import compute_class_weight
+
+# GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
+tf.keras.utils.set_random_seed(420) #not a special number 
 VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
 
 def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True):
@@ -62,7 +66,10 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
         sample_indices = np.where(class_mask)[0]
         bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
         bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
-        sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
+        if idx == len(class_labels):
+            sample_weights[sample_indices] = 0.5
+        else:
+            sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
     
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)

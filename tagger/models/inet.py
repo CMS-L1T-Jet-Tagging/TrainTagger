@@ -12,6 +12,8 @@ import tensorflow.keras.layers as KL
 import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+
 
 import keras
 
@@ -135,8 +137,8 @@ class IntNet:
         self.aggreg = aggreg
         self.activ = activ
 
-        self.classification_loss =  'binary_crossentropy'
-        self.regression_loss =  'mean_absolute_error'
+        self.classification_loss =  'categorical_crossentropy'
+        self.regression_loss =  tf.keras.losses.Huber()
         self.optimizer = keras.optimizers.Adam(learning_rate=1e-3)
 
         # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
@@ -144,7 +146,7 @@ class IntNet:
         self.BATCH_SIZE = 1024
         self.EPOCHS = 30
 
-        self.GAMMA = 0.1
+        self.GAMMA = 0.3
 
         self.I_SPARSITY = 0.0 #Initial sparsity
         self.F_SPARSITY = 0.6 #Final sparsity
@@ -282,14 +284,17 @@ class IntNet:
 
         self.model.compile(optimizer=self.optimizer,
                            loss={self.classificationOutputLayerName: self.classification_loss, self.regressionOutputLayerName: self.regression_loss},
-                           loss_weights={self.classificationOutputLayerName: self.GAMMA, self.regressionOutputLayerName: 1 - self.GAMMA}, metrics=['accuracy'])
+                           loss_weights={self.classificationOutputLayerName: self.GAMMA, self.regressionOutputLayerName: 1 - self.GAMMA},
+                           metrics = {self.classificationOutputLayerName: 'categorical_accuracy', self.regressionOutputLayerName: ['mae', 'mean_squared_error']},
+                           weighted_metrics = {self.classificationOutputLayerName: 'categorical_accuracy', self.regressionOutputLayerName: ['mae', 'mean_squared_error']})
 
-        self.callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss', verbose=2, patience=5))
+        self.callbacks.append([EarlyStopping(monitor='val_loss', patience=10),ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)])
 
-
-    def fit(self,X_train,y_train,pt_target_train):
+    def fit(self,X_train,y_train,pt_target_train,sample_weights):
+        regression_weight = np.ones_like(pt_target_train) * (pt_target_train != 0)
         history = self.model.fit({'model_input': X_train},
                             {self.classificationOutputLayerName: y_train, self.regressionOutputLayerName: pt_target_train},
+                            sample_weight = sample_weights,
                             epochs=self.EPOCHS, batch_size=self.BATCH_SIZE, verbose=2, validation_split=self.VALIDATION_SPLIT, callbacks = [self.callbacks])
         return history
 

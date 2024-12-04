@@ -380,4 +380,4 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         chunk += 1
         num_entries_done += len(data)
         print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
-        if num_entries_done / num_entries >= 1: break
+        #if num_entries_done / num_entries >= 1: break

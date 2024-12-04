@@ -13,6 +13,8 @@ from qkeras import QConv1D
 import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+
 
 import os
 
@@ -42,7 +44,7 @@ class Baseline:
         self.bits_int = bits_int
         self.alpha = alpha_val
 
-        self.classification_loss =  'binary_crossentropy'
+        self.classification_loss =  'categorical_crossentropy'
         self.regression_loss = tf.keras.losses.Huber()
         self.optimizer = 'adam'
 
@@ -100,8 +102,6 @@ class Baseline:
         #pT regression branch
         pt_regress = QDense(10, name='Dense_1_pT', **self.common_args)(main)
         pt_regress = QActivation(activation=quantized_relu(self.bits), name='relu_1_pt')(pt_regress)
-        pt_regress = QDense(10, name='Dense_2_pT', **self.common_args)(main)
-        pt_regress = QActivation(activation=quantized_relu(self.bits), name='relu_2_pt')(pt_regress)
         
         pt_regress = QDense(1, name='pT_output',
                             kernel_quantizer=quantized_bits(16, 6, alpha=self.alpha),
@@ -127,7 +127,9 @@ class Baseline:
 
         self.model.compile(optimizer=self.optimizer,
                            loss={self.classificationOutputLayerName: self.classification_loss, self.regressionOutputLayerName: self.regression_loss},
-                           loss_weights={self.classificationOutputLayerName: self.GAMMA, self.regressionOutputLayerName: 1 - self.GAMMA}, metrics=['accuracy'],weighted_metrics=[])
+                           loss_weights={self.classificationOutputLayerName: self.GAMMA, self.regressionOutputLayerName: 1 - self.GAMMA}, 
+                           metrics = {self.classificationOutputLayerName: 'categorical_accuracy', self.regressionOutputLayerName: ['mae', 'mean_squared_error']},
+                           weighted_metrics = {self.classificationOutputLayerName: 'categorical_accuracy', self.regressionOutputLayerName: ['mae', 'mean_squared_error']})
 
         self.callbacks.append([EarlyStopping(monitor='val_loss', patience=10),ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)])
 
@@ -137,7 +139,7 @@ class Baseline:
         regression_weight = np.ones_like(pt_target_train) * (pt_target_train != 0)
         history = self.model.fit({'model_input': X_train},
                             {self.classificationOutputLayerName: y_train, self.regressionOutputLayerName: pt_target_train},
-                            sample_weight = [sample_weights, regression_weight],
+                            sample_weight = sample_weights,
                             epochs=self.EPOCHS, batch_size=self.BATCH_SIZE, verbose=2, validation_split=self.VALIDATION_SPLIT, callbacks = [self.callbacks])
         return history
 

@@ -353,7 +353,6 @@ def basic(model_dir):
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1].flatten()
 
-    """
     #Plot ROC curves
     ROC(y_pred, y_test, class_labels, plot_dir)
 
@@ -372,11 +371,8 @@ def basic(model_dir):
 
     #Plot inclusive response and individual flavor
     response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    """
     
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-
-   
 
     return

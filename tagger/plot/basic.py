@@ -159,16 +159,12 @@ def plot_input_vars(X_test, input_vars, plot_dir):
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
         plt.close()
 
-def response_inclusive(y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
-    save_dir = os.path.join(plot_dir, 'response')
-    os.makedirs(save_dir, exist_ok=True)
+def get_response(truth_pt, reco_pt, pt_ratio):
 
-    # pT coordinate points for plotting
-    pt_points = [average(PT_BINS[i], PT_BINS[i + 1]) for i in range(len(PT_BINS) - 1)]
+    #Calculate the regressed pt
+    regressed_pt = np.multiply(reco_pt, pt_ratio)
 
-    # Plot inclusive
-    regressed_pt = np.multiply(reco_pt_test, pt_ratio)
-
+    #to calculate response
     uncorrected_response = []
     regressed_response = []
     uncorrected_errors = []
@@ -179,46 +175,72 @@ def response_inclusive(y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
         pt_min = PT_BINS[i]
         pt_max = PT_BINS[i + 1]
 
-        selection = (truth_pt_test > pt_min) & (truth_pt_test < pt_max)
+        selection = (truth_pt > pt_min) & (truth_pt < pt_max)
 
         # Compute responses
-        uncorrected_response_bin = reco_pt_test[selection] / truth_pt_test[selection]
-        regressed_response_bin = regressed_pt[selection] / truth_pt_test[selection]
+        uncorrected_response_bin = reco_pt[selection] / truth_pt[selection]
+        regressed_response_bin = regressed_pt[selection] / truth_pt[selection]
 
         # Append the mean response
         uncorrected_response.append(np.mean(uncorrected_response_bin))
         regressed_response.append(np.mean(regressed_response_bin))
 
         # Compute the standard deviation and uncertainty in the mean
-        n_events = len(truth_pt_test[selection])
+        n_events = len(truth_pt[selection])
 
         if n_events > 0:
             uncorrected_std = np.std(uncorrected_response_bin)
             regressed_std = np.std(regressed_response_bin)
 
-            uncorrected_errors.append(uncorrected_std / np.sqrt(n_events))
-            regressed_errors.append(regressed_std / np.sqrt(n_events))
+            uncorrected_errors.append(uncorrected_std/np.sqrt(n_events))
+            regressed_errors.append(regressed_std/np.sqrt(n_events))
         else:
             # No events in bin
             uncorrected_errors.append(0)
             regressed_errors.append(0)
 
-    # Plot the responses
-    plt.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label="Uncorrected", capsize=4)
-    plt.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label="Regressed", capsize=4)
+    return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
 
-    plt.xlabel(r"$p_T$ [GeV]")
-    plt.ylabel("Response (Reconstructed/Gen)")
-    plt.legend()
-    plt.grid()
 
-    # Save the plot
-    save_path = os.path.join(save_dir, "inclusive_response")
-    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
-    plt.savefig(f"{save_path}.png", bbox_inches='tight')
-    plt.close()
+def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
+    save_dir = os.path.join(plot_dir, 'response')
+    os.makedirs(save_dir, exist_ok=True)
+
+    # pT coordinate points for plotting
+    pt_points = [average(PT_BINS[i], PT_BINS[i + 1]) for i in range(len(PT_BINS) - 1)]
+
+    def plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor, plot_name):
+
+        # Plot the inclusive response
+        plt.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4)
+        plt.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4)
+
+        plt.xlabel(r"Jet $p_T^{Gen}$ [GeV]")
+        plt.ylabel("Response (Reco/Gen)")
+        plt.legend()
+        plt.grid()
+
+        # Save the plot
+        save_path = os.path.join(save_dir, plot_name)
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.close()
+
+
+    # Inclusive response
+    uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test, reco_pt_test, pt_ratio)
+    plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor='inclusive', plot_name="inclusive_response")
+
+    #Flavor-wise response
+    for flavor in class_labels.keys():
+        idx = class_labels[flavor]
+        flavor_selection = y_test[:,idx] == 1
+
+        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
+        plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=flavor, plot_name=f"{flavor}_response")
 
     return
+
 
 def basic(model_dir):
     """
@@ -261,7 +283,7 @@ def basic(model_dir):
     #Plot input distributions
     plot_input_vars(X_test, input_vars, plot_dir)
 
-    #Plot inclusive response
-    response_inclusive(y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    #Plot inclusive response and individual flavor
+    response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     return

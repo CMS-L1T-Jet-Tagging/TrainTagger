@@ -93,8 +93,8 @@ evaluate:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-  - python tagger/plot/bbbb.py --deriveWPs -n 600000
-  - python tagger/plot/bbbb.py --eff -n 100000
+  - python tagger/plot/bbbb.py --deriveWPs --minbias $EOS_DIR/$DataDir/$MINBIAS -n 650000
+  - python tagger/plot/bbbb.py --eff -s $EOS_DIR/$DataDir/$BBBB -n 100000
   - cd output/baseline
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/testing_data_$Inputs.tgz ./
   - tar -xf testing_data_$Inputs.tgz

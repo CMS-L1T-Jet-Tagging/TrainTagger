@@ -124,7 +124,7 @@ def doPlots(model,outputdir,inputdir):
     modelsAndNames = {"model":model}
     
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100,test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt = to_ML(data, class_labels)
+    X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
 

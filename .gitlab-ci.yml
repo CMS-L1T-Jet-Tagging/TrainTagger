@@ -10,7 +10,7 @@ DeepSet:baseline_4param:
     Dataset: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: ggHHbbbb_PU200.root
-    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/
+    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
@@ -24,7 +24,7 @@ DeepSet:baseline_5param:
     Dataset: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: ggHHbbbb_PU200.root
-    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/
+    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
@@ -38,7 +38,7 @@ DeepSet:baseline_4param_extended_trk:
     Dataset: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: ggHHbbbb_PU200.root
-    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/
+    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
@@ -52,7 +52,7 @@ DeepSet:baseline_5param_extended_trk:
     Dataset: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: ggHHbbbb_PU200.root
-    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/
+    EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'

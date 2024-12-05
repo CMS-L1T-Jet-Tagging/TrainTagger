@@ -24,7 +24,9 @@ pylab.rcParams.update(params)
 
 import os
 from .common import PT_BINS
+from scipy.stats import norm
 
+###### DEFINE ALL THE PLOPTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def average(number1, number2):
   return (number1 + number2) / 2.0
 
@@ -201,7 +203,6 @@ def get_response(truth_pt, reco_pt, pt_ratio):
 
     return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
 
-
 def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
     save_dir = os.path.join(plot_dir, 'response')
     os.makedirs(save_dir, exist_ok=True)
@@ -211,7 +212,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
     def plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor, plot_name):
 
-        # Plot the inclusive response
+        # Plot the response
         plt.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4)
         plt.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4)
 
@@ -241,6 +242,91 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
     return
 
+def get_rms(truth_pt, reco_pt, pt_ratio):
+
+    #Calculate the regressed pt
+    regressed_pt = np.multiply(reco_pt, pt_ratio)
+
+    #Get the residuals
+    un_corrected_res = reco_pt - truth_pt
+    regressed_res = regressed_pt - truth_pt
+
+    rms_uncorr = []
+    rms_reg = []
+    rms_uncorr_err = []
+    rms_reg_err = []
+
+    # Loop over the pT ranges
+    for i in range(len(PT_BINS) - 1):
+        pt_min = PT_BINS[i]
+        pt_max = PT_BINS[i + 1]
+        pt_avg = average(pt_min, pt_max)
+
+        selection = (truth_pt > pt_min) & (truth_pt < pt_max)
+
+        # Fit a Gaussian to the residuals and extract the standard deviation
+        mu_uncorr, sigma_uncorr = norm.fit(un_corrected_res[selection]/pt_avg)
+        mu_reg, sigma_reg = norm.fit(regressed_res[selection]/pt_avg)
+
+        # Get the errors for the standard deviation
+        # Standard error of the standard deviation for a normal distribution
+        n_uncorr = len(un_corrected_res[selection])
+        n_reg = len(regressed_res[selection])
+
+        if n_uncorr <= 1 or n_reg <= 1:
+            sigma_uncorr_err = sigma_uncorr
+            sigma_reg_err = sigma_reg
+        else:
+            sigma_uncorr_err = sigma_uncorr / np.sqrt(2 * (n_uncorr - 1))
+            sigma_reg_err = sigma_reg / np.sqrt(2 * (n_reg - 1))
+
+        rms_uncorr.append(sigma_uncorr)
+        rms_reg.append(sigma_reg)
+        rms_uncorr_err.append(sigma_uncorr_err)
+        rms_reg_err.append(sigma_reg_err)
+
+    return rms_uncorr, rms_reg, rms_uncorr_err, rms_reg_err
+
+def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
+
+    save_dir = os.path.join(plot_dir, 'residual_rms')
+    os.makedirs(save_dir, exist_ok=True)
+
+    # pT coordinate points for plotting
+    pt_points = [average(PT_BINS[i], PT_BINS[i + 1]) for i in range(len(PT_BINS) - 1)]
+
+    def plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor, plot_name):
+
+        # Plot the response
+        plt.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4)
+        plt.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4)
+
+        plt.xlabel(r"Jet $p_T^{Gen}$ [GeV]")
+        plt.ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})/p_T^{Gen}}$")
+        plt.legend()
+        plt.grid(True)
+
+        # Save the plot
+        save_path = os.path.join(save_dir, plot_name)
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.close()
+
+    #Inclusive rms
+    uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test, reco_pt_test, pt_ratio)
+    plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor='inclusive', plot_name='inclusive')
+
+    #Flavor-wise rms
+    for flavor in class_labels.keys():
+        idx = class_labels[flavor]
+        flavor_selection = y_test[:,idx] == 1
+
+        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
+        plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
+
+
+    return
+###### <<<<<<<<<<<<<<<<< DEFINE ALL THE PLOPTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function below
 
 def basic(model_dir):
     """
@@ -267,6 +353,7 @@ def basic(model_dir):
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1].flatten()
 
+    """
     #Plot ROC curves
     ROC(y_pred, y_test, class_labels, plot_dir)
 
@@ -285,5 +372,11 @@ def basic(model_dir):
 
     #Plot inclusive response and individual flavor
     response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    """
+    
+    #Plot the rms of the residuals vs pt
+    rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+
+   
 
     return

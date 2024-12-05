@@ -48,7 +48,7 @@ DeepSet:baseline_5param_extended_trk:
   variables:
     Name: baseline_5param_extended_trk
     Inputs: baseline
-    DataDir: extendedTRK_5param_021024
+    DataDir: extendedTRK_5param_221124
     Dataset: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: ggHHbbbb_PU200.root

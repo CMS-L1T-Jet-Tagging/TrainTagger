@@ -22,6 +22,9 @@ params = {'legend.fontsize': 'medium',
 pylab.rcParams.update(params)
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+#Interpolation of working point
+from scipy.interpolate import interp1d
+
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
@@ -72,9 +75,16 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     target_rate_NN = [nn_list[i] for i in target_rate_idx] # NN cut dimension
     target_rate_HT = [ht_list[i] for i in target_rate_idx] # HT cut dimension
 
-    #Export the WP
-    working_point = {"HT": WPs_CMSSW['btag_l1_ht'], "NN": target_rate_NN[target_rate_HT.index(WPs_CMSSW['btag_l1_ht'])]}
-    with open(os.path.join(plot_dir, "working_point.json"), "w") as f: json.dump(working_point, f, indent=4)
+    # Create an interpolation function
+    interp_func = interp1d(target_rate_HT, target_rate_NN, kind='linear', fill_value='extrapolate')
+
+    # Interpolate the NN value for the desired HT
+    working_point_NN = interp_func(WPs_CMSSW['btag_l1_ht'])
+
+    # Export the working point
+    working_point = {"HT": WPs_CMSSW['btag_l1_ht'], "NN": float(working_point_NN)}
+    with open(os.path.join(plot_dir, "working_point.json"), "w") as f:
+        json.dump(working_point, f, indent=4)
         
     plt.plot(target_rate_NN, target_rate_HT,
                 linewidth=5,
@@ -260,8 +270,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb') 
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb') 
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')

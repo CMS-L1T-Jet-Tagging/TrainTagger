@@ -241,10 +241,11 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
     #Now plot all
     fig = plt.figure()
     plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[0], fmt='o', linewidth=2, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
-    plt.errorbar(model_x, model_y, yerr=model_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, btag_wp))
+    plt.errorbar(model_x, model_y, yerr=model_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
 
     #Plot other labels
     plt.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=3)
+    plt.grid(True)
     plt.ylim([0., 1.1])
     plt.xlim([0, 800])
     hep.cms.text("Phase 2 Simulation")

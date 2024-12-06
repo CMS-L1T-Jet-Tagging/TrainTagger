@@ -62,7 +62,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     plt.ylabel(r"HT [GeV]")
     plt.xlabel(r"$\sum_{4~leading~jets}$ b scores")
     
-    plt.xlim([0,1.5])
+    plt.xlim([0,2.5])
     plt.ylim([10,500])
 
     #plus, minus range
@@ -136,7 +136,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
 
     #Define the histograms (pT edge and NN Score edge)
     ht_edges = list(np.arange(0,500,2)) + [10000] #Make sure to capture everything
-    NN_edges = list([round(i,2) for i in np.arange(0, 1.51, 0.01)])
+    NN_edges = list([round(i,2) for i in np.arange(0, 2.5, 0.01)]) + [4.0]
 
     RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
@@ -153,7 +153,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
         for NN in NN_edges[:-1]:
             
             #Calculate the rate
-            rate = RateHist[{"ht": slice(ht*1j, ht_edges[-1]*1.0j, sum)}][{"nn": slice(NN*1.0j,4.0j, sum)}]/n_events
+            rate = RateHist[{"ht": slice(ht*1j, None, sum)}][{"nn": slice(NN*1.0j, None, sum)}]/n_events
             rate_list.append(rate*MINBIAS_RATE)
 
             #Append the results   
@@ -271,8 +271,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb') 
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb') 
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')

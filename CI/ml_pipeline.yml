@@ -42,7 +42,7 @@ data:
   stage: data
   rules:
      - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-         - datatools/**
+         - tagger/data/**
   when: manual
   script:
   - source activate tagger
@@ -68,8 +68,6 @@ train:
   - python tagger/train/train.py
   - python tagger/train/train.py --plot-basic
   - cd output/baseline
-  - mkdir testing_data
-  - mv *.npy testing_data
   - tar -cf testing_data_$Inputs.tgz testing_data
   - mc cp testing_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
   artifacts:
@@ -83,12 +81,20 @@ evaluate:
   extends:
     - .template
   stage: evaluate
+  tags: [k8s-gpu]
+  image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 32Gi
+    KUBERNETES_CPU_REQUEST: 1
   needs: [train]
   dependencies: [train]
   script:
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
+  - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+  - python tagger/plot/bbbb.py --deriveWPs --minbias $EOS_DIR/$DataDir/$MINBIAS -n 650000
+  - python tagger/plot/bbbb.py --eff -s $EOS_DIR/$DataDir/$BBBB -n 100000
   - cd output/baseline
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/testing_data_$Inputs.tgz ./
   - tar -xf testing_data_$Inputs.tgz

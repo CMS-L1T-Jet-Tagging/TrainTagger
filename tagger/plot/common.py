@@ -23,6 +23,8 @@ PT_BINS = np.array([
 ])
 
 WPs_CMSSW = {
+    #Tau working points as defined here
+    #https://github.com/cms-sw/cmssw/blob/e9b58bef8b37e6113ba31a03429ffc4c300adb12/DataFormats/L1TParticleFlow/interface/PFTau.h#L16-L17
     'tau': 0.22,
     'tau_l1_pt': 34,
 
@@ -31,6 +33,7 @@ WPs_CMSSW = {
     'l1_pt_sc_barrel': 164, #GeV
     'l1_pt_sc_endcap':121, #GeV
 
+    #Slide 19 here: https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
     'btag': 2.32,
     'btag_l1_ht': 220,
 }

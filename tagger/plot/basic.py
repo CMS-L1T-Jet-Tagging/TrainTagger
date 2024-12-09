@@ -25,11 +25,9 @@ pylab.rcParams.update(params)
 import os
 from .common import PT_BINS
 from scipy.stats import norm
+import shap
 
 ###### DEFINE ALL THE PLOPTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
-def average(number1, number2):
-  return (number1 + number2) / 2.0
-
 def loss_history(plot_dir, history):
     plt.plot(history.history['loss'], label='Train Loss', linewidth=3)
     plt.plot(history.history['val_loss'], label='Validation Loss',linewidth=3)
@@ -208,7 +206,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
     os.makedirs(save_dir, exist_ok=True)
 
     # pT coordinate points for plotting
-    pt_points = [average(PT_BINS[i], PT_BINS[i + 1]) for i in range(len(PT_BINS) - 1)]
+    pt_points = [np.mean((PT_BINS[i], PT_BINS[i + 1])) for i in range(len(PT_BINS) - 1)]
 
     def plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor, plot_name):
 
@@ -260,7 +258,7 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     for i in range(len(PT_BINS) - 1):
         pt_min = PT_BINS[i]
         pt_max = PT_BINS[i + 1]
-        pt_avg = average(pt_min, pt_max)
+        pt_avg = np.mean((pt_min, pt_max))
 
         selection = (truth_pt > pt_min) & (truth_pt < pt_max)
 
@@ -293,7 +291,7 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
     os.makedirs(save_dir, exist_ok=True)
 
     # pT coordinate points for plotting
-    pt_points = [average(PT_BINS[i], PT_BINS[i + 1]) for i in range(len(PT_BINS) - 1)]
+    pt_points = [np.mean((PT_BINS[i], PT_BINS[i + 1])) for i in range(len(PT_BINS) - 1)]
 
     def plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor, plot_name):
 
@@ -324,9 +322,8 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
         uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
 
-
     return
-###### <<<<<<<<<<<<<<<<< DEFINE ALL THE PLOPTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function below
+# <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 
 def basic(model_dir):
     """

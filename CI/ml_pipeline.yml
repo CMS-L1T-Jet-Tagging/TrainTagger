@@ -183,8 +183,8 @@ upload:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 1
   stage: upload
-  needs: [emulation-evaluate,synth,train,evaluate]
-  dependencies: [emulation-evaluate,synth,train,evaluate]
+  needs: [emulation-evaluate,synth,train,evaluate,profile]
+  dependencies: [emulation-evaluate,synth,train,evaluate,profile]
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
   script:

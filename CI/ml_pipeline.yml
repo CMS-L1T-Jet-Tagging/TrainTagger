@@ -169,6 +169,7 @@ profile:
   - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
   - cd hls4ml
   - pip install .[profiling]
+  - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True
   artifacts:
     paths:

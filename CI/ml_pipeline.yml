@@ -148,7 +148,7 @@ emulation-evaluate:
     expire_in: 1 day
 
 profile:
-extends:
+  extends:
     - .template
   stage: profile
   tags:

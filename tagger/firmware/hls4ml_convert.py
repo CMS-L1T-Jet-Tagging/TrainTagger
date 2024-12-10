@@ -26,8 +26,8 @@ def convert(model, outpath,build=True):
 
     #Configuration for conv1d layers
     #hls4ml automatically figures out the paralellization factor
-    config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 10
-    config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 10
+    config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
+    config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
     #Additional config
     for layer in model.layers:
@@ -45,7 +45,7 @@ def convert(model, outpath,build=True):
 
     
     config["LayerName"]["jet_id_output"]["Precision"]["result"] = class_precision
-    config["LayerName"]["jet_id_output"]["Implementation"] = "legacy"
+    config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
     config["LayerName"]["pT_output"]["Precision"]["result"] = reg_precision
     config["LayerName"]["pT_output"]["Implementation"] = "latency"
 

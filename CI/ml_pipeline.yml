@@ -12,6 +12,7 @@ stages:
   - synth
   - emulate
   - emulation-evaluate
+  - profile
   - upload
 
 variables:
@@ -126,7 +127,6 @@ synth:
       - tagger/firmware
     expire_in: 1 day
 
-
 emulation-evaluate:
   extends:
     - .template
@@ -142,6 +142,34 @@ emulation-evaluate:
   - cd ..
   - source activate tagger
   - python tagger/plot/makeEmulationPlot.py -r True
+  artifacts:
+    paths:
+      - output/baseline
+    expire_in: 1 day
+
+profile:
+extends:
+    - .template
+  stage: profile
+  tags:
+    - cb_vivado
+  needs: [emulate,train,synth]
+  dependencies: [emulate,train,synth]
+  script:
+  - source /opt/Xilinx/Vivado/2022.2/settings64.sh
+  - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
+  - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
+  - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
+  - source activate tagger
+  - mkdir data
+  - cd data
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple.root .
+  - cd ..
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
+  - cd hls4ml
+  - git clone .[profiling]
+  - python tagger/firmware/hls4ml_profile.py -r True
   artifacts:
     paths:
       - output/baseline
@@ -163,8 +191,9 @@ upload:
     - mv tagger/firmware $Name
     - mv output/baseline/model $Name/model
     - mv output/baseline/plots/emulation $Name/plots
+    - mv output/baseline/plots/profile $Name/plots
     - mv output/baseline/plots/training/ $Name/plots
-    #- mv output/baseline/plots/testing/ $Name/plots
+    - mv output/baseline/plots/physics/ $Name/plots
     - cd ..
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - rm -rf php-plots

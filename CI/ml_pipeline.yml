@@ -165,10 +165,10 @@ profile:
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple.root .
   - cd ..
-  - pip uninstall hls4ml
+  - pip uninstall --no-input hls4ml
   - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
   - cd hls4ml
-  - git clone .[profiling]
+  - pip install --no-input .[profiling]
   - python tagger/firmware/hls4ml_profile.py -r True
   artifacts:
     paths:

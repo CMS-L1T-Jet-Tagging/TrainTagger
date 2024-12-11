@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 #Third party
 import hls4ml
 from qkeras.utils import load_qmodel
+import mlflow
 
 #----------------------------------------------
 
@@ -67,7 +68,8 @@ def convert(model, outpath,build=True):
     hls_model.compile()
     if build == True:
         hls_model.build(csim=False, reset = True)
-        return
+        report = hls_model.read_report()
+        return report
     else:
         return hls_model
 
@@ -76,6 +78,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')    
     parser.add_argument('-o','--outpath', default='tagger/firmware/JetTaggerNN' , help = 'Jet tagger synthesized output directory')    
+    parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
 
     args = parser.parse_args()
 
@@ -83,4 +86,20 @@ if __name__ == "__main__":
     model=load_qmodel(args.model)
     print(model.summary())
 
-    convert(model, args.outpath)
+    f = open("run_id.txt", "r")
+    run_id = (f.read())
+    mlflow.get_experiment_by_name(args.model)
+    with mlflow.start_run(experiment_id=1,
+                        run_name=str(args.name),
+                        run_id=run_id # pass None to start a new run
+                        ):
+        report = convert(model, args.outpath)
+        print(report)
+        mlflow.log_metric('FF %',report)
+        mlflow.log_metric('LUT %',report)
+        mlflow.log_metric('BRAM %',report)
+        mlflow.log_metric('DSP %',report)
+        mlflow.log_metric('Latency ',report)
+        mlflow.log_metric('Initiation Interval ',report)
+
+    

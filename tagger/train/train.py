@@ -12,6 +12,7 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from sklearn.utils.class_weight import compute_class_weight
+import mlflow
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 
@@ -199,20 +200,42 @@ if __name__ == "__main__":
     parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
     parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
+    parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
 
     #Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
 
     args = parser.parse_args()
 
+    mlflow.set_experiment(args.model)
+
     #Either make data or start the training
     if args.make_data:
         make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
     elif args.plot_basic:
         model_dir = args.output
-        
+        f = open("mlflow_run_id.txt", "r")
+        run_id = (f.read())
+        mlflow.get_experiment_by_name(args.model)
+        with mlflow.start_run(experiment_id=1,
+                            run_name=args.name,
+                            run_id=run_id # pass None to start a new run
+                            ):
+
         #All the basic plots!
-        basic(model_dir)
+            results = basic(model_dir)
+            mlflow.keras.autolog(model_format='h5')
+            for class_label in results.keys():
+                mlflow.log_metric(class_label + ' ROC AUC',results[class_label]['ROC_AUC'])
+            
     else:
-        train(args.output, args.percent, model_name=args.model)
+        with mlflow.start_run(run_name=args.name) as run:
+            mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
+            train(args.output, args.percent, model_name=args.model)
+            run_id = run.info.run_id
+        sourceFile = open('mlflow_run_id.txt', 'w')
+        print(run_id, end="", file = sourceFile)
+        sourceFile.close()
+
+        
         

@@ -340,7 +340,8 @@ def basic(model_dir):
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
-    results_dict = {class_label for class_label in class_labels}
+    results_dict = dict.fromkeys(class_labels, {})
+    print(results_dict)
 
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")

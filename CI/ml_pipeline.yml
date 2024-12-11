@@ -74,6 +74,7 @@ train:
   artifacts:
     paths:
       - output
+      - mlflow_run_id.txt
     exclude:
       - .npy
     expire_in: 1 day
@@ -103,6 +104,7 @@ evaluate:
   artifacts:
     paths:
       - output
+      - mlflow_run_id.txt
     exclude:
       - .npy
     expire_in: 1 day
@@ -116,7 +118,7 @@ synth:
   needs : [train]
   dependencies : [train]
   script:
-    - source /opt/Xilinx/Vivado/2022.2/settings64.sh
+    - source /opt/Xilinx/Vivado/2024.1/settings64.sh
     - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
     - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
@@ -125,6 +127,7 @@ synth:
   artifacts:
     paths:
       - tagger/firmware
+      - mlflow_run_id.txt
     expire_in: 1 day
 
 emulation-evaluate:
@@ -156,9 +159,7 @@ profile:
   needs: [emulate,train,synth]
   dependencies: [emulate,train,synth]
   script:
-  - source /opt/Xilinx/Vivado/2022.2/settings64.sh
-  - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
-  - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
+  - source /opt/Xilinx/Vivado/2024.1/settings64.sh
   - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
   - source activate tagger
   - mkdir data
@@ -190,6 +191,7 @@ upload:
   script:
     - mkdir $Name
     - mv tagger/firmware $Name
+    - mkdir $Name/plots
     - mv output/baseline/model $Name/model
     - mv output/baseline/plots/emulation $Name/plots
     - mv output/baseline/plots/profile $Name/plots

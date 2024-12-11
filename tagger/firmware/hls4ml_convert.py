@@ -6,8 +6,39 @@ from argparse import ArgumentParser
 import hls4ml
 from qkeras.utils import load_qmodel
 import mlflow
-
+from pathlib import Path
 #----------------------------------------------
+
+def getReports(indir):
+    data_ = {}
+    
+    report_vsynth = Path('{}/vivado_synth.rpt'.format(indir))
+    report_csynth = Path('{}/JetTaggerNN_prj/solution1/syn/report/JetTaggerNN_csynth.rpt'.format(indir))
+    
+    if report_vsynth.is_file() and report_csynth.is_file():
+        print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
+        
+        # Get the resources from the logic synthesis report 
+        with report_vsynth.open() as report:
+                lines = np.array(report.readlines())
+                data_['lut']     = int(lines[np.array(['CLB LUTs*' in line for line in lines])][0].split('|')[2])
+                data_['ff']      = int(lines[np.array(['CLB Registers' in line for line in lines])][0].split('|')[2])
+                data_['bram']    = float(lines[np.array(['Block RAM Tile' in line for line in lines])][0].split('|')[2])
+                data_['dsp']     = int(lines[np.array(['DSPs' in line for line in lines])][0].split('|')[2])
+                data_['lut_rel'] = float(lines[np.array(['CLB LUTs*' in line for line in lines])][0].split('|')[6])
+                data_['ff_rel']  = float(lines[np.array(['CLB Registers' in line for line in lines])][0].split('|')[6])
+                data_['bram_rel']= float(lines[np.array(['Block RAM Tile' in line for line in lines])][0].split('|')[6])
+                data_['dsp_rel'] = float(lines[np.array(['DSPs' in line for line in lines])][0].split('|')[6])
+
+        with report_csynth.open() as report:
+            lines = np.array(report.readlines())
+            lat_line = lines[np.argwhere(np.array(['Latency (cycles)' in line for line in lines])).flatten()[0] + 3]
+            data_['latency_clks'] = int(lat_line.split('|')[2])
+            data_['latency_mus']  = float(lat_line.split('|')[2])*5.0/1000.
+            data_['latency_ii']   = int(lat_line.split('|')[6])
+    
+    return data_
+
 
 def convert(model, outpath,build=True):
 
@@ -67,9 +98,7 @@ def convert(model, outpath,build=True):
     #Compile and build the project
     hls_model.compile()
     if build == True:
-        hls_model.build(csim=False, reset = True)
-        report = hls_model.read_report()
-        return report
+        hls_model.build(synth=True,vsynth=True,csim=False, reset = True)
     else:
         return hls_model
 
@@ -86,20 +115,21 @@ if __name__ == "__main__":
     model=load_qmodel(args.model)
     print(model.summary())
 
-    f = open("run_id.txt", "r")
+    f = open("mlflow_run_id.txt", "r")
     run_id = (f.read())
     mlflow.get_experiment_by_name(args.model)
     with mlflow.start_run(experiment_id=1,
                         run_name=str(args.name),
                         run_id=run_id # pass None to start a new run
                         ):
-        report = convert(model, args.outpath)
-        print(report)
-        mlflow.log_metric('FF %',report)
-        mlflow.log_metric('LUT %',report)
-        mlflow.log_metric('BRAM %',report)
-        mlflow.log_metric('DSP %',report)
-        mlflow.log_metric('Latency ',report)
-        mlflow.log_metric('Initiation Interval ',report)
+        convert(model,args.outpath)
+        report = getReports('tagger/firmware/JetTaggerNN')
+        mlflow.log_metric('FF',report['ff_rel'])
+        mlflow.log_metric('LUT',report['lut_rel'])
+        mlflow.log_metric('BRAM',report['bram_rel'])
+        mlflow.log_metric('DSP',report['dsp_rel'])
+        mlflow.log_metric('Latency cc',report['latency_clks'])
+        mlflow.log_metric('Latency us',report['latency_mus'])
+        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
 
     

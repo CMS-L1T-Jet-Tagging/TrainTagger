@@ -9,6 +9,7 @@ import hist
 from hist import Hist
 
 import matplotlib.pyplot as plt
+import matplotlib
 import mplhep as hep
 from tagger.plot.style import *
 

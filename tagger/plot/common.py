@@ -63,7 +63,7 @@ def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,titl
     fig,ax = plt.subplots(1,1,figsize=(18,15))
     hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
     
-    hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap=style.colormap)
+    hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap=colormap)
     ax.set_xlabel(name_one, horizontalalignment='right', x=1.0)
     ax.set_ylabel(name_two, horizontalalignment='right', y=1.0)
     cbar = plt.colorbar(hist2d[3] , ax=ax)
@@ -79,9 +79,9 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
     for i,histo in enumerate(variable):
 
         ax.hist(histo,bins=50,range=range,histtype="step",
-                    color = style.colours[i],
+                    color = colours[i],
                     label=name[i],
-                    linewidth = 5,
+                    linewidth = LINEWIDTH,
                     density=True)    
     ax.grid(True)
     ax.set_xlabel(xlabel,ha="right",x=1)
@@ -101,7 +101,7 @@ def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"
         tpr = modelsAndNames[key]["ROCs"]["tpr"]
         fpr = modelsAndNames[key]["ROCs"]["fpr"]
         auc1 = modelsAndNames[key]["ROCs"]["auc"]
-        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),color=style.colours[i])
+        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),color=colours[i])
     ax.semilogy()
     ax.set_xlabel("Signal efficiency")
     ax.set_ylabel("Mistag rate")

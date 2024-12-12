@@ -11,19 +11,21 @@ color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 colormap = "jet"
 
+SMALL_SIZE = 20
+MEDIUM_SIZE = 25
+BIGGER_SIZE = 35
+
+LEGEND_WIDTH = 20
+LINEWIDTH = 3
+MARKERSIZE = 20
+
 def set_style():
     # Setup plotting to CMS style
     hep.cms.label()
     hep.cms.text("Simulation")
     plt.style.use(hep.style.CMS)
 
-    SMALL_SIZE = 20
-    MEDIUM_SIZE = 25
-    BIGGER_SIZE = 35
 
-    LEGEND_WIDTH = 20
-    LINEWIDTH = 3
-    MARKERSIZE = 20
 
     plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
     plt.rc('axes', titlesize=BIGGER_SIZE)    # fontsize of the axes title

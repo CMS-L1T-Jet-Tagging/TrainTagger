@@ -18,9 +18,9 @@ from sklearn.metrics import roc_curve, auc,precision_recall_curve
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-import style 
+from tagger.plot.style import *
 
-style.set_style()
+set_style()
 
 
 def rms(array):

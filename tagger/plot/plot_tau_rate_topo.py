@@ -14,9 +14,9 @@ from datatools import helpers
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-import style 
+from tagger.plot.style import *
 
-style.set_style()
+set_style()
 
 def calculate_topo_score(tau_plus, tau_minus):
     #2=tau positive, 3=tau_negative

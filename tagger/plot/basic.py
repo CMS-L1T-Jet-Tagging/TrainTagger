@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import mplhep as hep
 
-import style
+from tagger.plot.style import *
 
 import os
 from .common import PT_BINS
 from scipy.stats import norm
 
-style.set_style()
+set_style()
 
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):

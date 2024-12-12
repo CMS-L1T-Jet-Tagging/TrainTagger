@@ -17,7 +17,7 @@ import shap
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 
-style.set_style()
+set_style()
 
 def shapPlot(shap_values, feature_names, class_names):
     fig,ax = plt.subplots(1,1,figsize=(18,15))

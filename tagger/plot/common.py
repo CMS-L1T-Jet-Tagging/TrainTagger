@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
-import style 
+from tagger.plot.style import *
 
-style.set_style()
+set_style()
 #GLOBAL VARIABLES TO USE ACROSS PLOTTING TOOLS
 MINBIAS_RATE = 32e+3 #32 kHZ
 
@@ -79,8 +79,9 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
     for i,histo in enumerate(variable):
 
         ax.hist(histo,bins=50,range=range,histtype="step",
-                    color = colours[i],
+                    color = style.colours[i],
                     label=name[i],
+                    linewidth = 5
                     density=True)    
     ax.grid(True)
     ax.set_xlabel(xlabel,ha="right",x=1)
@@ -91,7 +92,7 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
     plt.tight_layout()
     return fig
 
-def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"],labels = ["CMSSW Emulation", "Tensorflow", "hls4ml"],title="None",colours=style.colours):
+def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"],labels = ["CMSSW Emulation", "Tensorflow", "hls4ml"],title="None"):
     plt.clf()
     fig,ax = plt.subplots(1,1,figsize=(18,15))
     hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
@@ -100,7 +101,7 @@ def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"
         tpr = modelsAndNames[key]["ROCs"]["tpr"]
         fpr = modelsAndNames[key]["ROCs"]["fpr"]
         auc1 = modelsAndNames[key]["ROCs"]["auc"]
-        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),color=colours[i])
+        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),color=style.colours[i])
     ax.semilogy()
     ax.set_xlabel("Signal efficiency")
     ax.set_ylabel("Mistag rate")

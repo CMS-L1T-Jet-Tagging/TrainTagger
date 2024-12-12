@@ -22,9 +22,9 @@ import hist
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-import style 
+from tagger.plot.style import *
 
-style.set_style()
+set_style()
 
 def delta_r(eta1, phi1, eta2, phi2):
     """

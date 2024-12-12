@@ -22,9 +22,9 @@ from official_WPs import WPs, WPs_CMSSW
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-import style 
+from tagger.plot.style import *
 
-style.set_style()
+set_style()
 
 def eta_region_selection(eta_array, eta_region):
     """

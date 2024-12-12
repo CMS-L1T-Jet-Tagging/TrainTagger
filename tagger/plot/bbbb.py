@@ -10,9 +10,9 @@ from hist import Hist
 
 import matplotlib.pyplot as plt
 import mplhep as hep
-import style 
+from tagger.plot.style import *
 
-style.set_style()
+set_style()
 
 #Interpolation of working point
 from scipy.interpolate import interp1d

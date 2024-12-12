@@ -13,9 +13,9 @@ from datatools import helpers
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-import style 
+from tagger.plot.style import *
 
-style.set_style()
+set_style()
 
 #line thickness
 import matplotlib as mpl

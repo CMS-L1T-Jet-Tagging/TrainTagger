@@ -21,16 +21,10 @@ import hist
 
 #Plotting
 import matplotlib.pyplot as plt
-import matplotlib
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
+import style 
+
+style.set_style()
 
 def calculate_topo_score(tau_plus, tau_minus):
     #2=tau positive, 3=tau_negative

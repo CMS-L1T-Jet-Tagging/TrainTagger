@@ -5,29 +5,19 @@ import numpy as np
 from qkeras.utils import load_qmodel
 from sklearn.metrics import roc_curve, auc
 from itertools import combinations
-
-#For plotting
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 from matplotlib.pyplot import cm
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
 
-#Plotting default config
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
+import style
 
 import os
 from .common import PT_BINS
 from scipy.stats import norm
-import shap
 
-###### DEFINE ALL THE PLOPTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
+style.set_style()
+
+###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
     plt.plot(history.history['loss'], label='Train Loss', linewidth=3)
     plt.plot(history.history['val_loss'], label='Validation Loss',linewidth=3)

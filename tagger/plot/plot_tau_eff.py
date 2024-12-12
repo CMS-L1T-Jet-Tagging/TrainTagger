@@ -22,15 +22,9 @@ from official_WPs import WPs, WPs_CMSSW
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
-color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+import style 
+
+style.set_style()
 
 def eta_region_selection(eta_array, eta_region):
     """

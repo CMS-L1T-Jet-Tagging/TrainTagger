@@ -13,14 +13,9 @@ from datatools import helpers
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
+import style 
+
+style.set_style()
 
 #line thickness
 import matplotlib as mpl

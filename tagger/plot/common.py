@@ -1,17 +1,12 @@
 #Plotting
 import numpy as np
+
 import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
+import style 
 
+style.set_style()
 #GLOBAL VARIABLES TO USE ACROSS PLOTTING TOOLS
 MINBIAS_RATE = 32e+3 #32 kHZ
 
@@ -63,3 +58,56 @@ def get_bar_patch_data(artists):
     y_data = [artists.bar.patches[i].get_y() for i in range(len(artists.bar.patches))]
     err_data = [artists.bar.patches[i].get_height() for i in range(len(artists.bar.patches))]
     return x_data, y_data, err_data
+
+def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,title):
+    fig,ax = plt.subplots(1,1,figsize=(18,15))
+    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+    
+    hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap=style.colormap)
+    ax.set_xlabel(name_one, horizontalalignment='right', x=1.0)
+    ax.set_ylabel(name_two, horizontalalignment='right', y=1.0)
+    cbar = plt.colorbar(hist2d[3] , ax=ax)
+    cbar.set_label('# Tracks')
+    plt.suptitle(title)
+    plt.tight_layout()
+    return fig
+
+def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
+    plt.clf()
+    fig,ax = plt.subplots(1,1,figsize=(18,15))
+    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+    for i,histo in enumerate(variable):
+
+        ax.hist(histo,bins=50,range=range,histtype="step",
+                    color = colours[i],
+                    label=name[i],
+                    density=True)    
+    ax.grid(True)
+    ax.set_xlabel(xlabel,ha="right",x=1)
+    ax.set_ylabel(ylabel,ha="right",y=1)
+    ax.legend(loc='best')
+
+    plt.suptitle(title)
+    plt.tight_layout()
+    return fig
+
+def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"],labels = ["CMSSW Emulation", "Tensorflow", "hls4ml"],title="None",colours=style.colours):
+    plt.clf()
+    fig,ax = plt.subplots(1,1,figsize=(18,15))
+    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+
+    for i,key in enumerate(keys):
+        tpr = modelsAndNames[key]["ROCs"]["tpr"]
+        fpr = modelsAndNames[key]["ROCs"]["fpr"]
+        auc1 = modelsAndNames[key]["ROCs"]["auc"]
+        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),color=colours[i])
+    ax.semilogy()
+    ax.set_xlabel("Signal efficiency")
+    ax.set_ylabel("Mistag rate")
+    ax.set_xlim(0.,1.)
+    ax.set_ylim(0.001,1)
+    ax.grid(True)
+    ax.legend(loc='best')
+    plt.suptitle(title)
+    plt.tight_layout()
+    return fig

@@ -8,19 +8,11 @@ import uproot
 import hist
 from hist import Hist
 
-#Plotting
 import matplotlib.pyplot as plt
-import matplotlib
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
-color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+import style 
+
+style.set_style()
 
 #Interpolation of working point
 from scipy.interpolate import interp1d
@@ -240,8 +232,8 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
 
     #Now plot all
     fig = plt.figure()
-    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[0], fmt='o', linewidth=2, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
-    plt.errorbar(model_x, model_y, yerr=model_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
+    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=2, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
+    plt.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=2, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
 
     #Plot other labels
     plt.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=3)

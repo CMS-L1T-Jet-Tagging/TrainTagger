@@ -120,9 +120,9 @@ if __name__ == "__main__":
 
     f = open("mlflow_run_id.txt", "r")
     run_id = (f.read())
-    mlflow.get_experiment_by_name(args.model)
+    mlflow.get_experiment_by_name(args.name)
     with mlflow.start_run(experiment_id=1,
-                        run_name=str(args.name),
+                        run_name=str(args.model),
                         run_id=run_id # pass None to start a new run
                         ):
         convert(model,args.outpath)

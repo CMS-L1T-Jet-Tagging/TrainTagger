@@ -13,6 +13,7 @@ import tensorflow_model_optimization as tfmot
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from sklearn.utils.class_weight import compute_class_weight
 import mlflow
+from datetime import datetime
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 
@@ -207,7 +208,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    mlflow.set_experiment(args.model)
+    mlflow.set_experiment(args.name)
 
     #Either make data or start the training
     if args.make_data:
@@ -216,9 +217,9 @@ if __name__ == "__main__":
         model_dir = args.output
         f = open("mlflow_run_id.txt", "r")
         run_id = (f.read())
-        mlflow.get_experiment_by_name(args.model)
+        mlflow.get_experiment_by_name(args.name)
         with mlflow.start_run(experiment_id=1,
-                            run_name=args.name,
+                            run_name=args.model,
                             run_id=run_id # pass None to start a new run
                             ):
 
@@ -228,11 +229,10 @@ if __name__ == "__main__":
                 mlflow.log_metric(class_label + ' ROC AUC',results[class_label]['ROC_AUC'])
             
     else:
-        with mlflow.start_run(run_name=args.name) as run:
+        with mlflow.start_run(run_name=args.model) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
             mlflow.keras.autolog()
             train(args.output, args.percent, model_name=args.model)
-            mlflow.keras.log_model(args.output+"/model/saved_model.h5")
             run_id = run.info.run_id
         sourceFile = open('mlflow_run_id.txt', 'w')
         print(run_id, end="", file = sourceFile)

@@ -20,6 +20,7 @@ output/*
 data/*
 emulation_data/*
 temp/** 
+mlruns/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

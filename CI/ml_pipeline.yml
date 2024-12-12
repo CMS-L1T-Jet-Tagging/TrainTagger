@@ -66,8 +66,8 @@ train:
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/train/train.py
-  - python tagger/train/train.py --plot-basic
+  - python tagger/train/train.py -n ${CI_COMMIT_REF_NAME}/$Name
+  - python tagger/train/train.py --plot-basic -n ${CI_COMMIT_REF_NAME}/$Name
   - cd output/baseline
   - tar -cf testing_data_$Inputs.tgz testing_data
   - mc cp testing_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
@@ -123,7 +123,7 @@ synth:
     - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - source activate tagger
-    - python tagger/firmware/hls4ml_convert.py
+    - python tagger/firmware/hls4ml_convert.py -n ${CI_COMMIT_REF_NAME}/$Name
   artifacts:
     paths:
       - tagger/firmware
@@ -203,7 +203,7 @@ upload:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_deploy_plots.py TrainTagger/${Name} /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${Name}/${CI_COMMIT_REF_NAME} --recursive --extensions h5,cpp,h,yml,tcl,sh,png,pdf 
+    - pb_deploy_plots.py TrainTagger/${Name} /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME} --recursive --extensions h5,cpp,h,yml,tcl,sh,png,pdf,rpt 
   artifacts:
     paths:
       - $Name

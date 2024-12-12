@@ -7,28 +7,16 @@ import hls4ml
 from qkeras.utils import load_qmodel
 import mlflow
 from pathlib import Path
+import numpy as np
 #----------------------------------------------
 
 def getReports(indir):
     data_ = {}
     
-    report_vsynth = Path('{}/vivado_synth.rpt'.format(indir))
     report_csynth = Path('{}/JetTaggerNN_prj/solution1/syn/report/JetTaggerNN_csynth.rpt'.format(indir))
-    
-    if report_vsynth.is_file() and report_csynth.is_file():
+
+    if report_csynth.is_file():
         print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
-        
-        # Get the resources from the logic synthesis report 
-        with report_vsynth.open() as report:
-                lines = np.array(report.readlines())
-                data_['lut']     = int(lines[np.array(['CLB LUTs*' in line for line in lines])][0].split('|')[2])
-                data_['ff']      = int(lines[np.array(['CLB Registers' in line for line in lines])][0].split('|')[2])
-                data_['bram']    = float(lines[np.array(['Block RAM Tile' in line for line in lines])][0].split('|')[2])
-                data_['dsp']     = int(lines[np.array(['DSPs' in line for line in lines])][0].split('|')[2])
-                data_['lut_rel'] = float(lines[np.array(['CLB LUTs*' in line for line in lines])][0].split('|')[6])
-                data_['ff_rel']  = float(lines[np.array(['CLB Registers' in line for line in lines])][0].split('|')[6])
-                data_['bram_rel']= float(lines[np.array(['Block RAM Tile' in line for line in lines])][0].split('|')[6])
-                data_['dsp_rel'] = float(lines[np.array(['DSPs' in line for line in lines])][0].split('|')[6])
 
         with report_csynth.open() as report:
             lines = np.array(report.readlines())
@@ -36,7 +24,22 @@ def getReports(indir):
             data_['latency_clks'] = int(lat_line.split('|')[2])
             data_['latency_mus']  = float(lat_line.split('|')[2])*5.0/1000.
             data_['latency_ii']   = int(lat_line.split('|')[6])
-    
+
+            resource_line = lines[np.argwhere(np.array(['|Utilization (%)' in line for line in lines])).flatten()[0]]
+            try:
+                data_['bram_rel']     = int(resource_line.split('|')[2])
+            except ValueError:
+                data_['bram_rel']     = 0
+            data_['dsp_rel']     = int(resource_line.split('|')[3])
+            data_['ff_rel']     = int(resource_line.split('|')[4])
+            data_['lut_rel']     = int(resource_line.split('|')[5])
+
+            total_line = lines[np.argwhere(np.array(['|Total ' in line for line in lines])).flatten()[0]]
+            data_['bram']     = int(total_line.split('|')[2])
+            data_['dsp']     = int(total_line.split('|')[3])
+            data_['ff']     = int(total_line.split('|')[4])
+            data_['lut']     = int(total_line.split('|')[5])
+
     return data_
 
 
@@ -98,7 +101,7 @@ def convert(model, outpath,build=True):
     #Compile and build the project
     hls_model.compile()
     if build == True:
-        hls_model.build(synth=True,vsynth=True,csim=False, reset = True)
+        hls_model.build(csim=False, reset = True)
     else:
         return hls_model
 

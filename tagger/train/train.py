@@ -224,14 +224,15 @@ if __name__ == "__main__":
 
         #All the basic plots!
             results = basic(model_dir)
-            mlflow.keras.autolog(model_format='h5')
             for class_label in results.keys():
                 mlflow.log_metric(class_label + ' ROC AUC',results[class_label]['ROC_AUC'])
             
     else:
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
+            mlflow.keras.autolog()
             train(args.output, args.percent, model_name=args.model)
+            mlflow.keras.log_model(args.output+"/model/saved_model.h5")
             run_id = run.info.run_id
         sourceFile = open('mlflow_run_id.txt', 'w')
         print(run_id, end="", file = sourceFile)

@@ -330,7 +330,7 @@ def basic(model_dir):
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
-    results_dict = dict.fromkeys(class_labels, {})
+    results_dict = dict.fromkeys(class_labels, {"ROC_AUC":0})
     print(results_dict)
 
     #Load the testing data

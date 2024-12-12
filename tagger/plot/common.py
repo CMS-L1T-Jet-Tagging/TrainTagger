@@ -81,7 +81,7 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
         ax.hist(histo,bins=50,range=range,histtype="step",
                     color = style.colours[i],
                     label=name[i],
-                    linewidth = 5
+                    linewidth = 5,
                     density=True)    
     ax.grid(True)
     ax.set_xlabel(xlabel,ha="right",x=1)

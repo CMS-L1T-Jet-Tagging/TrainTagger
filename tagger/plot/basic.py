@@ -331,7 +331,6 @@ def basic(model_dir):
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
     results_dict = dict.fromkeys(class_labels, {"ROC_AUC":0})
-    print(results_dict)
 
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
@@ -348,9 +347,9 @@ def basic(model_dir):
     pt_ratio = model_outputs[1].flatten()
 
     #Plot ROC curves
-    ROC(y_pred, y_test, class_labels, plot_dir,results_dict)
+    results_dict = ROC(y_pred, y_test, class_labels, plot_dir,results_dict)
 
-    # Generate all possible pairs of classes
+    #Generate all possible pairs of classes
     for i in class_labels.keys():
         for j in class_labels.keys():
             if i != j:
@@ -369,4 +368,4 @@ def basic(model_dir):
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
-    return
+    return results_dict

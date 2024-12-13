@@ -22,9 +22,9 @@ from official_WPs import WPs, WPs_CMSSW
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-from tagger.plot.style import *
+import tagger.plot.style as style
 
-set_style()
+style.set_style()
 
 def eta_region_selection(eta_array, eta_region):
     """
@@ -40,8 +40,8 @@ def eta_region_selection(eta_array, eta_region):
 
 def plot_ratio(all_tau, selected_tau, num_label = r"Selected CMSSW Emulator Taus", figname='plots/cmssw_eff.pdf'):
 
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     _, eff = selected_tau.plot_ratio(all_tau,
                                               rp_num_label=num_label, rp_denom_label=r"All Taus",
                                               rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")
@@ -137,13 +137,13 @@ def eff_pt_tau(model, signal_path, uncorrect_pt=False, eta_region='barrel', tree
     nn_x, nn_y, nn_err = get_bar_patch_data(eff_nn)
     
     #Plot the efficiencies together
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
     ax.plot([], [], 'none', label=eta_label)
-    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=color_cycle[0], linewidth=2, label=r'SeededCone PuppiJet (L1 $p_T$ > {})'.format(model_pt_WP))
-    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator (L1 $p_T$ > {}, NN > {})'.format(WPs_CMSSW['tau_l1_pt'], WPs_CMSSW['tau']))
-    ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=color_cycle[2], linewidth=2, label=r'SeededCone Tau Tagger (L1 $p_T$ > {}, NN > {})'.format(model_pt_WP, model_NN_WP))
+    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[0], linewidth=2, label=r'SeededCone PuppiJet (L1 $p_T$ > {})'.format(model_pt_WP))
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator (L1 $p_T$ > {}, NN > {})'.format(WPs_CMSSW['tau_l1_pt'], WPs_CMSSW['tau']))
+    ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[2], linewidth=2, label=r'SeededCone Tau Tagger (L1 $p_T$ > {}, NN > {})'.format(model_pt_WP, model_NN_WP))
     
     #Plot other labels
     ax.hlines(1, 0, 150, linestyles='dashed', color='black', linewidth=3)
@@ -210,14 +210,14 @@ def eff_sc_and_tau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets
     cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
     
     #Plot the efficiencies together
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
     if eta_region != 'none':
         ax.plot([], [], 'none', label=eta_label)
 
-    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=color_cycle[0], linewidth=2, label=r'SeededCone CMSSW Emulator')
-    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator')
+    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[0], linewidth=2, label=r'SeededCone CMSSW Emulator')
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator')
     
     #Plot other labels
     ax.hlines(1, 0, 150, linestyles='dashed', color='black', linewidth=3)

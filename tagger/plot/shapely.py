@@ -5,7 +5,7 @@ import os, shutil, json
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.firmware.hls4ml_convert import convert
 import tagger.train.models
-from tagger.plot.style import *
+import tagger.plot.style as style
 #Third parties
 import numpy as np
 import tensorflow as tf
@@ -17,10 +17,10 @@ import shap
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 
-set_style()
+style.set_style()
 
 def shapPlot(shap_values, feature_names, class_names):
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     
     feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
     num_features = (shap_values[0].shape[1])

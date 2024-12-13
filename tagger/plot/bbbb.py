@@ -11,9 +11,9 @@ from hist import Hist
 import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
-from tagger.plot.style import *
+import tagger.plot.style as style
 
-set_style()
+style.set_style()
 
 #Interpolation of working point
 from scipy.interpolate import interp1d
@@ -43,8 +43,8 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
     os.makedirs(plot_dir, exist_ok=True)
     
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     im = ax.scatter(nn_list, ht_list, c=rate_list, s=500, marker='s',
                     cmap='Spectral_r',
                     linewidths=0,
@@ -233,10 +233,10 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
     model_x, model_y, model_err = get_bar_patch_data(eff_model)
 
     #Now plot all
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
-    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
-    ax.errorbar(model_x, model_y, yerr=model_err, c=color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
+    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
 
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)

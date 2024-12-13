@@ -3,13 +3,10 @@ import matplotlib.colors as colors
 from matplotlib.pyplot import cm
 import mplhep as hep
 
-#colours=["green","red","blue","black","orange","purple","goldenrod"]
 colours = ["black","red","orange","green", "blue"]
 linestyles = ["-","--","dotted",(0, (3, 5, 1, 5)),(0, (3, 5, 1,1,1,5,)),(0, (3, 10, 1, 10)),(0, (3, 10, 1, 10, 1, 10))]
 
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
-
-colormap = "jet"
 
 SMALL_SIZE = 20
 MEDIUM_SIZE = 25

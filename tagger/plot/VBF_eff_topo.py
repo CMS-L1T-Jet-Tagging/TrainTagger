@@ -23,9 +23,9 @@ from official_WPs import WPs, WPs_CMSSW
 import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
-from tagger.plot.style import *
+import tagger.plot.style as style
 
-set_style()
+style.set_style()
 
 def delta_r(eta1, phi1, eta2, phi2):
     """
@@ -45,8 +45,8 @@ def ratio_2D(nume, deno):
 
 def plot_2D_ratio(ratio, pt_edges, figname="VBF_eff_CMSSW"):
     extent = [pt_edges[0], pt_edges[-1], pt_edges[0], pt_edges[-1]]
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     ax.imshow(ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
     ax.colorbar()
 

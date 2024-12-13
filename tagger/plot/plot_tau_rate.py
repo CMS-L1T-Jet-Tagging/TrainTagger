@@ -13,9 +13,9 @@ from datatools import helpers
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-from tagger.plot.style import *
+import tagger.plot.style as style
 
-set_style()
+style.set_style()
 
 #line thickness
 import matplotlib as mpl
@@ -91,8 +91,8 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, eta_cut=True, tre
         uncertainty_cmssw.append(np.sqrt(n_pass_cmssw) / n_event * minbias_rate)
         uncertainty_model.append(np.sqrt(n_pass_model) / n_event * minbias_rate)
 
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     ax.plot(pt_cuts, minbias_rate_no_nn, label=r'No ID/$p_T$ correction', linewidth = 5)
     ax.plot(pt_cuts, minbias_rate_cmssw, label=r'CMSSW PuppiTau Emulator', linewidth = 5)
     ax.plot(pt_cuts, minbias_rate_model, label=r'SeedCone Tau', linewidth = 5)

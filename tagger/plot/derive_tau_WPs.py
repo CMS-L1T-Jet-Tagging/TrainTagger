@@ -22,9 +22,9 @@ import hist
 #Plotting
 import matplotlib.pyplot as plt
 import mplhep as hep
-from tagger.plot.style import *
+import tagger.plot.style as style
 
-set_style()
+style.set_style()
 
 def delta_r(eta1, phi1, eta2, phi2):
     """
@@ -51,8 +51,8 @@ def find_rate(rate_list, target_rate = 28):
 
 def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True, mult=False):
     
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
                     cmap='Spectral_r',
                     linewidths=0,

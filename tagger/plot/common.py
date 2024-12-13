@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
-from tagger.plot.style import *
+import tagger.plot.style as style
 
-set_style()
+style.set_style()
 #GLOBAL VARIABLES TO USE ACROSS PLOTTING TOOLS
 MINBIAS_RATE = 32e+3 #32 kHZ
 
@@ -45,8 +45,8 @@ def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
     return idx_list    
 
 def plot_ratio(all_events, selected_events, plot=False):
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     _, eff = selected_events.plot_ratio(all_events,
                                         rp_num_label="Selected events", rp_denom_label=r"All",
                                         rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")
@@ -61,28 +61,28 @@ def get_bar_patch_data(artists):
     return x_data, y_data, err_data
 
 def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,title):
-    fig,ax = plt.subplots(1,1,figsize=(FIGURE_SIZE[0]+2,FIGURE_SIZE[1]))
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=(style.FIGURE_SIZE[0]+2,style.FIGURE_SIZE[1]))
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     
-    hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap=colormap)
+    hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap='jet')
     ax.set_xlabel(name_one)
     ax.set_ylabel(name_two)
     cbar = plt.colorbar(hist2d[3] , ax=ax)
-    cbar.set_label('# Tracks')
+    cbar.set_label('a.u.')
     plt.suptitle(title)
     plt.tight_layout()
     return fig
 
 def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
     plt.clf()
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     for i,histo in enumerate(variable):
 
         ax.hist(histo,bins=50,range=range,histtype="step",
-                    color = colours[i],
+                    color = style.colours[i],
                     label=name[i],
-                    linewidth = LINEWIDTH,
+                    linewidth = style.LINEWIDTH,
                     density=True)    
     ax.grid(True)
     ax.set_xlabel(xlabel,ha="right",x=1)
@@ -95,14 +95,14 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
 
 def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"],labels = ["CMSSW Emulation", "Tensorflow", "hls4ml"],title="None"):
     plt.clf()
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
 
     for i,key in enumerate(keys):
         tpr = modelsAndNames[key]["ROCs"]["tpr"]
         fpr = modelsAndNames[key]["ROCs"]["fpr"]
         auc1 = modelsAndNames[key]["ROCs"]["auc"]
-        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),color=colours[i])
+        ax.plot(tpr[truthclass],fpr[truthclass],label='%s Tagger, AUC = %.2f%%'%(labels[i], auc1[truthclass]*100.),color=style.colours[i])
     ax.semilogy()
     ax.set_xlabel("Signal efficiency")
     ax.set_ylabel("Mistag rate")

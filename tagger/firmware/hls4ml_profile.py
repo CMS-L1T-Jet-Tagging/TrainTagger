@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 from tagger.plot.style import *
 
-set_style()
+style.set_style()
 
 def doPlots(model,outputdir,inputdir):
     os.makedirs(outputdir, exist_ok=True)

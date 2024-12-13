@@ -9,21 +9,21 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import mplhep as hep
 
-from tagger.plot.style import *
+import tagger.plot.style as style
 
 import os
 from .common import PT_BINS
 from .common import plot_histo
 from scipy.stats import norm
 
-set_style()
+style.set_style()
 
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
-    ax.plot(history.history['loss'], label='Train Loss', linewidth=3)
-    ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=3)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    ax.plot(history.history['loss'], label='Train Loss', linewidth=style.LINEWIDTH)
+    ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=style.LINEWIDTH)
     ax.set_ylabel('Loss')
     ax.set_xlabel('Epoch')
     ax.legend(loc='upper right')
@@ -61,8 +61,8 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     roc_auc = auc(fpr, tpr)
 
     # Plot the ROC curve
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     ax.plot(tpr, fpr, label=f'{class_pair[0]} vs {class_pair[1]} (AUC = {roc_auc:.2f})',
              color='blue', linewidth=5)
     ax.grid(True)
@@ -83,8 +83,8 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
     colormap = cm.get_cmap('Set1', len(class_labels))  # Use 'tab10' with enough colors
 
     # Create a plot for ROC curves
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
     for i, class_label in enumerate(class_labels):
 
         # Get true labels and predicted probabilities for the current class
@@ -201,8 +201,8 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
     def plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor, plot_name):
 
         # Plot the response
-        fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-        hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+        fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
         ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4,ms=8,elinewidth=3)
         ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4,ms=8,elinewidth=3)
 
@@ -288,8 +288,8 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
     def plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor, plot_name):
 
         # Plot the response
-        fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
-        hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+        fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
         ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4,ms=8,elinewidth=3)
         ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4,ms=8,elinewidth=3)
 

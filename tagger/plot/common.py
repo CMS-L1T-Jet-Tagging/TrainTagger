@@ -5,7 +5,7 @@ import matplotlib.pylab as pylab
 import mplhep as hep
 
 def apply_style():
-    plt.style.use(hep.style.ROOT)
+    plt.style.use(hep.style.CMS)
     params = {
         'legend.fontsize': 'medium',
         'axes.labelsize': 'x-large',

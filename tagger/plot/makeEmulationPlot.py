@@ -59,14 +59,14 @@ def doPlots(model,outputdir,inputdir):
     plt.savefig("%s/jetRegression_2D.pdf" % outputdir)
 
     plt.clf()
-    figure = common.plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_multijetscore_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet Regression",'Regression Score','# Jets',range=(0,2))
+    figure = common.plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_multijetscore_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",'regression output','a.u.',range=(0,2))
     plt.savefig("%s/jetRegression_1D.png" % outputdir)
     plt.savefig("%s/jetRegression_1D.pdf" % outputdir)
 
     for i, label in enumerate(labels):
         plt.close()
         plt.clf()
-        figure = common.plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet " + label + " Score",label+' Score','# Jets',range=(0,1))
+        figure = common.plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",label+' score','a.u.',range=(0,1))
         plt.savefig("%s/%s_score_1D.png" % (outputdir,label))
         plt.savefig("%s/%s_score_1D.pdf" % (outputdir,label))
 

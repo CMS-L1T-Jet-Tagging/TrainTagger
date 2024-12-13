@@ -5,7 +5,7 @@ import os, shutil, json
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.firmware.hls4ml_convert import convert
 import tagger.train.models
-import style
+from tagger.plot.style import *
 #Third parties
 import numpy as np
 import tensorflow as tf
@@ -40,7 +40,7 @@ def shapPlot(shap_values, feature_names, class_names):
         left_pos += global_shap_values[feature_inds]
 
     ax.set_yticklabels([feature_names[i] for i in feature_inds])
-    ax.legend(loc='best',fontsize=30)
+    ax.legend(loc='lower right',fontsize=30)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.xaxis.set_ticks_position('none')

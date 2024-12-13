@@ -18,9 +18,12 @@ hls4ml/**
 *JetTaggerNN*
 output/*
 data/*
-emulation_data/*
+emulation_data/** 
+profiling_data/** 
 temp/** 
 mlruns/**
+mlflow_*.txt
+tagger/firmware/*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

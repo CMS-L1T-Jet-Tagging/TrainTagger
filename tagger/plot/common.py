@@ -61,7 +61,7 @@ def get_bar_patch_data(artists):
     return x_data, y_data, err_data
 
 def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,title):
-    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    fig,ax = plt.subplots(1,1,figsize=(FIGURE_SIZE[0]+2,FIGURE_SIZE[1]))
     hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     
     hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap=colormap)

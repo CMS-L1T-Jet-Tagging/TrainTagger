@@ -223,10 +223,10 @@ if __name__ == "__main__":
                             run_id=run_id # pass None to start a new run
                             ):
 
-        #All the basic plots!
+            #All the basic plots!
             results = basic(model_dir)
             for class_label in results.keys():
-                mlflow.log_metric(class_label + ' ROC AUC',results[class_label]['ROC_AUC'])
+                mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
             
     else:
         with mlflow.start_run(run_name=args.model) as run:

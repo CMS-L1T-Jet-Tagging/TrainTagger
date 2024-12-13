@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    mlflow.set_experiment(args.name)
+    mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
 
     #Either make data or start the training
     if args.make_data:
@@ -217,9 +217,9 @@ if __name__ == "__main__":
         model_dir = args.output
         f = open("mlflow_run_id.txt", "r")
         run_id = (f.read())
-        mlflow.get_experiment_by_name(args.name)
+        mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
         with mlflow.start_run(experiment_id=1,
-                            run_name=args.model,
+                            run_name=args.name,
                             run_id=run_id # pass None to start a new run
                             ):
 
@@ -229,7 +229,7 @@ if __name__ == "__main__":
                 mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
             
     else:
-        with mlflow.start_run(run_name=args.model) as run:
+        with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
             mlflow.keras.autolog()
             train(args.output, args.percent, model_name=args.model)

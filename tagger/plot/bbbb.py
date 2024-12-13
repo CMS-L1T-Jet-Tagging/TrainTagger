@@ -245,7 +245,7 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
     ax.set_xlim([0, 800])
     ax.set_xlabel(r"$HT^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b trigger rate at 14 kHz)")
-    plt.legend(loc='lower right')
+    plt.legend(loc='upper left')
 
     #Save plot
     plot_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT")

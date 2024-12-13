@@ -396,7 +396,6 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
 
         #Add additional response variables
         # _add_response_vars(data)
-
         #Split data into all the training classes
         data_split, class_labels = _split_flavor(data)
 

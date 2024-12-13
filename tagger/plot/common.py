@@ -1,16 +1,21 @@
-#Plotting
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
-import mplhep as hep
-plt.style.use(hep.style.ROOT)
+import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
+import mplhep as hep
+
+def apply_style():
+    plt.style.use(hep.style.ROOT)
+    params = {
+        'legend.fontsize': 'medium',
+        'axes.labelsize': 'x-large',
+        'axes.titlesize':'x-large',
+        'xtick.labelsize':'medium',
+        'ytick.labelsize':'medium'
+    }
+    pylab.rcParams.update(params)
+
+apply_style()
 
 #GLOBAL VARIABLES TO USE ACROSS PLOTTING TOOLS
 MINBIAS_RATE = 32e+3 #32 kHZ

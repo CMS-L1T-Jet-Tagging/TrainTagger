@@ -7,26 +7,20 @@ from sklearn.metrics import roc_curve, auc
 from itertools import combinations
 
 #For plotting
+from tensorflow.keras.utils import plot_model
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.pyplot import cm
 import mplhep as hep
-from tensorflow.keras.utils import plot_model
-plt.style.use(hep.style.ROOT)
-
-#Plotting default config
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
 
 import os
-from .common import PT_BINS
+from .common import PT_BINS, apply_style
 from scipy.stats import norm
 import shap
+
+#Plot style setting
+apply_style()
 
 ###### DEFINE ALL THE PLOPTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):

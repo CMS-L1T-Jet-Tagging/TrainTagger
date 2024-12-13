@@ -9,25 +9,19 @@ import hist
 from hist import Hist
 
 #Plotting
-import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.pyplot as plt
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
-color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 #Interpolation of working point
 from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, apply_style
+
+#Plot style setting
+apply_style()
 
 def nn_bscore_sum(model, jet_nn_inputs, n_jets=4, b_index = 1):
 

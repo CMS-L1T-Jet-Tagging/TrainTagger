@@ -78,7 +78,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.close()
 
-def ROC(y_pred, y_test, class_labels, plot_dir,results_dict):
+def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
     # Create a colormap for unique colors
     colormap = cm.get_cmap('Set1', len(class_labels))  # Use 'tab10' with enough colors
 
@@ -95,8 +95,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir,results_dict):
         fpr, tpr, _ = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
 
-        results_dict[class_label]['ROC_AUC'] = roc_auc
-
+        ROC_dict[class_label] = roc_auc
         # Plot the ROC curve for the current class
         ax.plot(tpr, fpr, label=f'{class_label} (AUC = {roc_auc:.2f})',
                  color=colormap(i), linewidth=5)
@@ -105,7 +104,12 @@ def ROC(y_pred, y_test, class_labels, plot_dir,results_dict):
     ax.grid(True)
     ax.set_ylabel('False Positive Rate')
     ax.set_xlabel('True Positive Rate')
-    ax.legend(loc='lower right')
+
+    auc_list = [value for key,value in ROC_dict.items()]
+    handles, labels = plt.gca().get_legend_handles_labels()
+    order = np.argsort(auc_list)
+    ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc='upper left',ncol=2)
+
 
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
@@ -116,7 +120,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir,results_dict):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.close()
 
-    return results_dict
+    return ROC_dict
 
 def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     """
@@ -199,8 +203,8 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
         hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
-        ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4,ms=6)
-        ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4,ms=6)
+        ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4,ms=8,elinewidth=3)
+        ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4,ms=8,elinewidth=3)
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
         ax.set_ylabel("Response (Reco/Gen)")
@@ -286,8 +290,8 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
         hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
-        ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4,ms=6)
-        ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4,ms=6)
+        ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4,ms=8,elinewidth=3)
+        ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4,ms=8,elinewidth=3)
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
         ax.set_ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})/p_T^{Gen}}$")
@@ -327,8 +331,8 @@ def basic(model_dir):
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
-    results_dict = dict.fromkeys(class_labels, {"ROC_AUC":0})
-
+    ROC_dict = {class_label : 0 for class_label in class_labels} 
+    
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
@@ -344,7 +348,7 @@ def basic(model_dir):
     pt_ratio = model_outputs[1].flatten()
 
     #Plot ROC curves
-    results_dict = ROC(y_pred, y_test, class_labels, plot_dir,results_dict)
+    ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
 
     #Generate all possible pairs of classes
     for i in class_labels.keys():
@@ -365,4 +369,4 @@ def basic(model_dir):
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
-    return results_dict
+    return ROC_dict

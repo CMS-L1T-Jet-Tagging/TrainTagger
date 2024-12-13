@@ -5,7 +5,7 @@ import os, shutil, json
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.firmware.hls4ml_convert import convert
 import tagger.train.models
-import tagger.plot.common
+import tagger.plot.common as common
 
 #Third parties
 import numpy as np

@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.pyplot import cm
 import mplhep as hep
+from tensorflow.keras.utils import plot_model
 plt.style.use(hep.style.ROOT)
 
 #Plotting default config
@@ -323,8 +324,8 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
         plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
 
     return
-# <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 
+# <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 def basic(model_dir):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
@@ -344,6 +345,10 @@ def basic(model_dir):
     
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5")
+
+    # Generate a plot of the model
+    plot_model(model, to_file=f'{model_dir}/model/diagram.png', show_shapes=True, show_layer_names=True)
+
     model_outputs = model.predict(X_test)
 
     #Get classification outputs

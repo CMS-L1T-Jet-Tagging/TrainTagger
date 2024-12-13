@@ -317,8 +317,72 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
         plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
 
     return
-# <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 
+def shapPlot(shap_values, feature_names, class_names):
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    
+    feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
+    num_features = (shap_values[0].shape[1])
+    feature_inds = feature_order
+    y_pos = np.arange(len(feature_inds))
+    left_pos = np.zeros(len(feature_inds))
+
+    axis_color="#333333"
+
+    class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
+    colormap = cm.get_cmap('Set1', len(class_names))  # Use 'tab10' with enough colors
+
+    for i, ind in enumerate(class_inds):
+        global_shap_values = np.abs(shap_values[ind]).mean(0)
+        label = style.CLASS_LABEL_STYLE[class_names[ind]]
+        ax.barh(y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',label=label,color=colormap(class_inds[i]))
+        left_pos += global_shap_values[feature_inds]
+
+    #ax.set_yticklabels([style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_inds])
+    ax.legend(loc='lower right',fontsize=30)
+
+    ax.xaxis.set_ticks_position('bottom')
+    ax.xaxis.set_ticks_position('none')
+    ax.yaxis.set_ticks_position('none')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.tick_params(color=axis_color, labelcolor=axis_color)
+    ax.set_yticks(range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order],fontsize=30)
+    ax.set_xlabel("mean (shapley value) - (average impact on model output magnitude)",fontsize=30)
+    plt.tight_layout()
+
+def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
+    
+    labels = list(class_labels.keys())
+    model2 = tf.keras.Model(model.input, model.output[0])
+    model3 = tf.keras.Model(model.input, model.output[1])
+
+    for explainer, name  in [(shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"), ]:
+        print("... {0}: explainer.shap_values(X)".format(name))
+        shap_values = explainer.shap_values(X_test[:1000])
+        new = np.sum(shap_values, axis = 2)
+        print("... shap summary_plot classification")
+        plt.clf()
+
+        new = np.transpose(new, (2, 0, 1))
+        shapPlot(new, input_vars, labels)
+        plt.savefig(plot_dir+"/shap_summary_class.pdf")
+        plt.savefig(plot_dir+"/shap_summary_class.png")
+
+    for explainer, name  in [(shap.GradientExplainer(model3, X_test[:1000]), "GradientExplainer"), ]:
+        print("... {0}: explainer.shap_values(X)".format(name))
+        shap_values = explainer.shap_values(X_test[:1000])
+        new = np.sum(shap_values, axis = 2)
+        print("... shap summary_plot regression")
+        plt.clf()
+        labels = ["Regression"]
+        new = np.transpose(new, (2, 0, 1))
+        shapPlot(new, input_vars, labels)
+        plt.savefig(plot_dir+"/shap_summary_reg.pdf")
+        plt.savefig(plot_dir+"/shap_summary_reg.png")
+
+# <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 def basic(model_dir):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
@@ -346,7 +410,7 @@ def basic(model_dir):
     #Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1].flatten()
-
+    '''
     #Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
 
@@ -368,5 +432,8 @@ def basic(model_dir):
     
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    '''
+    #Plot the shaply feature importance
+    plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 
     return ROC_dict

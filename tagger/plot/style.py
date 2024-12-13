@@ -4,13 +4,13 @@ from matplotlib.pyplot import cm
 import mplhep as hep
 
 colours = ["black","red","orange","green", "blue"]
-linestyles = ["-","--","dotted",(0, (3, 5, 1, 5)),(0, (3, 5, 1,1,1,5,)),(0, (3, 10, 1, 10)),(0, (3, 10, 1, 10, 1, 10))]
+LINESTYLES = ["-","--","dotted",(0, (3, 5, 1, 5)),(0, (3, 5, 1,1,1,5,)),(0, (3, 10, 1, 10)),(0, (3, 10, 1, 10, 1, 10))]
 
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-SMALL_SIZE = 20
-MEDIUM_SIZE = 25
-BIGGER_SIZE = 35
+SMALL_SIZE = 30
+MEDIUM_SIZE = 35
+BIGGER_SIZE = 40
 
 LEGEND_WIDTH = 20
 LINEWIDTH = 3
@@ -18,16 +18,20 @@ MARKERSIZE = 20
 
 FIGURE_SIZE = (17,17)
 
-CMSHEADER_LEFT = "Phase-2 Simulation Preliminary"
+CMSHEADER_LEFT = "Phase 2 Simulation Preliminary"
 CMSHEADER_RIGHT = "14 TeV, 200 PU"
+
+CLASS_LABEL_STYLE = {'b':'b','charm':'charm','light':'light','gluon':'gluon','taum':'$\\tau_{h}^{-}$','taup':'$\\tau_{h}^{+}$','electron':'Electron','muon':'Muon','Regression':'Regression'}
+INPUT_FEATURE_STYLE = {'pt':'$p_T$','pt_rel':'relative $p_T$', 'pt_log':'$log(p_T)$','deta':'$\\Delta\\eta$','dphi':'$\\Delta\\phi$',
+                       'mass':'mass', 'isPhoton':'PID: photon', 'isElectronPlus':'PID: electron +', 'isElectronMinus':'PID: electron -',
+                       'isMuonPlus':'PID: muon +', 'isMuonMinus':'PID: muon -', 'isNeutralHadron':'PID: hadron neutral',
+                       'isChargedHadronPlus':'PID: hadron +','isChargedHadronMinus':'PID: hadron -', 'z0':'$z_0$', 'dxy':'$d_{xy}$'}
 
 def set_style():
     # Setup plotting to CMS style
     hep.cms.label()
     hep.cms.text("Simulation")
     plt.style.use(hep.style.CMS)
-
-
 
     plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
     plt.rc('axes', titlesize=BIGGER_SIZE)    # fontsize of the axes title

@@ -35,11 +35,11 @@ def shapPlot(shap_values, feature_names, class_names):
 
     for i, ind in enumerate(class_inds):
         global_shap_values = np.abs(shap_values[ind]).mean(0)
-        label = class_names[ind]
+        label = style.CLASS_LABEL_STYLE[class_names[ind]]
         ax.barh(y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',label=label,color=colormap(class_inds[i]))
         left_pos += global_shap_values[feature_inds]
 
-    ax.set_yticklabels([feature_names[i] for i in feature_inds])
+    #ax.set_yticklabels([style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_inds])
     ax.legend(loc='lower right',fontsize=30)
 
     ax.xaxis.set_ticks_position('bottom')
@@ -49,7 +49,7 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.spines['top'].set_visible(False)
     ax.spines['left'].set_visible(False)
     ax.tick_params(color=axis_color, labelcolor=axis_color)
-    ax.set_yticks(range(len(feature_order)), [feature_names[i] for i in feature_order],fontsize=30)
+    ax.set_yticks(range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order],fontsize=30)
     ax.set_xlabel("mean (shapley value) - (average impact on model output magnitude)",fontsize=30)
     plt.tight_layout()
 

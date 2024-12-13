@@ -1,12 +1,15 @@
 import matplotlib.pyplot as plt
 
 def plot_ratio(all_events, selected_events, plot=False):
-    fig = plt.figure(figsize=(10, 12))
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     _, eff = selected_events.plot_ratio(all_events,
                                               rp_num_label="Selected events", rp_denom_label=r"All Taus",
                                               rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")
     
-    if plot: plt.savefig('plots/HH_eff_test.pdf', bbox_inches='tight')
+    if plot:
+        plt.savefig('plots/HH_eff_test.pdf', bbox_inches='tight')
+        plt.savefig('plots/HH_eff_test.png', bbox_inches='tight')
 
     plt.show(block=False)
     return eff

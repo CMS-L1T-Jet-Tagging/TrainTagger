@@ -5,7 +5,7 @@ import os, shutil, json
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.firmware.hls4ml_convert import convert
 import tagger.train.models
-from tagger.plot.makeEmulationPlot import plot_2d
+from tagger.plot.common import plot_2d
 
 #Third parties
 import numpy as np
@@ -41,6 +41,7 @@ def doPlots(model,outputdir,inputdir):
         max_x = max(np.amax(y_hls[:,i]), np.amax(y_class[:,i]))
         figure = plot_2d(np.array(y_class[:,i]), np.array(y_hls[:,i]) ,(min_x,max_x),(min_x,max_x),"Tensorflow","hls4ml",label+" score")
         plt.savefig("%s/%s_score_2D.png" % (outputdir,label))
+        plt.savefig("%s/%s_score_2D.pdf" % (outputdir,label))
 
     plt.clf()
     figure = plot_2d(y_ptreg[:,0] ,y_ptreg_hls[:,0],
@@ -48,6 +49,7 @@ def doPlots(model,outputdir,inputdir):
                      ( min(np.amin(y_ptreg_hls), np.amin(y_ptreg)),max(np.amax(y_ptreg_hls), np.amax(y_ptreg))),
                      "Tensorflow","hls4ml","Regression score")
     plt.savefig("%s/%s_score_2D.png" % (outputdir,"Regression"))
+    plt.savefig("%s/%s_score_2D.pdf" % (outputdir,"Regression"))
     plt.close()
     
     wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model, hls_model=hls_model, X=X_test)
@@ -61,15 +63,15 @@ def doPlots(model,outputdir,inputdir):
 
     for layer in hls4ml_trace.keys():
         print ("Doing profiling 2d for layer", layer)
-        fig,ax = plt.subplots(1,1,figsize=(18,15))
-        hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
         min_x = min(np.amin(hls4ml_trace[layer]), np.amin(keras_trace[layer]))
         max_x = max(np.amax(hls4ml_trace[layer]), np.amax(keras_trace[layer]))
-        hist2d = ax.hist2d(hls4ml_trace[layer].flatten(), keras_trace[layer].flatten(), bins=50, range=((min_x,max_x),(min_x,max_x)), norm=matplotlib.colors.LogNorm(),cmap='jet')    
+        plot_2d(hls4ml_trace[layer].flatten() ,keras_trace[layer].flatten(),
+                     (min_x,max_x),
+                     ( min_x,max_x),
+                     "hls4ml {}".format(layer),"Tensorflow  {}".format(layer),layer +" agreement")
         plt.plot([min_x, max_x], [min_x, max_x], c="gray")
-        ax.set_xlabel("hls4ml {}".format(layer), horizontalalignment='right', x=1.0)
-        ax.set_ylabel("Tensorflow  {}".format(layer), horizontalalignment='right', y=1.0)
         plt.savefig(f"{outputdir}/profile_2d_{layer}.png")
+        plt.savefig(f"{outputdir}/profile_2d_{layer}.pdf")
         plt.close()
 
 

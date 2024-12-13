@@ -45,7 +45,8 @@ def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
     return idx_list    
 
 def plot_ratio(all_events, selected_events, plot=False):
-    fig = plt.figure(figsize=(10, 12))
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     _, eff = selected_events.plot_ratio(all_events,
                                         rp_num_label="Selected events", rp_denom_label=r"All",
                                         rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")
@@ -60,12 +61,12 @@ def get_bar_patch_data(artists):
     return x_data, y_data, err_data
 
 def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,title):
-    fig,ax = plt.subplots(1,1,figsize=(18,15))
-    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     
     hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap=colormap)
-    ax.set_xlabel(name_one, horizontalalignment='right', x=1.0)
-    ax.set_ylabel(name_two, horizontalalignment='right', y=1.0)
+    ax.set_xlabel(name_one)
+    ax.set_ylabel(name_two)
     cbar = plt.colorbar(hist2d[3] , ax=ax)
     cbar.set_label('# Tracks')
     plt.suptitle(title)
@@ -74,8 +75,8 @@ def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,titl
 
 def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
     plt.clf()
-    fig,ax = plt.subplots(1,1,figsize=(18,15))
-    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     for i,histo in enumerate(variable):
 
         ax.hist(histo,bins=50,range=range,histtype="step",
@@ -94,8 +95,8 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
 
 def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"],labels = ["CMSSW Emulation", "Tensorflow", "hls4ml"],title="None"):
     plt.clf()
-    fig,ax = plt.subplots(1,1,figsize=(18,15))
-    hep.cms.label(llabel="Phase-2 Simulation Preliminary",rlabel="14 TeV, 200 PU",ax=ax)
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
 
     for i,key in enumerate(keys):
         tpr = modelsAndNames[key]["ROCs"]["tpr"]

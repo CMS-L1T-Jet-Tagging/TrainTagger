@@ -13,21 +13,24 @@ from tagger.plot.style import *
 
 import os
 from .common import PT_BINS
+from .common import plot_histo
 from scipy.stats import norm
 
 set_style()
 
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
-    plt.plot(history.history['loss'], label='Train Loss', linewidth=3)
-    plt.plot(history.history['val_loss'], label='Validation Loss',linewidth=3)
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(loc='upper right')
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    ax.plot(history.history['loss'], label='Train Loss', linewidth=3)
+    ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=3)
+    ax.set_ylabel('Loss')
+    ax.set_xlabel('Epoch')
+    ax.legend(loc='upper right')
 
     save_path = os.path.join(plot_dir, "loss_history")
-    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
 
 def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     """
@@ -58,17 +61,16 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     roc_auc = auc(fpr, tpr)
 
     # Plot the ROC curve
-    plt.figure(figsize=(10, 10))
-    plt.plot(tpr, fpr, label=f'{class_pair[0]} vs {class_pair[1]} (AUC = {roc_auc:.2f})',
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    ax.plot(tpr, fpr, label=f'{class_pair[0]} vs {class_pair[1]} (AUC = {roc_auc:.2f})',
              color='blue', linewidth=5)
-    plt.grid(True)
-    plt.ylabel('False Positive Rate')
-    plt.xlabel('True Positive Rate')
-    hep.cms.text("Phase 2 Simulation")
-    hep.cms.lumitext("PU 200 (14 TeV)")
-    plt.legend(loc='lower right')
-    plt.yscale('log')
-    plt.ylim([1e-3, 1.1])
+    ax.grid(True)
+    ax.set_ylabel('False Positive Rate')
+    ax.set_xlabel('True Positive Rate')
+    ax.legend(loc='lower right')
+    ax.set_yscale('log')
+    ax.set_ylim([1e-3, 1.1])
 
     # Save the plot
     save_path = os.path.join(save_dir, f"ROC_{class_pair[0]}_vs_{class_pair[1]}")
@@ -81,7 +83,8 @@ def ROC(y_pred, y_test, class_labels, plot_dir,results_dict):
     colormap = cm.get_cmap('Set1', len(class_labels))  # Use 'tab10' with enough colors
 
     # Create a plot for ROC curves
-    plt.figure(figsize=(16, 16))
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     for i, class_label in enumerate(class_labels):
 
         # Get true labels and predicted probabilities for the current class
@@ -95,19 +98,17 @@ def ROC(y_pred, y_test, class_labels, plot_dir,results_dict):
         results_dict[class_label]['ROC_AUC'] = roc_auc
 
         # Plot the ROC curve for the current class
-        plt.plot(tpr, fpr, label=f'{class_label} (AUC = {roc_auc:.2f})',
+        ax.plot(tpr, fpr, label=f'{class_label} (AUC = {roc_auc:.2f})',
                  color=colormap(i), linewidth=5)
 
     # Plot formatting
-    plt.grid(True)
-    plt.ylabel('False Positive Rate')
-    plt.xlabel('True Positive Rate')
-    hep.cms.text("Phase 2 Simulation")
-    hep.cms.lumitext("PU 200 (14 TeV)")
-    plt.legend(loc='lower right')
+    ax.grid(True)
+    ax.set_ylabel('False Positive Rate')
+    ax.set_xlabel('True Positive Rate')
+    ax.legend(loc='lower right')
 
-    plt.yscale('log')
-    plt.ylim([1e-3, 1.1])
+    ax.set_yscale('log')
+    ax.set_ylim([1e-3, 1.1])
 
     # Save the plot
     save_path = os.path.join(plot_dir, "basic_ROC")
@@ -122,14 +123,8 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     Plot the histograms of truth pt, reconstructed (uncorrected) pt, and corrected pt
     """
 
-    plt.figure(figsize=(16, 16))
-    plt.hist(truth_pt_test, bins = 20, range = (0,300), density=True, histtype = 'step', label = 'Truth', linewidth=5)
-    plt.hist(reco_pt_test, bins = 20, range = (0,300), density=True, histtype = 'step', label = 'Reconstructed', linewidth=5)
-    plt.hist(np.multiply(reco_pt_test,pt_ratio), bins = 20, range = (0,300), density=True, histtype = 'step', label = 'NN Predicted', linewidth=5)
-
-    plt.xlabel(r'$p_T$ [GeV]')
-    plt.ylabel('a.u.')
-    plt.legend()  
+    plot_histo([truth_pt_test,reco_pt_test,np.multiply(reco_pt_test,pt_ratio)],
+                ['Truth','Reconstructed','NN Predicted'],'',r'$p_T$ [GeV]','a.u',range=(0,300))
     save_path = os.path.join(plot_dir, "pt_hist")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
@@ -143,13 +138,11 @@ def plot_input_vars(X_test, input_vars, plot_dir):
     os.makedirs(save_dir, exist_ok=True)
 
     for i in range(len(input_vars)):
-        plt.figure(figsize=(16, 16))
-        plt.hist(X_test[:,:,i].flatten(), bins=50, density=True, label=input_vars[i])
-        plt.ylabel('a.u.')
-        plt.legend()  
-
+        plot_histo([X_test[:,:,i].flatten()],
+                [input_vars[i]],'',input_vars[i],'a.u',range=(np.min(X_test[:,:,i]),np.max(X_test[:,:,i])))
         save_path = os.path.join(save_dir, input_vars[i])
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
         plt.close()
 
 def get_response(truth_pt, reco_pt, pt_ratio):
@@ -204,13 +197,15 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
     def plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor, plot_name):
 
         # Plot the response
-        plt.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4)
-        plt.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4)
+        fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+        hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+        ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4,ms=6)
+        ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4,ms=6)
 
-        plt.xlabel(r"Jet $p_T^{Gen}$ [GeV]")
-        plt.ylabel("Response (Reco/Gen)")
-        plt.legend()
-        plt.grid()
+        ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
+        ax.set_ylabel("Response (Reco/Gen)")
+        ax.legend()
+        ax.grid()
 
         # Save the plot
         save_path = os.path.join(save_dir, plot_name)
@@ -289,13 +284,15 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
     def plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor, plot_name):
 
         # Plot the response
-        plt.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4)
-        plt.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4)
+        fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+        hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+        ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4,ms=6)
+        ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4,ms=6)
 
-        plt.xlabel(r"Jet $p_T^{Gen}$ [GeV]")
-        plt.ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})/p_T^{Gen}}$")
-        plt.legend()
-        plt.grid(True)
+        ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
+        ax.set_ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})/p_T^{Gen}}$")
+        ax.legend()
+        ax.grid(True)
 
         # Save the plot
         save_path = os.path.join(save_dir, plot_name)

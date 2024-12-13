@@ -40,7 +40,8 @@ def eta_region_selection(eta_array, eta_region):
 
 def plot_ratio(all_tau, selected_tau, num_label = r"Selected CMSSW Emulator Taus", figname='plots/cmssw_eff.pdf'):
 
-    fig = plt.figure(figsize=(10, 12))
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     _, eff = selected_tau.plot_ratio(all_tau,
                                               rp_num_label=num_label, rp_denom_label=r"All Taus",
                                               rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")
@@ -136,24 +137,24 @@ def eff_pt_tau(model, signal_path, uncorrect_pt=False, eta_region='barrel', tree
     nn_x, nn_y, nn_err = get_bar_patch_data(eff_nn)
     
     #Plot the efficiencies together
-    fig = plt.figure()
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
-    plt.plot([], [], 'none', label=eta_label)
-    plt.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=color_cycle[0], linewidth=2, label=r'SeededCone PuppiJet (L1 $p_T$ > {})'.format(model_pt_WP))
-    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator (L1 $p_T$ > {}, NN > {})'.format(WPs_CMSSW['tau_l1_pt'], WPs_CMSSW['tau']))
-    plt.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=color_cycle[2], linewidth=2, label=r'SeededCone Tau Tagger (L1 $p_T$ > {}, NN > {})'.format(model_pt_WP, model_NN_WP))
+    ax.plot([], [], 'none', label=eta_label)
+    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=color_cycle[0], linewidth=2, label=r'SeededCone PuppiJet (L1 $p_T$ > {})'.format(model_pt_WP))
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator (L1 $p_T$ > {}, NN > {})'.format(WPs_CMSSW['tau_l1_pt'], WPs_CMSSW['tau']))
+    ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=color_cycle[2], linewidth=2, label=r'SeededCone Tau Tagger (L1 $p_T$ > {}, NN > {})'.format(model_pt_WP, model_NN_WP))
     
     #Plot other labels
-    plt.hlines(1, 0, 150, linestyles='dashed', color='black', linewidth=3)
-    plt.ylim([0., 1.1])
-    plt.xlim([0, 150])
-    hep.cms.text("Phase 2 Simulation")
-    hep.cms.lumitext("PU 200 (14 TeV)")
-    plt.xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
-    plt.ylabel(r"$\epsilon$(Di-$\tau_h$ trigger rate at 28 kHz)")
-    plt.legend(loc='lower right', fontsize=15)
+    ax.hlines(1, 0, 150, linestyles='dashed', color='black', linewidth=3)
+    ax.set_ylim([0., 1.1])
+    ax.set_xlim([0, 150])
+    ax.set_xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
+    ax.set_ylabel(r"$\epsilon$(Di-$\tau_h$ trigger rate at 28 kHz)")
+    ax.legend(loc='lower right', fontsize=15)
     figname = f'tau_eff_all_{eta_region}_ptUncorrected' if uncorrect_pt else f'tau_eff_all_{eta_region}_ptCorrected'
     plt.savefig(f'plots/{figname}.pdf')
+    plt.savefig(f'plots/{figname}.png')
     plt.show(block=False)
 
 def eff_sc_and_tau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000):
@@ -209,25 +210,25 @@ def eff_sc_and_tau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets
     cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
     
     #Plot the efficiencies together
-    fig = plt.figure()
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
     if eta_region != 'none':
-        plt.plot([], [], 'none', label=eta_label)
+        ax.plot([], [], 'none', label=eta_label)
 
-    plt.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=color_cycle[0], linewidth=2, label=r'SeededCone CMSSW Emulator')
-    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator')
+    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=color_cycle[0], linewidth=2, label=r'SeededCone CMSSW Emulator')
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[1], fmt='o', linewidth=2, label=r'Tau CMSSW Emulator')
     
     #Plot other labels
-    plt.hlines(1, 0, 150, linestyles='dashed', color='black', linewidth=3)
-    plt.ylim([0., 1.1])
-    plt.xlim([0, 150])
-    hep.cms.text("Phase 2 Simulation")
-    hep.cms.lumitext("PU 200 (14 TeV)")
-    plt.xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
-    plt.ylabel(r"$\epsilon$ (VBF H $\rightarrow$ $\tau\tau$)")
-    plt.legend(loc='lower right', fontsize=15)
+    ax.hlines(1, 0, 150, linestyles='dashed', color='black', linewidth=3)
+    ax.set_ylim([0., 1.1])
+    ax.set_xlim([0, 150])
+    ax.set_xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
+    ax.set_ylabel(r"$\epsilon$ (VBF H $\rightarrow$ $\tau\tau$)")
+    ax.legend(loc='lower right', fontsize=15)
     figname = f'sc_and_tau_eff_{eta_region}'
     plt.savefig(f'plots/{figname}.pdf')
+    plt.savefig(f'plots/{figname}.png')
     plt.show(block=False)
 
 

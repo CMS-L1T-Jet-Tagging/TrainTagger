@@ -20,19 +20,12 @@ import hist
 #Import the calculated working points
 from official_WPs import WPs, WPs_CMSSW
 
-#Plotting
 import matplotlib.pyplot as plt
+import matplotlib
 import mplhep as hep
-plt.style.use(hep.style.ROOT)
-import matplotlib.pylab as pylab
-params = {'legend.fontsize': 'medium',
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'medium',
-         'ytick.labelsize':'medium'}
-pylab.rcParams.update(params)
-color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+from tagger.plot.style import *
 
+set_style()
 
 def delta_r(eta1, phi1, eta2, phi2):
     """
@@ -52,15 +45,16 @@ def ratio_2D(nume, deno):
 
 def plot_2D_ratio(ratio, pt_edges, figname="VBF_eff_CMSSW"):
     extent = [pt_edges[0], pt_edges[-1], pt_edges[0], pt_edges[-1]]
-    plt.imshow(ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
-    plt.colorbar()
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    ax.imshow(ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
+    ax.colorbar()
 
-    hep.cms.text("")
-    hep.cms.lumitext("PU 200 (14 TeV)")
 
-    plt.xlabel(r"Gen. $p_T^1$ [GeV]")
-    plt.ylabel(r"Gen. $p_T^2$ [GeV]")
+    ax.set_xlabel(r"Gen. $p_T^1$ [GeV]")
+    ax.set_ylabel(r"Gen. $p_T^2$ [GeV]")
     plt.savefig(f'plots/{figname}.pdf', bbox_inches='tight')
+    plt.savefig(f'plots/{figname}.png', bbox_inches='tight')
     plt.show(block=False)
 
 def VBF_eff_CMSSW(model, tau_eff_filepath,  tree='jetntuple/Jets',  correct_pt=True, input_tag='ext7', n_entries=100000):

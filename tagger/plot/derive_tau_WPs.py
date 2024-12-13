@@ -51,7 +51,8 @@ def find_rate(rate_list, target_rate = 28):
 
 def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True, mult=False):
     
-    fig, ax = plt.subplots()
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
                     cmap='Spectral_r',
                     linewidths=0,
@@ -60,15 +61,15 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True, mu
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label(r'Di-$\tau_h$ rate [kHZ]')
 
-    plt.ylabel(r"Min reco $p_T$ [GeV]")
-    plt.xlabel(r"Min NN Score")
+    ax.set_ylabel(r"Min reco $p_T$ [GeV]")
+    ax.set_xlabel(r"Min NN Score")
     
     if mult:
-        plt.xlim([0,0.06])
-        plt.ylim([10,100])
+        ax.set_xlim([0,0.06])
+        ax.set_ylim([10,100])
     else:
-        plt.xlim([0,0.6])
-        plt.ylim([10,100])
+        ax.set_xlim([0,0.6])
+        ax.set_ylim([10,100])
     
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate)
@@ -81,20 +82,21 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True, mu
         print("------")
         
         if legend_count == 0:
-            plt.scatter(nn_list[i], pt_list[i], s=600, marker='*',
+            ax.scatter(nn_list[i], pt_list[i], s=600, marker='*',
                         color ='firebrick', label = r"${} \pm 1$ kHz".format(target_rate))
         else:
-            plt.scatter(nn_list[i], pt_list[i], s=600, marker='*',
+            ax.scatter(nn_list[i], pt_list[i], s=600, marker='*',
                         color ='firebrick')
             
         legend_count += 1
     
-    plt.legend(loc='upper right')
+    ax.legend(loc='upper right')
     if mult:
-        plot_name = 'tau_rate_scan_ptcorrected_mult.pdf' if correct_pt else 'tau_rate_scan_ptuncorrected_mult.pdf' 
+        plot_name = 'tau_rate_scan_ptcorrected_mult' if correct_pt else 'tau_rate_scan_ptuncorrected_mult' 
     else:
-        plot_name = 'tau_rate_scan_ptcorrected.pdf' if correct_pt else 'tau_rate_scan_ptuncorrected.pdf' 
-    plt.savefig(f'plots/{plot_name}', bbox_inches='tight')
+        plot_name = 'tau_rate_scan_ptcorrected' if correct_pt else 'tau_rate_scan_ptuncorrected' 
+    plt.savefig(f'plots/{plot_name}'+'.png', bbox_inches='tight')
+    plt.savefig(f'plots/{plot_name}'+'.pdf', bbox_inches='tight')
 
 def derive_tau_rate(model, minbias_path, mult=True, input_tag='ext7', tree='jetntuple/Jets', n_entries=500000, correct_pt=True):
     '''

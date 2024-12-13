@@ -91,28 +91,29 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, eta_cut=True, tre
         uncertainty_cmssw.append(np.sqrt(n_pass_cmssw) / n_event * minbias_rate)
         uncertainty_model.append(np.sqrt(n_pass_model) / n_event * minbias_rate)
 
-    plt.plot(pt_cuts, minbias_rate_no_nn, label=r'No ID/$p_T$ correction', linewidth = 5)
-    plt.plot(pt_cuts, minbias_rate_cmssw, label=r'CMSSW PuppiTau Emulator', linewidth = 5)
-    plt.plot(pt_cuts, minbias_rate_model, label=r'SeedCone Tau', linewidth = 5)
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    ax.plot(pt_cuts, minbias_rate_no_nn, label=r'No ID/$p_T$ correction', linewidth = 5)
+    ax.plot(pt_cuts, minbias_rate_cmssw, label=r'CMSSW PuppiTau Emulator', linewidth = 5)
+    ax.plot(pt_cuts, minbias_rate_model, label=r'SeedCone Tau', linewidth = 5)
     
     # Add uncertainty bands
-    plt.fill_between(pt_cuts, np.array(minbias_rate_no_nn) - np.array(uncertainty_no_nn),
+    ax.fill_between(pt_cuts, np.array(minbias_rate_no_nn) - np.array(uncertainty_no_nn),
                      np.array(minbias_rate_no_nn) + np.array(uncertainty_no_nn), alpha=0.3)
-    plt.fill_between(pt_cuts, np.array(minbias_rate_cmssw) - np.array(uncertainty_cmssw),
+    ax.fill_between(pt_cuts, np.array(minbias_rate_cmssw) - np.array(uncertainty_cmssw),
                      np.array(minbias_rate_cmssw) + np.array(uncertainty_cmssw), alpha=0.3)
-    plt.fill_between(pt_cuts, np.array(minbias_rate_model) - np.array(uncertainty_model),
+    ax.fill_between(pt_cuts, np.array(minbias_rate_model) - np.array(uncertainty_model),
                      np.array(minbias_rate_model) + np.array(uncertainty_model), alpha=0.3)
     
-    hep.cms.text("Phase 2 Simulation")
-    hep.cms.lumitext("PU 200 (14 TeV)")
-    plt.yscale('log')
-    plt.ylabel(r"$\tau_h$ trigger rate [kHz]")
-    plt.xlabel(r"L1 $p_T$ [GeV]")
-    plt.legend(loc = 'upper right',fontsize = 15)
+    ax.set_yscale('log')
+    ax.set_ylabel(r"$\tau_h$ trigger rate [kHz]")
+    ax.set_xlabel(r"L1 $p_T$ [GeV]")
+    ax.legend(loc = 'upper right',fontsize = 15)
 
     if eta_cut: figname='bkg_rate_tau_etaCut_ptUncorrected' if uncorrect_pt else 'bkg_rate_tau_etaCut_ptCorrected'
     else: figname='bkg_rate_tau_ptUncorrected' if uncorrect_pt else 'bkg_rate_tau_ptCorrected'
     plt.savefig(f'plots/{figname}.pdf', bbox_inches='tight')
+    plt.savefig(f'plots/{figname}.png', bbox_inches='tight')
 
 
 if __name__ == "__main__":

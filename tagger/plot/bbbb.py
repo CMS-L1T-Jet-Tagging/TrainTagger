@@ -43,7 +43,8 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
     os.makedirs(plot_dir, exist_ok=True)
     
-    fig, ax = plt.subplots()
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     im = ax.scatter(nn_list, ht_list, c=rate_list, s=500, marker='s',
                     cmap='Spectral_r',
                     linewidths=0,
@@ -52,11 +53,11 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label(r'4-b rate [kHZ]')
 
-    plt.ylabel(r"HT [GeV]")
-    plt.xlabel(r"$\sum_{4~leading~jets}$ b scores")
+    ax.set_ylabel(r"HT [GeV]")
+    ax.set_xlabel(r"$\sum_{4~leading~jets}$ b scores")
     
-    plt.xlim([0,2.5])
-    plt.ylim([10,500])
+    ax.set_xlim([0,2.5])
+    ax.set_ylim([10,500])
 
     #plus, minus range
     RateRange = 0.5
@@ -79,12 +80,12 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     with open(os.path.join(plot_dir, "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
         
-    plt.plot(target_rate_NN, target_rate_HT,
+    ax.plot(target_rate_NN, target_rate_HT,
                 linewidth=5,
                 color ='firebrick',
                 label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
     
-    plt.legend(loc='upper right')
+    ax.legend(loc='upper right')
     plt.savefig(f"{plot_dir}/bbbb_rate.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate.png", bbox_inches='tight')
 
@@ -232,20 +233,19 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
     model_x, model_y, model_err = get_bar_patch_data(eff_model)
 
     #Now plot all
-    fig = plt.figure()
-    plt.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=2, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
-    plt.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=2, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
+    ax.errorbar(model_x, model_y, yerr=model_err, c=color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
 
     #Plot other labels
-    plt.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=3)
-    plt.grid(True)
-    plt.ylim([0., 1.1])
-    plt.xlim([0, 800])
-    hep.cms.text("Phase 2 Simulation")
-    hep.cms.lumitext("PU 200 (14 TeV)")
-    plt.xlabel(r"$HT^{gen}$ [GeV]")
-    plt.ylabel(r"$\epsilon$(HH $\to$ 4b trigger rate at 14 kHz)")
-    plt.legend(loc='lower right', fontsize=15)
+    ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
+    ax.grid(True)
+    ax.set_ylim([0., 1.1])
+    ax.set_xlim([0, 800])
+    ax.set_xlabel(r"$HT^{gen}$ [GeV]")
+    ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b trigger rate at 14 kHz)")
+    plt.legend(loc='lower right')
 
     #Save plot
     plot_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT")

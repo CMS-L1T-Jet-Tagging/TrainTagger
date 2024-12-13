@@ -60,7 +60,8 @@ def find_rate(rate_list, target_rate = 28):
 
 def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
     
-    fig, ax = plt.subplots()
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
+    hep.cms.label(llabel=CMSHEADER_LEFT,rlabel=CMSHEADER_RIGHT,ax=ax)
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
                     cmap='Spectral_r',
                     linewidths=0,
@@ -69,11 +70,11 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label(r'Di-$\tau_h$ rate [kHZ]')
 
-    plt.ylabel(r"Min reco $p_T$ [GeV]")
-    plt.xlabel(r"Tau Topology Score")
+    ax.set_ylabel(r"Min reco $p_T$ [GeV]")
+    ax.set_xlabel(r"Tau Topology Score")
 
-    plt.xlim([0,0.6])
-    plt.ylim([10,100])
+    ax.set_xlim([0,0.6])
+    ax.set_ylim([10,100])
     
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate)
@@ -86,18 +87,19 @@ def plot_rate(rate_list, pt_list, nn_list, target_rate = 28, correct_pt=True):
         print("------")
         
         if legend_count == 0:
-            plt.scatter(nn_list[i], pt_list[i], s=600, marker='*',
+            ax.scatter(nn_list[i], pt_list[i], s=600, marker='*',
                         color ='firebrick', label = r"${} \pm 1.5$ kHz".format(target_rate))
         else:
-            plt.scatter(nn_list[i], pt_list[i], s=600, marker='*',
+            ax.scatter(nn_list[i], pt_list[i], s=600, marker='*',
                         color ='firebrick')
             
         legend_count += 1
     
-    plt.legend(loc='upper right')
+    ax.legend(loc='upper right')
 
-    plot_name = 'tau_rate_scan_topo_ptcorrected.pdf' if correct_pt else 'tau_rate_scan_topo_ptuncorrected.pdf' 
-    plt.savefig(f'plots/{plot_name}', bbox_inches='tight')
+    plot_name = 'tau_rate_scan_topo_ptcorrected' if correct_pt else 'tau_rate_scan_topo_ptuncorrected' 
+    plt.savefig(f'plots/{plot_name}'+".png", bbox_inches='tight')
+    plt.savefig(f'plots/{plot_name}'+".pdf", bbox_inches='tight')
 
 def group_id_values(event_id, raw_tau_score_sum, *arrays, num_elements = 2):
     '''

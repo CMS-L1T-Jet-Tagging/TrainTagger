@@ -19,6 +19,11 @@ LEGEND_WIDTH = 20
 LINEWIDTH = 3
 MARKERSIZE = 20
 
+FIGURE_SIZE = (17,17)
+
+CMSHEADER_LEFT = "Phase-2 Simulation Preliminary"
+CMSHEADER_RIGHT = "14 TeV, 200 PU"
+
 def set_style():
     # Setup plotting to CMS style
     hep.cms.label()

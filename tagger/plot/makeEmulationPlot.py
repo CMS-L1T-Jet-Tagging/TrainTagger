@@ -5,7 +5,7 @@ import os, shutil, json
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.firmware.hls4ml_convert import convert
 import tagger.train.models
-import tagger.plots.common
+import tagger.plot.common
 
 #Third parties
 import numpy as np
@@ -56,20 +56,24 @@ def doPlots(model,outputdir,inputdir):
 
     figure = common.plot_2d(np.array(modelsAndNames["Y_predict_reg"][:,0]) ,np.array(data['jet_multijetscore_regression']) ,(0,2),(0,2),"Tensorflow","CMSSW Emulation","Jet Regression")
     plt.savefig("%s/jetRegression_2D.png" % outputdir)
+    plt.savefig("%s/jetRegression_2D.pdf" % outputdir)
 
     plt.clf()
     figure = common.plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_multijetscore_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet Regression",'Regression Score','# Jets',range=(0,2))
     plt.savefig("%s/jetRegression_1D.png" % outputdir)
+    plt.savefig("%s/jetRegression_1D.pdf" % outputdir)
 
     for i, label in enumerate(labels):
         plt.close()
         plt.clf()
         figure = common.plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"Jet " + label + " Score",label+' Score','# Jets',range=(0,1))
         plt.savefig("%s/%s_score_1D.png" % (outputdir,label))
+        plt.savefig("%s/%s_score_1D.pdf" % (outputdir,label))
 
         plt.clf()
         figure = common.plot_2d(np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),(0,1),(0,1),"Tensorflow","CMSSW Emulation",label+" score")
         plt.savefig("%s/%s_score_2D.png" % (outputdir,label))
+        plt.savefig("%s/%s_score_2D.pdf" % (outputdir,label))
 
     fpr = {}
     tpr = {}
@@ -119,9 +123,9 @@ def doPlots(model,outputdir,inputdir):
 
     for i, label in enumerate(labels):
         plt.close()
-        plt.figure()
         common.plot_roc(modelsAndNames,label,title=label+" ROC Comparison")
         plt.savefig(outputdir+"/ROC_Emulation_comparison_"+label+".png")
+        plt.savefig(outputdir+"/ROC_Emulation_comparison_"+label+".pdf")
 
     response_reg = jet_pt_cor_reg / data['jet_genmatch_pt']
     response_emu = jet_pt_cor_reg_emu / data['jet_genmatch_pt']
@@ -133,6 +137,7 @@ def doPlots(model,outputdir,inputdir):
                          "hls4ml" + " median: "+str(np.round(np.median(response_hls),3))+" rms: "+str(np.round(rms(response_hls),3)),],
                         "Jet Regression",'Jet Response (reco/gen)','# Jets',range=(0,2))
     plt.savefig(outputdir+"/response_emulation"+".png")
+    plt.savefig(outputdir+"/response_emulation"+".pdf")
     plt.close()
     return
 

@@ -20,7 +20,7 @@ from matplotlib.pyplot import cm
 set_style()
 
 def shapPlot(shap_values, feature_names, class_names):
-    fig,ax = plt.subplots(1,1,figsize=(18,15))
+    fig,ax = plt.subplots(1,1,figsize=FIGURE_SIZE)
     
     feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
     num_features = (shap_values[0].shape[1])

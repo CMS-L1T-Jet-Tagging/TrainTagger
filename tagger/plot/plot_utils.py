@@ -3,7 +3,7 @@ import tagger.plot.style as style
 
 def plot_ratio(all_events, selected_events, plot=False):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     _, eff = selected_events.plot_ratio(all_events,
                                               rp_num_label="Selected events", rp_denom_label=r"All Taus",
                                               rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")

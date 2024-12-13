@@ -41,7 +41,7 @@ def eta_region_selection(eta_array, eta_region):
 def plot_ratio(all_tau, selected_tau, num_label = r"Selected CMSSW Emulator Taus", figname='plots/cmssw_eff.pdf'):
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     _, eff = selected_tau.plot_ratio(all_tau,
                                               rp_num_label=num_label, rp_denom_label=r"All Taus",
                                               rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")
@@ -138,7 +138,7 @@ def eff_pt_tau(model, signal_path, uncorrect_pt=False, eta_region='barrel', tree
     
     #Plot the efficiencies together
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
     ax.plot([], [], 'none', label=eta_label)
     ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[0], linewidth=2, label=r'SeededCone PuppiJet (L1 $p_T$ > {})'.format(model_pt_WP))
@@ -211,7 +211,7 @@ def eff_sc_and_tau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets
     
     #Plot the efficiencies together
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
     if eta_region != 'none':
         ax.plot([], [], 'none', label=eta_label)

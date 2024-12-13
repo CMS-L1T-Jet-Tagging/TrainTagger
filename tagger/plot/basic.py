@@ -1,6 +1,7 @@
 import json
 
 #Third parties
+import shap
 import numpy as np
 from qkeras.utils import load_qmodel
 from sklearn.metrics import roc_curve, auc
@@ -8,7 +9,7 @@ from itertools import combinations
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import mplhep as hep
-
+import tensorflow as tf
 import tagger.plot.style as style
 
 import os
@@ -21,7 +22,7 @@ style.set_style()
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     ax.plot(history.history['loss'], label='Train Loss', linewidth=style.LINEWIDTH)
     ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=style.LINEWIDTH)
     ax.set_ylabel('Loss')
@@ -62,12 +63,12 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
 
     # Plot the ROC curve
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
-    ax.plot(tpr, fpr, label=f'{class_pair[0]} vs {class_pair[1]} (AUC = {roc_auc:.2f})',
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    ax.plot(tpr, fpr, label=f'{style.CLASS_LABEL_STYLE[class_pair[0]]} vs {style.CLASS_LABEL_STYLE[class_pair[1]]} (AUC = {roc_auc:.2f})',
              color='blue', linewidth=5)
     ax.grid(True)
-    ax.set_ylabel('False Positive Rate')
-    ax.set_xlabel('True Positive Rate')
+    ax.set_ylabel('Mistag Rate')
+    ax.set_xlabel('Signal Efficiency')
     ax.legend(loc='lower right')
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
@@ -84,7 +85,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
 
     # Create a plot for ROC curves
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     for i, class_label in enumerate(class_labels):
 
         # Get true labels and predicted probabilities for the current class
@@ -97,18 +98,18 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
 
         ROC_dict[class_label] = roc_auc
         # Plot the ROC curve for the current class
-        ax.plot(tpr, fpr, label=f'{class_label} (AUC = {roc_auc:.2f})',
-                 color=colormap(i), linewidth=5)
+        ax.plot(tpr, fpr, label=f'{style.CLASS_LABEL_STYLE[class_label]} (AUC = {roc_auc:.2f})',
+                 color=colormap(i), linewidth=style.LINEWIDTH)
 
     # Plot formatting
     ax.grid(True)
-    ax.set_ylabel('False Positive Rate')
-    ax.set_xlabel('True Positive Rate')
+    ax.set_ylabel('Mistag Rate')
+    ax.set_xlabel('Signal Efficiency')
 
     auc_list = [value for key,value in ROC_dict.items()]
     handles, labels = plt.gca().get_legend_handles_labels()
     order = np.argsort(auc_list)
-    ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc='upper left',ncol=2)
+    ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc='upper left',ncol=2,fontsize=style.SMALL_SIZE-3)
 
 
     ax.set_yscale('log')
@@ -143,7 +144,7 @@ def plot_input_vars(X_test, input_vars, plot_dir):
 
     for i in range(len(input_vars)):
         plot_histo([X_test[:,:,i].flatten()],
-                [input_vars[i]],'',input_vars[i],'a.u',range=(np.min(X_test[:,:,i]),np.max(X_test[:,:,i])))
+                [style.INPUT_FEATURE_STYLE[input_vars[i]]],'',style.INPUT_FEATURE_STYLE[input_vars[i]],'a.u',range=(np.min(X_test[:,:,i]),np.max(X_test[:,:,i])))
         save_path = os.path.join(save_dir, input_vars[i])
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
         plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
@@ -202,9 +203,9 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
-        ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4,ms=8,elinewidth=3)
-        ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4,ms=8,elinewidth=3)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+        ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {style.CLASS_LABEL_STYLE[flavor]}", capsize=4,ms=8,elinewidth=3)
+        ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {style.CLASS_LABEL_STYLE[flavor]}", capsize=4,ms=8,elinewidth=3)
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
         ax.set_ylabel("Response (Reco/Gen)")
@@ -289,9 +290,9 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
-        ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4,ms=8,elinewidth=3)
-        ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4,ms=8,elinewidth=3)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+        ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(style.CLASS_LABEL_STYLE[flavor]), capsize=4,ms=8,elinewidth=3)
+        ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(style.CLASS_LABEL_STYLE[flavor]), capsize=4,ms=8,elinewidth=3)
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
         ax.set_ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})/p_T^{Gen}}$")
@@ -320,7 +321,6 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
 def shapPlot(shap_values, feature_names, class_names):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    
     feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
     num_features = (shap_values[0].shape[1])
     feature_inds = feature_order
@@ -328,7 +328,6 @@ def shapPlot(shap_values, feature_names, class_names):
     left_pos = np.zeros(len(feature_inds))
 
     axis_color="#333333"
-
     class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
     colormap = cm.get_cmap('Set1', len(class_names))  # Use 'tab10' with enough colors
 
@@ -361,26 +360,25 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
     for explainer, name  in [(shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"), ]:
         print("... {0}: explainer.shap_values(X)".format(name))
         shap_values = explainer.shap_values(X_test[:1000])
-        new = np.sum(shap_values, axis = 2)
+        new = np.sum(shap_values, axis = 1)
         print("... shap summary_plot classification")
         plt.clf()
-
-        new = np.transpose(new, (2, 0, 1))
+        new = np.transpose(new, (2,0,1))
         shapPlot(new, input_vars, labels)
-        plt.savefig(plot_dir+"/shap_summary_class.pdf")
-        plt.savefig(plot_dir+"/shap_summary_class.png")
+        plt.savefig(plot_dir+"/shap_summary_class.pdf",bbox_inches='tight')
+        plt.savefig(plot_dir+"/shap_summary_class.png",bbox_inches='tight')
 
     for explainer, name  in [(shap.GradientExplainer(model3, X_test[:1000]), "GradientExplainer"), ]:
         print("... {0}: explainer.shap_values(X)".format(name))
         shap_values = explainer.shap_values(X_test[:1000])
-        new = np.sum(shap_values, axis = 2)
+        new = np.sum(shap_values, axis = 1)
         print("... shap summary_plot regression")
         plt.clf()
         labels = ["Regression"]
-        new = np.transpose(new, (2, 0, 1))
+        new = np.transpose(new, (2,0,1))
         shapPlot(new, input_vars, labels)
-        plt.savefig(plot_dir+"/shap_summary_reg.pdf")
-        plt.savefig(plot_dir+"/shap_summary_reg.png")
+        plt.savefig(plot_dir+"/shap_summary_reg.pdf",bbox_inches='tight')
+        plt.savefig(plot_dir+"/shap_summary_reg.png",bbox_inches='tight')
 
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 def basic(model_dir):
@@ -410,7 +408,7 @@ def basic(model_dir):
     #Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1].flatten()
-    '''
+    
     #Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
 
@@ -432,7 +430,7 @@ def basic(model_dir):
     
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    '''
+    
     #Plot the shaply feature importance
     plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 

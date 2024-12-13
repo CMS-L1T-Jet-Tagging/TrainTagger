@@ -46,7 +46,7 @@ def ratio_2D(nume, deno):
 def plot_2D_ratio(ratio, pt_edges, figname="VBF_eff_CMSSW"):
     extent = [pt_edges[0], pt_edges[-1], pt_edges[0], pt_edges[-1]]
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     ax.imshow(ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
     ax.colorbar()
 

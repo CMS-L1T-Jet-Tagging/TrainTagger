@@ -92,7 +92,7 @@ def plot_bkg_rate_tau(model, minbias_path, uncorrect_pt=False, eta_cut=True, tre
         uncertainty_model.append(np.sqrt(n_pass_model) / n_event * minbias_rate)
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     ax.plot(pt_cuts, minbias_rate_no_nn, label=r'No ID/$p_T$ correction', linewidth = 5)
     ax.plot(pt_cuts, minbias_rate_cmssw, label=r'CMSSW PuppiTau Emulator', linewidth = 5)
     ax.plot(pt_cuts, minbias_rate_model, label=r'SeedCone Tau', linewidth = 5)

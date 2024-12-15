@@ -17,7 +17,7 @@ from sklearn.metrics import roc_curve, auc,precision_recall_curve
 
 import matplotlib.pyplot as plt
 import mplhep as hep
-from tagger.plot.style import *
+import tagger.plot.style as style
 
 style.set_style()
 
@@ -39,17 +39,17 @@ def doPlots(model,outputdir,inputdir):
         plt.clf()
         min_x = min(np.amin(y_hls[:,i]), np.amin(y_class[:,i]))
         max_x = max(np.amax(y_hls[:,i]), np.amax(y_class[:,i]))
-        figure = plot_2d(np.array(y_class[:,i]), np.array(y_hls[:,i]) ,(min_x,max_x),(min_x,max_x),"Tensorflow","hls4ml",label+" score")
-        plt.savefig("%s/%s_score_2D.png" % (outputdir,label))
-        plt.savefig("%s/%s_score_2D.pdf" % (outputdir,label))
+        figure = plot_2d(np.array(y_class[:,i]), np.array(y_hls[:,i]) ,(min_x,max_x),(min_x,max_x),"Tensorflow","hls4ml",style.CLASS_LABEL_STYLE[label]+" score")
+        plt.savefig("%s/%s_score_2D.png" % (outputdir,label),bbox_inches='tight')
+        plt.savefig("%s/%s_score_2D.pdf" % (outputdir,label),bbox_inches='tight')
 
     plt.clf()
     figure = plot_2d(y_ptreg[:,0] ,y_ptreg_hls[:,0],
                      ( min(np.amin(y_ptreg_hls), np.amin(y_ptreg)),max(np.amax(y_ptreg_hls), np.amax(y_ptreg))),
                      ( min(np.amin(y_ptreg_hls), np.amin(y_ptreg)),max(np.amax(y_ptreg_hls), np.amax(y_ptreg))),
                      "Tensorflow","hls4ml","Regression score")
-    plt.savefig("%s/%s_score_2D.png" % (outputdir,"Regression"))
-    plt.savefig("%s/%s_score_2D.pdf" % (outputdir,"Regression"))
+    plt.savefig("%s/%s_score_2D.png" % (outputdir,"Regression"),bbox_inches='tight')
+    plt.savefig("%s/%s_score_2D.pdf" % (outputdir,"Regression"),bbox_inches='tight')
     plt.close()
     
     wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model, hls_model=hls_model, X=X_test)
@@ -70,8 +70,8 @@ def doPlots(model,outputdir,inputdir):
                      ( min_x,max_x),
                      "hls4ml {}".format(layer),"Tensorflow  {}".format(layer),layer +" agreement")
         plt.plot([min_x, max_x], [min_x, max_x], c="gray")
-        plt.savefig(f"{outputdir}/profile_2d_{layer}.png")
-        plt.savefig(f"{outputdir}/profile_2d_{layer}.pdf")
+        plt.savefig(f"{outputdir}/profile_2d_{layer}.png",bbox_inches='tight')
+        plt.savefig(f"{outputdir}/profile_2d_{layer}.pdf",bbox_inches='tight')
         plt.close()
 
 

@@ -172,7 +172,6 @@ profile:
   - pip install .[profiling]
   - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True
-  - python tagger/plot/shapely.py 
   artifacts:
     paths:
       - output/baseline

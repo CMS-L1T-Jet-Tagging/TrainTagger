@@ -46,11 +46,7 @@ def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
 
 def plot_ratio(all_events, selected_events, plot=False):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-<<<<<<< HEAD
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
-=======
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
->>>>>>> 91c7bfe88c845b8ae5fc7fcf9b44d3b441ca917d
     _, eff = selected_events.plot_ratio(all_events,
                                         rp_num_label="Selected events", rp_denom_label=r"All",
                                         rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")

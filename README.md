@@ -31,6 +31,7 @@ conda activate tagger
 
 #Run this to add the scripts in this directory to your python path
 export PYTHONPATH=$PYTHONPATH:$PWD
+export CI_COMMIT_REF_NAME=local
 
 #Prepare the data
 python tagger/train/train.py --make-data
@@ -108,11 +109,16 @@ The models are defined in `tagger/train/models.py` the `baseline` model is provi
 
 # 3. Physics Validation
 
-Various physics validation plots can be make using the `tagger/plot` modules, the plots are divided into different final states, such as:
+Various physics validation plots can be make using the `tagger/plot` modules, the plots are divided into different final states, such as `bbbb.py`, to use the script, you need to derive the working points before evaluating the background rate/efficiency.
 
 ```
-python tagger/plot/bbbb.py
-python tagger/plot/bbtautau.py
+python tagger/plot/bbbb.py --deriveWPs -n <number of samples to use, usually ~1M>
+```
+
+then, evaluate the efficiency using:
+
+```
+python tagger/plot/bbbb.py --eff -n <number of samples to use, usually ~500k>
 ```
 
 # 4. Synthesize the model to HDL Codes

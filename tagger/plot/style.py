@@ -20,6 +20,7 @@ FIGURE_SIZE = (17,17)
 
 CMSHEADER_LEFT = "Phase-2 Simulation Preliminary"
 CMSHEADER_RIGHT = "14 TeV, 200 PU"
+CMSHEADER_SIZE = BIGGER_SIZE
 
 def set_style():
     # Setup plotting to CMS style
@@ -31,7 +32,7 @@ def set_style():
 
     plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
     plt.rc('axes', titlesize=BIGGER_SIZE)    # fontsize of the axes title
-    plt.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
+    plt.rc('axes', labelsize=BIGGER_SIZE+5)    # fontsize of the x and y labels
     plt.rc('axes', linewidth=LINEWIDTH+2)              # thickness of axes
     plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
     plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels

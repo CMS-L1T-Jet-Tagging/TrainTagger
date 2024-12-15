@@ -21,9 +21,10 @@ style.set_style()
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     ax.plot(history.history['loss'], label='Train Loss', linewidth=style.LINEWIDTH)
     ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=style.LINEWIDTH)
+    ax.grid(True)
     ax.set_ylabel('Loss')
     ax.set_xlabel('Epoch')
     ax.legend(loc='upper right')
@@ -62,12 +63,12 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
 
     # Plot the ROC curve
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     ax.plot(tpr, fpr, label=f'{class_pair[0]} vs {class_pair[1]} (AUC = {roc_auc:.2f})',
              color='blue', linewidth=5)
     ax.grid(True)
-    ax.set_ylabel('False Positive Rate')
-    ax.set_xlabel('True Positive Rate')
+    ax.set_ylabel('Mistag rate')
+    ax.set_xlabel('Signal Efficiency')
     ax.legend(loc='lower right')
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
@@ -84,7 +85,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
 
     # Create a plot for ROC curves
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     for i, class_label in enumerate(class_labels):
 
         # Get true labels and predicted probabilities for the current class
@@ -102,14 +103,13 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
 
     # Plot formatting
     ax.grid(True)
-    ax.set_ylabel('False Positive Rate')
-    ax.set_xlabel('True Positive Rate')
+    ax.set_ylabel('Mistag rate')
+    ax.set_xlabel('Signal Efficiency')
 
     auc_list = [value for key,value in ROC_dict.items()]
     handles, labels = plt.gca().get_legend_handles_labels()
     order = np.argsort(auc_list)
     ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc='upper left',ncol=2)
-
 
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
@@ -202,7 +202,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
         ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {flavor}", capsize=4,ms=8,elinewidth=3)
         ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {flavor}", capsize=4,ms=8,elinewidth=3)
 
@@ -289,7 +289,7 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
         ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(flavor), capsize=4,ms=8,elinewidth=3)
         ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(flavor), capsize=4,ms=8,elinewidth=3)
 

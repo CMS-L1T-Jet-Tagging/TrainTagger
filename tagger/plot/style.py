@@ -22,7 +22,11 @@ CMSHEADER_LEFT = "Phase 2 Simulation Preliminary"
 CMSHEADER_RIGHT = "14 TeV, 200 PU"
 CMSHEADER_SIZE = BIGGER_SIZE
 
-CLASS_LABEL_STYLE = {'b':'b','charm':'charm','light':'light','gluon':'gluon','taum':'$\\tau_{h}^{-}$','taup':'$\\tau_{h}^{+}$','electron':'Electron','muon':'Muon','inclusive':'Inclusive','Regression':'Regression'}
+CLASS_LABEL_STYLE = {'b':'b','charm':'charm','light':'light','gluon':'gluon',
+                    'taum':'$\\tau_{h}^{-}$','taup':'$\\tau_{h}^{+}$','electron':'Electron','muon':'Muon',
+                    'inclusive':'Inclusive','Regression':'Regression',
+                    "taus": "Taus", "jets":"Jets (b, charm, light, gluon)","leptons":"Leptons (muon, electron)"}
+
 INPUT_FEATURE_STYLE = {'pt':'$p_T$','pt_rel':'relative $p_T$', 'pt_log':'$log(p_T)$','deta':'$\\Delta\\eta$','dphi':'$\\Delta\\phi$',
                        'mass':'mass', 'isPhoton':'PID: photon', 'isElectronPlus':'PID: electron +', 'isElectronMinus':'PID: electron -',
                        'isMuonPlus':'PID: muon +', 'isMuonMinus':'PID: muon -', 'isNeutralHadron':'PID: hadron neutral',

@@ -291,6 +291,19 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=flavor, plot_name=f"{flavor}_response")
+    
+    #Taus, jets, leptons rms
+    rms_selection = {
+        'taus': [class_labels['taup'], class_labels['taum']],
+        'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
+        'leptons': [class_labels[key] for key in ['muon', 'electron']]
+    }
+
+    for key in rms_selection.keys():
+        selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
+        
+        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
+        plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=key, plot_name=f"{key}_response")
 
     return
 
@@ -377,6 +390,19 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
         uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
+
+    #Taus, jets, leptons rms
+    rms_selection = {
+        'taus': [class_labels['taup'], class_labels['taum']],
+        'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
+        'leptons': [class_labels[key] for key in ['muon', 'electron']]
+    }
+
+    for key in rms_selection.keys():
+        selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
+
+        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
+        plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=key, plot_name=f"{key}_rms")
 
     return
 

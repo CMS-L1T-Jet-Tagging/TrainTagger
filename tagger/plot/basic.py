@@ -22,9 +22,10 @@ style.set_style()
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     ax.plot(history.history['loss'], label='Train Loss', linewidth=style.LINEWIDTH)
     ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=style.LINEWIDTH)
+    ax.grid(True)
     ax.set_ylabel('Loss')
     ax.set_xlabel('Epoch')
     ax.legend(loc='upper right')
@@ -32,6 +33,67 @@ def loss_history(plot_dir, history):
     save_path = os.path.join(plot_dir, "loss_history")
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+
+def ROC_taus(y_pred, y_test, class_labels, plot_dir):
+    """
+    Plot ROC curves for taus vs jets and leptons
+    """
+
+    save_dir = os.path.join(plot_dir, 'roc_taus')
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Define class label groups
+    tau_indices = [class_labels['taup'], class_labels['taum']]
+    jet_indices = [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']]
+    lepton_indices = [class_labels[key] for key in ['muon', 'electron']]
+
+    #Function to calculate the roc inputs for plotting
+    def compute_roc_inputs(y_pred, y_test, signal_indices, background_indices):
+        """
+        Compute the true labels and scores for ROC curve inputs.
+        """
+        signal_mask = sum(y_test[:, idx] for idx in signal_indices) > 0
+        total_mask = signal_mask | (sum(y_test[:, idx] for idx in background_indices) > 0)
+
+        signal_scores = sum(y_pred[:, idx] for idx in signal_indices)
+        background_scores = sum(y_pred[:, idx] for idx in background_indices)
+        total_scores = signal_scores + background_scores
+
+        return signal_mask[total_mask], (signal_scores / total_scores)[total_mask]
+
+    def plot_roc(y_true, y_score, label, save_path):
+        """
+        Plot and save a single ROC curve.
+        """
+        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc_auc = auc(fpr, tpr)
+
+        plt.figure(figsize=style.FIGURE_SIZE)
+        hep.cms.label(
+            llabel=style.CMSHEADER_LEFT, 
+            rlabel=style.CMSHEADER_RIGHT, 
+            fontsize=style.CMSHEADER_SIZE
+        )
+        plt.plot(tpr, fpr, label=f'{label} (AUC = {roc_auc:.2f})', linewidth=style.LINEWIDTH)
+        plt.grid(True)
+        plt.xlabel('Signal Efficiency')
+        plt.ylabel('Mistag Rate')
+        plt.yscale('log')
+        plt.ylim(1e-3, 1.1)
+        plt.legend(loc='lower right')
+
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.close()
+
+    #Plot taus versus jets ROC
+    y_true_taus_vs_jets, y_score_taus_vs_jets = compute_roc_inputs(y_pred, y_test, tau_indices, jet_indices)
+    plot_roc(y_true_taus_vs_jets, y_score_taus_vs_jets, r'$\tau = \tau_{{h}}^{{+}} + \tau_{{h}}^{{-}}$ vs Jets (b, charm, light, gluon)', os.path.join(save_dir, "ROC_taus_vs_jets"))
+
+    #Plot taus versus leptons ROC
+    y_true_taus_vs_leptons, y_score_taus_vs_leptons = compute_roc_inputs(y_pred, y_test, tau_indices, lepton_indices)
+    plot_roc(y_true_taus_vs_leptons, y_score_taus_vs_leptons, r'$\tau = \tau_{{h}}^{{+}} + \tau_{{h}}^{{-}}$ vs Leptons (muon, electron)', os.path.join(save_dir, "ROC_taus_vs_leptons"))
+
 
 def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     """
@@ -63,7 +125,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
 
     # Plot the ROC curve
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.CMSHEADER_SIZE)
     ax.plot(tpr, fpr, label=f'{style.CLASS_LABEL_STYLE[class_pair[0]]} vs {style.CLASS_LABEL_STYLE[class_pair[1]]} (AUC = {roc_auc:.2f})',
              color='blue', linewidth=5)
     ax.grid(True)
@@ -85,7 +147,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
 
     # Create a plot for ROC curves
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     for i, class_label in enumerate(class_labels):
 
         # Get true labels and predicted probabilities for the current class
@@ -110,7 +172,6 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
     handles, labels = plt.gca().get_legend_handles_labels()
     order = np.argsort(auc_list)
     ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc='upper left',ncol=2,fontsize=style.SMALL_SIZE-3)
-
 
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
@@ -203,7 +264,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.CMSHEADER_SIZE)
         ax.errorbar(pt_points, uncorrected_response, yerr=uncorrected_errors, fmt='o', label=f"Uncorrected - {style.CLASS_LABEL_STYLE[flavor]}", capsize=4,ms=8,elinewidth=3)
         ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {style.CLASS_LABEL_STYLE[flavor]}", capsize=4,ms=8,elinewidth=3)
 
@@ -230,6 +291,19 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=flavor, plot_name=f"{flavor}_response")
+    
+    #Taus, jets, leptons rms
+    rms_selection = {
+        'taus': [class_labels['taup'], class_labels['taum']],
+        'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
+        'leptons': [class_labels[key] for key in ['muon', 'electron']]
+    }
+
+    for key in rms_selection.keys():
+        selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
+        
+        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
+        plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=key, plot_name=f"{key}_response")
 
     return
 
@@ -290,7 +364,7 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
         # Plot the response
         fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.CMSHEADER_SIZE)
         ax.errorbar(pt_points, uncorrected_rms, yerr=uncorrected_rms_err, fmt='o', label=r"Uncorrected $\sigma$- {}".format(style.CLASS_LABEL_STYLE[flavor]), capsize=4,ms=8,elinewidth=3)
         ax.errorbar(pt_points, regressed_rms, yerr=regressed_rms_err, fmt='o', label=r"Regressed $\sigma$ - {}".format(style.CLASS_LABEL_STYLE[flavor]), capsize=4,ms=8,elinewidth=3)
 
@@ -316,6 +390,19 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
         uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
+
+    #Taus, jets, leptons rms
+    rms_selection = {
+        'taus': [class_labels['taup'], class_labels['taum']],
+        'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
+        'leptons': [class_labels[key] for key in ['muon', 'electron']]
+    }
+
+    for key in rms_selection.keys():
+        selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
+
+        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
+        plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=key, plot_name=f"{key}_rms")
 
     return
 
@@ -418,6 +505,9 @@ def basic(model_dir):
             if i != j:
                 class_pair = (i,j)
                 ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)        
+
+    #ROC for taus versus jets and taus versus leptons
+    ROC_taus(y_pred, y_test, class_labels, plot_dir)
 
     #Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)

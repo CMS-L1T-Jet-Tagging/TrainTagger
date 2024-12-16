@@ -20,8 +20,13 @@ FIGURE_SIZE = (17,17)
 
 CMSHEADER_LEFT = "Phase 2 Simulation Preliminary"
 CMSHEADER_RIGHT = "14 TeV, 200 PU"
+CMSHEADER_SIZE = BIGGER_SIZE
 
-CLASS_LABEL_STYLE = {'b':'b','charm':'charm','light':'light','gluon':'gluon','taum':'$\\tau_{h}^{-}$','taup':'$\\tau_{h}^{+}$','electron':'Electron','muon':'Muon','inclusive':'Inclusive','Regression':'Regression'}
+CLASS_LABEL_STYLE = {'b':'b','charm':'charm','light':'light','gluon':'gluon',
+                    'taum':'$\\tau_{h}^{-}$','taup':'$\\tau_{h}^{+}$','electron':'Electron','muon':'Muon',
+                    'inclusive':'Inclusive','Regression':'Regression',
+                    "taus": "Taus", "jets":"Jets (b, charm, light, gluon)","leptons":"Leptons (muon, electron)"}
+
 INPUT_FEATURE_STYLE = {'pt':'$p_T$','pt_rel':'relative $p_T$', 'pt_log':'$log(p_T)$','deta':'$\\Delta\\eta$','dphi':'$\\Delta\\phi$',
                        'mass':'mass', 'isPhoton':'PID: photon', 'isElectronPlus':'PID: electron +', 'isElectronMinus':'PID: electron -',
                        'isMuonPlus':'PID: muon +', 'isMuonMinus':'PID: muon -', 'isNeutralHadron':'PID: hadron neutral',
@@ -36,8 +41,8 @@ def set_style():
 
     plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
     plt.rc('axes', titlesize=BIGGER_SIZE)    # fontsize of the axes title
-    plt.rc('axes', labelsize=BIGGER_SIZE+2)    # fontsize of the x and y labels
-    plt.rc('axes', linewidth=5)              # thickness of axes
+    plt.rc('axes', labelsize=BIGGER_SIZE+5)    # fontsize of the x and y labels
+    plt.rc('axes', linewidth=LINEWIDTH+2)              # thickness of axes
     plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
     plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
     plt.rc('legend', fontsize=SMALL_SIZE-2)            # legend fontsize

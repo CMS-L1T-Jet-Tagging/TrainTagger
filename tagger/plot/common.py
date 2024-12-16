@@ -46,7 +46,7 @@ def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
 
 def plot_ratio(all_events, selected_events, plot=False):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     _, eff = selected_events.plot_ratio(all_events,
                                         rp_num_label="Selected events", rp_denom_label=r"All",
                                         rp_uncert_draw_type="bar", rp_uncertainty_type="efficiency")
@@ -62,7 +62,7 @@ def get_bar_patch_data(artists):
 
 def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,title):
     fig,ax = plt.subplots(1,1,figsize=(style.FIGURE_SIZE[0]+2,style.FIGURE_SIZE[1]))
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     
     hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap='jet')
     ax.set_xlabel(name_one)
@@ -75,7 +75,7 @@ def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,titl
 def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
     plt.clf()
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
     for i,histo in enumerate(variable):
 
         ax.hist(histo,bins=50,range=range,histtype="step",
@@ -93,7 +93,7 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
 def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"],labels = ["CMSSW Emulation", "Tensorflow", "hls4ml"],title="None"):
     plt.clf()
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
 
     for i,key in enumerate(keys):
         tpr = modelsAndNames[key]["ROCs"]["tpr"]

@@ -95,8 +95,8 @@ evaluate:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-  - python tagger/plot/bbbb.py --deriveWPs --minbias $EOS_DIR/$DataDir/$MINBIAS -n 650000
-  - python tagger/plot/bbbb.py --eff -s $EOS_DIR/$DataDir/$BBBB -n 500000
+  - python tagger/plot/bbbb.py --deriveWPs --minbias $EOS_DIR/$MINBIAS -n 650000
+  - python tagger/plot/bbbb.py --eff -s $EOS_DIR/$BBBB -n 500000
   - cd output/baseline
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/testing_data_$Inputs.tgz ./
   - tar -xf testing_data_$Inputs.tgz
@@ -141,7 +141,7 @@ emulation-evaluate:
   script:
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/perfTuple.root .
   - cd ..
   - source activate tagger
   - python tagger/plot/makeEmulationPlot.py -r True
@@ -164,7 +164,7 @@ profile:
   - source activate tagger
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/perfTuple.root .
   - cd ..
   - pip uninstall hls4ml -y
   - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger

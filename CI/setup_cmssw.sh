@@ -50,7 +50,7 @@ make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b addMultiJet_newModel
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b dev/14_2_X
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi

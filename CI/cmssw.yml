@@ -14,6 +14,6 @@ emulate:
   artifacts:
     when: always
     paths:
-      - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple.root
+      - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/perfTuple.root
       - ${CMSSW_VERSION}/cmsRun.log
       - ${CMSSW_VERSION}/compilation.log

@@ -70,6 +70,5 @@ cmsenv
 
 echo "Temporary workaround to get the input files"
 curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
-mv inputs131X_1.root inputs125X.root
-#echo 'process.source.fileNames = ["file:inputs131X_1.root"]' >> runPerformanceNTuple.py
-cmsRun runPerformanceNTuple.py --tm18 2>&1 | tee cmsRun.log
+echo '\nprocess.source.fileNames = ["file:inputs131X_1.root"]' >> runJetNTuple.py
+cmsRun runJetNTuple.py --tm18 2>&1 | tee cmsRun.log

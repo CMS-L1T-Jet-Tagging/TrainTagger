@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
     parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')    
-    parser.add_argument('-i','--input', default='data/perfTuple.root' , help = 'Path to profiling data rootfile')
+    parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to profiling data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake profiling data? ')
 
     args = parser.parse_args()

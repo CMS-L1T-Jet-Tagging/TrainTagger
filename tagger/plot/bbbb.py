@@ -89,7 +89,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     plt.savefig(f"{plot_dir}/bbbb_rate.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate.png", bbox_inches='tight')
 
-def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='jetntuple/Jets'):
+def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
@@ -159,7 +159,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
 
     return
 
-def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets'):
+def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """

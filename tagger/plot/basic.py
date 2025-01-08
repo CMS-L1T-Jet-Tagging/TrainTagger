@@ -70,8 +70,8 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
 
         plt.figure(figsize=style.FIGURE_SIZE)
         hep.cms.label(
-            llabel=style.CMSHEADER_LEFT, 
-            rlabel=style.CMSHEADER_RIGHT, 
+            llabel=style.CMSHEADER_LEFT,
+            rlabel=style.CMSHEADER_RIGHT,
             fontsize=style.CMSHEADER_SIZE
         )
         plt.plot(tpr, fpr, label=f'{label} (AUC = {roc_auc:.2f})', linewidth=style.LINEWIDTH)
@@ -116,7 +116,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
 
     # Combine the labels and scores for binary classification
     selection = (y_true1 == 1) | (y_true2 == 1)
-    y_true_binary = y_true1[selection] 
+    y_true_binary = y_true1[selection]
     y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])  # Normalized probabilities
 
     # Compute FPR, TPR, and AUC
@@ -291,7 +291,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=flavor, plot_name=f"{flavor}_response")
-    
+
     #Taus, jets, leptons rms
     rms_selection = {
         'taus': [class_labels['taup'], class_labels['taum']],
@@ -301,7 +301,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
     for key in rms_selection.keys():
         selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
-        
+
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=key, plot_name=f"{key}_response")
 
@@ -439,7 +439,7 @@ def shapPlot(shap_values, feature_names, class_names):
     plt.tight_layout()
 
 def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
-    
+
     labels = list(class_labels.keys())
     model2 = tf.keras.Model(model.input, model.output[0])
     model3 = tf.keras.Model(model.input, model.output[1])
@@ -473,21 +473,21 @@ def basic(model_dir):
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     Returns a dictionary of ROCs for each class
     """
-    
+
     plot_dir = os.path.join(model_dir, "plots/training")
 
-    #Load the metada for class_label
+    #Load the metadata for class_label
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
-    ROC_dict = {class_label : 0 for class_label in class_labels} 
-    
+    ROC_dict = {class_label : 0 for class_label in class_labels}
+
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
-    
+
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5")
     model_outputs = model.predict(X_test)
@@ -495,7 +495,7 @@ def basic(model_dir):
     #Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1].flatten()
-    
+
     #Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
 
@@ -504,7 +504,7 @@ def basic(model_dir):
         for j in class_labels.keys():
             if i != j:
                 class_pair = (i,j)
-                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)        
+                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)
 
     #ROC for taus versus jets and taus versus leptons
     ROC_taus(y_pred, y_test, class_labels, plot_dir)
@@ -517,11 +517,103 @@ def basic(model_dir):
 
     #Plot inclusive response and individual flavor
     response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    
+
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    
+
     #Plot the shaply feature importance
     plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 
     return ROC_dict
+
+
+def kfolds_basic(model_dir, n_folds):
+
+    folds_dir = f"{model_dir}_{n_folds}folds"
+    n_files = len(os.listdir(folds_dir))
+
+    # Check if all folds are present
+    if n_files != n_folds:
+        raise ValueError(f"Expected {n_folds} validation folds, found {n_files}")
+
+    # Load the metadata for class_label
+    with open(f"{folds_dir}/{os.listdir(folds_dir)[0]}/class_label.json", 'r') as file: class_labels = json.load(file)
+    with open(f"{folds_dir}/{os.listdir(folds_dir)[0]}/input_vars.json", 'r') as file: input_vars = json.load(file)
+
+    ROC_dict = {class_label : 0 for class_label in class_labels}
+
+    X_tests = []
+    y_preds = []
+    y_tests = []
+    truth_pt_tests = []
+    reco_pt_tests = []
+    pt_ratios = []
+
+    # Make predictions for each fold and collect the results
+    for f in os.listdir(folds_dir):
+        # Load fold data
+        X_test_fold = np.load(f"{folds_dir}/{f}/testing_data/X_test.npy")
+        y_test_fold = np.load(f"{folds_dir}/{f}/testing_data/y_test.npy")
+        truth_pt_test_fold = np.load(f"{folds_dir}/{f}/testing_data/truth_pt_test.npy")
+        reco_pt_test_fold = np.load(f"{folds_dir}/{f}/testing_data/reco_pt_test.npy")
+
+        #Load model
+        model = load_qmodel(f"{folds_dir}/{f}/model/saved_model.h5")
+        y_pred_fold, pt_ratio_fold = model.predict(X_test_fold)
+
+        # collect predictions and truth labels
+        X_tests.append(X_test_fold)
+        y_preds.append(y_pred_fold)
+        y_tests.append(y_test_fold)
+        truth_pt_tests.append(truth_pt_test_fold)
+        reco_pt_tests.append(reco_pt_test_fold)
+        pt_ratios.append(pt_ratio_fold.flatten())
+
+    # Concatenate the predictions and truth labels of the individual folds
+    X_test = np.concatenate(X_tests)
+    y_pred = np.concatenate(y_preds)
+    y_test = np.concatenate(y_tests)
+    truth_pt_test = np.concatenate(truth_pt_tests)
+    reco_pt_test = np.concatenate(reco_pt_tests)
+    pt_ratio = np.concatenate(pt_ratios)
+
+    # Create the plot directory
+    plot_dir = os.path.join(folds_dir, "plots")
+    if os.path.exists(plot_dir):
+        shutil.rmtree(plot_dir)
+    os.makedirs(plot_dir)
+
+    #Plot ROC curves
+    ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict)
+
+    #Generate all possible pairs of classes
+    for i in class_labels.keys():
+        for j in class_labels.keys():
+            if i != j:
+                class_pair = (i,j)
+                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)
+
+    #ROC for taus versus jets and taus versus leptons
+    ROC_taus(y_pred, y_test, class_labels, plot_dir)
+
+    #Plot pt corrections
+    pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
+
+    #Plot input distributions
+    plot_input_vars(X_test, input_vars, plot_dir)
+
+    #Plot inclusive response and individual flavor
+    response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+
+    #Plot the rms of the residuals vs pt
+    rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+
+    #Plot the shaply feature importance
+    plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
+
+    return ROC_dict
+
+
+
+
+

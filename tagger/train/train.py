@@ -2,8 +2,8 @@ from argparse import ArgumentParser
 import os, shutil, json
 
 #Import from other modules
-from tagger.data.tools import make_data, load_data, to_ML
-from tagger.plot.basic import loss_history, basic
+from tagger.data.tools import make_data, load_data, to_ML, make_kfolds
+from tagger.plot.basic import loss_history, basic, kfolds_basic
 import models
 
 #Third parties
@@ -16,10 +16,10 @@ import mlflow
 from datetime import datetime
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
-tf.keras.utils.set_random_seed(420) #not a special number 
+tf.keras.utils.set_random_seed(420) #not a special number
 BATCH_SIZE = 1024
 EPOCHS = 100
-VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
+VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set.
 
 # Sparsity parameters
 I_SPARSITY = 0.0 #Initial sparsity
@@ -75,21 +75,21 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
         60, 76, 97, 122, 154, 195, 246, 311,
         393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
     ])
-    
+
     # Initialize counts per class per pT bin
     class_pt_counts = {}
-    
+
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
         class_pt_counts[idx], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
-    
+
     # Compute the maximum counts per pT bin over all classes
     max_counts_per_bin = np.zeros(len(pt_bins)-1)
     for bin_idx in range(len(pt_bins)-1):
         counts_in_bin = [class_pt_counts[idx][bin_idx] for idx in class_labels.values()]
         max_counts_per_bin[bin_idx] = max(counts_in_bin)
-    
+
     # Compute weights per class per pT bin
     weights_per_class_pt_bin = {}
     for idx in class_labels.values():
@@ -109,11 +109,11 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
         bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
         bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
         sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
-    
+
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)
 
-def train(out_dir, percent, model_name):
+def train(out_dir, percent, model_name, kfold, n_folds):
 
     #Remove output dir if exists
     if os.path.exists(out_dir):
@@ -124,7 +124,7 @@ def train(out_dir, percent, model_name):
     os.makedirs(out_dir)
 
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percent, kfold, n_folds)
 
     #Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump output variables
@@ -140,7 +140,7 @@ def train(out_dir, percent, model_name):
     #Calculate the sample weights for training
     sample_weight = train_weights(y_train, truth_pt_train, class_labels)
 
-    #Get input shape
+    #Get input shape and output shape
     input_shape = X_train.shape[1:] #First dimension is batch size
     output_shape = y_train.shape[1:]
 
@@ -169,7 +169,7 @@ def train(out_dir, percent, model_name):
                             validation_split=VALIDATION_SPLIT,
                             callbacks = [callbacks],
                             shuffle=True)
-    
+
     #Export the model
     model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
 
@@ -192,28 +192,36 @@ if __name__ == "__main__":
 
     #Making input arguments
     parser.add_argument('--make-data', action='store_true', help='Prepare the data if set.')
-    parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/All200.root' , help = 'Path to input training data')
+    parser.add_argument('--make-kfolds', action='store_true', help='Create kfold indices for given number of folds.')
+    parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200_part0.root', help = 'Path to input training data')
     parser.add_argument('-r','--ratio', default=1, type=float, help = 'Ratio (0-1) of the input data root file to process')
     parser.add_argument('-s','--step', default='100MB' , help = 'The maximum memory size to process input root file')
     parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, defined in pfcand_fields.yml')
-
+    parser.add_argument('-nf','--nfolds', default=5, type=int, help = 'Number of folds to create')
     #Training argument
     parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
     parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
+    parser.add_argument('-f', '--kfold', default=0, type=int, help='0: no cross-validation used, >0: fold used for cross-validation')
 
     #Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
+    parser.add_argument('--plot-kfolds', action='store_true', help='Plot results of k fold cross validation')
 
     args = parser.parse_args()
+
+    if args.kfold > args.nfolds:
+        raise ValueError("kfold must be less than or equal to nfolds")
 
     mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
 
     #Either make data or start the training
     if args.make_data:
         make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
-    elif args.plot_basic:
+    elif args.make_kfolds:
+        make_kfolds(args.nfolds, args.percent)
+    elif args.plot_basic | args.plot_kfolds:
         model_dir = args.output
         f = open("mlflow_run_id.txt", "r")
         run_id = (f.read())
@@ -224,19 +232,20 @@ if __name__ == "__main__":
                             ):
 
             #All the basic plots!
-            results = basic(model_dir)
+            results = basic(model_dir) if args.plot_basic else kfolds_basic(model_dir, args.nfolds)
             for class_label in results.keys():
                 mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
-            
     else:
+        if args.kfold:
+            args.output = os.path.join(f"{args.output}_{args.nfolds}folds", f"fold{args.kfold}of{args.nfolds}")
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
             mlflow.keras.autolog()
-            train(args.output, args.percent, model_name=args.model)
+            train(args.output, args.percent, model_name=args.model, kfold=args.kfold, n_folds=args.nfolds)
             run_id = run.info.run_id
         sourceFile = open('mlflow_run_id.txt', 'w')
         print(run_id, end="", file = sourceFile)
         sourceFile.close()
 
-        
-        
+
+

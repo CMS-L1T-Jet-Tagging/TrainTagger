@@ -6,6 +6,8 @@ import numpy as np
 import awkward as ak
 import tensorflow as tf
 import uproot, yaml
+from sklearn.model_selection import KFold
+import time
 
 #Dataset configuration
 from .config import FILTER_PATTERN, N_PARTICLES, INPUT_TAG, EXTRA_FIELDS
@@ -126,7 +128,7 @@ def _split_flavor(data):
     return data[jet_ptmin_gen], class_labels
 
 def _get_pfcand_fields(tag):
-    
+
     # Get the directory of the current file (tools.py)
     current_dir = os.path.dirname(__file__)
 
@@ -145,7 +147,7 @@ def _pad_fill(array, target):
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
 def _make_nn_inputs(data_split, tag, n_parts):
-    
+
     features = _get_pfcand_fields(tag)
 
     #Concatenate all the inputs
@@ -163,7 +165,7 @@ def _make_nn_inputs(data_split, tag, n_parts):
     #batch_size, n_particles, n_features
     inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
-    
+
     return
 
 def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
@@ -270,7 +272,7 @@ def group_id_values(event_id, *arrays, num_elements = 2):
 
     # Find unique event_ids and counts manually
     unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
-    
+
     # Use ak.unflatten to group the arrays by counts
     grouped_id = ak.unflatten(sorted_event_id, counts)
     grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
@@ -294,7 +296,7 @@ def to_ML(data, class_labels):
 
     return X, y, pt_target, truth_pt, reco_pt
 
-def load_data(outdir, percentage, test_ratio=0.1, fields=None):
+def load_data(outdir, percentage, kfold, n_folds, test_ratio=0.1, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -326,14 +328,17 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
 
-    # Shuffle the data indices
-    total_data_len = len(data)
-    indices = np.arange(total_data_len)
-    np.random.shuffle(indices)
+    if kfold:
+        train_indices, test_indices = get_kfold(kfold, n_folds)
+    else:
+        # Shuffle the data indices
+        total_data_len = len(data)
+        indices = np.arange(total_data_len)
+        np.random.shuffle(indices)
 
-    # Split indices based on test_ratio
-    split_index = int((1 - test_ratio) * total_data_len)
-    train_indices, test_indices = indices[:split_index], indices[split_index:]
+        # Split indices based on test_ratio
+        split_index = int((1 - test_ratio) * total_data_len)
+        train_indices, test_indices = indices[:split_index], indices[split_index:]
 
     # Split the data into training and testing sets
     train_data = data[train_indices]
@@ -346,10 +351,10 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         class_labels = variables['outputs']
         input_vars = variables['inputs']
         extra_vars = variables['extras']
-    
+
     return train_data, test_data, class_labels, input_vars, extra_vars
 
-def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root', 
+def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root',
               outdir='training_data/',
               tag=INPUT_TAG,
               extras=EXTRA_FIELDS,
@@ -389,8 +394,8 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
     chunk = 0
 
     for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=step_size, max_workers=4):
-        
-        #Define jet kinematic cuts
+
+        # Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
         data = data[jet_cut]
 
@@ -410,3 +415,46 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         num_entries_done += len(data)
         print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
         if num_entries_done / num_entries >= ratio: break
+
+
+def make_kfolds(n_folds, percentage, fields=None):
+    # Load metadata to determine chunks to load
+    metadata_file = os.path.join("training_data/", "metadata.json")
+    with open(metadata_file, "r") as f:
+        metadata = json.load(f)
+
+    total_chunks = len(metadata)
+    chunks_to_load = int(np.ceil((percentage / 100) * total_chunks))
+
+    # Collect the file paths for the chunks to load
+    chunk_files = [metadata[i]["file"] for i in range(chunks_to_load)]
+
+    # Use uproot.concatenate to load and combine data from multiple files
+    data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
+
+    # Create folds directory for given number of folds
+    folds_dir = f"cross_validation_indices/{n_folds}_fold_validation"
+    if os.path.exists(f"{folds_dir}"):
+        shutil.rmtree(f"{folds_dir}")
+    os.makedirs(f"{folds_dir}")
+
+    # Create k-folds and save k-fold indices
+    kf = KFold(n_splits=n_folds, shuffle=True)
+    for i, (train_index, test_index) in enumerate(kf.split(data)):
+        np.save(f"{folds_dir}/train_fold_{i+1}of{n_folds}.npy", train_index)
+        np.save(f"{folds_dir}/test_fold_{i+1}of{n_folds}.npy", test_index)
+        print(f"Saved fold {i+1} of {n_folds} to {folds_dir}")
+
+
+def get_kfold(fold_idx, n_folds):
+    # Load k-fold indices
+    train_indices = np.load(f"cross_validation_indices/{n_folds}_fold_validation/train_fold_{fold_idx}of{n_folds}.npy")
+    test_indices = np.load(f"cross_validation_indices/{n_folds}_fold_validation/test_fold_{fold_idx}of{n_folds}.npy")
+    print(f"Loaded indices for fold {fold_idx} of {n_folds}")
+
+    return train_indices, test_indices
+
+
+
+
+

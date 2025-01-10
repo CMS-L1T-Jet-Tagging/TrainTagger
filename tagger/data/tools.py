@@ -33,21 +33,21 @@ def _split_flavor(data):
 
     # Define conditions for each label
     conditions = {
-        "b": (
+        "b": ( # Bottom
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
             (data['jet_elflav'] == 0) &
             (data['jet_genmatch_hflav'] == 5)
         ),
-        "charm": ( #Charm
+        "charm": ( # Charm
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
             (data['jet_elflav'] == 0) &
             (data['jet_genmatch_hflav'] == 4)
         ),
-        "light": (
+        "light": ( # uds
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
@@ -55,7 +55,7 @@ def _split_flavor(data):
             (data['jet_genmatch_hflav'] == 0) &
             ((abs(data['jet_genmatch_pflav']) == 0) | (abs(data['jet_genmatch_pflav']) == 1) | (abs(data['jet_genmatch_pflav']) == 2) | (abs(data['jet_genmatch_pflav']) == 3))
         ),
-        "gluon": ( #Gluon
+        "gluon": ( # Gluon
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
@@ -63,27 +63,27 @@ def _split_flavor(data):
             (data['jet_genmatch_hflav'] == 0) &
             (data['jet_genmatch_pflav'] == 21)
         ),
-        "taup": (
+        "taup": ( # Tau +
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 1) &
             (data['jet_taucharge'] > 0) &
             (data['jet_elflav'] == 0)
         ),
-        "taum": (
+        "taum": ( # Tau -
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 1) &
             (data['jet_taucharge'] < 0) &
             (data['jet_elflav'] == 0)
         ),
-        "muon": (
+        "muon": ( # muon
             genmatch_pt_base &
             (data['jet_muflav'] == 1) &
             (data['jet_tauflav'] == 0) &
             (data['jet_elflav'] == 0)
         ),
-        "electron": (
+        "electron": ( # electron
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &

@@ -11,7 +11,7 @@ from matplotlib.pyplot import cm
 import mplhep as hep
 import tensorflow as tf
 import tagger.plot.style as style
-
+from tagger.data.tools import load_data, to_ML
 import os
 from .common import PT_BINS
 from .common import plot_histo
@@ -70,8 +70,8 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
 
         plt.figure(figsize=style.FIGURE_SIZE)
         hep.cms.label(
-            llabel=style.CMSHEADER_LEFT, 
-            rlabel=style.CMSHEADER_RIGHT, 
+            llabel=style.CMSHEADER_LEFT,
+            rlabel=style.CMSHEADER_RIGHT,
             fontsize=style.CMSHEADER_SIZE
         )
         plt.plot(tpr, fpr, label=f'{label} (AUC = {roc_auc:.2f})', linewidth=style.LINEWIDTH)
@@ -95,7 +95,7 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     plot_roc(y_true_taus_vs_leptons, y_score_taus_vs_leptons, r'$\tau = \tau_{{h}}^{{+}} + \tau_{{h}}^{{-}}$ vs Leptons (muon, electron)', os.path.join(save_dir, "ROC_taus_vs_leptons"))
 
 
-def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
+def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=None):
     """
     Generate ROC curves comparing between two specific class labels.
     """
@@ -116,7 +116,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
 
     # Combine the labels and scores for binary classification
     selection = (y_true1 == 1) | (y_true2 == 1)
-    y_true_binary = y_true1[selection] 
+    y_true_binary = y_true1[selection]
     y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])  # Normalized probabilities
 
     # Compute FPR, TPR, and AUC
@@ -131,7 +131,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     ax.grid(True)
     ax.set_ylabel('Mistag Rate')
     ax.set_xlabel('Signal Efficiency')
-    ax.legend(loc='lower right')
+    ax.legend(loc='lower right', title=signal_proc, alignment='left')
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
 
@@ -291,7 +291,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=flavor, plot_name=f"{flavor}_response")
-    
+
     #Taus, jets, leptons rms
     rms_selection = {
         'taus': [class_labels['taup'], class_labels['taum']],
@@ -301,7 +301,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
     for key in rms_selection.keys():
         selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
-        
+
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=key, plot_name=f"{key}_response")
 
@@ -439,7 +439,7 @@ def shapPlot(shap_values, feature_names, class_names):
     plt.tight_layout()
 
 def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
-    
+
     labels = list(class_labels.keys())
     model2 = tf.keras.Model(model.input, model.output[0])
     model3 = tf.keras.Model(model.input, model.output[1])
@@ -468,26 +468,60 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
         plt.savefig(plot_dir+"/shap_summary_reg.png",bbox_inches='tight')
 
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
-def basic(model_dir):
+
+# Helper functions for signal specific plotting
+def filter_process(test_data, process_dir):
+    """
+    Filter jets from specific signal process to create plots for specified signal processes.
+    Comparison done through concatenation of sets to be compared and np unique to check for duplicates.
+    """
+    train, test, class_labels = load_data(os.path.join("signal_process_data", process_dir), percentage=100)[:3]
+    train, test = to_ML(train, class_labels), to_ML(test, class_labels)
+
+    # apply unique to sets to be compared, since there tend to be duplicates
+    process_data = np.unique(np.concatenate((train[0], test[0]), axis=0), axis=0)
+    unique_test_data, indices_unique_test_data = np.unique(test_data, axis=0, return_index=True)
+    comparison_data = np.concatenate((unique_test_data, process_data), axis=0)
+    u, index, counts = np.unique(comparison_data, axis=0, return_index=True, return_counts=True)
+    process_indices = index[counts == 2]
+    filtered_indices = indices_unique_test_data[process_indices]
+
+    return filtered_indices
+
+
+# fancy signal process labels
+def process_labels(process_key):
+    processes = {
+        'TT_PU200': r't$\bar{t}$ (PU200)',
+        'ggHHbbbb_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$b$\bar{b}$ (PU200)',
+        'VBFHtt_PU200': r'VBF $\rightarrow$ H $\rightarrow$ t$\bar{t}$ (PU200)',
+        'ggHHbbtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$t$\bar{t}$ (PU200)',
+        'ggHtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ t$\bar{t}$ (PU200)',
+        }
+
+    return processes[process_key]
+
+
+def basic(model_dir, signal_dirs):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     Returns a dictionary of ROCs for each class
     """
-    
+
     plot_dir = os.path.join(model_dir, "plots/training")
 
-    #Load the metada for class_label
+    #Load the metadata for class_label
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
-    ROC_dict = {class_label : 0 for class_label in class_labels} 
-    
+    ROC_dict = {class_label : 0 for class_label in class_labels}
+
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
-    
+
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5")
     model_outputs = model.predict(X_test)
@@ -495,16 +529,32 @@ def basic(model_dir):
     #Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1].flatten()
-    
+
     #Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
 
     #Generate all possible pairs of classes
+    class_pairs = []
     for i in class_labels.keys():
         for j in class_labels.keys():
             if i != j:
                 class_pair = (i,j)
-                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)        
+                class_pairs.append(class_pair)
+
+    # Make ROC binaries for complete test set and each signal process
+    for i in range(-1, len(signal_dirs), 1):
+        if i == -1:
+            y_p, y_t = y_pred, y_test
+            process_label = None
+            binary_dir = plot_dir
+        else:
+            signal_indices = filter_process(X_test, signal_dirs[i])
+            y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
+            process_label = process_labels(signal_dirs[i])
+            binary_dir = os.path.join(plot_dir, signal_dirs[i])
+
+        for class_pair in class_pairs:
+            ROC_binary(y_p, y_t, class_labels, binary_dir, class_pair, process_label)
 
     #ROC for taus versus jets and taus versus leptons
     ROC_taus(y_pred, y_test, class_labels, plot_dir)
@@ -517,10 +567,10 @@ def basic(model_dir):
 
     #Plot inclusive response and individual flavor
     response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    
+
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    
+
     #Plot the shaply feature importance
     plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 

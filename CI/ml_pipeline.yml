@@ -52,6 +52,7 @@ data:
   # when: manual
   script:
   - source activate tagger
+  - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   - python tagger/train/train.py --make-data -i /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root
   - tar -cf training_data_$Inputs.tgz training_data
   - mc cp training_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir

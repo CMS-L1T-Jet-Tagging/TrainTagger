@@ -41,17 +41,18 @@ data:
   extends:
     - .template
   stage: data
-  rules:
-     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-         - tagger/data/**
-  when: manual
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_CPU_REQUEST: 1
+  image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
+  # rules:
+  #    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+  #        - tagger/data/**
+  # when: manual
   script:
   - source activate tagger
-  - mkdir data
-  - cd data
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/$Dataset ./
-  - cd ..
-  - python tagger/train/train.py --make-data -i data/$Dataset
+  - python tagger/train/train.py --make-data -i /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root
   - tar -cf training_data_$Inputs.tgz training_data
   - mc cp training_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
 

@@ -1,9 +1,5 @@
 include:
     - CI/cmssw.yml
-    - project: cms-cactus/ops/auto-devops
-      ref: 0.4.1
-      file: templates/upload-eos.yml
-
 
 stages:
   - data
@@ -27,6 +23,7 @@ variables:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
     - mc admin info $ARTIFACTS_ALIAS
   script:
@@ -41,10 +38,6 @@ data:
   extends:
     - .template
   stage: data
-  tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 1
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   # rules:
   #    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
@@ -52,8 +45,11 @@ data:
   # when: manual
   script:
   - source activate tagger
-  - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-  - python tagger/train/train.py --make-data -i /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root
+  - mkdir data
+  - cd data
+  - eos cp /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root .
+  - cd ..
+  - python tagger/train/train.py --make-data -i data/All200.root
   - tar -cf training_data_$Inputs.tgz training_data
   - mc cp training_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
 
@@ -85,11 +81,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [k8s-gpu]
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 1
   needs: [train]
   dependencies: [train]
   script:
@@ -97,8 +89,13 @@ evaluate:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-  - python tagger/plot/bbbb.py --deriveWPs --minbias $EOS_DIR/$MINBIAS -n 650000
-  - python tagger/plot/bbbb.py --eff -s $EOS_DIR/$BBBB -n 500000
+  - mkdir data
+  - cd data
+  - eos cp $EOS_DIR/$MINBIAS .
+  - eos cp $EOS_DIR/$BBBB .
+  - cd ..
+  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000
+  - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000
   - cd output/baseline
   - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/testing_data_$Inputs.tgz ./
   - tar -xf testing_data_$Inputs.tgz
@@ -182,9 +179,6 @@ profile:
 upload:
   tags: [k8s-gpu]
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 1
   stage: upload
   needs: [emulation-evaluate,synth,train,evaluate,profile]
   dependencies: [emulation-evaluate,synth,train,evaluate,profile]
@@ -200,7 +194,6 @@ upload:
     - mv output/baseline/plots/training/ $Name/plots
     - mv output/baseline/plots/physics/ $Name/plots
     - cd ..
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"

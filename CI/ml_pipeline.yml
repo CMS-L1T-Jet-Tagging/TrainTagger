@@ -193,6 +193,8 @@ upload:
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
+    - export EOS_MGM_URL=root://eosuser.cern.ch
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - pb_copy_index.py TrainTagger/${Name} --recursive
     - pb_deploy_plots.py TrainTagger/${Name} $EOS_STORAGE_DIR/JetTagging/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME} --recursive --extensions h5,cpp,h,yml,tcl,sh,png,pdf,rpt 
   artifacts:

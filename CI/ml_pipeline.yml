@@ -18,14 +18,14 @@ variables:
     Inputs: baseline
     DataDir: ./
     Dataset: All200.root
+    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
+    EOS_STORAGE_DIR: /eos/cms/store/cmst3/group/l1tr/MultiJetTagger/
 
 .template:
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
-    - mc alias set $ARTIFACTS_ALIAS http://$ARTIFACTS_HOST $ARTIFACTS_ACCESS_KEY $ARTIFACTS_SECRET_KEY
-    - mc admin info $ARTIFACTS_ALIAS
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags:
@@ -47,11 +47,12 @@ data:
   - source activate tagger
   - mkdir data
   - cd data
-  - eos cp /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root .
+  - eos cp $EOS_DATA_DIR/$Dataset .
   - cd ..
-  - python tagger/train/train.py --make-data -i data/All200.root
+  - python tagger/train/train.py --make-data -i data/$Dataset
   - tar -cf training_data_$Inputs.tgz training_data
-  - mc cp training_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
+  - eos mkdir $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}
+  - eos cp training_data_$Inputs.tgz $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}
 
 train:
   extends:
@@ -61,14 +62,14 @@ train:
     - job : data
       optional: true
   script:
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
+  - eos cp $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/train/train.py -n $Name -p 50
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/baseline
   - tar -cf testing_data_$Inputs.tgz testing_data
-  - mc cp testing_data_$Inputs.tgz $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir
+  - eos cp testing_data_$Inputs.tgz $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}
   artifacts:
     paths:
       - output
@@ -85,21 +86,16 @@ evaluate:
   needs: [train]
   dependencies: [train]
   script:
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/training_data_$Inputs.tgz ./
+  - eos cp $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   - mkdir data
   - cd data
-  - eos cp $EOS_DIR/$MINBIAS .
-  - eos cp $EOS_DIR/$BBBB .
+  - eos cp $EOS_DATA_DIR/$MINBIAS .
+  - eos cp $EOS_DATA_DIR/$BBBB .
   - cd ..
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000
-  - cd output/baseline
-  - mc cp $ARTIFACTS_ALIAS/$ARTIFACTS_BUCKET/$DataDir/testing_data_$Inputs.tgz ./
-  - tar -xf testing_data_$Inputs.tgz
-  - cd ../..
   artifacts:
     paths:
       - output
@@ -198,7 +194,7 @@ upload:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_deploy_plots.py TrainTagger/${Name} /eos/user/c/cebrown/www/JetTagging/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME} --recursive --extensions h5,cpp,h,yml,tcl,sh,png,pdf,rpt 
+    - pb_deploy_plots.py TrainTagger/${Name} $EOS_STORAGE_DIR/JetTagging/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME} --recursive --extensions h5,cpp,h,yml,tcl,sh,png,pdf,rpt 
   artifacts:
     paths:
       - $Name

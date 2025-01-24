@@ -225,7 +225,6 @@ if __name__ == "__main__":
 
             #All the basic plots!
             results = basic(model_dir)
-            mlflow.log_artifacts("output/baseline/plots/training",artifact_path="plots/training")
             for class_label in results.keys():
                 mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
             
@@ -235,7 +234,6 @@ if __name__ == "__main__":
             mlflow.keras.autolog()
             train(args.output, args.percent, model_name=args.model)
             run_id = run.info.run_id
-            mlflow.log_artifact("output/baseline/model/saved_model.h5") 
         sourceFile = open('mlflow_run_id.txt', 'w')
         print(run_id, end="", file = sourceFile)
         sourceFile.close()

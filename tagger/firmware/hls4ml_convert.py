@@ -102,6 +102,7 @@ def convert(model, outpath,build=True):
     hls_model.compile()
     if build == True:
         hls_model.build(csim=False, reset = True)
+        return [input_precision,class_precision,reg_precision]
     else:
         return hls_model
 
@@ -125,7 +126,7 @@ if __name__ == "__main__":
                         run_name=args.name,
                         run_id=run_id # pass None to start a new run
                         ):
-        convert(model,args.outpath)
+        precisions = convert(model,args.outpath)
         report = getReports('tagger/firmware/JetTaggerNN')
         mlflow.log_metric('FF',report['ff_rel'])
         mlflow.log_metric('LUT',report['lut_rel'])
@@ -136,11 +137,8 @@ if __name__ == "__main__":
         mlflow.log_metric('Initiation Interval ',report['latency_ii'])
         mlflow.log_metric('Initiation Interval ',report['latency_ii'])
 
-        mlflow.log_param('Input Precision ',input_precision)
-        mlflow.log_param('Class Precision ',class_precision)
-        mlflow.log_param('Regression Precision ',reg_precision)
-
-        os.system('tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN')
-        mlflow.log_artifact("JetTaggerNN.tgz",artifact_path="firmware",run_id=run_id)
+        mlflow.log_param('Input Precision ',precisions[0])
+        mlflow.log_param('Class Precision ',precisions[1])
+        mlflow.log_param('Regression Precision ',precisions[2])
 
     

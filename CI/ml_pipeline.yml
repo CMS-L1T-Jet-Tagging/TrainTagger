@@ -51,8 +51,8 @@ data:
   - cd ..
   - python tagger/train/train.py --make-data -i data/$Dataset
   - tar -cf training_data_$Inputs.tgz training_data
-  - eos mkdir $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}
-  - eos cp training_data_$Inputs.tgz $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}
+  - eos mkdir $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/
+  - eos cp training_data_$Inputs.tgz $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}
 
 train:
   extends:
@@ -62,14 +62,18 @@ train:
     - job : data
       optional: true
   script:
-  - eos cp $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}/training_data_$Inputs.tgz .
+  - eos cp $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/train/train.py -n $Name -p 50
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/baseline
   - tar -cf testing_data_$Inputs.tgz testing_data
-  - eos cp testing_data_$Inputs.tgz $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}
+  - eos mkdir $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
+  - eos mkdir $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/model/
+  - eos cp -r plots/training $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
+  - eos cp model/saved_model.h5 $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/model/
+  - eos cp testing_data_$Inputs.tgz $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}
   artifacts:
     paths:
       - output
@@ -86,7 +90,7 @@ evaluate:
   needs: [train]
   dependencies: [train]
   script:
-  - eos cp $EOS_STORAGE_DIR/${CI_COMMIT_REF_NAME}/${NAME}/training_data_$Inputs.tgz .
+  - eos cp $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - mkdir data
@@ -96,6 +100,7 @@ evaluate:
   - cd ..
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000
+  - eos cp -r plots/training/physics $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
   artifacts:
     paths:
       - output
@@ -119,6 +124,9 @@ synth:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - source activate tagger
     - python tagger/firmware/hls4ml_convert.py -n $Name
+    - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
+    - eos mkdir $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/firmware/
+    - eos cp -r JetTaggerNN.tgz $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/firmware/
   artifacts:
     paths:
       - tagger/firmware
@@ -140,6 +148,7 @@ emulation-evaluate:
   - cd ..
   - source activate tagger
   - python tagger/plot/makeEmulationPlot.py -r True
+  - eos cp -r plots/training/emulation $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
   artifacts:
     paths:
       - output/baseline
@@ -167,6 +176,7 @@ profile:
   - pip install .[profiling]
   - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True
+  - eos cp -r plots/training/profile $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
   artifacts:
     paths:
       - output/baseline
@@ -196,7 +206,12 @@ upload:
     - export EOS_MGM_URL=root://eosuser.cern.ch
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_deploy_plots.py TrainTagger/${Name} $EOS_STORAGE_DIR/JetTagging/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME} --recursive --extensions png,pdf 
+    - pb_deploy_plots.py TrainTagger/${Name} eos/user/c/cebrown/JetTagging/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME} --recursive --extensions png,pdf,h5
+    - cd TrainTagger
+    - python mlflow_logger.py -w 'https://cebrown.web.cern.ch/JetTagging/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME} 
+      -f $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/firmware 
+      -m $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/model
+      -p $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots
   artifacts:
     paths:
       - $Name

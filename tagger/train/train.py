@@ -132,7 +132,7 @@ def train(out_dir, percent, model_name):
 
     #Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-    print(X_train[0][:][:][0])
+
     #Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels)
@@ -225,6 +225,7 @@ if __name__ == "__main__":
 
             #All the basic plots!
             results = basic(model_dir)
+            mlflow.log_artifacts("output/baseline/plots/training",artifact_path="plots/training")
             for class_label in results.keys():
                 mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
             
@@ -234,6 +235,7 @@ if __name__ == "__main__":
             mlflow.keras.autolog()
             train(args.output, args.percent, model_name=args.model)
             run_id = run.info.run_id
+            mlflow.log_artifact("output/baseline/model/saved_model.h5") 
         sourceFile = open('mlflow_run_id.txt', 'w')
         print(run_id, end="", file = sourceFile)
         sourceFile.close()

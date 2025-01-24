@@ -159,3 +159,7 @@ if __name__ == "__main__":
         make_data(infile=args.input,outdir="emulation_data/",extras='extra_emulation_fields')
 
     doPlots(model,args.outpath,"emulation_data/")
+
+    f = open("mlflow_run_id.txt", "r")
+    run_id = (f.read())
+    mlflow.log_artifacts("output/baseline/plots/emulation",artifact_path="plots/emulation",run_id=run_id)

@@ -134,5 +134,13 @@ if __name__ == "__main__":
         mlflow.log_metric('Latency cc',report['latency_clks'])
         mlflow.log_metric('Latency us',report['latency_mus'])
         mlflow.log_metric('Initiation Interval ',report['latency_ii'])
+        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
+
+        mlflow.log_param('Input Precision ',input_precision)
+        mlflow.log_param('Class Precision ',class_precision)
+        mlflow.log_param('Regression Precision ',reg_precision)
+
+        os.system('tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN')
+        mlflow.log_artifact("JetTaggerNN.tgz",artifact_path="firmware",run_id=run_id)
 
     

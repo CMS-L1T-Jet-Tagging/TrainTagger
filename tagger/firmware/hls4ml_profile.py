@@ -14,6 +14,7 @@ import tensorflow_model_optimization as tfmot
 import hls4ml
 from qkeras.utils import load_qmodel
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
+import mlflow
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -98,3 +99,7 @@ if __name__ == "__main__":
         make_data(infile=args.input,outdir="profiling_data/",extras='extra_emulation_fields')
 
     doPlots(model,args.outpath,"profiling_data/")
+
+    f = open("mlflow_run_id.txt", "r")
+    run_id = (f.read())
+    mlflow.log_artifacts("output/baseline/plots/profile",artifact_path="plots/profile",run_id=run_id)

@@ -41,10 +41,10 @@ data:
     - .template
   stage: data
   image: gitlab-registry.cern.ch/cebrown/docker-images/mamba_jettagger:latest
-  rules:
-     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-         - tagger/data/**
-  when: manual
+  # rules:
+  #    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+  #        - tagger/data/**
+  # when: manual
   script:
   - source activate tagger
   - mkdir data

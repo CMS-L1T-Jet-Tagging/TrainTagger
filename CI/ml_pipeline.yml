@@ -53,7 +53,7 @@ data:
   - cd ..
   - python tagger/train/train.py --make-data -i data/$Dataset
   - tar -cf training_data_$Inputs.tgz training_data
-  - eos mkdir ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
+  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
   - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 train:
@@ -71,9 +71,9 @@ train:
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/baseline
   - tar -cf testing_data_$Inputs.tgz testing_data
-  - eos mkdir ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
-  - eos mkdir ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
-  - eos mkdir ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/testing_data/
+  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
+  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
+  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/testing_data/
   - eos cp -r plots/training ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   - eos cp model/saved_model.h5 ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
   - eos cp testing_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/testing_data/
@@ -103,7 +103,7 @@ evaluate:
   - cd ..
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000
-  - eos mkdir ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/physics
+  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/physics
   - eos cp -r output/baseline/plots/physics ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/physics
   artifacts:
     paths:
@@ -129,7 +129,7 @@ synth:
     - source activate tagger
     - python tagger/firmware/hls4ml_convert.py -n $Name
     - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
-    - eos mkdir ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   artifacts:
     paths:

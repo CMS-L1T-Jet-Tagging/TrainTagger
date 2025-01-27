@@ -100,7 +100,7 @@ evaluate:
   - cd ..
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000
-  - eos cp -r plots/training/physics $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
+  - eos cp -r output/baseline/plots/training/physics $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
   artifacts:
     paths:
       - output
@@ -148,7 +148,7 @@ emulation-evaluate:
   - cd ..
   - source activate tagger
   - python tagger/plot/makeEmulationPlot.py -r True
-  - eos cp -r plots/training/emulation $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
+  - eos cp -r output/baseline/plots/training/emulation $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
   artifacts:
     paths:
       - output/baseline
@@ -176,7 +176,7 @@ profile:
   - pip install .[profiling]
   - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True
-  - eos cp -r plots/training/profile $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
+  - eos cp -r output/baseline/plots/training/profile $EOS_STORAGE_DIR/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/${NAME}/plots/
   artifacts:
     paths:
       - output/baseline

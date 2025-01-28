@@ -49,10 +49,12 @@ data:
   - source activate tagger
   - mkdir data
   - cd data
+  - export EOS_MGM_URL=root://eoscms.cern.ch
   - eos cp $EOS_DATA_DIR/$Dataset .
   - cd ..
   - python tagger/train/train.py --make-data -i data/$Dataset
   - tar -cf training_data_$Inputs.tgz training_data
+  - export EOS_MGM_URL=root://eosproject.cern.ch
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
   - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
@@ -207,7 +209,6 @@ upload:
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
-    - export EOS_MGM_URL=root://eosuser.cern.ch
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - pb_copy_index.py TrainTagger/${Name} --recursive
     - pb_deploy_plots.py TrainTagger/${Name} /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,h5

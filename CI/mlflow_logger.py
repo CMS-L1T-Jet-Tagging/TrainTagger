@@ -7,10 +7,11 @@ import mlflow
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('-w','--website', default='https://cebrown.web.cern.ch/' , help = 'Plotting Website')    
-    parser.add_argument('-f','--firmware', default='/eos/cms/store/cmst3/group/l1tr/MultiJetTagger/main/firmware' , help = 'Firmware archive')    
-    parser.add_argument('-m','--model', default=='/eos/cms/store/cmst3/group/l1tr/MultiJetTagger/main/model', help = 'Model archive')
-    parser.add_argument('-p','--plots', default=='/eos/cms/store/cmst3/group/l1tr/MultiJetTagger/main/plots', help = 'Plots archive')
+    parser.add_argument('-w','--website', default='https://cms-l1t-jet-tagger.web.cern.ch/' , help = 'Plotting Website')    
+    parser.add_argument('-f','--firmware', default='/eos/project/c/cms-l1t-jet-tagger/CI/main/firmware' , help = 'Firmware archive')    
+    parser.add_argument('-m','--model', default='/eos/project/c/cms-l1t-jet-tagger/CI/main/model', help = 'Model archive')
+    parser.add_argument('-p','--plots', default='/eos/project/c/cms-l1t-jet-tagger/CI/main/plots', help = 'Plots archive')
+    parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
 
     args = parser.parse_args()
 

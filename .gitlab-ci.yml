@@ -53,7 +53,7 @@ DeepSet:baseline_5param_extended_trk:
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
     EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
-    EOS_STORAGE_DIR: /eos/cms/store/cmst3/group/l1tr/MultiJetTagger/
+    EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/CI/
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     SCRAM_ARCH: 'el9_amd64_gcc12'

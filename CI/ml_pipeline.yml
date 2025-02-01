@@ -197,6 +197,7 @@ upload:
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
   script:
+    - source activate tagger
     - mkdir $Name
     - mv tagger/firmware $Name
     - mkdir $Name/plots

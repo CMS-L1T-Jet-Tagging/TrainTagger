@@ -201,7 +201,7 @@ upload:
     - mkdir $Name
     - mv tagger/firmware $Name
     - mkdir $Name/plots
-    - mv output/baseline/model $Name/model
+    - cp output/baseline/model $Name/model
     - mv output/baseline/plots/emulation $Name/plots
     - mv output/baseline/plots/profile $Name/plots
     - mv output/baseline/plots/training/ $Name/plots

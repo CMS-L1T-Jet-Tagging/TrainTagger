@@ -1,7 +1,7 @@
 include:
   - local: "CI/template.yml"
 
- DeepSet:baseline_4param:
+DeepSet:baseline_4param:
    extends: .ml_pipeline
    variables:
      Name: baseline_4param
@@ -18,7 +18,7 @@ include:
      CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
      CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
 
- DeepSet:baseline_5param:
+DeepSet:baseline_5param:
    extends: .ml_pipeline
    variables:
      Name: baseline_5param
@@ -35,8 +35,8 @@ include:
      CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
      CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
 
- DeepSet:baseline_4param_extended_trk:
-   extends: .ml_pipeline
+DeepSet:baseline_4param_extended_trk:
+  extends: .ml_pipeline
    variables:
      Name: baseline_4param_extended_trk
      Inputs: baseline
@@ -53,7 +53,7 @@ include:
      CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
 
 DeepSet:baseline_4param_extended_trk:
-   extends: .ml_pipeline
+  extends: .ml_pipeline
    variables:
      Name: baseline_5param_extended_trk
      Inputs: baseline

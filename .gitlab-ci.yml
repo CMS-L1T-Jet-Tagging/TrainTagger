@@ -52,7 +52,7 @@ DeepSet:baseline_4param_extended_trk:
      CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
      CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
 
-DeepSet:baseline_4param_extended_trk:
+DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline
    variables:
      Name: baseline_5param_extended_trk

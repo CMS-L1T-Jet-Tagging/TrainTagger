@@ -15,8 +15,8 @@ DeepSet:baseline_4param:
      EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/CI/
      EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
      EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
-     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
+     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
 
 DeepSet:baseline_5param:
    extends: .ml_pipeline
@@ -32,12 +32,12 @@ DeepSet:baseline_5param:
      EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
      EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
      SCRAM_ARCH: 'el9_amd64_gcc12'
-     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
+     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
 
 DeepSet:baseline_4param_extended_trk:
   extends: .ml_pipeline
-   variables:
+  variables:
      Name: baseline_4param_extended_trk
      Inputs: baseline
      DataDir: extendedTRK_4param_221124
@@ -49,12 +49,12 @@ DeepSet:baseline_4param_extended_trk:
      EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
      EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
      SCRAM_ARCH: 'el9_amd64_gcc12'
-     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
+     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
 
 DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline
-   variables:
+  variables:
      Name: baseline_5param_extended_trk
      Inputs: baseline
      DataDir: extendedTRK_5param_221124
@@ -66,8 +66,8 @@ DeepSet:baseline_5param_extended_trk:
      EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
      EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
      SCRAM_ARCH: 'el9_amd64_gcc12'
-     CMSSW_VERSION: 'CMSSW_14_0_0_pre3'
-     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_0_0_pre3-JetTaggerNN'
+     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
 
 DeepSet:new_samples_baseline_5param_extended_trk:
   extends: .ml_pipeline

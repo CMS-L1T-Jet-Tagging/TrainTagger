@@ -388,7 +388,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
     num_entries_done = 0
     chunk = 0
 
-    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=step_size, max_workers=8):
+    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=8):
         
         #Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)

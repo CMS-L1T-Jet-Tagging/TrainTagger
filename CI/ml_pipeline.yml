@@ -13,15 +13,15 @@ stages:
 
 variables:
     Name:  baseline_4_params
-    Model: DeepSet
-    Classes: btgc
     Inputs: baseline
-    DataDir: ./
-    Dataset: All200.root
+    TRAIN: All200.root
     EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
-    EOS_STORAGE_DIR: /eos/cms/store/cmst3/group/l1tr/MultiJetTagger/
+    EOS_STORAGE_DIR: /eos/cms/store/cmst3/group/l1tr/MultiJetTagger
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
+    SCRAM_ARCH: 'el9_amd64_gcc12'
+    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -50,9 +50,9 @@ data:
   - mkdir data
   - cd data
   - export EOS_MGM_URL=root://eoscms.cern.ch
-  - eos cp $EOS_DATA_DIR/$Dataset .
+  - eos cp $EOS_DATA_DIR/${TRAIN} .
   - cd ..
-  - python tagger/train/train.py --make-data -i data/$Dataset
+  - python tagger/train/train.py --make-data -i data/${TRAIN}
   - tar -cf training_data_$Inputs.tgz training_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
@@ -72,13 +72,11 @@ train:
   - python tagger/train/train.py -n $Name -p 50
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/baseline
-  - tar -cf testing_data_$Inputs.tgz testing_data
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/testing_data/
   - eos cp -r plots/training ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   - eos cp model/saved_model.h5 ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
-  - eos cp testing_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/testing_data/
   artifacts:
     paths:
       - output

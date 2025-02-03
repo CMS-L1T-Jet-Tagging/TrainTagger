@@ -271,11 +271,13 @@ if __name__ == "__main__":
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')
     parser.add_argument('--eff', action='store_true', help='plot efficiency for HH->4b')
 
+    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
+
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
     args = parser.parse_args()
 
     if args.deriveWPs:
-        derive_bbbb_WPs(args.model_dir, args.minbias, n_entries=args.n_entries)
+        derive_bbbb_WPs(args.model_dir, args.minbias, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
-        bbbb_eff_HT(args.model_dir, args.sample, n_entries=args.n_entries)
+        bbbb_eff_HT(args.model_dir, args.sample, n_entries=args.n_entries,tree=args.tree)

@@ -52,7 +52,7 @@ data:
   - export EOS_MGM_URL=root://eoscms.cern.ch
   - eos cp $EOS_DATA_DIR/${TRAIN} .
   - cd ..
-  - python tagger/train/train.py --make-data -i data/${TRAIN}
+  - python tagger/train/train.py --make-data -i data/${TRAIN} --tree $NTUPLE_TREE
   - tar -cf training_data_$Inputs.tgz training_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
@@ -69,7 +69,7 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/train/train.py -n $Name -p 50
+  - python tagger/train/train.py -n $Name -p 50 
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/baseline
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
@@ -101,8 +101,8 @@ evaluate:
   - eos cp $EOS_DATA_DIR/$MINBIAS .
   - eos cp $EOS_DATA_DIR/$BBBB .
   - cd ..
-  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000
-  - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000
+  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/physics
   - eos cp -r output/baseline/plots/physics ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/physics
   artifacts:

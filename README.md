@@ -42,12 +42,12 @@ python tagger/train/train.py
 #Make some basic validation plots
 python tagger/train/train.py --plot-basic
 
-#Make other plots for bbbb/bbtautau final state for example:
-python tagger/plot/bbbb.py
-python tagger/plot/bbtautau.py
+#Make other plots for bbbb/di-taus final state for example:
+python bbbb.py --deriveWPs
+python bbbb.py --eff
 
-#OR vbf tautau
-python tagger/plot/vbf_tautau.py
+#Or for di-taus
+python tagger/plot/diTaus.py
 
 #Synthesize the model (with wrapper and CMMSSW)
 python tagger/firmware/hls4ml_convert.py

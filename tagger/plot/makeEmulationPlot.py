@@ -156,6 +156,6 @@ if __name__ == "__main__":
     print(model.summary())
 
     if args.remake:
-        make_data(infile=args.input,outdir="emulation_data/",extras='extra_emulation_fields')
+        make_data(infile=args.input,outdir="emulation_data/",extras='extra_emulation_fields',tree="outnano/Jets")
 
     doPlots(model,args.outpath,"emulation_data/")

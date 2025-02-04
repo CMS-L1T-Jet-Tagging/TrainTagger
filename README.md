@@ -26,6 +26,8 @@ The CI in this repository aims at building a pipeline that enables running all o
 Note that the instructions are assuming that you have access to the appropriate `eos` data spaces. If you are not interested in reading lengthy documentation like me, here is a ultra-short version to get started on running the code (more details in each specific command is provided in each section above, futher help can be found by looking into each script):
 
 ```
+#Everything is done directly under the TrainTagger directory
+
 #Activate the environment
 conda activate tagger
 
@@ -47,7 +49,7 @@ python bbbb.py --deriveWPs
 python bbbb.py --eff
 
 #Or for di-taus
-python tagger/plot/diTaus.py
+python tagger/plot/diTaus.py --deriveWPs
 
 #Synthesize the model (with wrapper and CMMSSW)
 python tagger/firmware/hls4ml_convert.py

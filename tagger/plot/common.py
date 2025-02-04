@@ -34,6 +34,17 @@ WPs_CMSSW = {
 }
 
 #FUNCTIONS
+def delta_r(eta1, phi1, eta2, phi2):
+    """
+    Calculate the delta R between two sets of eta and phi values.
+    """
+    delta_eta = eta1 - eta2
+    delta_phi = phi1 - phi2
+
+    # Ensure delta_phi is within -pi to pi
+    delta_phi = (delta_phi + np.pi) % (2 * np.pi) - np.pi
+    return np.sqrt(delta_eta**2 + delta_phi**2)
+
 def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
     
     idx_list = []

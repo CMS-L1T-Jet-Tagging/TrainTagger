@@ -34,6 +34,18 @@ WPs_CMSSW = {
 }
 
 #FUNCTIONS
+def eta_region_selection(eta_array, eta_region):
+    """
+    eta range for barrel: |eta| < 1.5
+    eta range for endcap: 1.5 < |eta| < 2.5
+
+    return eta array selection
+    """
+
+    if eta_region == 'barrel': return np.abs(eta_array) < 1.5
+    elif eta_region == 'endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.5)
+    else: return np.abs(eta_array) > 0.0 #Select everything
+
 def delta_r(eta1, phi1, eta2, phi2):
     """
     Calculate the delta R between two sets of eta and phi values.

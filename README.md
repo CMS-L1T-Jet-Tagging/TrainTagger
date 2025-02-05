@@ -50,6 +50,8 @@ python bbbb.py --eff
 
 #Or for di-taus
 python tagger/plot/diTaus.py --deriveWPs
+python tagger/plot/diTaus.py --BkgRate
+python tagger/plot/diTaus.py --eff
 
 #Synthesize the model (with wrapper and CMMSSW)
 python tagger/firmware/hls4ml_convert.py

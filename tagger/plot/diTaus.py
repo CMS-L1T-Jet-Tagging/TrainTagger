@@ -443,12 +443,14 @@ if __name__ == "__main__":
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
+    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
+
     args = parser.parse_args()
 
     if args.deriveWPs:
-        derive_diTaus_WPs(args.model_dir, args.minbias, n_entries=args.n_entries)
+        derive_diTaus_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.BkgRate:
-        plot_bkg_rate_ditau(args.model_dir, args.minbias, n_entries=args.n_entries)
+        plot_bkg_rate_ditau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel')
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap')
+        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree)
+        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)

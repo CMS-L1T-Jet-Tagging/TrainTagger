@@ -100,7 +100,7 @@ evaluate:
   - cd data
   - eos cp $EOS_DATA_DIR/$MINBIAS .
   - eos cp $EOS_DATA_DIR/$BBBB .
-  - eos cp $EOS_DATA_DIR/$VBFTAUTAU .
+  - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "bbbb performance"
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE

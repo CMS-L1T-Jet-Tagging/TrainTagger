@@ -142,7 +142,7 @@ def train(out_dir, percent, model_name):
 
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
-
+    
     #Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump output variables
     with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
@@ -217,13 +217,14 @@ if __name__ == "__main__":
     parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/All200.root' , help = 'Path to input training data')
     parser.add_argument('-r','--ratio', default=1, type=float, help = 'Ratio (0-1) of the input data root file to process')
     parser.add_argument('-s','--step', default='100MB' , help = 'The maximum memory size to process input root file')
-    parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, defined in pfcand_fields.yml')
+    parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, in pfcand_fields.yml')
 
     #Training argument
     parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
     parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
+    parser.add_argument('-t','--tree', default='outnano/jets', help = 'Tree within the ntuple containing the jets')
 
     #Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
@@ -234,7 +235,7 @@ if __name__ == "__main__":
 
     #Either make data or start the training
     if args.make_data:
-        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
     elif args.plot_basic:
         model_dir = args.output
         f = open("mlflow_run_id.txt", "r")

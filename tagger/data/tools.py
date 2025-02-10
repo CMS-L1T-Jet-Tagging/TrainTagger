@@ -33,21 +33,21 @@ def _split_flavor(data):
 
     # Define conditions for each label
     conditions = {
-        "b": (
+        "b": ( # Bottom
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
             (data['jet_elflav'] == 0) &
             (data['jet_genmatch_hflav'] == 5)
         ),
-        "charm": ( #Charm
+        "charm": ( # Charm
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
             (data['jet_elflav'] == 0) &
             (data['jet_genmatch_hflav'] == 4)
         ),
-        "light": (
+        "light": ( # uds
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
@@ -55,7 +55,7 @@ def _split_flavor(data):
             (data['jet_genmatch_hflav'] == 0) &
             ((abs(data['jet_genmatch_pflav']) == 0) | (abs(data['jet_genmatch_pflav']) == 1) | (abs(data['jet_genmatch_pflav']) == 2) | (abs(data['jet_genmatch_pflav']) == 3))
         ),
-        "gluon": ( #Gluon
+        "gluon": ( # Gluon
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
@@ -63,27 +63,27 @@ def _split_flavor(data):
             (data['jet_genmatch_hflav'] == 0) &
             (data['jet_genmatch_pflav'] == 21)
         ),
-        "taup": (
+        "taup": ( # Tau +
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 1) &
             (data['jet_taucharge'] > 0) &
             (data['jet_elflav'] == 0)
         ),
-        "taum": (
+        "taum": ( # Tau -
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 1) &
             (data['jet_taucharge'] < 0) &
             (data['jet_elflav'] == 0)
         ),
-        "muon": (
+        "muon": ( # muon
             genmatch_pt_base &
             (data['jet_muflav'] == 1) &
             (data['jet_tauflav'] == 0) &
             (data['jet_elflav'] == 0)
         ),
-        "electron": (
+        "electron": ( # electron
             genmatch_pt_base &
             (data['jet_muflav'] == 0) &
             (data['jet_tauflav'] == 0) &
@@ -349,13 +349,14 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     
     return train_data, test_data, class_labels, input_vars, extra_vars
 
-def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/All200.root', 
+def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200.root', 
               outdir='training_data/',
               tag=INPUT_TAG,
               extras=EXTRA_FIELDS,
               n_parts=N_PARTICLES,
               ratio=1.0,
-              step_size="100MB"):
+              step_size="100MB",
+              tree="outnano/jets"):
     """
     Process the data set in chunks from the input ntuples file.
 
@@ -384,11 +385,11 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
     print("Output directory:", outdir)
 
     #Loop through the entries
-    num_entries = uproot.open(infile)["jetntuple/Jets"].num_entries
+    num_entries = uproot.open(infile)[tree].num_entries
     num_entries_done = 0
     chunk = 0
 
-    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip",step_size=step_size, max_workers=4):
+    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=8):
         
         #Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)

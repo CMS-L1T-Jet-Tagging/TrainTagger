@@ -89,7 +89,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     plt.savefig(f"{plot_dir}/bbbb_rate.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate.png", bbox_inches='tight')
 
-def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='jetntuple/Jets'):
+def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
@@ -159,7 +159,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
 
     return
 
-def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets'):
+def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
@@ -271,11 +271,13 @@ if __name__ == "__main__":
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')
     parser.add_argument('--eff', action='store_true', help='plot efficiency for HH->4b')
 
+    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
+
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
     args = parser.parse_args()
 
     if args.deriveWPs:
-        derive_bbbb_WPs(args.model_dir, args.minbias, n_entries=args.n_entries)
+        derive_bbbb_WPs(args.model_dir, args.minbias, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
-        bbbb_eff_HT(args.model_dir, args.sample, n_entries=args.n_entries)
+        bbbb_eff_HT(args.model_dir, args.sample, n_entries=args.n_entries,tree=args.tree)

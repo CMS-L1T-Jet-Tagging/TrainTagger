@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import os, shutil, json
 
 #Import from other modules
-from tagger.data.tools import make_data, load_data, to_ML
+from tagger.data.tools import make_data, load_data, to_ML, get_input_mask
 from tagger.firmware.hls4ml_convert import convert
 import tagger.train.models
 import tagger.plot.common as common
@@ -31,7 +31,8 @@ def doPlots(model,outputdir,inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     modelsAndNames = {"model":model}
-    
+    N_FILTERS = model.get_layer('avgpool').output_shape[1]
+
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100,test_ratio=0.0)
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
@@ -39,9 +40,11 @@ def doPlots(model,outputdir,inputdir):
 
     hls_model = convert(model,"temp",build=False)
 
-    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
-    y_class, y_ptreg = model.predict(np.ascontiguousarray(X_test))
-    
+    input_mask = get_input_mask(X_test, N_FILTERS)
+    model_inp = [np.ascontiguousarray(X_test), np.ascontiguousarray(input_mask)]
+    y_hls, y_ptreg_hls = hls_model.predict(model_inp)
+    y_class, y_ptreg = model.predict(model_inp)
+
     jet_pt_phys= np.array(data['jet_pt_phys'])
 
     modelsAndNames["Y_predict"] = y_class
@@ -142,10 +145,10 @@ def doPlots(model,outputdir,inputdir):
     return
 
 if __name__ == "__main__":
-    
+
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
-    parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')    
+    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')
+    parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to emulation data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake emulation data? ')
 

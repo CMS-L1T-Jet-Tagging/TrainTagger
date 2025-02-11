@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import os, shutil, json
 
 #Import from other modules
-from tagger.data.tools import make_data, load_data, to_ML
+from tagger.data.tools import make_data, load_data, to_ML, get_input_mask
 from tagger.plot.basic import loss_history, basic
 import models
 
@@ -117,19 +117,6 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)
 
-def get_input_mask(X_data, repeat_shape=N_FILTERS):
-    # Create input mask from training data
-    inputs_mask = np.where(np.sum(X_data, axis=2)==0, 0, X_data.shape[1])
-    inputs_count = np.sum(np.where(np.sum(X_data, axis=2)==0, 0, 1), axis=1)
-
-    # Normalize using constituents multiplicity, enforces averaging over real constituents in the model
-    inputs_mask = inputs_mask / inputs_count[:, np.newaxis]
-
-    # Mask shape must mathc the nn shape before the average poolinng layer
-    inputs_mask = np.repeat(inputs_mask[:, :,np.newaxis], repeat_shape, axis=2)
-
-    return inputs_mask
-
 def train(out_dir, percent, model_name):
 
     #Remove output dir if exists
@@ -142,7 +129,7 @@ def train(out_dir, percent, model_name):
 
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
-    
+
     #Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump output variables
     with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
@@ -154,8 +141,8 @@ def train(out_dir, percent, model_name):
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
 
     # Create input mask from training data
-    X_train_mask = get_input_mask(X_train)
-    X_test_mask = get_input_mask(X_test)
+    X_train_mask = get_input_mask(X_train, N_FILTERS)
+    X_test_mask = get_input_mask(X_test, N_FILTERS)
 
     save_test_data(out_dir, X_test, y_test, X_test_mask, truth_pt_test, reco_pt_test, class_labels)
 

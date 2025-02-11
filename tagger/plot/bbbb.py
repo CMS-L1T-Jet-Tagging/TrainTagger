@@ -19,16 +19,20 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, get_input_mask
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
 def nn_bscore_sum(model, jet_nn_inputs, n_jets=4, b_index = 1):
 
-    #Get the inputs for the first n_jets
+    N_FILTERS = model.get_layer('avgpool').output_shape[1]
+
+    #Get the inputs and masks for the first n_jets
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
+    input_masks = [get_input_mask(btag_inp, N_FILTERS) for btag_inp in btag_inputs]
+    nn_inputs = [[inp, mask] for inp, mask in zip(btag_inputs, input_masks)]
 
     #Get the nn outputs
-    nn_outputs = [model.predict(nn_input) for nn_input in btag_inputs]
+    nn_outputs = [model.predict(nn_inp) for nn_inp in nn_inputs]
 
     #Sum them together
     bscore_sum = sum([pred_score[0][:, b_index] for pred_score in nn_outputs])
@@ -42,7 +46,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
 
     plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
     os.makedirs(plot_dir, exist_ok=True)
-    
+
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     im = ax.scatter(nn_list, ht_list, c=rate_list, s=500, marker='s',
@@ -55,7 +59,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
 
     ax.set_ylabel(r"HT [GeV]")
     ax.set_xlabel(r"$\sum_{4~leading~jets}$ b scores")
-    
+
     ax.set_xlim([0,2.5])
     ax.set_ylim([10,500])
 
@@ -79,22 +83,23 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     working_point = {"HT": WPs_CMSSW['btag_l1_ht'], "NN": float(working_point_NN)}
     with open(os.path.join(plot_dir, "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
-        
+
     ax.plot(target_rate_NN, target_rate_HT,
                 linewidth=5,
                 color ='firebrick',
                 label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
-    
+
     ax.legend(loc='upper right')
     plt.savefig(f"{plot_dir}/bbbb_rate.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate.png", bbox_inches='tight')
 
-def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='outnano/Jets'):
+def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='jetntuple/Jets'):
     """
     Derive the HH->4b working points
     """
 
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    N_FILTERS = model.get_layer('avgpool').output_shape[1]
 
     #Load input/ouput variables of the NN
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
@@ -119,7 +124,10 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
     jet_pt, jet_nn_inputs = grouped_arrays
 
     #Btag input list for first 4 jets
-    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i])) for i in range(0,4)]
+    jet_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, 4)]
+    input_masks = [get_input_mask(jet_inp, N_FILTERS) for jet_inp in jet_inputs]
+    nn_inputs = [[inp, mask] for inp, mask in zip(jet_inputs, input_masks)]
+    nn_outputs = [model.predict(nn_inp) for nn_inp in nn_inputs]
 
     #Calculate the output sum
     b_index = class_labels['b']
@@ -145,12 +153,12 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
     #Loop through the edges and integrate
     for ht in ht_edges[:-1]:
         for NN in NN_edges[:-1]:
-            
+
             #Calculate the rate
             rate = RateHist[{"ht": slice(ht*1j, None, sum)}][{"nn": slice(NN*1.0j, None, sum)}]/n_events
             rate_list.append(rate*MINBIAS_RATE)
 
-            #Append the results   
+            #Append the results
             ht_list.append(ht)
             nn_list.append(NN)
 
@@ -159,7 +167,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
 
     return
 
-def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
+def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
@@ -264,14 +272,14 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb') 
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')
     parser.add_argument('--eff', action='store_true', help='plot efficiency for HH->4b')
 
-    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')

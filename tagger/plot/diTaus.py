@@ -25,7 +25,7 @@ from scipy.interpolate import interp1d
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 
-def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28):
+def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28, RateRange = 1.0):
     """
     Pick the working points and plot
     """
@@ -48,9 +48,6 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
     
     ax.set_xlim([0,0.4])
     ax.set_ylim([10,100])
-
-    #plus, minus range
-    RateRange = 1.0
 
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
@@ -81,7 +78,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
     #Just plot the points instead of the interpolation
     #ax.plot(target_rate_NN, target_rate_PT, linewidth=style.LINEWIDTH, color ='firebrick', label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
     
-    ax.legend(loc='upper right', fontsize=style.SMALL_SIZE-3)
+    ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
     plt.savefig(f"{plot_dir}/tautau_WPs.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/tautau_WPs.png", bbox_inches='tight')
 
@@ -271,22 +268,26 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
 
     # Plot the trigger rates
-    ax.plot(pt_cuts, minbias_rate_no_nn, label=r'No ID/$p_T$ correction', linewidth=style.LINEWIDTH)
-    ax.plot(pt_cuts, minbias_rate_cmssw, label=r'CMSSW PuppiTau Emulator', linewidth=style.LINEWIDTH)
-    ax.plot(pt_cuts, minbias_rate_model, label=r'SeedCone Tau', linewidth=style.LINEWIDTH)
+    ax.plot([],[], linestyle='none', label=r'$|\eta| < 2.5$')
+    ax.plot(pt_cuts, minbias_rate_no_nn, c=style.color_cycle[0], label=r'No ID/$p_T$ correction', linewidth=style.LINEWIDTH)
+    ax.plot(pt_cuts, minbias_rate_cmssw, c=style.color_cycle[1], label=r'CMSSW PuppiTau Emulator', linewidth=style.LINEWIDTH)
+    ax.plot(pt_cuts, minbias_rate_model, c=style.color_cycle[2],label=r'SeedCone Tau', linewidth=style.LINEWIDTH)
     
     # Add uncertainty bands
     ax.fill_between(pt_cuts,
                     np.array(minbias_rate_no_nn) - np.array(uncertainty_no_nn),
                     np.array(minbias_rate_no_nn) + np.array(uncertainty_no_nn),
+                    color=style.color_cycle[0],
                     alpha=0.3)
     ax.fill_between(pt_cuts,
                     np.array(minbias_rate_cmssw) - np.array(uncertainty_cmssw),
                     np.array(minbias_rate_cmssw) + np.array(uncertainty_cmssw),
+                    color=style.color_cycle[1],
                     alpha=0.3)
     ax.fill_between(pt_cuts,
                     np.array(minbias_rate_model) - np.array(uncertainty_model),
                     np.array(minbias_rate_model) + np.array(uncertainty_model),
+                    color=style.color_cycle[2],
                     alpha=0.3)
 
     # Set plot properties
@@ -419,6 +420,7 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     # Save and show the plot
     figname = f'sc_and_tau_eff_{eta_region}'
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
+    fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     plt.show(block=False)
 
     return
@@ -443,7 +445,7 @@ if __name__ == "__main__":
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
-    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
 
     args = parser.parse_args()
 

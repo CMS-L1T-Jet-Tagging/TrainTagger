@@ -32,8 +32,7 @@ Note that the instructions are assuming that you have access to the appropriate 
 conda activate tagger
 
 #Run this to add the scripts in this directory to your python path
-export PYTHONPATH=$PYTHONPATH:$PWD
-export CI_COMMIT_REF_NAME=local
+source setup.sh
 
 #Prepare the data
 python tagger/train/train.py --make-data

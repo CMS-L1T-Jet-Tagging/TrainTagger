@@ -228,11 +228,12 @@ profile:
     expire_in: 1 day
 
 upload:
-  tags: [k8s-gpu]
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_CPU_REQUEST: 1
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_CPU_REQUEST: 1
   needs: [emulation-evaluate,pre-synth,train,evaluate,profile]
   dependencies: [emulation-evaluate,pre-synth,train,evaluate,profile]
   before_script:

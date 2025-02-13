@@ -33,9 +33,9 @@ variables:
     - python $FOLDER/$SCRIPT $ARGS
   tags:
     - docker
-  rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
-     - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
-       when: on_success
+  # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
+  #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
+  #      when: on_success
 
 data:
   extends:

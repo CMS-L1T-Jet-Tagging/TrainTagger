@@ -46,8 +46,8 @@ data:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 4
   rules:
-     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-         - tagger/data/**
+    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+        - tagger/data/**
       when: manual
   script:
   - source activate tagger

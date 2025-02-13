@@ -48,7 +48,7 @@ data:
   rules:
      - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
          - tagger/data/**
-  when: manual
+      when: manual
   script:
   - source activate tagger
   - mkdir data
@@ -102,7 +102,6 @@ evaluate:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
   needs: [train]
-  dependencies: [train]
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
@@ -133,7 +132,6 @@ hls4ml:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
   needs : [train]
-  dependencies : [train]
   script:
     - source activate tagger
     - python tagger/firmware/hls4ml_convert.py -n $Name
@@ -152,7 +150,6 @@ synth:
   image: registry.cern.ch/ci4fpga/vivado:2024.1
   stage: synth
   needs : [hls4ml]
-  dependencies : [hls4ml]
   script:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - cp -r ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/JetTaggerNN.tgz .

@@ -171,7 +171,6 @@ synth:
   image: registry.cern.ch/ci4fpga/vivado:2024.1
   stage: synth
   needs : [hls4ml]
-  dependencies : [hls4ml]
   script:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - cp -r ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/JetTaggerNN.tgz .

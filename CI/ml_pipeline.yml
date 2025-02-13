@@ -124,24 +124,24 @@ evaluate:
     expire_in: 1 day
 
 hls4ml:
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 32Gi
+    KUBERNETES_CPU_REQUEST: 4
   extends:
     - .template
   stage: hls4ml
-  tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
-  needs : [train]
+  needs: 
+    - job : train
   script:
-    - source activate tagger
-    - python tagger/firmware/hls4ml_convert.py -n $Name
-    - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
-    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+  - source activate tagger
+  - python tagger/firmware/hls4ml_convert.py -n $Name
+  - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
+  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+  - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   artifacts:
     paths:
       - tagger/firmware
-      - mlflow_run_id.txt
     expire_in: 1 day
 
 synth:

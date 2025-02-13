@@ -129,12 +129,6 @@ evaluate:
     expire_in: 1 day
 
 hls4ml:
-<<<<<<< HEAD
-=======
-  extends:
-    - .template
-  stage: hls4ml
->>>>>>> 5ed2d53 (Fix to pre synth)
   tags: [k8s-gpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
@@ -145,16 +139,8 @@ hls4ml:
   needs: 
     - job : train
   script:
-<<<<<<< HEAD
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py
-=======
-    - source activate tagger
-    - python tagger/firmware/hls4ml_convert.py -n $Name
-    - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
-    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
->>>>>>> 5ed2d53 (Fix to pre synth)
   artifacts:
     paths:
       - tagger/firmware
@@ -182,7 +168,6 @@ synth:
   image: registry.cern.ch/ci4fpga/vivado:2024.1
   stage: synth
   needs : [hls4ml]
-  dependencies : [hls4ml]
   script:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - cp -r ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/JetTaggerNN.tgz .

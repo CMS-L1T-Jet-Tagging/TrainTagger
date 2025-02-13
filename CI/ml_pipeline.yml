@@ -5,6 +5,7 @@ stages:
   - data
   - train
   - evaluate
+  - pre-synth
   - synth
   - emulate
   - emulation-evaluate

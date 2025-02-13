@@ -2,8 +2,8 @@ emulate:
   tags: [ k8s-cvmfs ]
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: emulate
-  needs : [pre-synth]
-  dependencies : [pre-synth]
+  needs : [hls4ml]
+  dependencies : [hls4ml]
   before_script:
     #- yum install -q -y python3 python3-virtualenv mesa-libGL-devel mesa-libGLU-devel libXpm-devel openssl-devel ncurses-compat-libs 
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh

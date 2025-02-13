@@ -5,7 +5,7 @@ stages:
   - data
   - train
   - evaluate
-  - pre-synth
+  - hls4ml
   - synth
   - emulate
   - emulation-evaluate
@@ -124,10 +124,10 @@ evaluate:
       - .npy
     expire_in: 1 day
 
-pre-synth:
+hls4ml:
   extends:
     - .template
-  stage: pre-synth
+  stage: hls4ml
   tags: [k8s-gpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
@@ -135,10 +135,6 @@ pre-synth:
   needs : [train]
   dependencies : [train]
   script:
-    - source /opt/Xilinx/Vivado/2024.1/settings64.sh
-    - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
-    - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - source activate tagger
     - python tagger/firmware/hls4ml_convert.py -n $Name
     - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
@@ -155,8 +151,8 @@ synth:
     - fpga-small
   image: registry.cern.ch/ci4fpga/vivado:2024.1
   stage: synth
-  needs : [pre-synth]
-  dependencies : [pre-synth]
+  needs : [hls4ml]
+  dependencies : [hls4ml]
   script:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
     - cp -r ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/JetTaggerNN.tgz .
@@ -180,8 +176,8 @@ emulation-evaluate:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [emulate,train,pre-synth]
-  dependencies: [emulate,train,pre-synth]
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
   script:
   - mkdir data
   - cd data
@@ -203,8 +199,8 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [emulate,train,synth]
-  dependencies: [emulate,train,synth]
+  needs: [emulate,train]
+  dependencies: [emulate,train]
   script:
   - source activate tagger
   - mkdir data
@@ -230,8 +226,8 @@ upload:
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
-  needs: [emulation-evaluate,pre-synth,train,evaluate,profile]
-  dependencies: [emulation-evaluate,pre-synth,train,evaluate,profile]
+  needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
   script:

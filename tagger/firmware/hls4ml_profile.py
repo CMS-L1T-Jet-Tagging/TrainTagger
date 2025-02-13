@@ -74,10 +74,6 @@ def doPlots(model,outputdir,inputdir):
         plt.savefig(f"{outputdir}/profile_2d_{layer}.pdf",bbox_inches='tight')
         plt.close()
 
-
-
-
-
     return
 
 if __name__ == "__main__":
@@ -98,3 +94,26 @@ if __name__ == "__main__":
         make_data(infile=args.input,outdir="profiling_data/",extras='extra_emulation_fields',tree="outnano/Jets")
 
     doPlots(model,args.outpath,"profiling_data/")
+
+    f = open("mlflow_run_id.txt", "r")
+    run_id = (f.read())
+    mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
+    with mlflow.start_run(experiment_id=1,
+                        run_name=args.name,
+                        run_id=run_id # pass None to start a new run
+                        ):
+        precisions = convert(model,args.outpath)
+        report = getReports('tagger/firmware/JetTaggerNN')
+        mlflow.log_metric('FF',report['ff_rel'])
+        mlflow.log_metric('LUT',report['lut_rel'])
+        mlflow.log_metric('BRAM',report['bram_rel'])
+        mlflow.log_metric('DSP',report['dsp_rel'])
+        mlflow.log_metric('Latency cc',report['latency_clks'])
+        mlflow.log_metric('Latency us',report['latency_mus'])
+        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
+        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
+
+        mlflow.log_param('Input Precision ',precisions[0])
+        mlflow.log_param('Class Precision ',precisions[1])
+        mlflow.log_param('Regression Precision ',precisions[2])
+

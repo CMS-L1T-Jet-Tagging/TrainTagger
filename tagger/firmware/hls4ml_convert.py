@@ -101,7 +101,7 @@ def convert(model, outpath,build=True):
     #Compile and build the project
     hls_model.compile()
     if build == True:
-        hls_model.build(csim=False, reset = True)
+        #hls_model.build(csim=False, reset = True)
         return [input_precision,class_precision,reg_precision]
     else:
         return hls_model
@@ -111,34 +111,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')    
     parser.add_argument('-o','--outpath', default='tagger/firmware/JetTaggerNN' , help = 'Jet tagger synthesized output directory')    
-    parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
-
     args = parser.parse_args()
 
     #Load the model
     model=load_qmodel(args.model)
-    print(model.summary())
+    precisions = convert(model,args.outpath)
 
-    f = open("mlflow_run_id.txt", "r")
-    run_id = (f.read())
-    mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
-    with mlflow.start_run(experiment_id=1,
-                        run_name=args.name,
-                        run_id=run_id # pass None to start a new run
-                        ):
-        precisions = convert(model,args.outpath)
-        report = getReports('tagger/firmware/JetTaggerNN')
-        mlflow.log_metric('FF',report['ff_rel'])
-        mlflow.log_metric('LUT',report['lut_rel'])
-        mlflow.log_metric('BRAM',report['bram_rel'])
-        mlflow.log_metric('DSP',report['dsp_rel'])
-        mlflow.log_metric('Latency cc',report['latency_clks'])
-        mlflow.log_metric('Latency us',report['latency_mus'])
-        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
-        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
-
-        mlflow.log_param('Input Precision ',precisions[0])
-        mlflow.log_param('Class Precision ',precisions[1])
-        mlflow.log_param('Regression Precision ',precisions[2])
 
     

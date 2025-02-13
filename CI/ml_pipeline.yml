@@ -63,7 +63,7 @@ data:
   - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 train:
-  tags: [k8s-eos]
+  tags: [memory-intensive]
   extends:
     - .template
   stage: train

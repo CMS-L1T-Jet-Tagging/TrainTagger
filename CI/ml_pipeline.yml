@@ -41,7 +41,6 @@ data:
   extends:
     - .template
   stage: data
-  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   tags: [k8s-gpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
@@ -102,7 +101,6 @@ evaluate:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   needs: [train]
   dependencies: [train]
   script:
@@ -182,8 +180,6 @@ emulation-evaluate:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  tags:
-    - cb_vivado
   needs: [emulate,train,pre-synth]
   dependencies: [emulate,train,pre-synth]
   script:

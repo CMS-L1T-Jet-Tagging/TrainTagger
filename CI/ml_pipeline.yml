@@ -69,6 +69,10 @@ train:
   extends:
     - .template
   stage: train
+  variables:
+    KUBERNETES_MEMORY_LIMIT: 4G
+    KUBERNETES_MEMORY_REQUEST: 4G
+    KUBERNETES_HELPER_MEMORY_LIMIT: 4G
   needs: 
     - job : data
       optional: true

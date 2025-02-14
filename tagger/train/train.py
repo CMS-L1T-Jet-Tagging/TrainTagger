@@ -15,10 +15,10 @@ from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 
-num_threads = 4
-os.environ["OMP_NUM_THREADS"] = "4"
-os.environ["TF_NUM_INTRAOP_THREADS"] = "4"
-os.environ["TF_NUM_INTEROP_THREADS"] = "4"
+num_threads = 8
+os.environ["OMP_NUM_THREADS"] = str(num_threads)
+os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
+os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
 
 tf.config.threading.set_inter_op_parallelism_threads(
     num_threads

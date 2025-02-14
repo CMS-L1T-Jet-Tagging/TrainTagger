@@ -63,15 +63,15 @@ data:
   - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 train:
-  tags: [k8s-gpu]
+  tags: [cpu-intensive]
   extends:
     - .template
   stage: train
   variables:
-    KUBERNETES_MEMORY_LIMIT: 32G
-    KUBERNETES_MEMORY_REQUEST: 32G
-    KUBERNETES_HELPER_MEMORY_LIMIT: 32G
-    KUBERNETES_CPU_REQUEST: 2
+    KUBERNETES_MEMORY_LIMIT: 12G
+    KUBERNETES_MEMORY_REQUEST: 12G
+    KUBERNETES_HELPER_MEMORY_LIMIT: 12G
+    KUBERNETES_CPU_REQUEST: 8
   needs: 
     - job : data
       optional: true

@@ -15,7 +15,7 @@ from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 
-num_threads = 8
+num_threads = 2
 os.environ["OMP_NUM_THREADS"] = str(num_threads)
 os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
 os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)

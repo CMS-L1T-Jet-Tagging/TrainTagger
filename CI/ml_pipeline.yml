@@ -142,7 +142,7 @@ hls4ml:
 
 synth:
   tags:
-    - fpga-small
+    - fpga-mid
   image: registry.cern.ch/ci4fpga/vivado:2024.1
   stage: synth
   needs : [hls4ml]
@@ -205,7 +205,7 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - python tagger/firmware/hls4ml_profile.py -r True -n -n $Name
+  - python tagger/firmware/hls4ml_profile.py -r True -n $Name
   - eos cp -r output/baseline/plots/profile ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   artifacts:
     paths:

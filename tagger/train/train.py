@@ -20,12 +20,12 @@ os.environ["OMP_NUM_THREADS"] = "4"
 os.environ["TF_NUM_INTRAOP_THREADS"] = "4"
 os.environ["TF_NUM_INTEROP_THREADS"] = "4"
 
-
-config = tf.ConfigProto()
-config.intra_op_parallelism_threads = num_threads
-config.inter_op_parallelism_threads = num_threads
-tf.session(config=config)
-
+tf.config.threading.set_inter_op_parallelism_threads(
+    num_threads
+)
+tf.config.threading.set_intra_op_parallelism_threads(
+    num_threads
+)
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 

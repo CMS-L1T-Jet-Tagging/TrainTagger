@@ -20,13 +20,11 @@ os.environ["OMP_NUM_THREADS"] = "4"
 os.environ["TF_NUM_INTRAOP_THREADS"] = "4"
 os.environ["TF_NUM_INTEROP_THREADS"] = "4"
 
-tf.config.threading.set_inter_op_parallelism_threads(
-    num_threads
-)
-tf.config.threading.set_intra_op_parallelism_threads(
-    num_threads
-)
-tf.config.set_soft_device_placement(True)
+
+config = tf.ConfigProto()
+config.intra_op_parallelism_threads = num_threads
+config.inter_op_parallelism_threads = num_threads
+tf.session(config=config)
 
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING

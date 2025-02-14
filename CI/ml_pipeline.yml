@@ -165,18 +165,13 @@ synth:
   stage: synth
   needs : [hls4ml]
   script:
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
-    - cp -r ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/JetTaggerNN.tgz .
-    - tar -xvf JetTaggerNN.tgz
-    - cd JetTaggerNN
+    - cd TrainTagger/tagger/firmware/JetTaggerNN
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl 
-    - cd ..
-    - tar -cvf JetTaggerNN.tgz JetTaggerNN
-    - cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    - cd ../../..
   artifacts:
     paths:
-      - JetTaggerNN
+      - TrainTagger/tagger/firmware/JetTaggerNN
     expire_in: 1 day
 
 emulation-evaluate:

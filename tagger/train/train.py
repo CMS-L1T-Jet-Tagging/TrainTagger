@@ -15,6 +15,20 @@ from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 
+num_threads = 4
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["TF_NUM_INTRAOP_THREADS"] = "4"
+os.environ["TF_NUM_INTEROP_THREADS"] = "4"
+
+tf.config.threading.set_inter_op_parallelism_threads(
+    num_threads
+)
+tf.config.threading.set_intra_op_parallelism_threads(
+    num_threads
+)
+tf.config.set_soft_device_placement(True)
+
+
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 
 BATCH_SIZE = 1024

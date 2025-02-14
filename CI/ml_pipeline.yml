@@ -151,6 +151,7 @@ hls4ml:
 
 synth:
   tags:
+<<<<<<< HEAD
     - fpga-large
   image: registry.cern.ch/ci4fpga/vivado:2023.2
   stage: synth
@@ -168,6 +169,9 @@ synth:
 synth:
   tags:
     - fpga-small
+=======
+    - fpga-mid
+>>>>>>> 1370460 (Pipeline fix)
   image: registry.cern.ch/ci4fpga/vivado:2024.1
   stage: synth
   needs : [hls4ml]
@@ -229,8 +233,13 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
+<<<<<<< HEAD
   - ls tagger/firmware/JetTaggerNN/JetTaggerNN_prj/solution1/syn/report/
   - python tagger/firmware/hls4ml_profile.py -r True -n $Name
+=======
+  - python tagger/firmware/hls4ml_profile.py -r True -n $Name
+  - eos cp -r output/baseline/plots/profile ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
+>>>>>>> 1370460 (Pipeline fix)
   artifacts:
     paths:
       - output/baseline

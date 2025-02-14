@@ -70,10 +70,10 @@ train:
     - .template
   stage: train
   variables:
-    KUBERNETES_MEMORY_LIMIT: 16G
-    KUBERNETES_MEMORY_REQUEST: 16G
-    KUBERNETES_HELPER_MEMORY_LIMIT: 16G
-    KUBERNETES_CPU_REQUEST: 4
+    KUBERNETES_MEMORY_LIMIT: 32G
+    KUBERNETES_MEMORY_REQUEST: 32G
+    KUBERNETES_HELPER_MEMORY_LIMIT: 32G
+    KUBERNETES_CPU_REQUEST: 8
   needs: 
     - job : data
       optional: true
@@ -81,7 +81,7 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/train/train.py -n $Name -p 10 
+  - python tagger/train/train.py -n $Name -p 50 
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/baseline
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/

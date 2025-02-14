@@ -26,35 +26,6 @@ from scipy.interpolate import interp1d
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 
-
-def group_id_values_topo(event_id, raw_tau_score_sum, *arrays, num_elements = 2):
-    '''
-    Group values according to event id.
-    Filter out events that has less than num_elements
-    '''
-
-    # Use ak.argsort to sort based on event_id
-    sorted_indices = ak.argsort(event_id)
-    sorted_event_id = event_id[sorted_indices]
-
-    # Find unique event_ids and counts manually
-    unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
-    
-    # Use ak.unflatten to group the arrays by counts
-    grouped_id = ak.unflatten(sorted_event_id, counts)
-    grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
-
-    #Sort by tau score
-    tau_score = ak.unflatten(raw_tau_score_sum[sorted_indices],counts)
-    tau_sort_index = ak.argsort(tau_score, ascending=False)
-    grouped_arrays_sorted = [arr[tau_sort_index] for arr in grouped_arrays]
-
-    #Filter out groups that don't have at least 2 elements
-    mask = ak.num(grouped_id) >= num_elements
-    filtered_grouped_arrays = [arr[mask] for arr in grouped_arrays_sorted]
-
-    return grouped_id[mask], filtered_grouped_arrays
-
 def calculate_topo_score(tau_plus, tau_minus):
     #2=tau positive, 3=tau_negative
 
@@ -234,6 +205,7 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
 
     pick_and_plot_topo(rate_list, pt_list, nn_list, model_dir, target_rate=28)
 
+#-------- Plot the background rate
 def cmssw_pt_score(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt):
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
@@ -416,6 +388,165 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
     fig.savefig(os.path.join(plot_dir, "tautau_topo_BkgRate.png"), bbox_inches='tight')
     return
 
+#------ Plot efficiency
+def ratio_2D(nume, deno):
+    ratio = np.divide(nume, deno, where=deno != 0)
+    ratio[deno == 0] = np.nan
+    return ratio
+
+def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
+    extent = [pt_edges[0], pt_edges[-1], pt_edges[0], pt_edges[-1]]
+
+    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+
+    # Use ax.imshow and save the returned image for the colorbar
+    im = ax.imshow(ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
+    fig.colorbar(im, ax=ax)
+
+    ax.set_xlabel(r"Gen. $p_T^1$ [GeV]")
+    ax.set_ylabel(r"Gen. $p_T^2$ [GeV]")
+
+    fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
+    plt.show(block=True) 
+
+
+def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=100000):
+
+    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+
+    #Load the signal data
+    signal = uproot.open(tau_eff_filepath)[tree]
+
+    # Load the inputs
+    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
+    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+
+    raw_event_id = extract_array(signal, 'event', n_entries)
+    raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
+    raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
+    raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
+    raw_jet_phi = extract_array(signal, 'jet_phi_phys', n_entries)
+
+    raw_cmssw_tau = extract_array(signal, 'jet_tauscore', n_entries)
+    raw_cmssw_taupt = extract_array(signal, 'jet_taupt', n_entries)
+
+    #NN related 
+    raw_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
+    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+
+    #Check if the working point have been derived
+    WP_path = os.path.join(model_dir, "plots/physics/tautau_topo/working_point.json")
+
+    #Get derived working points
+    if os.path.exists(WP_path):
+        with open(WP_path, "r") as f:  WPs = json.load(f)
+        model_NN_WP = WPs['NN']
+        model_PT_WP = WPs['PT']
+    else:
+        raise Exception("Working point does not exist. Run with --deriveWPs first.")
+    
+    raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:,class_labels['taum']]
+    raw_tau_plus = raw_pred_score[:,class_labels['taup']]
+    raw_tau_minus = raw_pred_score[:,class_labels['taum']]
+
+    #Count number of total event
+    n_events = len(np.unique(raw_event_id))
+    print("Total number of signal events: ", n_events)
+
+    #Group these attributes by event id, and filter out groups that don't have at least 2 elements
+    event_id, grouped_arrays  = group_id_values_topo(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_jet_genpt, raw_pt_correction.flatten(), raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt, num_elements=2)
+
+    # Extract the grouped arrays
+    tau_plus, tau_minus, jet_pt, jet_genpt, jet_pt_correction, jet_eta, jet_phi, cmssw_tau, cmssw_taupt = grouped_arrays
+    genpt1, genpt2 = np.asarray(jet_genpt[:,0]), np.asarray(jet_genpt[:,1])
+
+    #calculate delta_r
+    eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
+    phi1, phi2 = jet_phi[:, 0], jet_phi[:, 1]
+    delta_r_values = delta_r(eta1, phi1, eta2, phi2)
+
+    # Additional cuts recommended here:
+    # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
+    # Slide 7
+    cuts = (np.abs(eta1) < 2.172) & (np.abs(eta2) < 2.172) & (delta_r_values > 0.5)
+
+    tau_topo_score = calculate_topo_score(tau_plus, tau_minus)
+
+    #correct for pt
+    pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:,0][cuts]), np.asarray(jet_pt[:,1][cuts])
+    ratio1, ratio2 = np.asarray(jet_pt_correction[:,0][cuts]), np.asarray(jet_pt_correction[:,1][cuts])
+
+    pt1 = pt1_uncorrected*ratio1
+    pt2 = pt2_uncorrected*ratio2
+
+    pt = np.vstack([pt1, pt2]).transpose()
+    pt_min_model = np.min(pt, axis=1)
+
+    #Get cmssw attribubtes to calculate the rate
+    cmssw_pt1, cmssw_pt2 = np.asarray(cmssw_taupt[:,0][cuts]), np.asarray(cmssw_taupt[:,1][cuts])
+    cmssw_pt = np.vstack([cmssw_pt1, cmssw_pt2]).transpose()
+    cmssw_pt_min = np.min(cmssw_pt, axis=1)
+
+    #Do similar thing for the tau score
+    cmssw_tau1, cmssw_tau2 = np.asarray(cmssw_tau[:,0][cuts]), np.asarray(cmssw_tau[:,1][cuts])
+    cmssw_tau = np.vstack([cmssw_tau1, cmssw_tau2]).transpose()
+    cmssw_tau_min =  np.min(cmssw_tau, axis=1)
+
+    #Create histograms to contain the gen pts
+    pt_edges = list(np.arange(0,200,10)) #Make sure to capture everything
+
+    all_genpt = Hist(hist.axis.Variable(pt_edges, name="genpt1", label="genpt1"),
+                    hist.axis.Variable(pt_edges, name="genpt2", label="genpt2"))
+    cmssw_pt = Hist(hist.axis.Variable(pt_edges, name="genpt1", label="genpt1"),
+                    hist.axis.Variable(pt_edges, name="genpt2", label="genpt2"))
+    model_pt = Hist(hist.axis.Variable(pt_edges, name="genpt1", label="genpt1"),
+                    hist.axis.Variable(pt_edges, name="genpt2", label="genpt2"))
+    
+    all_genpt.fill(genpt1=genpt1, genpt2=genpt2)
+
+    cmssw_selection = (cmssw_tau_min > WPs_CMSSW['tau']) & (cmssw_pt_min > WPs_CMSSW['tau_l1_pt'])
+    cmssw_pt.fill(genpt1=genpt1[cuts][cmssw_selection], genpt2=genpt2[cuts][cmssw_selection])
+
+    model_selection = (pt_min_model > model_PT_WP) & (tau_topo_score[cuts] > model_NN_WP) 
+    model_pt.fill(genpt1=genpt1[cuts][model_selection], genpt2=genpt2[cuts][model_selection])
+
+    cmssw_ratio = ratio_2D(cmssw_pt, all_genpt)
+    model_ratio = ratio_2D(model_pt, all_genpt)
+
+    plot_dir = os.path.join(model_dir, 'plots/physics/tautau_topo')
+
+    #Plot them side by side
+    fig_width = 2.5 * style.FIGURE_SIZE[0]
+    fig_height = style.FIGURE_SIZE[1]
+    fig, axes = plt.subplots(1, 2, figsize=(fig_width, fig_height))
+
+    extent = [pt_edges[0], pt_edges[-1], pt_edges[0], pt_edges[-1]]
+
+    # Plot first efficiency ratio (e.g., CMSSW efficiency)
+    im0 = axes[0].imshow(cmssw_ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
+    axes[0].set_xlabel(r"Gen. $p_T^1$ [GeV]")
+    axes[0].set_ylabel(r"Gen. $p_T^2$ [GeV]")
+    axes[0].set_title("PuppiTau CMSSW Efficiency", pad=45)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=axes[0], fontsize=style.MEDIUM_SIZE-2)
+
+    # Plot second efficiency ratio (e.g., Model efficiency)
+    im1 = axes[1].imshow(model_ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
+    axes[1].set_xlabel(r"Gen. $p_T^1$ [GeV]")
+    axes[1].set_ylabel(r"Gen. $p_T^2$ [GeV]")
+    axes[1].set_title("Jet Tagger Efficiency", pad=45)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=axes[1], fontsize=style.MEDIUM_SIZE-2)
+
+    # Add a common colorbar
+    cbar = fig.colorbar(im1, ax=axes.ravel().tolist())
+
+    # Save and show the plot
+    fig.savefig(f'{plot_dir}/topo_vbf_eff.pdf', bbox_inches='tight')
+    plt.show(block=True)
+
+
+    return
+
 if __name__ == "__main__":
     """
     2 steps:
@@ -435,7 +566,7 @@ if __name__ == "__main__":
     parser.add_argument('--eff', action='store_true', help='plot efficiency for VBF-> tautau')
 
     #Other controls
-    parser.add_argument('-n','--n_entries', type=int, default=600000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
+    parser.add_argument('-n','--n_entries', type=int, default=10000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
     parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
 
     args = parser.parse_args()
@@ -444,6 +575,6 @@ if __name__ == "__main__":
         derive_diTaus_topo_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.BkgRate:
         plot_bkg_rate_ditau_topo(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
-    # elif args.eff:
-    #     eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree)
+    elif args.eff:
+        topo_eff(args.model_dir, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)
     #     eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)

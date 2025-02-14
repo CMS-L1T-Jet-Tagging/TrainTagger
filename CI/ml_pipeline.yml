@@ -131,7 +131,7 @@ hls4ml:
     - job : train
   script:
   - source activate tagger
-  - python tagger/firmware/hls4ml_convert.py -n $Name
+  - python tagger/firmware/hls4ml_convert.py
   - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
@@ -205,7 +205,7 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - python tagger/firmware/hls4ml_profile.py -r True
+  - python tagger/firmware/hls4ml_profile.py -r True -n -n $Name
   - eos cp -r output/baseline/plots/profile ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   artifacts:
     paths:

@@ -83,6 +83,7 @@ if __name__ == "__main__":
     parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')    
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to profiling data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake profiling data? ')
+    parser.add_argument('-n','--name',default='baseline', help= 'Mlfow model name? ')
 
     args = parser.parse_args()
 

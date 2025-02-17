@@ -346,8 +346,7 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
     pred_score, ratio = model.predict(nn_inputs)
 
-    tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
-    nn_tauscore_raw = pred_score[:,tau_index[0]] + pred_score[:,tau_index[1]]
+    nn_tauscore_raw = pred_score[:,class_labels['taup'],] + pred_score[:,class_labels['taum']]
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     #selecting the eta region

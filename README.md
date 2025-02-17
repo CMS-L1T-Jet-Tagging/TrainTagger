@@ -86,7 +86,7 @@ conda-env create -f environment.yml
 conda activate tagger
 
 #Run this to add the scripts in this directory to your python path
-export PYTHONPATH=$PYTHONPATH:$PWD
+source setup.sh
 ```
 
 

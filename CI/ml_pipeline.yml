@@ -137,11 +137,7 @@ hls4ml:
   script:
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py
-<<<<<<< HEAD
   - tar -cvf L1TSC4NGJetModel.tgz tagger/firmware/L1TSC4NGJetModel
-=======
-  - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
->>>>>>> 5613a72 (Tweaks to scripts arguments)
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   - eos cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   artifacts:
@@ -151,7 +147,6 @@ hls4ml:
 
 synth:
   tags:
-<<<<<<< HEAD
     - fpga-large
   image: registry.cern.ch/ci4fpga/vivado:2023.2
   stage: synth
@@ -169,14 +164,11 @@ synth:
 synth:
   tags:
     - fpga-small
-=======
-    - fpga-mid
->>>>>>> 1370460 (Pipeline fix)
   image: registry.cern.ch/ci4fpga/vivado:2024.1
   stage: synth
   needs : [hls4ml]
   script:
-    - cd TrainTagger/tagger/firmware/JetTaggerNN
+    - cd tagger/firmware/JetTaggerNN
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl 
     - cd ../../..
@@ -228,13 +220,8 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-<<<<<<< HEAD
   - ls tagger/firmware/JetTaggerNN/JetTaggerNN_prj/solution1/syn/report/
   - python tagger/firmware/hls4ml_profile.py -r True -n $Name
-=======
-  - python tagger/firmware/hls4ml_profile.py -r True -n $Name
-  - eos cp -r output/baseline/plots/profile ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
->>>>>>> 1370460 (Pipeline fix)
   artifacts:
     paths:
       - output/baseline
@@ -256,16 +243,9 @@ upload:
     - source activate tagger
     - mkdir $Name
     - cd tagger/firmware
-<<<<<<< HEAD
     - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
     - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cd ../..
-=======
-    - tar -cvf JetTaggerNN.tgz JetTaggerNN
-    - cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    - cd ../..
-    - mv tagger/firmware/JetTaggerNN.tgz $Name
->>>>>>> 1180568 (Remove eos requirement for synth job)
     - mkdir $Name/plots
     - cp -r output/baseline/model $Name/model
     - mv output/baseline/plots/emulation $Name/plots

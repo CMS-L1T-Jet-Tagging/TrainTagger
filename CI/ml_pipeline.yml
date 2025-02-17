@@ -145,7 +145,7 @@ hls4ml:
 synth:
   tags:
     - fpga-mid
-  image: registry.cern.ch/ci4fpga/vivado:2024.1
+  image: registry.cern.ch/ci4fpga/vivado:2023.2
   stage: synth
   needs : [hls4ml]
   script:

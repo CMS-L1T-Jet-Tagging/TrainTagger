@@ -10,39 +10,6 @@ from pathlib import Path
 import numpy as np
 #----------------------------------------------
 
-def getReports(indir):
-    data_ = {}
-    
-    report_csynth = Path('{}/JetTaggerNN_prj/solution1/syn/report/JetTaggerNN_csynth.rpt'.format(indir))
-
-    if report_csynth.is_file():
-        print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
-
-        with report_csynth.open() as report:
-            lines = np.array(report.readlines())
-            lat_line = lines[np.argwhere(np.array(['Latency (cycles)' in line for line in lines])).flatten()[0] + 3]
-            data_['latency_clks'] = int(lat_line.split('|')[2])
-            data_['latency_mus']  = float(lat_line.split('|')[2])*5.0/1000.
-            data_['latency_ii']   = int(lat_line.split('|')[6])
-
-            resource_line = lines[np.argwhere(np.array(['|Utilization (%)' in line for line in lines])).flatten()[0]]
-            try:
-                data_['bram_rel']     = int(resource_line.split('|')[2])
-            except ValueError:
-                data_['bram_rel']     = 0
-            data_['dsp_rel']     = int(resource_line.split('|')[3])
-            data_['ff_rel']     = int(resource_line.split('|')[4])
-            data_['lut_rel']     = int(resource_line.split('|')[5])
-
-            total_line = lines[np.argwhere(np.array(['|Total ' in line for line in lines])).flatten()[0]]
-            data_['bram']     = int(total_line.split('|')[2])
-            data_['dsp']     = int(total_line.split('|')[3])
-            data_['ff']     = int(total_line.split('|')[4])
-            data_['lut']     = int(total_line.split('|')[5])
-
-    return data_
-
-
 def convert(model, outpath,build=True):
 
     #Remove the old directory if they exist

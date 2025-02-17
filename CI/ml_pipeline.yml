@@ -172,7 +172,7 @@ synth:
   stage: synth
   needs : [hls4ml]
   script:
-    - cd TrainTagger/tagger/firmware/JetTaggerNN
+    - cd tagger/firmware/JetTaggerNN
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl 
     - cd ../../..

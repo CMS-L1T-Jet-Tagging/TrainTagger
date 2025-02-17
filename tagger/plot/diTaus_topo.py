@@ -542,6 +542,7 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
 
     # Save and show the plot
     fig.savefig(f'{plot_dir}/topo_vbf_eff.pdf', bbox_inches='tight')
+    fig.savefig(f'{plot_dir}/topo_vbf_eff.png', bbox_inches='tight')
     plt.show(block=True)
 
 

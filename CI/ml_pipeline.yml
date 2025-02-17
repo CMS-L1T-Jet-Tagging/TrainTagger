@@ -1,5 +1,6 @@
 include:
     - CI/cmssw.yml
+    - template: Code-Quality.gitlab-ci.yml
 
 stages:
   - data
@@ -11,6 +12,7 @@ stages:
   - emulation-evaluate
   - profile
   - upload
+  - test
 
 variables:
     Name:  baseline_4_params
@@ -147,7 +149,7 @@ synth:
   stage: synth
   needs : [hls4ml]
   script:
-    - cd TrainTagger/tagger/firmware/JetTaggerNN
+    - cd tagger/firmware/JetTaggerNN
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl 
     - cd ../../..
@@ -250,3 +252,9 @@ upload:
     paths:
       - $Name
     expire_in: 1 day
+
+code_quality:
+   tags:
+    - docker-privileged-xl
+   artifacts:
+    paths: [gl-code-quality-report.json]

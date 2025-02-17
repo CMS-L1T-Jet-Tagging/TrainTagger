@@ -114,7 +114,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #Load the model
-    model=load_qmodel(args.model)
+    model = load_qmodel(args.model)
     precisions = convert(model,args.outpath)
 
 

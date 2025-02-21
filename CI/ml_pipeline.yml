@@ -134,9 +134,6 @@ hls4ml:
   script:
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py
-  - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
-  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-  - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   artifacts:
     paths:
       - tagger/firmware

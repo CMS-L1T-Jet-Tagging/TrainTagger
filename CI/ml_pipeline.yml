@@ -155,7 +155,7 @@ synth:
     - cd ../../..
   artifacts:
     paths:
-      - TrainTagger/tagger/firmware/JetTaggerNN
+      - tagger/firmware/JetTaggerNN
     expire_in: 1 day
 
 emulation-evaluate:
@@ -202,6 +202,7 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
+  - ls tagger/firmware/JetTaggerNN/JetTaggerNN_prj/solution1/syn/report/
   - python tagger/firmware/hls4ml_profile.py -r True -n $Name
   - eos cp -r output/baseline/plots/profile ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   artifacts:

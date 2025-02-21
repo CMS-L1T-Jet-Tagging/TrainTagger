@@ -189,8 +189,8 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [emulate,train]
-  dependencies: [emulate,train]
+  needs: [emulate,synth,train]
+  dependencies: [emulate,synth,train]
   script:
   - source activate tagger
   - mkdir data

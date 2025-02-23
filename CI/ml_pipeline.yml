@@ -223,7 +223,7 @@ upload:
     - mkdir $Name
     - cd tagger/firmware
     - tar -cvf JetTaggerNN.tgz JetTaggerNN
-    - eos mkdir ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cd ../..
     - mv tagger/firmware/JetTaggerNN.tgz $Name

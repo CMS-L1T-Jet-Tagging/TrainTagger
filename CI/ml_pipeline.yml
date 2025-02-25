@@ -1,15 +1,18 @@
 include:
     - CI/cmssw.yml
+    - template: Code-Quality.gitlab-ci.yml
 
 stages:
   - data
   - train
   - evaluate
+  - hls4ml
   - synth
   - emulate
   - emulation-evaluate
   - profile
   - upload
+  - test
 
 variables:
     Name:  baseline_4_params
@@ -40,11 +43,14 @@ data:
   extends:
     - .template
   stage: data
-  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 32Gi
+    KUBERNETES_CPU_REQUEST: 2
   rules:
-     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-         - tagger/data/**
-  when: manual
+    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+        - tagger/data/**
+      when: manual
   script:
   - source activate tagger
   - mkdir data
@@ -89,9 +95,11 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_CPU_REQUEST: 2
   needs: [train]
-  dependencies: [train]
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
@@ -123,38 +131,50 @@ evaluate:
       - .npy
     expire_in: 1 day
 
-synth:
+hls4ml:
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 32Gi
+    KUBERNETES_CPU_REQUEST: 4
   extends:
     - .template
-  stage: synth
-  tags:
-    - cb_vivado
-  needs : [train]
-  dependencies : [train]
+  stage: hls4ml
+  needs: 
+    - job : train
   script:
-    - source /opt/Xilinx/Vivado/2024.1/settings64.sh
-    - export PATH="/externalopt/modelsim/2019.2/modeltech/bin/:$PATH"
-    - export LD_LIBRARY_PATH=/externalopt/cactus/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
-    - source activate tagger
-    - python tagger/firmware/hls4ml_convert.py -n $Name
-    - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
-    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+  - source activate tagger
+  - python tagger/firmware/hls4ml_convert.py
   artifacts:
     paths:
       - tagger/firmware
-      - mlflow_run_id.txt
+    expire_in: 1 day
+
+synth:
+  tags:
+    - fpga-large
+  image: registry.cern.ch/ci4fpga/vivado:2023.2
+  stage: synth
+  needs : [hls4ml]
+  script:
+    - cd tagger/firmware/JetTaggerNN
+    - vitis_hls -f build_prj.tcl
+    - vivado -mode batch -source vivado_synth.tcl 
+    - cd ../../..
+  artifacts:
+    paths:
+      - tagger/firmware/JetTaggerNN
     expire_in: 1 day
 
 emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags:
-    - cb_vivado
-  needs: [emulate,train,synth]
-  dependencies: [emulate,train,synth]
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_CPU_REQUEST: 2
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
   script:
   - mkdir data
   - cd data
@@ -172,13 +192,13 @@ profile:
   extends:
     - .template
   stage: profile
-  tags:
-    - cb_vivado
-  needs: [emulate,train,synth]
-  dependencies: [emulate,train,synth]
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_CPU_REQUEST: 2
+  needs: [emulate,synth,train]
+  dependencies: [emulate,synth,train]
   script:
-  - source /opt/Xilinx/Vivado/2024.1/settings64.sh
-  - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
   - source activate tagger
   - mkdir data
   - cd data
@@ -189,7 +209,8 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - python tagger/firmware/hls4ml_profile.py -r True
+  - ls tagger/firmware/JetTaggerNN/JetTaggerNN_prj/solution1/syn/report/
+  - python tagger/firmware/hls4ml_profile.py -r True -n $Name
   - eos cp -r output/baseline/plots/profile ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   artifacts:
     paths:
@@ -197,17 +218,26 @@ profile:
     expire_in: 1 day
 
 upload:
-  tags: [k8s-gpu]
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  needs: [emulation-evaluate,synth,train,evaluate,profile]
-  dependencies: [emulation-evaluate,synth,train,evaluate,profile]
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_CPU_REQUEST: 1
+  needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - source activate tagger
     - mkdir $Name
-    - mv tagger/firmware $Name
+    - cd tagger/firmware
+    - tar -cvf JetTaggerNN.tgz JetTaggerNN
+    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    - cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    - cd ../..
+    - mv tagger/firmware/JetTaggerNN.tgz $Name
     - mkdir $Name/plots
     - cp -r output/baseline/model $Name/model
     - mv output/baseline/plots/emulation $Name/plots
@@ -217,8 +247,7 @@ upload:
     - cd ..
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
-    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
+    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin" 
     - pb_copy_index.py TrainTagger/${Name} --recursive
     - pb_deploy_plots.py TrainTagger/${Name} /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,h5
     - cd TrainTagger
@@ -232,3 +261,9 @@ upload:
     paths:
       - $Name
     expire_in: 1 day
+
+code_quality:
+   tags:
+    - docker-privileged-xl
+   artifacts:
+    paths: [gl-code-quality-report.json]

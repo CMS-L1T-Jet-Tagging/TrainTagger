@@ -205,7 +205,6 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
 
     #Calculate the ht
     jet_genht = ak.sum(jet_genpt, axis=1)
-    jet_genht_raw = ak.sum(raw_jet_genpt, axis=1)
     jet_ht = ak.sum(jet_pt, axis=1)
 
     #B score from cmssw emulator
@@ -221,7 +220,7 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     cmssw_selected_events = Hist(ht_axis)
     model_selected_events = Hist(ht_axis)
 
-    all_events.fill(jet_genht_raw)
+    all_events.fill(jet_genht)
     cmssw_selected_events.fill(jet_genht[cmssw_selection])
     model_selected_events.fill(jet_genht[model_selection])
 

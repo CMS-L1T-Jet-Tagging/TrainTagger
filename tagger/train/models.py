@@ -10,7 +10,7 @@ from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.qlayers import QDense, QActivation
 from qkeras import QConv1D
 
-
+# masking model with cropping layers
 def baseline(inputs_shape, output_shape, n_filters, n_constituents, bits=9, bits_int=2, alpha_val=1):
 
     # Define a dictionary for common arguments

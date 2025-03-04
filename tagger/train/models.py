@@ -21,8 +21,7 @@ def baseline(inputs_shape, output_shape, n_filters, n_constituents, bits=9, bits
     }
 
     #Initialize inputs
-    inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
-    inputs_mask = tf.keras.layers.Input(shape=inputs_shape[1], name='mask_input')
+    inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
 
     # split into main and mask inputs
     main_inp = Cropping1D(cropping=(0, n_constituents), name='inp_crop')(inputs)
@@ -68,7 +67,7 @@ def baseline(inputs_shape, output_shape, n_filters, n_constituents, bits=9, bits
                         kernel_initializer='lecun_uniform')(pt_regress)
 
     #Define the model using both branches
-    model = tf.keras.Model(inputs = [inputs, inputs_mask], outputs = [jet_id, pt_regress])
+    model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
     print(model.summary())
 

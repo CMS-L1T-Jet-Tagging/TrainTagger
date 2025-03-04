@@ -178,7 +178,7 @@ def train(out_dir, percent, model_name):
     sample_weight = train_weights(y_train, truth_pt_train, class_labels)
 
     #Get input shape
-    input_shape = [X_train.shape[1:], X_train_mask.shape[1:]] #First dimension is batch size
+    input_shape = X_train.shape[1:] #First dimension is batch size
     output_shape = y_train.shape[1:]
 
     #Dynamically get the model
@@ -197,7 +197,7 @@ def train(out_dir, percent, model_name):
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
 
-    history = pruned_model.fit({'model_input': X_train, 'mask_input': X_train_mask},
+    history = pruned_model.fit({'model_input': X_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
                             sample_weight=sample_weight,
                             epochs=EPOCHS,

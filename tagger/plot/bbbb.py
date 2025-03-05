@@ -56,7 +56,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     ax.set_ylabel(r"HT [GeV]")
     ax.set_xlabel(r"$\sum_{4~leading~jets}$ b scores")
     
-    ax.set_xlim([0,2.5])
+    ax.set_xlim([0, 1.3])
     ax.set_ylim([10,500])
 
     #plus, minus range
@@ -88,6 +88,36 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     ax.legend(loc='upper right')
     plt.savefig(f"{plot_dir}/bbbb_rate.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate.png", bbox_inches='tight')
+
+def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.5):
+    """
+    Derive the HT only working points (without bb cuts)
+    """
+
+    plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
+
+    #Derive the rate
+    rate_list = []
+    ht_list = []
+
+    #Loop through the edges and integrate
+    for ht in ht_edges[:-1]:
+            
+        #Calculate the rate
+        rate = RateHist[{"ht": slice(ht*1j, None, sum)}][{"nn": slice(0.0j, None, sum)}]/n_events
+        rate_list.append(rate*MINBIAS_RATE)
+
+        #Append the results   
+        ht_list.append(ht)
+    
+    target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
+
+    #Read WPs dict and add HT cut
+    WP_json = os.path.join(plot_dir, "working_point.json")
+    working_point = json.load(open(WP_json, "r"))
+    working_point["ht_only_cut"] = float(ht_list[target_rate_idx[0]])
+    json.dump(working_point, open(WP_json, "w"), indent=4)
+
 
 def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree='outnano/Jets'):
     """
@@ -156,6 +186,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
 
     #Pick target rate and plot it
     pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate=target_rate)
+    derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate=target_rate)
 
     return
 
@@ -166,8 +197,8 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
 
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
-    ht_egdes = list(np.arange(0,800,20))
-    ht_axis = hist.axis.Variable(ht_egdes, name = r"$HT^{gen}$")
+    ht_edges = list(np.arange(0,800,20))
+    ht_axis = hist.axis.Variable(ht_edges, name = r"$HT^{gen}$")
 
     #Working points for CMSSW
     cmssw_btag = WPs_CMSSW['btag']
@@ -181,6 +212,7 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
         with open(WP_path, "r") as f:  WPs = json.load(f)
         btag_wp = WPs['NN']
         btag_ht_wp = WPs['HT']
+        ht_only_wp = WPs['ht_only_cut']
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
@@ -213,16 +245,19 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp)
+    ht_only_selection = jet_ht > ht_only_wp
 
     #PLot the efficiencies
     #Basically we want to bin the selected truth ht and divide it by the overall count
     all_events = Hist(ht_axis)
     cmssw_selected_events = Hist(ht_axis)
     model_selected_events = Hist(ht_axis)
+    ht_only_selected_events = Hist(ht_axis)
 
     all_events.fill(jet_genht)
     cmssw_selected_events.fill(jet_genht[cmssw_selection])
     model_selected_events.fill(jet_genht[model_selection])
+    ht_only_selected_events.fill(jet_genht[ht_only_selection])
 
     #Plot the ratio
     eff_cmssw = plot_ratio(all_events, cmssw_selected_events)
@@ -231,6 +266,8 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     #Get data from handles
     cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
     model_x, model_y, model_err = get_bar_patch_data(eff_model)
+    eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
+    ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
 
     #Now plot all
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -251,6 +288,31 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     plot_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
+    plt.show(block=False)
+
+    #Plot a different plot comparing the multiclass with ht only selection
+    fig2, ax2 = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax2, fontsize=style.MEDIUM_SIZE-2)
+    
+    ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, 
+                label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp, 2)))
+    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, 
+                label=r'HT-only @ 14 kHz (L1 $HT$ > {} GeV)'.format(ht_only_wp))
+
+    # Common plot settings for second plot
+    ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
+    ax2.grid(True)
+    ax2.set_ylim([0., 1.1])
+    ax2.set_xlim([0, 800])
+    ax2.set_xlabel(r"$HT^{gen}$ [GeV]")
+    ax2.set_ylabel(r"$\epsilon$(HH $\to$ 4b trigger rate at 14 kHz)")
+    ax2.legend(loc='upper left')
+
+    # Save second plot
+    ht_compare_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT_vs_HTonly")
+    plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
+    plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
+    
     plt.show(block=False)
 
 

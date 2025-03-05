@@ -9,7 +9,7 @@ Documentation for training a L1T Jet Tagging model for CMS Phase-2 L1 upgrades.
 
 To train the jet tagger, there are multiple steps that one need to follow, from creating the raw datasets, preprocessing them, train the model, synthesize it, and make validation plots for different physics seeds. This README describes all the steps in a sequential manner.
 
-The CI in this repository aims at building a pipeline that enables running all of these steps automatically.
+The CI in this repository aims at building a pipeline that enables running all of these steps automatically. The CI artifacts are saved here: https://cms-l1t-jet-tagger.web.cern.ch/
 
 **A summary menu of all the steps is listed below**:
 

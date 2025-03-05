@@ -38,11 +38,12 @@ git config user.name "Chriisbrown"
 
 
 
-git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git && \
-  cd hls4ml-jettagger
-  git checkout hls4ml-jettaggerNN
+git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git 
+mv hls4ml-jettagger L1TSC4NGJetModel
+cd L1TSC4NGJetModel
+git checkout L1TSC4NGJetModel
 
-cp -r ../../../tagger/firmware/JetTaggerNN/firmware JetTaggerNN/
+cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware L1TSC4NGJetModel/
 ./setup.sh
 cat setup.sh
 
@@ -50,7 +51,7 @@ make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b dev/14_2_X
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b L1TSC4NGJetTagger
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
@@ -65,7 +66,6 @@ scram b 2>&1 || exit 1
 if [[ "$RUN" == "false" ]]; then exit 0; fi
 
 cd FastPUPPI/NtupleProducer/python
-#sed -i -e 's/MultiJetBaseline/JetTaggerNN/g' runPerformanceNTuple.py
 cmsenv
 
 echo "Temporary workaround to get the input files"

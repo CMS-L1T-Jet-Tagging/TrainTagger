@@ -58,7 +58,7 @@ def convert(model, outpath,build=True):
     #Write HLS
     hls_model = hls4ml.converters.convert_from_keras_model(model,
                                                        backend='Vitis',
-                                                       project_name='JetTaggerNN',
+                                                       project_name='L1TSC4NGJetModel',
                                                        clock_period=2.8, #1/360MHz = 2.8ns
                                                        hls_config=config,
                                                        output_dir=f'{outpath}',
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')    
-    parser.add_argument('-o','--outpath', default='tagger/firmware/JetTaggerNN' , help = 'Jet tagger synthesized output directory')    
+    parser.add_argument('-o','--outpath', default='tagger/firmware/L1TSC4NGJetModel' , help = 'Jet tagger synthesized output directory')    
     args = parser.parse_args()
 
     #Load the model

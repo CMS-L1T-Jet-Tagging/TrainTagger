@@ -174,7 +174,7 @@ synth:
     - cd ../../..
   artifacts:
     paths:
-      - TrainTagger/tagger/firmware/JetTaggerNN
+      - TrainTagger/tagger/firmware/L1TSC4NGJetModel
     expire_in: 1 day
 
 emulation-evaluate:

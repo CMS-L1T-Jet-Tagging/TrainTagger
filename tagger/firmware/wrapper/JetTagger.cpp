@@ -1,5 +1,5 @@
-#include "JetTagger.h"
-#include "../JetTaggerNN/firmware/JetTaggerNN.h"
+#include "L1TSC4NGJetModel.h"
+#include "../L1TSC4NGJetModel/firmware/L1TSC4NGJetModel.h"
 #include "data.h"
 #include "hls_math.h"
 
@@ -106,7 +106,7 @@ void JetTagger(const Particle input[N_TAGGER_PARTICLES], // Input
   #pragma HLS ARRAY_PARTITION variable=nn_output_pt_reg complete
 
   prepare_inputs<N_TAGGER_PARTICLES, N_FEATURES_PARTICLES>(input, tagger_input);
-  JetTaggerNN(tagger_input, nn_output_scores, nn_output_pt_reg); // Run it through the network
+  L1TSC4NGJetModel(tagger_input, nn_output_scores, nn_output_pt_reg); // Run it through the network
   
   //clear the output and assign the score
   clear(out_scores[0]);

@@ -40,7 +40,7 @@ DeepSet:baseline_5param:
      EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
      SCRAM_ARCH: 'el9_amd64_gcc12'
      CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
+     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:14_2_pre2_L1TSC4NGJetTagger
 
 DeepSet:baseline_4param_extended_trk:
   extends: .ml_pipeline
@@ -57,7 +57,7 @@ DeepSet:baseline_4param_extended_trk:
      EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
      SCRAM_ARCH: 'el9_amd64_gcc12'
      CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
+     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:14_2_pre2_L1TSC4NGJetTagger
 
 DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline
@@ -74,7 +74,7 @@ DeepSet:baseline_5param_extended_trk:
      EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
      SCRAM_ARCH: 'el9_amd64_gcc12'
      CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
+     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:14_2_pre2_L1TSC4NGJetTagger
 
 DeepSet:new_samples_baseline_5param_extended_trk:
   extends: .ml_pipeline
@@ -91,4 +91,4 @@ DeepSet:new_samples_baseline_5param_extended_trk:
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:14_2_pre2_L1TSC4NGJetTagger

@@ -24,7 +24,7 @@ variables:
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:P2L1JetTagger_14_2_0_pre2-JetTaggerNN'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:14_2_pre2_L1TSC4NGJetTagger'
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -134,9 +134,9 @@ hls4ml:
   script:
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py
-  - tar -cvf JetTaggerNN.tgz tagger/firmware/JetTaggerNN
+  - tar -cvf L1TSC4NGJetModel.tgz tagger/firmware/L1TSC4NGJetModel
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-  - eos cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+  - eos cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   artifacts:
     paths:
       - tagger/firmware
@@ -149,13 +149,13 @@ synth:
   stage: synth
   needs : [hls4ml]
   script:
-    - cd tagger/firmware/JetTaggerNN
+    - cd tagger/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl 
     - cd ../../..
   artifacts:
     paths:
-      - TrainTagger/tagger/firmware/JetTaggerNN
+      - TrainTagger/tagger/firmware/L1TSC4NGJetModel
     expire_in: 1 day
 
 emulation-evaluate:
@@ -224,10 +224,10 @@ upload:
     - source activate tagger
     - mkdir $Name
     - cd tagger/firmware
-    - tar -cvf JetTaggerNN.tgz JetTaggerNN
-    - cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
+    - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cd ../..
-    - mv tagger/firmware/JetTaggerNN.tgz $Name
+    - mv tagger/firmware/L1TSC4NGJetModel.tgz $Name
     - mkdir $Name/plots
     - cp -r output/baseline/model $Name/model
     - mv output/baseline/plots/emulation $Name/plots

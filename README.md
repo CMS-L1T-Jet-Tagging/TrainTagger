@@ -1,7 +1,7 @@
 <img src="https://github.com/user-attachments/assets/9eb9833f-0672-4aa8-a66f-8920393bc8e1" alt="CERN-LOGO" width="102">
 <img src="https://github.com/user-attachments/assets/ccb113aa-2050-4873-982a-e7aaffd5cf60" alt="NextGen" width="113">
-<img src="https://github.com/user-attachments/assets/960d9384-529b-45c3-b965-301820271d65" alt="CMSlogo" width="99"> 
-<img src="https://github.com/user-attachments/assets/00fd895b-dd4a-4f84-91df-42bd229e8506" alt="MIT-social-media-logo-white" width="99">
+<img src="logos/CMS_Logo.png" alt="CMSlogo" width="99"> 
+<img src="logos/MIT_Logo.png" alt="MIT-social-media-logo-white" width="99">
 
 # Training Jet Taggers for CMS Phase 2 L1 Trigger
 

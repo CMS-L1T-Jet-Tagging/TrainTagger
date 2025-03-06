@@ -155,10 +155,10 @@ synth:
     - cd tagger/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl 
-    - cd ../../..
+    - cd ../..
   artifacts:
     paths:
-      - TrainTagger/tagger/firmware/L1TSC4NGJetModel
+      - tagger/firmware/L1TSC4NGJetModel
     expire_in: 1 day
 
 synth:

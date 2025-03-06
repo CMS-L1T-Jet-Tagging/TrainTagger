@@ -1,8 +1,8 @@
 <span>
-  <img src="logos/CERN_Logo.png" alt="CERNlogo" width="99">
+  <img src="logos/CERN_Logo.png" alt="CERNlogo" width="102">
 </span>
 <span>
-  <img src="logos/NextGen_Logo.png" alt="CMSlogo" width="99">
+  <img src="logos/NextGen_Logo.png" alt="CMSlogo" width="113">
 </span>
 <span>
   <img src="logos/CMS_Logo.png" alt="CMSlogo" width="99">

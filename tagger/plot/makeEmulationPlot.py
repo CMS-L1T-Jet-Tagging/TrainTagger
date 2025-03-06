@@ -52,26 +52,26 @@ def doPlots(model,outputdir,inputdir):
 
     jet_pt_cor_reg = jet_pt_phys * modelsAndNames["Y_predict_reg"][:,0]
     jet_pt_cor_reg_hls = jet_pt_phys * modelsAndNames["Y_hls_predict_reg"][:,0]
-    jet_pt_cor_reg_emu = jet_pt_phys * np.array(data['jet_multijetscore_regression'])
+    jet_pt_cor_reg_emu = jet_pt_phys * np.array(data['jet_SC4NGJet_score_regression'])
 
-    figure = common.plot_2d(np.array(modelsAndNames["Y_predict_reg"][:,0]) ,np.array(data['jet_multijetscore_regression']) ,(0,2),(0,2),"Tensorflow","CMSSW Emulation","Jet Regression")
+    figure = common.plot_2d(np.array(modelsAndNames["Y_predict_reg"][:,0]) ,np.array(data['jet_SC4NGJet_score_regression']) ,(0,2),(0,2),"Tensorflow","CMSSW Emulation","Jet Regression")
     plt.savefig("%s/jetRegression_2D.png" % outputdir,bbox_inches='tight')
     plt.savefig("%s/jetRegression_2D.pdf" % outputdir,bbox_inches='tight')
 
     plt.clf()
-    figure = common.plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_multijetscore_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",'Regression Output','a.u.',range=(0,2))
+    figure = common.plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_SC4NGJet_score_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",'Regression Output','a.u.',range=(0,2))
     plt.savefig("%s/jetRegression_1D.png" % outputdir,bbox_inches='tight')
     plt.savefig("%s/jetRegression_1D.pdf" % outputdir,bbox_inches='tight')
 
     for i, label in enumerate(labels):
         plt.close()
         plt.clf()
-        figure = common.plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",style.CLASS_LABEL_STYLE[label]+' score','a.u.',range=(0,1))
+        figure = common.plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_SC4NGJet_score_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",style.CLASS_LABEL_STYLE[label]+' score','a.u.',range=(0,1))
         plt.savefig("%s/%s_score_1D.png" % (outputdir,label),bbox_inches='tight')
         plt.savefig("%s/%s_score_1D.pdf" % (outputdir,label),bbox_inches='tight')
 
         plt.clf()
-        figure = common.plot_2d(np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_multijetscore_'+label]),(0,1),(0,1),"Tensorflow","CMSSW Emulation",style.CLASS_LABEL_STYLE[label]+" score")
+        figure = common.plot_2d(np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_SC4NGJet_score_'+label]),(0,1),(0,1),"Tensorflow","CMSSW Emulation",style.CLASS_LABEL_STYLE[label]+" score")
         plt.savefig("%s/%s_score_2D.png" % (outputdir,label),bbox_inches='tight')
         plt.savefig("%s/%s_score_2D.pdf" % (outputdir,label),bbox_inches='tight')
 
@@ -110,7 +110,7 @@ def doPlots(model,outputdir,inputdir):
     thresholds = {}
     # Get emulation ROCs
     for i, label in enumerate(labels):
-        fpr[label], tpr[label], thresholds[label] = roc_curve(Y_test[:,i], data['jet_multijetscore_'+label])
+        fpr[label], tpr[label], thresholds[label] = roc_curve(Y_test[:,i], data['jet_SC4NGJet_score_'+label])
         auc1[label] = auc(fpr[label], tpr[label])
 
     modelsAndNames["Emulation"] = {}

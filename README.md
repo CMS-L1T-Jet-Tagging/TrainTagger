@@ -1,5 +1,9 @@
-<img src="https://github.com/user-attachments/assets/9eb9833f-0672-4aa8-a66f-8920393bc8e1" alt="CERN-LOGO" width="102">
-<img src="https://github.com/user-attachments/assets/ccb113aa-2050-4873-982a-e7aaffd5cf60" alt="NextGen" width="113">
+<span>
+  <img src="logos/CERN_Logo.png" alt="CERNlogo" width="99">
+</span>
+<span>
+  <img src="logos/NextGen_Logo.png" alt="CMSlogo" width="99">
+</span>
 <span>
   <img src="logos/CMS_Logo.png" alt="CMSlogo" width="99">
 </span>

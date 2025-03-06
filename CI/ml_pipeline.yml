@@ -220,7 +220,7 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - ls tagger/firmware/JetTaggerNN/JetTaggerNN_prj/solution1/syn/report/
+  - ls tagger/firmware/L1TSC4NGJetModel/L1TSC4NGJetModel_prj/solution1/syn/report/
   - python tagger/firmware/hls4ml_profile.py -r True -n $Name
   artifacts:
     paths:

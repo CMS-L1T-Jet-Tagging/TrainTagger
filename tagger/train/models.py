@@ -27,6 +27,7 @@ def baseline(inputs_shape, output_shape, n_filters, bits=9, bits_int=2, alpha_va
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
+    jet_main = BatchNormalization(name='norm_jet_input')(inputs_jet)
 
     #First Conv1D
     main = QConv1D(filters=10, kernel_size=1, name='Conv1D_1', **common_args)(main)
@@ -44,7 +45,7 @@ def baseline(inputs_shape, output_shape, n_filters, bits=9, bits_int=2, alpha_va
     main = GlobalAveragePooling1D(name='avgpool')(main)
 
     # Concatenate with jet inputs
-    main = Concatenate(name='concatenate_jet')([main, inputs_jet])
+    main = Concatenate(name='concatenate_jet')([main, jet_main])
 
     #Now split into jet ID and pt regression
 

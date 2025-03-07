@@ -22,14 +22,15 @@ from scipy.interpolate import interp1d
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, get_input_mask
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
-def nn_bscore_sum(model, jet_nn_inputs, n_jets=4, b_index = 1):
+def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, n_jets=4, b_index = 1):
 
     N_FILTERS = model.get_layer('avgpool').output_shape[1]
 
     #Get the inputs and masks for the first n_jets
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
     input_masks = [get_input_mask(btag_inp, N_FILTERS) for btag_inp in btag_inputs]
-    nn_inputs = [[inp, mask] for inp, mask in zip(btag_inputs, input_masks)]
+    jet_features = [np.asarray(np.stack((jet_pt[:, i], jet_eta[:, i]), axis=-1)) for i in range(0, n_jets)]
+    nn_inputs = [[inp, features, mask] for inp, features, mask in zip(btag_inputs, jet_features, input_masks)]
 
     #Get the nn outputs
     nn_outputs = [model.predict(nn_inp) for nn_inp in nn_inputs]
@@ -110,6 +111,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_eta = extract_array(minbias, 'jet_eta', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
 
     #Count number of total event
@@ -117,21 +119,14 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
 
-    #Btag input list for first 4 jets
-    jet_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, 4)]
-    input_masks = [get_input_mask(jet_inp, N_FILTERS) for jet_inp in jet_inputs]
-    nn_inputs = [[inp, mask] for inp, mask in zip(jet_inputs, input_masks)]
-    nn_outputs = [model.predict(nn_inp) for nn_inp in nn_inputs]
-
-    #Calculate the output sum
-    b_index = class_labels['b']
-    bscore_sum = sum([pred_score[0][:, b_index] for pred_score in nn_outputs])
+    # Get sum NN  b-score predictions
+    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, b_index=class_labels['b'])
     ht = ak.sum(jet_pt, axis=1)
 
     assert(len(bscore_sum) == len(ht))
@@ -199,6 +194,7 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
     raw_event_id = extract_array(signal, 'event', n_entries)
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt_phys', n_entries)
+    raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
     raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
 
     # Load the inputs
@@ -208,8 +204,8 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
     raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_cmssw_bscore, raw_inputs, num_elements=4)
-    jet_genpt, jet_pt, cmssw_bscore, jet_nn_inputs = grouped_arrays
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, num_elements=4)
+    jet_genpt, jet_pt, jet_eta, cmssw_bscore, jet_nn_inputs = grouped_arrays
 
     #Calculate the ht
     jet_genht = ak.sum(jet_genpt, axis=1)
@@ -217,7 +213,7 @@ def bbbb_eff_HT(model_dir, signal_path, n_entries=100000, tree='jetntuple/Jets')
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, b_index=class_labels['b'])
+    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, b_index=class_labels['b'])
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp)
@@ -271,7 +267,7 @@ if __name__ == "__main__":
     """
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
+    parser.add_argument('-m','--model_dir', default='output/baseline2', help = 'Input model')
     parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb')
     parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 

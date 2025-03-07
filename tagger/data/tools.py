@@ -304,8 +304,9 @@ def to_ML(data, class_labels):
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
+    reco_eta = np.asarray(data['jet_eta_phys'])
 
-    return X, y, pt_target, truth_pt, reco_pt
+    return X, y, pt_target, truth_pt, reco_pt, reco_eta
 
 def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """
@@ -369,7 +370,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
               n_parts=N_PARTICLES,
               ratio=1.0,
               step_size="100MB",
-              tree="outnano/jets"):
+              tree="jetntuple/Jets"):
     """
     Process the data set in chunks from the input ntuples file.
 

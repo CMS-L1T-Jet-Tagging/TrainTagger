@@ -51,7 +51,7 @@ def prune_model(model, num_samples):
 
     return pruned_model
 
-def save_test_data(out_dir, X_test, y_test, X_test_mask, truth_pt_test, reco_pt_test, class_labels):
+def save_test_data(out_dir, X_test, y_test, X_test_mask, truth_pt_test, reco_pt_test, jet_input, class_labels):
 
     os.makedirs(os.path.join(out_dir,'testing_data'), exist_ok=True)
 
@@ -60,6 +60,7 @@ def save_test_data(out_dir, X_test, y_test, X_test_mask, truth_pt_test, reco_pt_
     np.save(os.path.join(out_dir, "testing_data/X_test_mask.npy"), X_test_mask)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
+    np.save(os.path.join(out_dir, "testing_data/jet_input_test.npy"), jet_input)
     with open(os.path.join(out_dir, "class_label.json"), "w") as f: json.dump(class_labels, f, indent=4) #Dump output variables
 
     print(f"Test data saved to {out_dir}")
@@ -135,22 +136,26 @@ def train(out_dir, percent, model_name):
     with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
 
     #Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, reco_eta_train = to_ML(data_train, class_labels)
 
     #Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
+    X_test, y_test, _, truth_pt_test, reco_pt_test, reco_eta_test = to_ML(data_test, class_labels)
+
+    # Create jet input
+    jet_input_train = np.stack([reco_pt_train, reco_eta_train], axis=-1)
+    jet_input_test = np.stack([reco_pt_test, reco_eta_test], axis=-1)
 
     # Create input mask from training data
     X_train_mask = get_input_mask(X_train, N_FILTERS)
     X_test_mask = get_input_mask(X_test, N_FILTERS)
 
-    save_test_data(out_dir, X_test, y_test, X_test_mask, truth_pt_test, reco_pt_test, class_labels)
+    save_test_data(out_dir, X_test, y_test, X_test_mask, truth_pt_test, reco_pt_test, jet_input_test, class_labels)
 
     #Calculate the sample weights for training
     sample_weight = train_weights(y_train, truth_pt_train, class_labels)
 
     #Get input shape
-    input_shape = [X_train.shape[1:], X_train_mask.shape[1:]] #First dimension is batch size
+    input_shape = [X_train.shape[1:], jet_input_train.shape[1:], X_train_mask.shape[1:]] #First dimension is batch size
     output_shape = y_train.shape[1:]
 
     #Dynamically get the model
@@ -169,7 +174,7 @@ def train(out_dir, percent, model_name):
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
 
-    history = pruned_model.fit({'model_input': X_train, 'mask_input': X_train_mask},
+    history = pruned_model.fit({'model_input': X_train, 'jet_input': jet_input_train, 'mask_input': X_train_mask},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
                             sample_weight=sample_weight,
                             epochs=EPOCHS,
@@ -207,11 +212,11 @@ if __name__ == "__main__":
     parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, in pfcand_fields.yml')
 
     #Training argument
-    parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
+    parser.add_argument('-o','--output', default='output/baseline2', help = 'Output model directory path, also save evaluation plots')
     parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
-    parser.add_argument('-t','--tree', default='outnano/jets', help = 'Tree within the ntuple containing the jets')
+    parser.add_argument('-t','--tree', default='jetntuple/Jets', help = 'Tree within the ntuple containing the jets')
 
     #Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')

@@ -97,6 +97,7 @@ baseline_hardware_inputs:
 
 extra_fields:
   - jet_pt_phys
+  - jet_eta_phys
   - jet_genmatch_pt
 
 extra_emulation_fields:

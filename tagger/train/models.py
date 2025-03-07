@@ -3,7 +3,7 @@ Here all the models are defined to be called in train.py
 """
 import tensorflow as tf
 from tensorflow.keras.layers import (BatchNormalization, Input, Activation, GlobalAveragePooling1D,
-    Masking, Multiply)
+    Masking, Multiply, Concatenate)
 
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
@@ -22,7 +22,8 @@ def baseline(inputs_shape, output_shape, n_filters, bits=9, bits_int=2, alpha_va
 
     #Initialize inputs
     inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
-    inputs_mask = tf.keras.layers.Input(shape=inputs_shape[1], name='mask_input')
+    inputs_jet = tf.keras.layers.Input(shape=inputs_shape[1], name='jet_input')
+    inputs_mask = tf.keras.layers.Input(shape=inputs_shape[2], name='mask_input')
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
@@ -41,6 +42,9 @@ def baseline(inputs_shape, output_shape, n_filters, bits=9, bits_int=2, alpha_va
     # Masking through multiplication
     main = Multiply()([main, inputs_mask])
     main = GlobalAveragePooling1D(name='avgpool')(main)
+
+    # Concatenate with jet inputs
+    main = Concatenate(name='concatenate_jet')([main, inputs_jet])
 
     #Now split into jet ID and pt regression
 
@@ -64,7 +68,7 @@ def baseline(inputs_shape, output_shape, n_filters, bits=9, bits_int=2, alpha_va
                         kernel_initializer='lecun_uniform')(pt_regress)
 
     #Define the model using both branches
-    model = tf.keras.Model(inputs = [inputs, inputs_mask], outputs = [jet_id, pt_regress])
+    model = tf.keras.Model(inputs = [inputs, inputs_jet, inputs_mask], outputs = [jet_id, pt_regress])
 
     print(model.summary())
 

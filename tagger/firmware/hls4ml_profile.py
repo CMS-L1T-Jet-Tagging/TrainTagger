@@ -28,13 +28,19 @@ def doPlots(model,outputdir,inputdir):
     N_FILTERS = model.get_layer('avgpool').output_shape[1]
 
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100,test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)
+    X_test, Y_test, pt_target, truth_pt, reco_pt, reco_eta = to_ML(data, class_labels)
 
     labels = list(class_labels.keys())
 
     hls_model = convert(model,"temp",build=False)
+
+    # create additional model inputs (mask + jet features)
     input_mask = get_input_mask(X_test, N_FILTERS)
-    model_inp = [np.ascontiguousarray(X_test), np.ascontiguousarray(input_mask)]
+    jet_features = np.stack([reco_pt, reco_eta], axis=-1)
+    model_inp = [np.ascontiguousarray(X_test),
+        np.ascontiguousarray(jet_features),
+        np.ascontiguousarray(input_mask)]
+
     y_hls, y_ptreg_hls = hls_model.predict(model_inp)
     y_class, y_ptreg = model.predict(model_inp)
 

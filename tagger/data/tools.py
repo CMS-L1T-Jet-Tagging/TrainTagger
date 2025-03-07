@@ -1,13 +1,13 @@
-#Python
+# Python
 import os, gc, json, glob, shutil
 
-#Third party
+# Third party
 import numpy as np
 import awkward as ak
 import tensorflow as tf
 import uproot, yaml
 
-#Dataset configuration
+# Dataset configuration
 from .config import FILTER_PATTERN, N_PARTICLES, INPUT_TAG, EXTRA_FIELDS
 
 gc.set_threshold(0)

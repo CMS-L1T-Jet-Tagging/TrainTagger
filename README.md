@@ -26,12 +26,13 @@ The CI in this repository aims at building a pipeline that enables running all o
 Note that the instructions are assuming that you have access to the appropriate `eos` data spaces. If you are not interested in reading lengthy documentation like me, here is a ultra-short version to get started on running the code (more details in each specific command is provided in each section above, futher help can be found by looking into each script):
 
 ```
+#Everything is done directly under the TrainTagger directory
+
 #Activate the environment
 conda activate tagger
 
 #Run this to add the scripts in this directory to your python path
-export PYTHONPATH=$PYTHONPATH:$PWD
-export CI_COMMIT_REF_NAME=local
+source setup.sh
 
 #Prepare the data
 python tagger/train/train.py --make-data
@@ -42,12 +43,14 @@ python tagger/train/train.py
 #Make some basic validation plots
 python tagger/train/train.py --plot-basic
 
-#Make other plots for bbbb/bbtautau final state for example:
-python tagger/plot/bbbb.py
-python tagger/plot/bbtautau.py
+#Make other plots for bbbb/di-taus final state for example:
+python bbbb.py --deriveWPs
+python bbbb.py --eff
 
-#OR vbf tautau
-python tagger/plot/vbf_tautau.py
+#Or for di-taus
+python tagger/plot/diTaus.py --deriveWPs
+python tagger/plot/diTaus.py --BkgRate
+python tagger/plot/diTaus.py --eff
 
 #Synthesize the model (with wrapper and CMMSSW)
 python tagger/firmware/hls4ml_convert.py
@@ -83,7 +86,7 @@ conda-env create -f environment.yml
 conda activate tagger
 
 #Run this to add the scripts in this directory to your python path
-export PYTHONPATH=$PYTHONPATH:$PWD
+source setup.sh
 ```
 
 

@@ -224,7 +224,7 @@ if __name__ == "__main__":
     parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, in pfcand_fields.yml')
 
     #Training argument
-    parser.add_argument('-o','--output', default='output/baseline2', help = 'Output model directory path, also save evaluation plots')
+    parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
     parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')

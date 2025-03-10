@@ -237,7 +237,6 @@ upload:
     - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cd ../..
-    - mv tagger/firmware/JetTaggerNN.tgz $Name
     - mkdir $Name/plots
     - cp -r output/baseline/model $Name/model
     - mv output/baseline/plots/emulation $Name/plots
@@ -249,7 +248,7 @@ upload:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin" 
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_deploy_plots.py TrainTagger/${Name} /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,h5
+    - pb_deploy_plots.py TrainTagger/${Name} ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,h5
     - cd TrainTagger
     - mv CI/mlflow_logger.py .
     - python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR}
@@ -257,6 +256,8 @@ upload:
       -m ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
       -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
       -n ${Name}
+    - eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
+    - eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipelines${CI_PIPELINE_ID}
   artifacts:
     paths:
       - $Name

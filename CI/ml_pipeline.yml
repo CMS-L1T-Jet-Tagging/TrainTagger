@@ -78,11 +78,6 @@ train:
   - python tagger/train/train.py -n $Name -p 50 
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/baseline
-  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
-  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
-  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/testing_data/
-  - eos cp -r plots/training ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
-  - eos cp model/saved_model.h5 ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
   artifacts:
     paths:
       - output
@@ -121,8 +116,6 @@ evaluate:
   - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE
-  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/physics
-  - eos cp -r output/baseline/plots/physics ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/physics
   artifacts:
     paths:
       - output
@@ -182,7 +175,6 @@ emulation-evaluate:
   - cd ..
   - source activate tagger
   - python tagger/plot/makeEmulationPlot.py -r True
-  - eos cp -r output/baseline/plots/emulation ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   artifacts:
     paths:
       - output/baseline
@@ -211,7 +203,6 @@ profile:
   - cd ..
   - ls tagger/firmware/JetTaggerNN/JetTaggerNN_prj/solution1/syn/report/
   - python tagger/firmware/hls4ml_profile.py -r True -n $Name
-  - eos cp -r output/baseline/plots/profile ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots/
   artifacts:
     paths:
       - output/baseline
@@ -231,16 +222,29 @@ upload:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - source activate tagger
+    - mkdir $Name
     - cd tagger/firmware
     - tar -cvf JetTaggerNN.tgz JetTaggerNN
     - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cp -r JetTaggerNN.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    - cd ../../..
+    - cd ../..
+    - mkdir $Name/plots
+    - cp -r output/baseline/model $Name/model
+    - mv output/baseline/plots/emulation $Name/plots
+    - mv output/baseline/plots/profile $Name/plots
+    - mv output/baseline/plots/training/ $Name/plots
+    - mv output/baseline/plots/physics/ $Name/plots
+    - cd ..
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin" 
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+    - pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive
+    /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
+    branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
+    - cd TrainTagger/${Name} 
+    - pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
+    - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf
     - cd TrainTagger
     - mv CI/mlflow_logger.py .
     - python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR}
@@ -249,8 +253,7 @@ upload:
       -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
       -n ${Name}
     - eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
-    - eos mkdir ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest 
-    - eos cp -r ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipelines${CI_PIPELINE_ID} ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest 
+    - eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
   artifacts:
     paths:
       - $Name

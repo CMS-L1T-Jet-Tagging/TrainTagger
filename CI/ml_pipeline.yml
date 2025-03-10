@@ -243,7 +243,7 @@ upload:
     - cd TrainTagger/${Name} 
     - pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
     - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf
-    - cd TrainTagger
+    - cd ..
     - mv CI/mlflow_logger.py .
     - python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR}
       -f ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware 

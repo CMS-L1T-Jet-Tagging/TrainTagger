@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
+from tagger.data.tools import get_input_mask
 
 style.set_style()
 
@@ -46,7 +47,7 @@ def group_id_values_topo(event_id, raw_tau_score_sum, *arrays, num_elements = 2)
 
     # Find unique event_ids and counts manually
     unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
-    
+
     # Use ak.unflatten to group the arrays by counts
     grouped_id = ak.unflatten(sorted_event_id, counts)
     grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
@@ -61,12 +62,12 @@ def group_id_values_topo(event_id, raw_tau_score_sum, *arrays, num_elements = 2)
     filtered_grouped_arrays = [arr[mask] for arr in grouped_arrays_sorted]
 
     return grouped_id[mask], filtered_grouped_arrays
- 
+
 def pick_and_plot_topo(rate_list, pt_list, nn_list, model_dir, target_rate = 28, RateRange=1.0):
 
     plot_dir = os.path.join(model_dir, 'plots/physics/tautau_topo')
     os.makedirs(plot_dir, exist_ok=True)
-    
+
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
@@ -82,10 +83,10 @@ def pick_and_plot_topo(rate_list, pt_list, nn_list, model_dir, target_rate = 28,
 
     ax.set_xlim([0,0.2])
     ax.set_ylim([10,100])
-    
+
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
-    
+
     #Get the coordinates
     target_rate_NN = [nn_list[i] for i in target_rate_idx] # NN cut dimension
     target_rate_PT = [pt_list[i] for i in target_rate_idx] # HT cut dimension
@@ -102,27 +103,28 @@ def pick_and_plot_topo(rate_list, pt_list, nn_list, model_dir, target_rate = 28,
 
     with open(os.path.join(plot_dir, "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
-    
+
     # Generate 100 points spanning the entire pT range visible on the plot.
     pT_full = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 100)
-    
+
     # Evaluate the interpolation function to obtain NN values for these pT points.
     NN_full = interp_func(pT_full)
     ax.plot(NN_full, pT_full, linewidth=style.LINEWIDTH, color ='firebrick', label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
 
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
     plt.savefig(f"{plot_dir}/tautau_topo_WPs.pdf", bbox_inches='tight')
-    plt.savefig(f"{plot_dir}/tautau_topo_WPs.png", bbox_inches='tight')   
-    
+    plt.savefig(f"{plot_dir}/tautau_topo_WPs.png", bbox_inches='tight')
+
 def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntuple/Jets', target_rate=28):
     """
-    Derive ditau topology working points. 
-    Using a new score that uses the charge definition in the jet tagger. 
+    Derive ditau topology working points.
+    Using a new score that uses the charge definition in the jet tagger.
 
     topology_score = (tau_p_1 + tau_p_2)*(tau_m_1 + tau_m_2)
     """
 
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    n_filters = model.get_layer('avgpool').output_shape[1]
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -136,7 +138,9 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta], axis=-1))
+    input_mask = get_input_mask(raw_inputs, n_filters)
+    raw_pred_score, raw_pt_correction = model.predict([raw_inputs, jet_features, input_mask])
 
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
@@ -194,12 +198,12 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     #Loop through the edges and integrate
     for pt in pT_edges[:-1]:
         for NN in NN_edges[:-1]:
-            
+
             #Calculate the rate
             rate = RateHist[{"pt": slice(pt*1j, pT_edges[-1]*1.0j, sum)}][{"nn": slice(NN*1.0j,1.0j, sum)}]/n_events
             rate_list.append(rate*MINBIAS_RATE)
 
-            #Append the results   
+            #Append the results
             pt_list.append(pt)
             nn_list.append(NN)
 
@@ -272,9 +276,10 @@ def model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus,
 
     return event_id[cuts], pt_min, tau_topo_score[cuts]
 
-def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetntuple/Jets'): 
+def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetntuple/Jets'):
 
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    n_filters = model.get_layer('avgpool').output_shape[1]
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -302,7 +307,9 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
 
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta], axis=-1))
+    input_mask = get_input_mask(raw_inputs, n_filters)
+    raw_pred_score, raw_pt_correction = model.predict([raw_inputs, jet_features, input_mask])
 
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
@@ -375,7 +382,7 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
                     np.array(minbias_rate_model) + np.array(uncertainty_model),
                     color=style.color_cycle[2],
                     alpha=0.3)
-    
+
     # Set plot properties
     ax.set_yscale('log')
     ax.set_ylabel(r"VBF H$\to \tau_h \tau_h$ trigger rate [kHz]")
@@ -408,12 +415,13 @@ def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
     ax.set_ylabel(r"Gen. $p_T^2$ [GeV]")
 
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
-    plt.show(block=True) 
+    plt.show(block=True)
 
 
 def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=100000):
 
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    n_filters = model.get_layer('avgpool').output_shape[1]
 
     #Load the signal data
     signal = uproot.open(tau_eff_filepath)[tree]
@@ -431,9 +439,11 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
     raw_cmssw_tau = extract_array(signal, 'jet_tauscore', n_entries)
     raw_cmssw_taupt = extract_array(signal, 'jet_taupt', n_entries)
 
-    #NN related 
+    #NN related
     raw_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta], axis=-1))
+    input_mask = get_input_mask(raw_inputs, n_filters)
+    raw_pred_score, raw_pt_correction = model.predict([raw_inputs, jet_features, input_mask])
 
     #Check if the working point have been derived
     WP_path = os.path.join(model_dir, "plots/physics/tautau_topo/working_point.json")
@@ -445,7 +455,7 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
         model_PT_WP = WPs['PT']
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
-    
+
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:,class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
     raw_tau_minus = raw_pred_score[:,class_labels['taum']]
@@ -502,13 +512,13 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
                     hist.axis.Variable(pt_edges, name="genpt2", label="genpt2"))
     model_pt = Hist(hist.axis.Variable(pt_edges, name="genpt1", label="genpt1"),
                     hist.axis.Variable(pt_edges, name="genpt2", label="genpt2"))
-    
+
     all_genpt.fill(genpt1=genpt1, genpt2=genpt2)
 
     cmssw_selection = (cmssw_tau_min > WPs_CMSSW['tau']) & (cmssw_pt_min > WPs_CMSSW['tau_l1_pt'])
     cmssw_pt.fill(genpt1=genpt1[cuts][cmssw_selection], genpt2=genpt2[cuts][cmssw_selection])
 
-    model_selection = (pt_min_model > model_PT_WP) & (tau_topo_score[cuts] > model_NN_WP) 
+    model_selection = (pt_min_model > model_PT_WP) & (tau_topo_score[cuts] > model_NN_WP)
     model_pt.fill(genpt1=genpt1[cuts][model_selection], genpt2=genpt2[cuts][model_selection])
 
     cmssw_ratio = ratio_2D(cmssw_pt, all_genpt)
@@ -558,8 +568,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus') 
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')

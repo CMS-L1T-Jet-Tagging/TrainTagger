@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
+from tagger.data.tools import get_input_mask
 
 style.set_style()
 
@@ -32,7 +33,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
 
     plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
     os.makedirs(plot_dir, exist_ok=True)
-    
+
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
@@ -45,7 +46,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
 
     ax.set_ylabel(r"Min L1 $p_T$ [GeV]")
     ax.set_xlabel(r"Min Tau NN ($\tau^{+} + \tau^{-}$) Score")
-    
+
     ax.set_xlim([0,0.4])
     ax.set_ylim([10,100])
 
@@ -67,32 +68,33 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
 
     with open(os.path.join(plot_dir, "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
-    
+
     # Generate 100 points spanning the entire pT range visible on the plot.
     pT_full = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 100)
-    
+
     # Evaluate the interpolation function to obtain NN values for these pT points.
     NN_full = interp_func(pT_full)
     ax.plot(NN_full, pT_full, linewidth=style.LINEWIDTH, color ='firebrick', label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
 
     #Just plot the points instead of the interpolation
     #ax.plot(target_rate_NN, target_rate_PT, linewidth=style.LINEWIDTH, color ='firebrick', label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
-    
+
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
     plt.savefig(f"{plot_dir}/tautau_WPs.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/tautau_WPs.png", bbox_inches='tight')
 
 def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tree='jetntuple/Jets'):
     """
-    Derive the di-tau rate. 
+    Derive the di-tau rate.
     Seed definition can be found here (2024 Annual Review):
 
     https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
 
-    Double Puppi Tau Seed, same NN cut and pT (52 GeV) on both taus to give 28 kHZ based on the definition above.  
+    Double Puppi Tau Seed, same NN cut and pT (52 GeV) on both taus to give 28 kHZ based on the definition above.
     """
 
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    n_filters = model.get_layer('avgpool').output_shape[1]
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -130,12 +132,17 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
 
     #Get inputs and pts for processing
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
+    eta1, eta2 = np.asarray(jet_eta[:, 0][cuts]), np.asarray(jet_eta[:, 1][cuts])
+    jet_features1 = np.stack([pt1_uncorrected, eta1], axis=-1)
+    jet_features2 = np.stack([pt2_uncorrected, eta2], axis=-1)
     input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
+    input1_mask = get_input_mask(input1, n_filters)
+    input2_mask = get_input_mask(input2, n_filters)
 
     #Get the NN predictions
     tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
-    pred_score1, ratio1 = model.predict(input1)
-    pred_score2, ratio2 = model.predict(input2)
+    pred_score1, ratio1 = model.predict([input1, jet_features1, input1_mask])
+    pred_score2, ratio2 = model.predict([input2, jet_features2, input2_mask])
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())
@@ -168,12 +175,12 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     #Loop through the edges and integrate
     for pt in pT_edges[:-1]:
         for NN in NN_edges[:-1]:
-            
+
             #Calculate the rate
             rate = RateHist[{"pt": slice(pt*1j, None, sum)}][{"nn": slice(NN*1.0j, None, sum)}]/n_events
             rate_list.append(rate*MINBIAS_RATE)
 
-            #Append the results   
+            #Append the results
             pt_list.append(pt)
             nn_list.append(NN)
 
@@ -189,24 +196,30 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     #Load metadata from the model directory
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    n_filters = model.get_layer('avgpool').output_shape[1]
+
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
     with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
-    pt_cuts = list(np.arange(0,250,10)) 
+    pt_cuts = list(np.arange(0,250,10))
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
 
     #Impose eta cuts
     jet_eta =  extract_array(minbias, 'jet_eta_phys', n_entries)
+    jet_pt =  extract_array(minbias, 'jet_pt', n_entries)
     eta_selection = np.abs(jet_eta) < 2.5
 
-    #
     nn_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
 
     #Get the NN predictions
     tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
-    pred_score, ratio = model.predict(nn_inputs[eta_selection])
+    eta_selected_input = nn_inputs[eta_selection]
+    eta_selected_jet_pt, eta_selected_jet_eta = jet_pt[eta_selection], jet_eta[eta_selection]
+    jet_features = np.asarray(np.stack([eta_selected_jet_pt, eta_selected_jet_eta], axis=-1))
+    input_mask = get_input_mask(eta_selected_input, n_filters)
+    pred_score, ratio = model.predict([eta_selected_input, jet_features, input_mask])
     model_tau = pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
 
     #Emulator tau score
@@ -227,7 +240,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
         tautau_pt_wp = WPs['PT']
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
-    
+
     event_id_model = event_id[model_tau > tautau_wp]
 
     #Cut on jet pT to extract the rate
@@ -272,7 +285,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     ax.plot(pt_cuts, minbias_rate_no_nn, c=style.color_cycle[0], label=r'No ID/$p_T$ correction', linewidth=style.LINEWIDTH)
     ax.plot(pt_cuts, minbias_rate_cmssw, c=style.color_cycle[1], label=r'CMSSW PuppiTau Emulator', linewidth=style.LINEWIDTH)
     ax.plot(pt_cuts, minbias_rate_model, c=style.color_cycle[2],label=r'SeedCone Tau', linewidth=style.LINEWIDTH)
-    
+
     # Add uncertainty bands
     ax.fill_between(pt_cuts,
                     np.array(minbias_rate_no_nn) - np.array(uncertainty_no_nn),
@@ -314,6 +327,8 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
 
     #Load metadata from the model directory
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    n_filters = model.get_layer('avgpool').output_shape[1]
+
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
     with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
@@ -339,12 +354,15 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     gen_dr_raw = extract_array(signal, 'jet_genmatch_dR', n_entries)
 
     l1_pt_raw = extract_array(signal, 'jet_pt', n_entries)
+    l1_eta_raw = extract_array(signal, 'jet_eta_phys', n_entries)
     jet_taupt_raw= extract_array(signal, 'jet_taupt', n_entries)
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
-    pred_score, ratio = model.predict(nn_inputs)
+    jet_features = np.asarray(np.stack([l1_pt_raw, l1_eta_raw], axis=-1))
+    input_mask = get_input_mask(nn_inputs, n_filters)
+    pred_score, ratio = model.predict([nn_inputs, jet_features, input_mask])
 
     nn_tauscore_raw = pred_score[:,class_labels['taup'],] + pred_score[:,class_labels['taum']]
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
@@ -434,8 +452,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus') 
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')

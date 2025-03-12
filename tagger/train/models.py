@@ -3,7 +3,8 @@ Here all the models are defined to be called in train.py
 """
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D
-
+#HGQ
+from HGQ.layers import HDense, HConv1D, PAveragePooling1D,  HQuantize, HActivation, PFlatten, HConv1DBatchNorm
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.qlayers import QDense, QActivation
@@ -62,5 +63,41 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1):
     model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
     print(model.summary())
+
+    return model
+
+
+def deepset_HGQ(inputs_shape, output_shape):
+
+    inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+  
+    #Main branch
+    main = HQuantize(name='norm_input',beta=3e-5)(inputs)
+    main = HConv1DBatchNorm(filters=10, kernel_size=1, beta=1.1e-5,parallel_factor=1,activation='relu',name='Conv1D_1')(main)
+    
+    main = HConv1D(filters=10, kernel_size=1,beta=1.1e-5,parallel_factor=1,activation='relu',name='Conv1D_2')(main)
+
+    sequence_length = main.shape[1]
+    main = PAveragePooling1D(pool_size=sequence_length, name="avgpool")(main)
+    main=PFlatten()(main)
+    
+    #jetID branch, 3 layer MLP
+    jet_id = HDense(32, beta=1.1e-11,parallel_factor=1,name='Dense_1_jetID')(main)
+    jet_id = HActivation(activation='relu', beta=1.1e-11,name='relu_1_jetID')(jet_id)
+
+    jet_id = HDense(16, name='Dense_2_jetID',beta=1.1e-11,parallel_factor=1)(jet_id)
+    jet_id = HActivation(activation='relu',beta=1.1e-11, name='relu_2_jetID')(jet_id)
+
+    jet_id = HDense(output_shape[0],beta=1.1e-11,parallel_factor=1, name='Dense_3_jetID')(jet_id)
+    jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+
+    #pT regression branch
+    pt_regress = HDense(10, name='Dense_1_pT', parallel_factor=1,beta=1.1e-11)(main)
+    pt_regress = HActivation(activation='relu',beta=1.1e-11, name='relu_1_pt')(pt_regress)
+
+    pt_regress = HDense(1, beta=1.1e-5,parallel_factor=1,name='pT_output')(pt_regress)
+
+    #Define the model using both branches
+    model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
     return model

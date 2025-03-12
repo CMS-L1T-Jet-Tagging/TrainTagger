@@ -17,7 +17,7 @@ dependencies:
     - shap
     - awkward-pandas
     - mlflow
-    
+    - hgq
     # For hardware synthesis
     - tensorflow==2.14
     - pyparsing

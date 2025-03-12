@@ -15,17 +15,20 @@ from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 
-num_threads = 8
-os.environ["OMP_NUM_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
+#HGQ
+from HGQ import ResetMinMax, FreeBOPs
 
-tf.config.threading.set_inter_op_parallelism_threads(
-    num_threads
-)
-tf.config.threading.set_intra_op_parallelism_threads(
-    num_threads
-)
+#num_threads = 8
+#os.environ["OMP_NUM_THREADS"] = str(num_threads)
+#os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
+#os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
+
+#tf.config.threading.set_inter_op_parallelism_threads(
+ #   num_threads
+#)
+#tf.config.threading.set_intra_op_parallelism_threads(
+  #  num_threads
+#)
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 
@@ -163,17 +166,37 @@ def train(out_dir, percent, model_name):
     except AttributeError:
         raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")
 
-    #Train it with a pruned model
-    num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
-    pruned_model = prune_model(model, num_samples)
 
-    #Now fit to the data
-    callbacks = [tfmot.sparsity.keras.UpdatePruningStep(),
+    
+    if model_name=="baseline":
+        #Train it with a pruned model
+        num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
+        pruned_model = prune_model(model, num_samples)
+        callbacks = [tfmot.sparsity.keras.UpdatePruningStep(),
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
-
-    history = pruned_model.fit({'model_input': X_train},
+        history = pruned_model.fit({'model_input': X_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
+                            sample_weight=sample_weight,
+                            epochs=EPOCHS,
+                            batch_size=BATCH_SIZE,
+                            verbose=2,
+                            validation_split=VALIDATION_SPLIT,
+                            callbacks = [callbacks],
+                            shuffle=True)
+
+    
+    else:
+        model.compile(optimizer='adam',
+                            loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': tf.keras.losses.Huber()},
+                            metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']},
+                            weighted_metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']})
+    
+        callbacks = [tfmot.sparsity.keras.UpdatePruningStep(),
+                 EarlyStopping(monitor='val_loss', patience=10),
+                 ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5),ResetMinMax(), FreeBOPs()]
+        history = model.fit({'model_input': X_train},
+                            {'jet_id_output': y_train, 'pT_output': pt_target_train},
                             sample_weight=sample_weight,
                             epochs=EPOCHS,
                             batch_size=BATCH_SIZE,
@@ -183,8 +206,10 @@ def train(out_dir, percent, model_name):
                             shuffle=True)
     
     #Export the model
-    model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
-
+    if model_name=="baseline":
+        model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
+    else:
+        model_export = tfmot.sparsity.keras.strip_pruning(model)
     export_path = os.path.join(out_dir, "model/saved_model.h5")
     model_export.save(export_path)
     print(f"Model saved to {export_path}")

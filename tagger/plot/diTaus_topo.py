@@ -138,8 +138,8 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta], axis=-1))
-    input_mask = get_input_mask(raw_inputs, n_filters)
+    input_mask, n_const = get_input_mask(raw_inputs, n_filters)
+    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta, n_const], axis=-1))
     raw_pred_score, raw_pt_correction = model.predict([raw_inputs, jet_features, input_mask])
 
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
@@ -307,8 +307,8 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
 
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta], axis=-1))
-    input_mask = get_input_mask(raw_inputs, n_filters)
+    input_mask, n_const = get_input_mask(raw_inputs, n_filters)
+    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta, n_const], axis=-1))
     raw_pred_score, raw_pt_correction = model.predict([raw_inputs, jet_features, input_mask])
 
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
@@ -441,8 +441,8 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
 
     #NN related
     raw_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
-    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta], axis=-1))
-    input_mask = get_input_mask(raw_inputs, n_filters)
+    input_mask, n_const = get_input_mask(raw_inputs, n_filters)
+    jet_features = np.asarray(np.stack([raw_jet_pt, raw_jet_eta, n_const], axis=-1))
     raw_pred_score, raw_pt_correction = model.predict([raw_inputs, jet_features, input_mask])
 
     #Check if the working point have been derived

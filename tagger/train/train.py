@@ -153,13 +153,14 @@ def train(out_dir, percent, model_name):
     #Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test, reco_eta_test = to_ML(data_test, class_labels)
 
-    # Create jet input
-    jet_input_train = np.stack([reco_pt_train, reco_eta_train], axis=-1)
-    jet_input_test = np.stack([reco_pt_test, reco_eta_test], axis=-1)
 
     # Create input mask from training data
-    X_train_mask = get_input_mask(X_train, N_FILTERS)
-    X_test_mask = get_input_mask(X_test, N_FILTERS)
+    X_train_mask, n_constituents_train = get_input_mask(X_train, N_FILTERS)
+    X_test_mask, n_constituents_test = get_input_mask(X_test, N_FILTERS)
+
+    # Create jet input
+    jet_input_train = np.stack([reco_pt_train, reco_eta_train, n_constituents_train], axis=-1)
+    jet_input_test = np.stack([reco_pt_test, reco_eta_test, n_constituents_test], axis=-1)
 
     save_test_data(out_dir, X_test, y_test, X_test_mask, truth_pt_test, reco_pt_test, jet_input_test, class_labels)
 

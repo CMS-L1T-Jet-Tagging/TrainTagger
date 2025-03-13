@@ -283,16 +283,13 @@ def group_id_values(event_id, *arrays, num_elements = 2):
 
 def get_input_mask(X_data, repeat_shape):
     # Create input mask from training data
-    inputs_mask = np.where(np.sum(X_data, axis=2)==0, 0, X_data.shape[1])
-    inputs_count = np.sum(np.where(np.sum(X_data, axis=2)==0, 0, 1), axis=1)
-
-    # Normalize using constituents multiplicity, enforces averaging over real constituents in the model
-    inputs_mask = inputs_mask / inputs_count[:, np.newaxis]
+    inputs_mask = np.where(np.sum(X_data, axis=2)==0, 0, 1)
+    n_constituents = ak.sum(inputs_mask, axis=1)
 
     # Mask shape must mathc the nn shape before the average poolinng layer
     inputs_mask = np.repeat(inputs_mask[:, :,np.newaxis], repeat_shape, axis=2)
 
-    return inputs_mask
+    return [inputs_mask, n_constituents]
 
 def to_ML(data, class_labels):
     """

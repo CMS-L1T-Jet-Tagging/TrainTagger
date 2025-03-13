@@ -41,8 +41,8 @@ def doPlots(model,outputdir,inputdir):
     hls_model = convert(model,"temp",build=False)
 
     # create additional model inputs (mask + jet features)
-    input_mask = get_input_mask(X_test, N_FILTERS)
-    jet_features = np.stack([reco_pt, reco_eta], axis=-1)
+    input_mask, n_const = get_input_mask(X_test, N_FILTERS)
+    jet_features = np.stack([reco_pt, reco_eta, n_const], axis=-1)
     model_inp = [np.ascontiguousarray(X_test),
         np.ascontiguousarray(jet_features),
         np.ascontiguousarray(input_mask)]

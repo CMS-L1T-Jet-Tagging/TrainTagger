@@ -133,11 +133,11 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     #Get inputs and pts for processing
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
     eta1, eta2 = np.asarray(jet_eta[:, 0][cuts]), np.asarray(jet_eta[:, 1][cuts])
-    jet_features1 = np.stack([pt1_uncorrected, eta1], axis=-1)
-    jet_features2 = np.stack([pt2_uncorrected, eta2], axis=-1)
     input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
-    input1_mask = get_input_mask(input1, n_filters)
-    input2_mask = get_input_mask(input2, n_filters)
+    input1_mask, n_const1 = get_input_mask(input1, n_filters)
+    input2_mask, n_const2 = get_input_mask(input2, n_filters)
+    jet_features1 = np.stack([pt1_uncorrected, eta1, n_const1], axis=-1)
+    jet_features2 = np.stack([pt2_uncorrected, eta2, n_const2], axis=-1)
 
     #Get the NN predictions
     tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
@@ -217,8 +217,8 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
     eta_selected_input = nn_inputs[eta_selection]
     eta_selected_jet_pt, eta_selected_jet_eta = jet_pt[eta_selection], jet_eta[eta_selection]
-    jet_features = np.asarray(np.stack([eta_selected_jet_pt, eta_selected_jet_eta], axis=-1))
-    input_mask = get_input_mask(eta_selected_input, n_filters)
+    input_mask, n_const = get_input_mask(eta_selected_input, n_filters)
+    jet_features = np.asarray(np.stack([eta_selected_jet_pt, eta_selected_jet_eta, n_const], axis=-1))
     pred_score, ratio = model.predict([eta_selected_input, jet_features, input_mask])
     model_tau = pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
 
@@ -360,8 +360,8 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
 
     #Get the model prediction
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
-    jet_features = np.asarray(np.stack([l1_pt_raw, l1_eta_raw], axis=-1))
-    input_mask = get_input_mask(nn_inputs, n_filters)
+    input_mask, n_const = get_input_mask(nn_inputs, n_filters)
+    jet_features = np.asarray(np.stack([l1_pt_raw, l1_eta_raw, n_const], axis=-1))
     pred_score, ratio = model.predict([nn_inputs, jet_features, input_mask])
 
     nn_tauscore_raw = pred_score[:,class_labels['taup'],] + pred_score[:,class_labels['taum']]

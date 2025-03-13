@@ -28,8 +28,9 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, n_jets=4, b_index = 1):
 
     #Get the inputs and masks for the first n_jets
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
-    input_masks = [get_input_mask(btag_inp, N_FILTERS) for btag_inp in btag_inputs]
-    jet_features = [np.asarray(np.stack((jet_pt[:, i], jet_eta[:, i]), axis=-1)) for i in range(0, n_jets)]
+    input_masks = [get_input_mask(btag_inp, N_FILTERS)[0] for btag_inp in btag_inputs]
+    n_const = [get_input_mask(btag_inp, N_FILTERS)[1] for btag_inp in btag_inputs]
+    jet_features = [np.asarray(np.stack((jet_pt[:, i], jet_eta[:, i], n_const[i]), axis=-1)) for i in range(0, n_jets)]
     nn_inputs = [[inp, features, mask] for inp, features, mask in zip(btag_inputs, jet_features, input_masks)]
 
     #Get the nn outputs

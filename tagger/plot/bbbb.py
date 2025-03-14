@@ -111,8 +111,8 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
     minbias = uproot.open(minbias_path)[tree]
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
-    raw_jet_eta = extract_array(minbias, 'jet_eta', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt_phys', n_entries)
+    raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
 
     #Count number of total event
@@ -268,9 +268,9 @@ if __name__ == "__main__":
     """
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model_dir', default='output/baseline2', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_021024/ggHHbbbb_PU200.root' , help = 'Signal sample for HH->bbbb')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_021024/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')

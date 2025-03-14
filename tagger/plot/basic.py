@@ -21,18 +21,18 @@ style.set_style()
 
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
-    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
-    ax.plot(history.history['loss'], label='Train Loss', linewidth=style.LINEWIDTH)
-    ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=style.LINEWIDTH)
-    ax.grid(True)
-    ax.set_ylabel('Loss')
-    ax.set_xlabel('Epoch')
-    ax.legend(loc='upper right')
+    losses = [l for l in history.history.keys() if 'loss' in l and 'val' not in l]
+    for branch in losses:
+        fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
+        ax.plot(model.history[branch], label='Train Loss', linewidth=style.LINEWIDTH)
+        ax.plot(model.history[f"val_{branch}"], label='Validation Loss',linewidth=style.LINEWIDTH)
+        ax.plot(history.history[branch], label='Train Loss', linewidth=style.LINEWIDTH)
+        ax.plot(history.history[f"val_{branch}"], label='Validation Loss',linewidth=style.LINEWIDTH)
+        ax.grid(True)
+        ax.set_ylabel('Loss')
+        ax.set_xlabel('Epoch')
 
-    save_path = os.path.join(plot_dir, "loss_history")
-    plt.savefig(f"{save_path}.png", bbox_inches='tight')
-    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
 
 def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     """

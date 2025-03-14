@@ -40,6 +40,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, n_jets=4, b_index = 1):
 
     return bscore_sum
 
+
 def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     """
     Pick the working points and plot
@@ -110,8 +111,8 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
     minbias = uproot.open(minbias_path)[tree]
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
-    raw_jet_eta = extract_array(minbias, 'jet_eta', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt_phys', n_entries)
+    raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
 
     #Count number of total event

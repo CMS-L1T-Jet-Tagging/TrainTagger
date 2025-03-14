@@ -25,8 +25,6 @@ def loss_history(plot_dir, history):
     for branch in losses:
         fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
         hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
-        ax.plot(model.history[branch], label='Train Loss', linewidth=style.LINEWIDTH)
-        ax.plot(model.history[f"val_{branch}"], label='Validation Loss',linewidth=style.LINEWIDTH)
         ax.plot(history.history[branch], label='Train Loss', linewidth=style.LINEWIDTH)
         ax.plot(history.history[f"val_{branch}"], label='Validation Loss',linewidth=style.LINEWIDTH)
         ax.grid(True)

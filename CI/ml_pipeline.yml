@@ -107,7 +107,7 @@ evaluate:
   - mkdir data
   - cd data
   - eos cp $EOS_DATA_DIR/$MINBIAS .
-  - eos cp $EOS_DATA_DIR/$BBBB .
+  - eos cp $BBBB_EOS_DIR/$BBBB .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "bbbb performance"

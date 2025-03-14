@@ -19,6 +19,7 @@ DeepSet:baseline_4param:
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
+     BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124
@@ -34,6 +35,7 @@ DeepSet:baseline_5param:
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
+     BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_5param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_5param_221124
@@ -52,6 +54,7 @@ DeepSet:baseline_4param_extended_trk:
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
+     BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_221124
@@ -69,7 +72,8 @@ DeepSet:baseline_5param_extended_trk:
      Inputs: baseline
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
-     BBBB: ggHHbbbb_PU200.root
+     BBBB:  ggHHbbbb_PU200.root
+     BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124
@@ -88,6 +92,7 @@ DeepSet:new_samples_baseline_5param_extended_trk:
     TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
+    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
     VBFHTAUTAU: VBFHToTauTau_PU200.root
     NTUPLE_TREE: outnano/Jets
     EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/

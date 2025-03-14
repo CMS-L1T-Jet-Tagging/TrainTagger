@@ -233,7 +233,13 @@ def bbbb_eff(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt_phys', n_entries)
     raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
-    raw_gen_mHH  = extract_array(signal, 'genHH_mass', n_entries)
+
+    # Try to extract genHH_mass, set to None if not found
+    try:
+        raw_gen_mHH = extract_array(signal, 'genHH_mass', n_entries)
+    except (KeyError, ValueError, uproot.exceptions.KeyInFileError) as e:
+        print(f"Warning: 'genHH_mass' not found in signal file: {e}")
+        raw_gen_mHH = None
 
     # Load the inputs
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
@@ -241,16 +247,28 @@ def bbbb_eff(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
 
     #Group event_id, gen_mHH, and genpt separately
-    event_id, grouped_gen_arrays =  group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, num_elements=0)
-    all_event_gen_mHH = ak.firsts(grouped_gen_arrays[0])
-    all_jet_genht = ak.sum(grouped_gen_arrays[1], axis=1)
+    if raw_gen_mHH is not None:
+        event_id, grouped_gen_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, num_elements=0)
+        all_event_gen_mHH = ak.firsts(grouped_gen_arrays[0])
+    else:
+        # If genHH_mass doesn't exist, only group event_id and genpt
+        event_id, grouped_gen_arrays = group_id_values(raw_event_id, raw_jet_genpt, num_elements=0)
+        all_event_gen_mHH = None
+    
+    all_jet_genht = ak.sum(grouped_gen_arrays[-1], axis=1)  # Last element will always be genpt
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_pt, raw_cmssw_bscore, raw_inputs, num_elements=4)
-    event_gen_mHH, jet_genpt, jet_pt, cmssw_bscore, jet_nn_inputs = grouped_arrays
+    if raw_gen_mHH is not None:
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_pt, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        event_gen_mHH, jet_genpt, jet_pt, cmssw_bscore, jet_nn_inputs = grouped_arrays
 
-    #Just pick the first entry of jet mHH arrays
-    event_gen_mHH = ak.firsts(event_gen_mHH)
+        #Just pick the first entry of jet mHH arrays
+        event_gen_mHH = ak.firsts(event_gen_mHH)
+    else:
+        # Handle case where genHH_mass doesn't exist
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        jet_genpt, jet_pt, cmssw_bscore, jet_nn_inputs = grouped_arrays
+        event_gen_mHH = None
 
     #Calculate the ht
     jet_genht = ak.sum(jet_genpt, axis=1)
@@ -264,11 +282,14 @@ def bbbb_eff(model_dir, signal_path, n_entries=100000, tree='outnano/Jets'):
     model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp)
     ht_only_selection = jet_ht > ht_only_wp
 
-    #Plot the efficiencies w.r.t mHH
-    bbbb_eff_mHH(model_dir,
-                all_event_gen_mHH,
-                event_gen_mHH,
-                cmssw_selection, model_selection, ht_only_selection)
+    #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
+    if all_event_gen_mHH is not None and event_gen_mHH is not None:
+        bbbb_eff_mHH(model_dir,
+                    all_event_gen_mHH,
+                    event_gen_mHH,
+                    cmssw_selection, model_selection, ht_only_selection)
+    else:
+        print("Skipping mHH efficiency plots because 'genHH_mass' is not available")
 
     #PLot the efficiencies
     #Basically we want to bin the selected truth ht and divide it by the overall count

@@ -40,7 +40,7 @@ git config user.name "Chriisbrown"
 
 git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git && \
   cd hls4ml-jettagger
-  git checkout hls4ml-jettaggerNN
+  git checkout HGQ
 
 cp -r ../../../tagger/firmware/JetTaggerNN/firmware JetTaggerNN/
 ./setup.sh

@@ -137,9 +137,6 @@ hls4ml:
   script:
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py
-  - tar -cvf L1TSC4NGJetModel.tgz tagger/firmware/L1TSC4NGJetModel
-  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-  - eos cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
   artifacts:
     paths:
       - tagger/firmware
@@ -155,7 +152,7 @@ synth:
     - cd tagger/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl 
-    - cd ../..
+    - cd ../../..
   artifacts:
     paths:
       - tagger/firmware/L1TSC4NGJetModel
@@ -228,6 +225,7 @@ upload:
     - mkdir $Name
     - cd tagger/firmware
     - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
+    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cd ../..
     - mkdir $Name/plots

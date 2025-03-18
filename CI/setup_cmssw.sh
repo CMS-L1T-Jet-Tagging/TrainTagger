@@ -39,7 +39,7 @@ git config user.name "Chriisbrown"
 
 
 git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git 
-mv hls4ml-jettagger L1TSC4NGJetModel
+mv hls4ml-jettagger HGQ
 cd L1TSC4NGJetModel
 git checkout HGQ
 

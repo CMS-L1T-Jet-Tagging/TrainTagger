@@ -45,7 +45,6 @@ git checkout L1TSC4NGJetModel
 
 cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware L1TSC4NGJetModel/
 ./setup.sh
-cat setup.sh
 
 make 
 make install

@@ -26,7 +26,7 @@ style.set_style()
 def getReports(indir):
     data_ = {}
     
-    report_csynth = Path('{}/JetTaggerNN_prj/solution1/syn/report/JetTaggerNN_csynth.rpt'.format(indir))
+    report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.rpt'.format(indir))
 
     if report_csynth.is_file():
         print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
@@ -138,7 +138,7 @@ if __name__ == "__main__":
                         run_id=run_id # pass None to start a new run
                         ):
         precisions = convert(model,args.outpath)
-        report = getReports('tagger/firmware/JetTaggerNN')
+        report = getReports('tagger/firmware/L1TSC4NGJetModel')
         mlflow.log_metric('FF',report['ff_rel'])
         mlflow.log_metric('LUT',report['lut_rel'])
         mlflow.log_metric('BRAM',report['bram_rel'])

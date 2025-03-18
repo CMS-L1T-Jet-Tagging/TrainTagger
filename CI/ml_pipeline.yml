@@ -241,10 +241,11 @@ upload:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin" 
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - cp /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/branches/index.php /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/branches/${CI_COMMIT_REF_SLUG}
-    - cp /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/branches/index.php /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/branches/${CI_COMMIT_REF_SLUG}/${Name}
-    - pb_deploy_plots.py TrainTagger/${Name} /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,h5
-    - cd TrainTagger
+    - pb_copy_index.py ${EOS_STORAGE_DIR} --recursive
+    - cd TrainTagger/${Name} 
+    - pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
+    - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf
+    - cd ..
     - mv CI/mlflow_logger.py .
     - python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR}
       -f ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware 

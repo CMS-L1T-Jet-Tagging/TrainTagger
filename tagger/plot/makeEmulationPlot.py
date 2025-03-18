@@ -41,14 +41,32 @@ def doPlots(model,outputdir,inputdir):
 
     y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
     y_class, y_ptreg = model.predict(np.ascontiguousarray(X_test))
-    
-    jet_pt_phys= np.array(data['jet_pt_phys'])
+    jet_pt_phys = np.array(data['jet_pt_phys'])
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg
 
     modelsAndNames["Y_hls_predict"] = y_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
+
+    for iJet in range(y_hls.shape[0]):
+        print_class = False
+        for i, label in enumerate(labels):
+            if abs(np.array(data['jet_SC4NGJet_score_'+label])[iJet] - y_hls[iJet][i]) > 0.001 : 
+                print_class = True
+        if print_class == True:
+            print("=== " + str(iJet) + " ===")
+            print("Inputs: " + str(X_test[iJet]))
+            for i, label in enumerate(labels): 
+                print(label  + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_'+label])[iJet]))
+                print(label  + ": hls : " + str(y_hls[iJet][i]))
+                print(label  + ": tf : " + str(y_class[iJet][i]))
+
+            if abs(np.array(data['jet_SC4NGJet_score_regression'])[iJet] - y_ptreg_hls[iJet]) > 0.001 :
+                print("pt reg cmssw : " + str(np.array(data['jet_SC4NGJet_score_regression'])[iJet]))
+                print("pt reg hls : " + str(y_ptreg_hls[iJet]))
+                print("pt reg tf : " + str(y_ptreg[iJet]))
+
 
     jet_pt_cor_reg = jet_pt_phys * modelsAndNames["Y_predict_reg"][:,0]
     jet_pt_cor_reg_hls = jet_pt_phys * modelsAndNames["Y_hls_predict_reg"][:,0]
@@ -123,7 +141,7 @@ def doPlots(model,outputdir,inputdir):
 
     for i, label in enumerate(labels):
         plt.close()
-        common.plot_roc(modelsAndNames,label,title=style.CLASS_LABEL_STYLE[label]+" ROC Comparison")
+        common.plot_roc(modelsAndNames,label,keys = ["Tensorflow","Emulation","hls4ml"],labels = ["Tensorflow","CMSSW Emulation", "hls4ml"],title=style.CLASS_LABEL_STYLE[label]+" ROC Comparison")
         plt.savefig(outputdir+"/ROC_Emulation_comparison_"+label+".png",bbox_inches='tight')
         plt.savefig(outputdir+"/ROC_Emulation_comparison_"+label+".pdf",bbox_inches='tight')
 
@@ -132,8 +150,8 @@ def doPlots(model,outputdir,inputdir):
     response_hls = jet_pt_cor_reg_hls / data['jet_genmatch_pt']
 
     figure = common.plot_histo([response_reg,response_emu,response_hls],
-                        ["Tensorflow" + " median: "+str(np.round(np.median(response_reg),3))+" rms: "+str(np.round(rms(response_reg),3)),
-                         "Emulation" + " median: "+str(np.round(np.median(response_emu),3))+" rms: "+str(np.round(rms(response_emu),3)),
+                        ["Emulation" + " median: "+str(np.round(np.median(response_emu),3))+" rms: "+str(np.round(rms(response_emu),3)),
+                         "Tensorflow" + " median: "+str(np.round(np.median(response_reg),3))+" rms: "+str(np.round(rms(response_reg),3)),
                          "hls4ml" + " median: "+str(np.round(np.median(response_hls),3))+" rms: "+str(np.round(rms(response_hls),3)),],
                         "Jet Regression",'Jet Response (reco/gen)','a.u.',range=(0,2))
     plt.savefig(outputdir+"/response_emulation"+".png",bbox_inches='tight')

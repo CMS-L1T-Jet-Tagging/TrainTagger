@@ -11,7 +11,7 @@ import numpy as np
 import uproot
 import hist
 from hist import Hist
-
+from HGQ import ResetMinMax, FreeBOPs
 import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep

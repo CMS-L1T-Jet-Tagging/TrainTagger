@@ -16,7 +16,7 @@ from qkeras.utils import load_qmodel
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 import mlflow
 from pathlib import Path
-
+from HGQ import ResetMinMax, FreeBOPs
 import matplotlib.pyplot as plt
 import mplhep as hep
 import tagger.plot.style as style

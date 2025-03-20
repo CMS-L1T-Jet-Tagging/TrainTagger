@@ -11,7 +11,7 @@ from matplotlib.pyplot import cm
 import mplhep as hep
 import tensorflow as tf
 import tagger.plot.style as style
-
+from HGQ import ResetMinMax, FreeBOPs
 import os
 from .common import PT_BINS
 from .common import plot_histo

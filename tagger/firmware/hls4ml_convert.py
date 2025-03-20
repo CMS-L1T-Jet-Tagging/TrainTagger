@@ -80,7 +80,7 @@ def convert(model, outpath,build=True):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='baseline' , help = 'model name')    
+    parser.add_argument('-m','--model', default='deepset_HGQ' , help = 'model name')    
     parser.add_argument('-o','--outpath', default='tagger/firmware/JetTaggerNN' , help = 'Jet tagger synthesized output directory')  
     
     args = parser.parse_args()

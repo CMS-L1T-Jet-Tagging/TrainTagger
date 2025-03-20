@@ -77,7 +77,7 @@ train:
   - source activate tagger
   - python tagger/train/train.py -n $Name -p 50 
   - python tagger/train/train.py --plot-basic -n $Name
-  - cd output/baseline
+  - cd output/deepset_HGQ
   artifacts:
     paths:
       - output
@@ -177,7 +177,7 @@ emulation-evaluate:
   - python tagger/plot/makeEmulationPlot.py -r True
   artifacts:
     paths:
-      - output/baseline
+      - output/deepset_HGQ
     expire_in: 1 day
 
 profile:
@@ -205,7 +205,7 @@ profile:
   - python tagger/firmware/hls4ml_profile.py -r True -n $Name
   artifacts:
     paths:
-      - output/baseline
+      - output/deepset_HGQ
     expire_in: 1 day
 
 upload:
@@ -229,11 +229,11 @@ upload:
     - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     - cd ../..
     - mkdir $Name/plots
-    - cp -r output/baseline/model $Name/model
-    - mv output/baseline/plots/emulation $Name/plots
-    - mv output/baseline/plots/profile $Name/plots
-    - mv output/baseline/plots/training/ $Name/plots
-    - mv output/baseline/plots/physics/ $Name/plots
+    - cp -r output/deepset_HGQ/model $Name/model
+    - mv output/deepset_HGQ/plots/emulation $Name/plots
+    - mv output/deepset_HGQ/plots/profile $Name/plots
+    - mv output/deepset_HGQ/plots/training/ $Name/plots
+    - mv output/deepset_HGQ/plots/physics/ $Name/plots
     - cd ..
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping

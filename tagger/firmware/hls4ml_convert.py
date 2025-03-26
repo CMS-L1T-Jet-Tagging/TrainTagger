@@ -62,7 +62,7 @@ def convert(model, outpath,build=True):
     #Write HLS
     hls_model = hls4ml.converters.convert_from_keras_model(model,
                                                        backend='Vitis',
-                                                       project_name='L1TSC4NGJetModel',
+                                                       project_name='JetTaggerNN',
                                                        clock_period=2.8, #1/360MHz = 2.8ns
                                                        hls_config=config,
                                                        output_dir=f'{outpath}',
@@ -72,7 +72,7 @@ def convert(model, outpath,build=True):
     #Compile and build the project
     hls_model.compile()
     if build == True:
-        hls_model.build(csim=False, reset = True)
+        #hls_model.build(csim=False, reset = True)
         return [input_precision,class_precision,reg_precision]
     else:
         return hls_model

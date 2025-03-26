@@ -114,7 +114,7 @@ python tagger/train/train.py --make-data -i <your-rootfile> -s <custom-step-size
 This automatically create a new directory: `training_data` (it will ask before removing the exisiting one), and writes the data into it. Then, to train the model:
 
 ```
-python tagger/train/train.py
+python tagger/train/train.py -m <model name> -o <output directory>
 ```
 
 The models are defined in `tagger/train/models.py` the `baseline` model is provided as default.
@@ -138,7 +138,7 @@ python tagger/plot/bbbb.py --eff -n <number of samples to use, usually ~500k>
 To synthesize the model into HDL codes, we first need use `hls4ml`:
 
 ```
-python tagger/firmware/hls4ml_convert.py
+python tagger/firmware/hls4ml_convert.py -m <model name>
 ```
 
 Then, these codes are synthesize again with an hls wrapper, and CMSSW:

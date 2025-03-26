@@ -1,0 +1,141 @@
+Backend: Vitis
+ClockPeriod: 2.8
+ClockUncertainty: 27%
+HLSConfig:
+  LayerName:
+    Conv1D_1:
+      ParallelizationFactor: 8
+      Precision:
+        bias: fixed<9,3,TRN,WRAP,0>
+        result: auto
+        weight: fixed<9,3,TRN,WRAP,0>
+      Trace: true
+    Conv1D_1_linear:
+      Precision:
+        result: auto
+      Trace: false
+    Conv1D_2:
+      ParallelizationFactor: 8
+      Precision:
+        bias: fixed<9,3,TRN,WRAP,0>
+        result: auto
+        weight: fixed<9,3,TRN,WRAP,0>
+      Trace: true
+    Conv1D_2_linear:
+      Precision:
+        result: auto
+      Trace: false
+    Dense_1_jetID:
+      Precision:
+        bias: fixed<9,3,TRN,WRAP,0>
+        result: auto
+        weight: fixed<9,3,TRN,WRAP,0>
+      Trace: true
+    Dense_1_jetID_linear:
+      Precision:
+        result: auto
+      Trace: false
+    Dense_1_pT:
+      Precision:
+        bias: fixed<9,3,TRN,WRAP,0>
+        result: auto
+        weight: fixed<9,3,TRN,WRAP,0>
+      Trace: true
+    Dense_1_pT_linear:
+      Precision:
+        result: auto
+      Trace: false
+    Dense_2_jetID:
+      Precision:
+        bias: fixed<9,3,TRN,WRAP,0>
+        result: auto
+        weight: fixed<9,3,TRN,WRAP,0>
+      Trace: true
+    Dense_2_jetID_linear:
+      Precision:
+        result: auto
+      Trace: false
+    Dense_3_jetID:
+      Precision:
+        bias: fixed<9,3,TRN,WRAP,0>
+        result: auto
+        weight: fixed<9,3,TRN,WRAP,0>
+      Trace: true
+    Dense_3_jetID_linear:
+      Precision:
+        result: auto
+      Trace: false
+    act_pool:
+      Precision:
+        result: fixed<18,9,RND_CONV,SAT,0>
+      Trace: true
+    avgpool:
+      Precision:
+        result: auto
+      Trace: true
+    jet_id_output:
+      Implementation: latency
+      Precision:
+        result: auto
+      Trace: true
+    model_input:
+      Precision:
+        result: auto
+      Trace: true
+    norm_input:
+      Precision:
+        bias: auto
+        result: auto
+        scale: auto
+      Trace: true
+    pT_output:
+      Implementation: latency
+      Precision:
+        bias: fixed<16,7,TRN,WRAP,0>
+        result: auto
+        weight: fixed<16,7,TRN,WRAP,0>
+      Trace: true
+    pT_output_linear:
+      Precision:
+        result: auto
+      Trace: false
+    relu_1:
+      Precision:
+        result: ufixed<9,0,RND_CONV,SAT,0>
+      Trace: true
+    relu_1_jetID:
+      Precision:
+        result: ufixed<9,0,RND_CONV,SAT,0>
+      Trace: true
+    relu_1_pt:
+      Precision:
+        result: ufixed<9,0,RND_CONV,SAT,0>
+      Trace: true
+    relu_2:
+      Precision:
+        result: ufixed<9,0,RND_CONV,SAT,0>
+      Trace: true
+    relu_2_jetID:
+      Precision:
+        result: ufixed<9,0,RND_CONV,SAT,0>
+      Trace: true
+  Model:
+    BramFactor: 1000000000
+    Precision:
+      default: fixed<16,6>
+    ReuseFactor: 1
+    Strategy: Latency
+    TraceOutput: false
+IOType: io_parallel
+InputData: null
+KerasModel: !keras_model 'tagger/firmware/JetTaggerNN/keras_model.keras'
+OutputDir: tagger/firmware/JetTaggerNN
+OutputPredictions: null
+Part: xcvu9p-flga2104-2L-e
+ProjectName: JetTaggerNN
+Stamp: a6b02e9c
+Version: 1.0.0
+WriterConfig:
+  Namespace: null
+  WriteTar: false
+  WriteWeightsTxt: true

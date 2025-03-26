@@ -1,13 +1,17 @@
 import os, sys
 import json
 from argparse import ArgumentParser
-
+from tagger.data.tools import make_data, load_data, to_ML
 #Third party
 import hls4ml
 from qkeras.utils import load_qmodel
 import mlflow
 from pathlib import Path
 import numpy as np
+
+#HGQ
+from tensorflow.keras.models import load_model
+from HGQ import trace_minmax, to_proxy_model
 #----------------------------------------------
 
 def convert(model, outpath,build=True):
@@ -24,7 +28,7 @@ def convert(model, outpath,build=True):
     #Create default config
     config = hls4ml.utils.config_from_keras_model(model, granularity='name')
     config['IOType'] = 'io_parallel'
-    config['LayerName']['model_input']['Precision']['result'] = input_precision
+   #config['LayerName']['model_input']['Precision']['result'] = input_precision
 
     #Configuration for conv1d layers
     #hls4ml automatically figures out the paralellization factor
@@ -36,8 +40,8 @@ def convert(model, outpath,build=True):
         layer_name = layer.__class__.__name__
 
         if layer_name in ["BatchNormalization", "InputLayer"]:
-            config["LayerName"][layer.name]["Precision"] = input_precision
-            config["LayerName"][layer.name]["result"] = input_precision
+            #config["LayerName"][layer.name]["Precision"] = input_precision
+            #config["LayerName"][layer.name]["result"] = input_precision
             config["LayerName"][layer.name]["Trace"] = trace
 
         elif layer_name in ["Permute","Concatenate","Flatten","Reshape","UpSampling1D","Add"]:
@@ -46,9 +50,9 @@ def convert(model, outpath,build=True):
             config["LayerName"][layer.name]["Trace"] = trace
 
     
-    config["LayerName"]["jet_id_output"]["Precision"]["result"] = class_precision
+    #config["LayerName"]["jet_id_output"]["Precision"]["result"] = class_precision
     config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
-    config["LayerName"]["pT_output"]["Precision"]["result"] = reg_precision
+    #config["LayerName"]["pT_output"]["Precision"]["result"] = reg_precision
     config["LayerName"]["pT_output"]["Implementation"] = "latency"
 
     #Save config  as json file
@@ -68,7 +72,7 @@ def convert(model, outpath,build=True):
     #Compile and build the project
     hls_model.compile()
     if build == True:
-        #hls_model.build(csim=False, reset = True)
+        hls_model.build(csim=False, reset = True)
         return [input_precision,class_precision,reg_precision]
     else:
         return hls_model
@@ -76,13 +80,22 @@ def convert(model, outpath,build=True):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')    
-    parser.add_argument('-o','--outpath', default='tagger/firmware/L1TSC4NGJetModel' , help = 'Jet tagger synthesized output directory')    
+    parser.add_argument('-m','--model', default='deepset_HGQ' , help = 'model name')    
+    parser.add_argument('-o','--outpath', default='tagger/firmware/JetTaggerNN' , help = 'Jet tagger synthesized output directory')  
+    
     args = parser.parse_args()
+    path=f'output/{args.model}/model/saved_model.h5'
+    if args.model=="baseline":
+        model = load_qmodel(path)
+        precisions = convert(model,args.outpath)
+    else:
+        data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=0.1)
+        X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+        model = load_model(path)
+        trace_minmax(model, X_train, cover_factor=1.0)
+        proxy = to_proxy_model(model, aggressive=True)
+        precisions = convert(proxy,args.outpath)
 
-    #Load the model
-    model = load_qmodel(args.model)
-    precisions = convert(model,args.outpath)
 
 
     

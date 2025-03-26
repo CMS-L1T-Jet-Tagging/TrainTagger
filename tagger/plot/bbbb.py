@@ -184,7 +184,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     minbias = uproot.open(minbias_path)[tree]
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt_corr', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
 
@@ -294,7 +294,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     # Calculate the truth HT
     raw_event_id = extract_array(signal, 'event', n_entries)
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
-    raw_jet_pt = extract_array(signal, 'jet_pt_corr', n_entries)
+    raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
     raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
 

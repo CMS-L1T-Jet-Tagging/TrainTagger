@@ -22,39 +22,7 @@ from scipy.interpolate import interp1d
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
-def nn_bscore_sum(model, jet_nn_inputs, n_jets=4, b_index = 1):
-
-    #Get the inputs for the first n_jets
-    btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
-
-    #Get the nn outputs
-    nn_outputs = [model.predict(nn_input) for nn_input in btag_inputs]
-
-    #Sum them together
-    bscore_sum = sum([pred_score[0][:, b_index] for pred_score in nn_outputs])import os, json
-from argparse import ArgumentParser
-
-from qkeras.utils import load_qmodel
-import awkward as ak
-import numpy as np
-import uproot
-import hist
-from hist import Hist
-
-import matplotlib.pyplot as plt
-import matplotlib
-import mplhep as hep
-import tagger.plot.style as style
-
-style.set_style()
-
-#Interpolation of working point
-from scipy.interpolate import interp1d
-
-#Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
-
+# Helpers
 def x_vs_y(x, y, apply_light):
     if apply_light:
         s = x / (x + y)
@@ -168,7 +136,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, Rate
     working_point = {"ht_only_cut": float(ht_list[target_rate_idx[0]])}
     json.dump(working_point, open(WP_json, "w"), indent=4)
 
-
+# WPs
 def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate=14, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
@@ -272,6 +240,7 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
 
     return btag_wp, btag_ht_wp, ht_only_wp
 
+# Efficiency
 def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT

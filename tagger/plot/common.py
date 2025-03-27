@@ -8,7 +8,10 @@ import tagger.plot.style as style
 
 style.set_style()
 #GLOBAL VARIABLES TO USE ACROSS PLOTTING TOOLS
-MINBIAS_RATE = 32e+3 #32 kHZ
+
+N_BUNCHES = 2760
+REVOLUTION_FREQUENCY = 11246
+MINBIAS_RATE = N_BUNCHES * REVOLUTION_FREQUENCY / 1000  # in kHz
 
 # Define pT bins
 PT_BINS = np.array([

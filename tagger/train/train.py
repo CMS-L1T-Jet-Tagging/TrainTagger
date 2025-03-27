@@ -125,6 +125,8 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)
 
+    return sample_weights
+
 def train(out_dir, percent, model_name):
 
     #Remove output dir if exists

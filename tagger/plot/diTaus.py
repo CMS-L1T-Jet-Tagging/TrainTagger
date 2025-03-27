@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
-
+from HGQ import trace_minmax, to_proxy_model
 style.set_style()
 
 #Interpolation of working point

@@ -38,18 +38,12 @@ git config user.name "Chriisbrown"
 
 
 
-<<<<<<< HEAD
 git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git 
-mv hls4ml-jettagger L1TSC4NGJetModel
-cd L1TSC4NGJetModel
-git checkout L1TSC4NGJetModel
-=======
-git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git && \
-  cd hls4ml-jettagger
-  git checkout HGQ
->>>>>>> 0ac75dc (changed from hls4ml-jettaggerNN to HGQ branch)
+mv hls4ml-jettagger HGQ
+cd HGQ
+git checkout HGQ
 
-cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware L1TSC4NGJetModel/
+cp -r ../../../tagger/firmware/JetTaggerNN/firmware JetTaggerNN/
 ./setup.sh
 
 make 

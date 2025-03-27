@@ -348,9 +348,16 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
     ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
 
+    # Plot ht distribution in the background
+    counts, bin_edges = np.histogram(np.clip(jet_genht, 0, 800), bins=np.arange(0,800,40))
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    bin_width = bin_edges[1] - bin_edges[0]
+    normalized_counts = counts / np.sum(counts)
+
     #Now plot all
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+    ax.bar(bin_centers, normalized_counts, width=bin_width, fill=False, edgecolor='grey')
     ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
 
@@ -432,6 +439,12 @@ def bbbb_eff_mHH(model_dir,
     eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
     ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
 
+    # Plot ht distribution in the background
+    counts, bin_edges = np.histogram(np.clip(jet_genht, 0, 800), bins=np.arange(0,800,40))
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    bin_width = bin_edges[1] - bin_edges[0]
+    normalized_counts = counts / np.sum(counts)
+
     #Load the working point from model directory
     btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_WPs(model_dir, apply_sel, apply_light)
 
@@ -439,6 +452,7 @@ def bbbb_eff_mHH(model_dir,
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE-2)
 
+    ax.bar(bin_centers, normalized_counts, width=bin_width, fill=False, edgecolor='grey')
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
                 label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp, 2)))
     ax.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,

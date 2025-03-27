@@ -135,6 +135,8 @@ hls4ml:
   needs: 
     - job : train
   script:
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py
   artifacts:
@@ -145,7 +147,7 @@ hls4ml:
 synth:
   tags:
     - fpga-large
-  image: registry.cern.ch/ci4fpga/vivado:2023.2
+  image: registry.cern.ch/ci4fpga/vivado:2022.2
   stage: synth
   needs : [hls4ml]
   script:

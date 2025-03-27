@@ -162,8 +162,8 @@ def doPlots(model,outputdir,inputdir):
 if __name__ == "__main__":
     
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
-    parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')    
+    parser.add_argument('-m','--model', default='output/deepset_HGQ/model/saved_model.h5' , help = 'Input model path for comparison')    
+    parser.add_argument('-o','--outpath', default='output/deepset_HGQ/plots/emulation' , help = 'Jet tagger plotting directory')    
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to emulation data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake emulation data? ')
 

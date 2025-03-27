@@ -26,7 +26,7 @@ style.set_style()
 def getReports(indir):
     data_ = {}
     
-    report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.rpt'.format(indir))
+    report_csynth = Path('{}/JetTaggerNN_prj/solution1/syn/report/JetTaggerNN_csynth.rpt'.format(indir))
 
     if report_csynth.is_file():
         print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
@@ -113,11 +113,11 @@ def doPlots(model,outputdir,inputdir):
 if __name__ == "__main__":
     
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
-    parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')    
+    parser.add_argument('-m','--model', default='output/deepset_HGQ/model/saved_model.h5' , help = 'Input model path for comparison')    
+    parser.add_argument('-o','--outpath', default='output/deepset_HGQ/plots/profile' , help = 'Jet tagger plotting directory')    
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to profiling data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake profiling data? ')
-    parser.add_argument('-n','--name',default='baseline', help= 'Mlfow model name? ')
+    parser.add_argument('-n','--name',default='deepset_HGQ', help= 'Mlfow model name? ')
 
     args = parser.parse_args()
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
                         run_id=run_id # pass None to start a new run
                         ):
         precisions = convert(model,args.outpath)
-        report = getReports('tagger/firmware/L1TSC4NGJetModel')
+        report = getReports('tagger/firmware/JetTaggerNN')
         mlflow.log_metric('FF',report['ff_rel'])
         mlflow.log_metric('LUT',report['lut_rel'])
         mlflow.log_metric('BRAM',report['bram_rel'])

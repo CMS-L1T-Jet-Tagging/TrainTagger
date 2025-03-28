@@ -39,8 +39,8 @@ git config user.name "Chriisbrown"
 
 
 git clone --quiet https://github.com/CMS-L1T-Jet-Tagging/hls4ml-jettagger.git 
-mv hls4ml-jettagger HGQ
-cd HGQ
+mv hls4ml-jettagger L1TSC4NGJetModel
+cd L1TSC4NGJetModel
 git checkout HGQ
 
 cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware L1TSC4NGJetModel/

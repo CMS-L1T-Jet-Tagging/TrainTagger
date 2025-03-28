@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument('-f','--firmware', default='/eos/project/c/cms-l1t-jet-tagger/CI/main/firmware' , help = 'Firmware archive')    
     parser.add_argument('-m','--model', default='/eos/project/c/cms-l1t-jet-tagger/CI/main/model', help = 'Model archive')
     parser.add_argument('-p','--plots', default='/eos/project/c/cms-l1t-jet-tagger/CI/main/plots', help = 'Plots archive')
-    parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
+    parser.add_argument('-n','--name', default='deepset_HGQ', help = 'Model experiment name')
 
     args = parser.parse_args()
 
@@ -28,4 +28,4 @@ if __name__ == "__main__":
         mlflow.log_param("Firmware Archive: ",args.firmware)
         mlflow.log_param("Model Archive: ",args.model)
         mlflow.log_param("Plots Archive: ",args.plots)
-        mlflow.log_artifact("output/baseline/model/saved_model.h5")
+        mlflow.log_artifact("output/deepset_HGQ/model/saved_model.h5")

@@ -28,7 +28,7 @@ def convert(model, outpath,build=True):
     #Create default config
     config = hls4ml.utils.config_from_keras_model(model, granularity='name')
     config['IOType'] = 'io_parallel'
-   #config['LayerName']['model_input']['Precision']['result'] = input_precision
+    config['LayerName']['input_1']['Precision']['result']  = input_precision
 
     #Configuration for conv1d layers
     #hls4ml automatically figures out the paralellization factor

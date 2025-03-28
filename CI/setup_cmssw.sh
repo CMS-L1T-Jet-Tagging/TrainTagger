@@ -43,7 +43,7 @@ mv hls4ml-jettagger HGQ
 cd HGQ
 git checkout HGQ
 
-cp -r ../../../tagger/firmware/JetTaggerNN/firmware JetTaggerNN/
+cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware L1TSC4NGJetModel/
 ./setup.sh
 
 make 

@@ -72,7 +72,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_l
 
     print(f"Test data saved to {out_dir}")
 
-def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True):
+def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True, reference_class = 'b'):
     """
     Re-balancing the class weights and then flatten them based on truth pT
     """
@@ -82,49 +82,44 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
     sample_weights = np.ones(num_samples)
 
     # Define pT bins
-    pt_bins = np.array([
-        15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
-        60, 76, 97, 122, 154, 195, 246, 311,
-        393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
-    ])
+    pt_bins = np.array([0, 15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
+                        60, 76, 97, 122, 154, 195, 246, 311,
+                        393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
+                        ])
     
     # Initialize counts per class per pT bin
     class_pt_counts = {}
+
+    #Try a simple idea
+    for i in range(len(pt_bins) - 1):
+        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+        sample_weights[bin_mask] = i + 1  # Normalized to 0-1 range
     
+    """
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
-        class_pt_counts[idx], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
+        class_pt_counts[label], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
     
-    # Compute the maximum counts per pT bin over all classes
-    max_counts_per_bin = np.zeros(len(pt_bins)-1)
-    for bin_idx in range(len(pt_bins)-1):
-        counts_in_bin = [class_pt_counts[idx][bin_idx] for idx in class_labels.values()]
-        max_counts_per_bin[bin_idx] = max(counts_in_bin)
-    
-    # Compute weights per class per pT bin
-    weights_per_class_pt_bin = {}
-    for idx in class_labels.values():
-        weights_per_class_pt_bin[idx] = np.zeros(len(pt_bins)-1)
-        for bin_idx in range(len(pt_bins)-1):
-            class_count = class_pt_counts[idx][bin_idx]
-            if class_count == 0:
-                weights_per_class_pt_bin[idx][bin_idx] = 0.
-            else:
-                weights_per_class_pt_bin[idx][bin_idx] = max_counts_per_bin[bin_idx] / class_count
+    #Re-weight everything to b spectrum (it has the least stats)
+    pt_spectrum_weights = {}
+    for label, counts in class_pt_counts.items():
+        # Avoid division by zero
+        safe_counts = np.where(counts > 0, counts, 1)
+        pt_spectrum_weights[label] = class_pt_counts[reference_class] / safe_counts
 
-    # Assign weights to samples
-    for idx in class_labels.values():
+    #Then assign the weights for each class within the pT range
+    for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
-        class_truth_pt = truth_pt_train[class_mask]
-        sample_indices = np.where(class_mask)[0]
-        bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
-        bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
-        sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
-    
-    # Normalize sample weights
-    sample_weights = sample_weights / np.mean(sample_weights)
 
+        # Find which pT bin each sample falls into
+        for i in range(len(pt_bins) - 1):
+            bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+            combined_mask = class_mask & bin_mask
+            
+            # Assign the sample weights
+            sample_weights[combined_mask] = pt_spectrum_weights[label][i]
+    """
     return sample_weights
 
 def train(out_dir, percent, model_name):
@@ -176,7 +171,7 @@ def train(out_dir, percent, model_name):
 
     history = pruned_model.fit({'model_input': X_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
-                            sample_weight=sample_weight,
+                            sample_weight={'prune_low_magnitude_jet_id_output': sample_weight},
                             epochs=EPOCHS,
                             batch_size=BATCH_SIZE,
                             verbose=2,

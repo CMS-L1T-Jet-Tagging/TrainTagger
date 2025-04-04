@@ -178,10 +178,10 @@ emulation-evaluate:
   script:
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - python tagger/plot/makeEmulationPlot.py -r True
+  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
   artifacts:
     paths:
       - output/baseline
@@ -201,7 +201,7 @@ profile:
   - source activate tagger
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - pip uninstall hls4ml -y
   - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
@@ -209,7 +209,7 @@ profile:
   - pip install .[profiling]
   - cd ..
   - ls tagger/firmware/L1TSC4NGJetModel/L1TSC4NGJetModel_prj/solution1/syn/report/
-  - python tagger/firmware/hls4ml_profile.py -r True -n $Name
+  - python tagger/firmware/hls4ml_profile.py -r True -n $Name -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
   artifacts:
     paths:
       - output/baseline

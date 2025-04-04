@@ -66,7 +66,8 @@ if [[ "$RUN" == "false" ]]; then exit 0; fi
 
 cd FastPUPPI/NtupleProducer/python
 cmsenv
-
+sed -i -e 's/trktype = "extended"/trktype = "$TRACK_ALGO"/g' runJetNTuple.py
+sed -i -e 's/nparam = 5/nparam = $N_PARAMS/g' runJetNTuple.py
 echo "Temporary workaround to get the input files"
 #curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
 #echo '\nprocess.source.fileNames = ["file:inputs131X_1.root"]' >> runJetNTuple.py

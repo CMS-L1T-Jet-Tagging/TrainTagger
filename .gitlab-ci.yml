@@ -2,7 +2,9 @@ include:
   - local: "CI/template.yml"
 
 # Name = Name of child pipeline
-# Inputs = Which input configuration to ise
+# Inputs = Which input configuration to use
+# N_PARAMS = Number of tracking parameters for the track fit
+# TRACK_ALGO = Tracking Algorithm, baseline or extended
 # TRAIN = Which dataset to use for training
 # MINBIAS = Which MinBias to use for rate calculations
 # BBBB = Which dataset to use for HH->BBBB efficiency studies
@@ -16,6 +18,8 @@ DeepSet:baseline_4param:
    variables:
      Name: baseline_4param
      Inputs: baseline
+     N_PARAMS: 4
+     TRACK_ALGO: baseline
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
@@ -32,6 +36,8 @@ DeepSet:baseline_5param:
    variables:
      Name: baseline_5param
      Inputs: baseline
+     N_PARAMS: 5
+     TRACK_ALGO: baseline
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
@@ -51,6 +57,8 @@ DeepSet:baseline_4param_extended_trk:
   variables:
      Name: baseline_4param_extended_trk
      Inputs: baseline
+     N_PARAMS: 4
+     TRACK_ALGO: extended
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
@@ -70,6 +78,8 @@ DeepSet:baseline_5param_extended_trk:
   variables:
      Name: baseline_5param_extended_trk
      Inputs: baseline
+     N_PARAMS: 5
+     TRACK_ALGO: extended
      TRAIN: All200.root
      MINBIAS: MinBias_PU200.root
      BBBB:  ggHHbbbb_PU200.root
@@ -89,6 +99,8 @@ DeepSet:new_samples_baseline_5param_extended_trk:
   variables:
     Name: new_samples_baseline_5param_extended_trk
     Inputs: baseline
+    N_PARAMS: 5
+    TRACK_ALGO: extended
     TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root

@@ -74,12 +74,15 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_l
 
 def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True, reference_class = 'b'):
     """
-    Re-balancing the class weights and then flatten them based on truth pT
+    Assign training weights based on analytic functions as a function of pT
+
+    1. Classification weights: Higher weights for higher pT samples
+    2. Regression weights: Lower weights for higher pT samples (or re-shape the distribution such that we achieve better regression)
     """
     num_samples = y_train.shape[0]
-    num_classes = y_train.shape[1]
 
-    sample_weights = np.ones(num_samples)
+    sample_weights_class = np.ones(num_samples)
+    sample_weights_regress = np.ones(num_samples)
 
     # Define pT bins
     pt_bins = np.array([0, 15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
@@ -87,6 +90,25 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True,
                         393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
                         ])
     
+    #Increaseing sample weights for higher pT for classification loss
+    class_constant = 0.02
+    class_weight_formula = lambda x: np.exp(class_constant * x) + 1
+
+    #Deacaying sample weights for higher pT for regression loss
+    regress_constant = 8
+    max_weight = 100  # Maximum value for x < 15
+    regress_weight_formula = lambda x: max_weight if x < 15 else np.exp(regress_constant)/max(x, 1e-6) + 1
+
+    #Assign the weights as a function of pT
+    for i in range(len(pt_bins) - 1):
+        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+        sample_weights_class[bin_mask] = class_weight_formula(pt_bins[i+1])
+        sample_weights_regress[bin_mask] = regress_weight_formula(pt_bins[i+1])
+
+    return sample_weights_class, sample_weights_regress
+
+
+    """
     # Initialize counts per class per pT bin
     class_pt_counts = {}
 
@@ -95,7 +117,6 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True,
         bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
         sample_weights[bin_mask] = i + 1  # Normalized to 0-1 range
     
-    """
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
@@ -147,7 +168,7 @@ def train(out_dir, percent, model_name):
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels)
 
     #Calculate the sample weights for training
-    sample_weight = train_weights(y_train, truth_pt_train, class_labels)
+    sample_weight_class, sample_weight_regress = train_weights(y_train, truth_pt_train, class_labels)
 
     #Get input shape
     input_shape = X_train.shape[1:] #First dimension is batch size
@@ -171,7 +192,8 @@ def train(out_dir, percent, model_name):
 
     history = pruned_model.fit({'model_input': X_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
-                            sample_weight={'prune_low_magnitude_jet_id_output': sample_weight},
+                            sample_weight={'prune_low_magnitude_jet_id_output': sample_weight_class, 
+                                            'prune_low_magnitude_pT_output': sample_weight_regress},
                             epochs=EPOCHS,
                             batch_size=BATCH_SIZE,
                             verbose=2,

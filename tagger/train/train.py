@@ -83,6 +83,7 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True,
 
     sample_weights_class = np.ones(num_samples)
     sample_weights_regress = np.ones(num_samples)
+    max_weight = 150 #Maximum weight values
 
     # Define pT bins
     pt_bins = np.array([0, 15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
@@ -91,13 +92,10 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True,
                         ])
     
     #Increaseing sample weights for higher pT for classification loss
-    class_constant = 0.02
-    class_weight_formula = lambda x: np.exp(class_constant * x) + 1
+    class_weight_formula = lambda x: max_weight if x > pt_bins[-2] else 1-np.log(2)+np.log(1+0.4*x) #Plot this function to see how it changes :)
 
     #Deacaying sample weights for higher pT for regression loss
-    regress_constant = 8
-    max_weight = 100  # Maximum value for x < 15
-    regress_weight_formula = lambda x: max_weight if x < 15 else np.exp(regress_constant)/max(x, 1e-6) + 1
+    regress_weight_formula = lambda x: max_weight if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)
 
     #Assign the weights as a function of pT
     for i in range(len(pt_bins) - 1):
@@ -106,42 +104,6 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True,
         sample_weights_regress[bin_mask] = regress_weight_formula(pt_bins[i+1])
 
     return sample_weights_class, sample_weights_regress
-
-
-    """
-    # Initialize counts per class per pT bin
-    class_pt_counts = {}
-
-    #Try a simple idea
-    for i in range(len(pt_bins) - 1):
-        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
-        sample_weights[bin_mask] = i + 1  # Normalized to 0-1 range
-    
-    # Calculate counts per class per pT bin
-    for label, idx in class_labels.items():
-        class_mask = y_train[:, idx] == 1
-        class_pt_counts[label], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
-    
-    #Re-weight everything to b spectrum (it has the least stats)
-    pt_spectrum_weights = {}
-    for label, counts in class_pt_counts.items():
-        # Avoid division by zero
-        safe_counts = np.where(counts > 0, counts, 1)
-        pt_spectrum_weights[label] = class_pt_counts[reference_class] / safe_counts
-
-    #Then assign the weights for each class within the pT range
-    for label, idx in class_labels.items():
-        class_mask = y_train[:, idx] == 1
-
-        # Find which pT bin each sample falls into
-        for i in range(len(pt_bins) - 1):
-            bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
-            combined_mask = class_mask & bin_mask
-            
-            # Assign the sample weights
-            sample_weights[combined_mask] = pt_spectrum_weights[label][i]
-    """
-    return sample_weights
 
 def train(out_dir, percent, model_name):
 

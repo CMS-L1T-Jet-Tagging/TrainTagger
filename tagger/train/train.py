@@ -96,7 +96,7 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
     #Assign the weights as a function of pT for classes
     for i in range(len(pt_bins) - 1):
         bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
-        sample_weights_class[bin_mask] = i + 1 
+        sample_weights_class[bin_mask] = i**2
         
         #Assign the pt regression weight only for classes in regression_weighted
         for cat in regression_weighted: #cat = categories

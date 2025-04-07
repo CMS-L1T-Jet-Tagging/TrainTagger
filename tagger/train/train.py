@@ -11,7 +11,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 
@@ -52,7 +51,7 @@ def prune_model(model, num_samples):
     pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
 
     pruned_model.compile(optimizer='adam',
-                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': tf.keras.losses.Huber()},
+                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': 'log_cosh'},
                             metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
 
@@ -97,8 +96,6 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
     max_weight_pt = 150 #Maximum weight values for pT re-weighting
     regress_weight_formula = lambda x: max_weight_pt if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)
 
-    num_regress_weighted = sum(np.sum(y_train[:, class_labels[cat]] == 1) for cat in regression_weighted)
-
     #Assign the weights as a function of pT for classes
     for i in range(len(pt_bins) - 1):
         bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
@@ -107,8 +104,9 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
         #Assign the pt regression weight only for classes in regression_weighted
         for cat in regression_weighted: #cat = categories
             class_mask = y_train[:, class_labels[cat]] == 1
+            num_cat = sum(class_mask)
             combined_mask = class_mask & bin_mask
-            sample_weights_regress[combined_mask] = regress_weight_formula(pt_bins[i+1])*(num_regress_weighted/num_samples)
+            sample_weights_regress[combined_mask] = regress_weight_formula(pt_bins[i+1])*(num_cat/num_samples)
 
     return sample_weights_class, sample_weights_regress
 

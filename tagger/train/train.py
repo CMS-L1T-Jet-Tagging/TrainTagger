@@ -29,7 +29,7 @@ tf.config.threading.set_intra_op_parallelism_threads(
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 
 BATCH_SIZE = 1024
-EPOCHS = 100
+EPOCHS = 150
 VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
 
 # Sparsity parameters
@@ -96,7 +96,7 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
     #Assign the weights as a function of pT for classes
     for i in range(len(pt_bins) - 1):
         bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
-        sample_weights_class[bin_mask] = i**2
+        # sample_weights_class[bin_mask] = i+2
         
         #Assign the pt regression weight only for classes in regression_weighted
         for cat in regression_weighted: #cat = categories

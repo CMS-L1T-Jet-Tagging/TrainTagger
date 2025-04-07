@@ -72,7 +72,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_l
 
     print(f"Test data saved to {out_dir}")
 
-def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True, reference_class = 'b'):
+def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['taum', 'taup']):
     """
     Assign training weights based on analytic functions as a function of pT
 
@@ -83,7 +83,6 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True,
 
     sample_weights_class = np.ones(num_samples)
     sample_weights_regress = np.ones(num_samples)
-    max_weight = 150 #Maximum weight values
 
     # Define pT bins
     pt_bins = np.array([0, 15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
@@ -92,16 +91,23 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True,
                         ])
     
     #Increaseing sample weights for higher pT for classification loss
-    class_weight_formula = lambda x: max_weight if x > pt_bins[-2] else 1-np.log(2)+np.log(1+0.4*x) #Plot this function to see how it changes :)
+    max_weight_class = 25
+    class_weight_formula = lambda x: max_weight_class if x > pt_bins[-2] else 1-np.log(2)+np.log(1+0.075*x) #Plot this function to see how it changes :)
 
     #Deacaying sample weights for higher pT for regression loss
-    regress_weight_formula = lambda x: max_weight if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)
+    max_weight_pt = 150 #Maximum weight values for pT re-weighting
+    regress_weight_formula = lambda x: max_weight_pt if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)
 
-    #Assign the weights as a function of pT
+    #Assign the weights as a function of pT for classes
     for i in range(len(pt_bins) - 1):
         bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
         sample_weights_class[bin_mask] = class_weight_formula(pt_bins[i+1])
-        sample_weights_regress[bin_mask] = regress_weight_formula(pt_bins[i+1])
+        
+        #Assign the pt regression weight only for classes in regression_weighted
+        for cat in regression_weighted: #cat = categories
+            class_mask = y_train[:, class_labels[cat]] == 1
+            combined_mask = class_mask & bin_mask
+            sample_weights_regress[combined_mask] = regress_weight_formula(pt_bins[i+1])
 
     return sample_weights_class, sample_weights_regress
 

@@ -52,7 +52,7 @@ def prune_model(model, num_samples):
 
     pruned_model.compile(optimizer='adam',
                             loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': 'log_cosh'},
-                            loss_weights={'prune_low_magnitude_jet_id_output': 0.8, 'prune_low_magnitude_pT_output': 0.3},
+                            loss_weights={'prune_low_magnitude_jet_id_output': 0.9, 'prune_low_magnitude_pT_output': 0.3},
                             metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
 

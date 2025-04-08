@@ -87,8 +87,12 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
                         125,150,175, 200, 300, 
                         400, 500, 600, 800, np.inf])  # Use np.inf to cover all higher values
     
-    #Increaseing sample weights for higher pT for classification loss
+    #Balance the classes
+    for label, idx in class_labels.items():
+        num_cat = sum(y_train[:, idx])
+        sample_weights_class[y_train[:, idx] == 1] = num_samples/num_cat
 
+    """
     #Deacaying sample weights for higher pT for regression loss
     max_weight_pt = 150 #Maximum weight values for pT re-weighting
     regress_weight_formula = lambda x: max_weight_pt if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)
@@ -104,6 +108,7 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
             num_cat = sum(class_mask)
             combined_mask = class_mask & bin_mask
             sample_weights_regress[combined_mask] = regress_weight_formula(pt_bins[i+1])*(num_cat/num_samples)
+    """
 
     return sample_weights_class, sample_weights_regress
 

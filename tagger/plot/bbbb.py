@@ -371,7 +371,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT")
+    plot_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.show(block=False)

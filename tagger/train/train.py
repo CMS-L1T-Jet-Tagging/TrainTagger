@@ -52,7 +52,7 @@ def prune_model(model, num_samples):
 
     pruned_model.compile(optimizer='adam',
                             loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': 'log_cosh'},
-                            loss_weights={'prune_low_magnitude_jet_id_output': 0.8, 'prune_low_magnitude_pT_output': 0.3},
+                            loss_weights={'prune_low_magnitude_jet_id_output': 1.0, 'prune_low_magnitude_pT_output': 1.0},
                             metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
 
@@ -85,8 +85,34 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
 
     # Define pT bins
     pt_bins = np.array([0,10,15,20,25,30,35,40,45,50,55,60,70,80,100,
-                        125,150,175, 200, 300, 
+                        125,150,175, 200, 250, 300, 
                         400, 500, 600, 800, np.inf])  # Use np.inf to cover all higher values
+    
+    # Initialize counts per class per pT bin
+    class_pt_counts = {}
+    """
+    # Calculate counts per class per pT bin
+    for label, idx in class_labels.items():
+        class_mask = y_train[:, idx] == 1
+        class_pt_counts[label], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
+
+    import matplotlib.pyplot as plt
+    # Plotting
+    plt.figure(figsize=(12, 6))
+    bin_centers = (pt_bins[:-1] + pt_bins[1:]) / 2
+
+    for label in class_labels:
+        plt.step(bin_centers, class_pt_counts[label], where='mid', label=label)
+
+    plt.xlabel("pT")
+    plt.ylabel("Number of samples")
+    plt.title("Histogram of pT per Class")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+    plt.savefig("pt_histogram.png")
+    
     
     class_weight_formula = lambda x: pt_bins[-2]/10. if x > pt_bins[-2] else x/10.
 
@@ -102,7 +128,7 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
             combined_mask = class_mask & bin_mask
             sample_weights_class[combined_mask] = class_weight_formula(pt_bins[i+1])*(num_samples-num_cat)/num_cat
 
-    """
+    
     #Deacaying sample weights for higher pT for regression loss
     max_weight_pt = 150 #Maximum weight values for pT re-weighting
     regress_weight_formula = lambda x: max_weight_pt if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)

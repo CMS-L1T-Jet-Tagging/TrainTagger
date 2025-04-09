@@ -52,7 +52,7 @@ def prune_model(model, num_samples):
 
     pruned_model.compile(optimizer='adam',
                             loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': 'log_cosh'},
-                            loss_weights={'prune_low_magnitude_jet_id_output': 0.9, 'prune_low_magnitude_pT_output': 0.3},
+                            loss_weights={'prune_low_magnitude_jet_id_output': 0.8, 'prune_low_magnitude_pT_output': 0.3},
                             metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
 
@@ -72,7 +72,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_l
 
     print(f"Test data saved to {out_dir}")
 
-def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['taum', 'taup']):
+def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['taum', 'taup'], class_weighted = ['taum', 'taup', 'b']):
     """
     Assign training weights based on analytic functions as a function of pT
 
@@ -88,12 +88,22 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
                         125,150,175, 200, 300, 
                         400, 500, 600, 800, np.inf])  # Use np.inf to cover all higher values
     
-    #Balance the classes
-    for label, idx in class_labels.items():
-        num_cat = sum(y_train[:, idx])
-        sample_weights_class[y_train[:, idx] == 1] = num_samples/num_cat
+    class_weight_formula = lambda x: pt_bins[-2]/10. if x > pt_bins[-2] else x/10.
+
+    #Balance the classes, and weight higher pT samples more
+    for i in range(len(pt_bins) - 1):
+        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+        sample_weights_class[bin_mask] = class_weight_formula(pt_bins[i+1])
 
     """
+        for cat in class_weighted:
+            class_mask = y_train[:, class_labels[cat]] == 1
+            num_cat = sum(class_mask)
+
+            #Assign the weight in each class in each pT bin
+            combined_mask = class_mask & bin_mask
+            sample_weights_class[combined_mask] = class_weight_formula(pt_bins[i+1])*(num_samples/num_cat)
+
     #Deacaying sample weights for higher pT for regression loss
     max_weight_pt = 150 #Maximum weight values for pT re-weighting
     regress_weight_formula = lambda x: max_weight_pt if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)

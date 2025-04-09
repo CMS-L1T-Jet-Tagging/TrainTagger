@@ -39,16 +39,18 @@ def default_selection(jet_pt, jet_eta, apply_sel):
 
     return event_mask
 
-def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, b_index = 1, light_index = 0):
+def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, b_index = 0, l_index = 2, g_index = 3):
 
     #Get the inputs for the first n_jets
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
     #Get the nn outputs
-    nn_outputs = [model.predict(nn_input) for nn_input in btag_inputs]
+    nn_outputs = [model.predict(nn_input)[0] for nn_input in btag_inputs]
 
     #Sum them together
-    bscore_sum = sum([x_vs_y(pred_score[0][:, b_index], pred_score[0][:, light_index], apply_light) for pred_score in nn_outputs])
+    bscore_sum = sum(
+        [x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
+        )
 
     return bscore_sum
 
@@ -93,7 +95,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light
     working_point_NN = interp_func(WPs_CMSSW['btag_l1_ht'])
 
     # Export the working point
-    score_type = "vs_light" if apply_light else "raw"
+    score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
     working_point = {"HT": WPs_CMSSW['btag_l1_ht'], "NN": float(working_point_NN)}
     with open(os.path.join(plot_dir, f"working_point_{score_type}_{sel_type}.json"), "w") as f:
@@ -169,12 +171,15 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     jet_nn_inputs = jet_nn_inputs[default_selection(jet_pt, jet_eta, apply_sel)]
 
     #Btag input list for first 4 jets
-    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i])) for i in range(0,4)]
+    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i]))[0] for i in range(0,4)]
 
     #Calculate the output sum
     b_index = class_labels['b']
-    light_index = class_labels['light']
-    bscore_sum = sum([x_vs_y(pred_score[0][:, b_index], pred_score[0][:, light_index], apply_light) for pred_score in nn_outputs])
+    l_index = class_labels['light']
+    g_index = class_labels['gluon']
+    bscore_sum = sum(
+        [x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
+        )
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]
     jet_ht = ak.sum(jet_pt, axis=1)
 
@@ -224,7 +229,7 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     """
 
     #Check if the working point have been derived
-    score_type = "vs_light" if apply_light else "raw"
+    score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
     WP_path = os.path.join(model_dir, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
     HT_WP_path = os.path.join(model_dir, f"plots/physics/bbbb/ht_working_point.json")
@@ -309,7 +314,8 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, b_index=class_labels['b'], light_index=class_labels['light'])
+    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light,
+        b_index=class_labels['b'], l_index=class_labels['light'], g_index=class_labels['gluon'])
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
@@ -357,21 +363,23 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     #Now plot all
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
-    ax.bar(bin_centers, normalized_counts, width=bin_width, fill=False, edgecolor='grey')
+    hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
 
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.1])
+    ax.set_ylim([0., 1.15])
     ax.set_xlim([0, 800])
     ax.set_xlabel(r"$HT^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b)")
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, "plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
+    score_type = "vs_qg" if apply_light else "raw"
+    sel_type = "sel" if apply_sel else "all"
+    plot_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.show(block=False)
@@ -379,7 +387,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     #Plot a different plot comparing the multiclass with ht only selection
     fig2, ax2 = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax2, fontsize=style.MEDIUM_SIZE-2)
-
+    hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
                 label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp, 2)))
     ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
@@ -395,8 +403,6 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     ax2.legend(loc='upper left')
 
     # Save second plot
-    score_type = "vs_light" if apply_light else "raw"
-    sel_type = "sel" if apply_sel else "all"
     ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
@@ -440,7 +446,7 @@ def bbbb_eff_mHH(model_dir,
     ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
 
     # Plot ht distribution in the background
-    counts, bin_edges = np.histogram(np.clip(jet_genht, 0, 800), bins=np.arange(0,800,40))
+    counts, bin_edges = np.histogram(np.clip(event_gen_mHH, 0, 800), bins=np.arange(0,800,40))
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     bin_width = bin_edges[1] - bin_edges[0]
     normalized_counts = counts / np.sum(counts)
@@ -452,7 +458,7 @@ def bbbb_eff_mHH(model_dir,
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE-2)
 
-    ax.bar(bin_centers, normalized_counts, width=bin_width, fill=False, edgecolor='grey', label=r"$HT^{gen}$")
+    hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$mHH^{gen}$")
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
                 label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp, 2)))
     ax.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
@@ -462,14 +468,14 @@ def bbbb_eff_mHH(model_dir,
     # Common plot settings for second plot
     ax.hlines(1, 0, 1000, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.1])
+    ax.set_ylim([0., 1.15])
     ax.set_xlim([0, 1000])
     ax.set_xlabel(r"$m_{HH}^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b)")
     ax.legend(loc='upper left')
 
     # Save second plot
-    score_type = "vs_light" if apply_light else "raw"
+    score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
     ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_mHH_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')

@@ -89,30 +89,25 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
     
     # Initialize counts per class per pT bin
     class_pt_counts = {}
-    """
+    class_pt_counts['total'], _ = np.histogram(truth_pt_train, bins=pt_bins)
+    
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
         class_pt_counts[label], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
 
-    import matplotlib.pyplot as plt
-    # Plotting
-    plt.figure(figsize=(12, 6))
-    bin_centers = (pt_bins[:-1] + pt_bins[1:]) / 2
+    #Set the class weights
+    for i in range(len(pt_bins) - 1):
+        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
 
-    for label in class_labels:
-        plt.step(bin_centers, class_pt_counts[label], where='mid', label=label)
+        for cat in class_labels.keys():
+            class_mask = y_train[:, class_labels[cat]] == 1
 
-    plt.xlabel("pT")
-    plt.ylabel("Number of samples")
-    plt.title("Histogram of pT per Class")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-    plt.savefig("pt_histogram.png")
-    
-    
+            #Assign the weight in each class in each pT bin
+            combined_mask = class_mask & bin_mask
+            sample_weights_class[combined_mask] = class_pt_counts['total'][i]/ class_pt_counts[cat][i]
+
+    """
     class_weight_formula = lambda x: pt_bins[-2]/10. if x > pt_bins[-2] else x/10.
 
     #Balance the classes, and weight higher pT samples more

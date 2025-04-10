@@ -385,7 +385,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.2])
+    ax.set_ylim([0., 1.99])
     ax.set_xlim([0, 800])
     ax.set_xlabel(r"$HT^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b)")

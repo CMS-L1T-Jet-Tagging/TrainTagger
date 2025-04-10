@@ -244,11 +244,11 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path) & os.path.exists(WP_path_low_HT):
         with open(WP_path, "r") as f: WPs = json.load(f)
         btag_wp = WPs['NN']
-        btag_ht_wp = WPs['HT']
+        btag_ht_wp = int(WPs['HT'])
         with open(WP_path_low_HT, "r") as f: WPs_low_HT = json.load(f)
         btag_wp_low_HT = WPs_low_HT['NN']
-        btag_ht_wp_low_HT = WPs_low_HT['HT']
-        ht_only_wp = json.load(open(HT_WP_path))["ht_only_cut"]
+        btag_ht_wp_low_HT = int(WPs_low_HT['HT'])
+        ht_only_wp = int(json.load(open(HT_WP_path))["ht_only_cut"])
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 

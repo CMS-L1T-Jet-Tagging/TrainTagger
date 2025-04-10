@@ -1,4 +1,5 @@
 import os, json
+import gc
 from argparse import ArgumentParser
 
 from qkeras.utils import load_qmodel
@@ -93,13 +94,17 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light
 
     # Interpolate the NN value for the desired HT
     working_point_NN = interp_func(WPs_CMSSW['btag_l1_ht'])
+    working_point_low_HT = interp_func(WPs_CMSSW['btag_l1_ht'] - 40)
 
     # Export the working point
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
     working_point = {"HT": WPs_CMSSW['btag_l1_ht'], "NN": float(working_point_NN)}
+    working_point_low_HT = {"HT": WPs_CMSSW['btag_l1_ht'] - 40, "NN": float(working_point_low_HT)}
     with open(os.path.join(plot_dir, f"working_point_{score_type}_{sel_type}.json"), "w") as f:
         json.dump(working_point, f, indent=4)
+    with open(os.path.join(plot_dir, f"working_point_low_HT_{score_type}_{sel_type}.json"), "w") as f:
+        json.dump(working_point_low_HT, f, indent=4)
 
     ax.plot(target_rate_NN, target_rate_HT,
                 linewidth=5,
@@ -232,18 +237,22 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
     WP_path = os.path.join(model_dir, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
+    WP_path_low_HT = os.path.join(model_dir, f"plots/physics/bbbb/working_point_low_HT_{score_type}_{sel_type}.json")
     HT_WP_path = os.path.join(model_dir, f"plots/physics/bbbb/ht_working_point.json")
 
     #Get derived working points
-    if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
-        with open(WP_path, "r") as f:  WPs = json.load(f)
+    if os.path.exists(WP_path) & os.path.exists(HT_WP_path) & os.path.exists(WP_path_low_HT):
+        with open(WP_path, "r") as f: WPs = json.load(f)
         btag_wp = WPs['NN']
         btag_ht_wp = WPs['HT']
+        with open(WP_path_low_HT, "r") as f: WPs_low_HT = json.load(f)
+        btag_wp_low_HT = WPs_low_HT['NN']
+        btag_ht_wp_low_HT = WPs_low_HT['HT']
         ht_only_wp = json.load(open(HT_WP_path))["ht_only_cut"]
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
-    return btag_wp, btag_ht_wp, ht_only_wp
+    return btag_wp, btag_ht_wp, btag_wp_low_HT, btag_ht_wp_low_HT, ht_only_wp
 
 # Efficiency
 def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
@@ -260,7 +269,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     cmssw_btag = WPs_CMSSW['btag']
     cmssw_btag_ht =  WPs_CMSSW['btag_l1_ht']
 
-    btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_WPs(model_dir, apply_sel, apply_light)
+    btag_wp, btag_ht_wp, btag_wp_low_HT, btag_ht_wp_low_HT, ht_only_wp = load_bbbb_WPs(model_dir, apply_sel, apply_light)
 
     #Load the signal data
     signal = uproot.open(signal_path)[tree]
@@ -319,6 +328,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
+    model_selection_low_HT = (jet_ht > btag_ht_wp_low_HT) & (model_bscore_sum > btag_wp_low_HT) & default_selection(jet_pt, jet_eta, apply_sel)
     ht_only_selection = jet_ht > ht_only_wp
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
@@ -337,20 +347,24 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     all_events = Hist(ht_axis)
     cmssw_selected_events = Hist(ht_axis)
     model_selected_events = Hist(ht_axis)
+    model_selected_events_low_HT = Hist(ht_axis)
     ht_only_selected_events = Hist(ht_axis)
 
     all_events.fill(all_jet_genht)
     cmssw_selected_events.fill(jet_genht[cmssw_selection])
     model_selected_events.fill(jet_genht[model_selection])
+    model_selected_events_low_HT.fill(jet_genht[model_selection_low_HT])
     ht_only_selected_events.fill(jet_genht[ht_only_selection])
 
     #Plot the ratio
     eff_cmssw = plot_ratio(all_events, cmssw_selected_events)
     eff_model = plot_ratio(all_events, model_selected_events)
+    eff_model_low_HT = plot_ratio(all_events, model_selected_events_low_HT)
 
     #Get data from handles
     cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
     model_x, model_y, model_err = get_bar_patch_data(eff_model)
+    model_low_HT_x, model_low_HT_y, model_low_HT_err = get_bar_patch_data(eff_model_low_HT)
     eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
     ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
 
@@ -366,11 +380,12 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
+    ax.errorbar(model_low_HT_x, model_low_HT_y, yerr=model_low_HT_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp_low_HT, round(btag_wp_low_HT,2)), alpha=0.5)
 
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.15])
+    ax.set_ylim([0., 1.2])
     ax.set_xlim([0, 800])
     ax.set_xlabel(r"$HT^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b)")
@@ -452,7 +467,7 @@ def bbbb_eff_mHH(model_dir,
     normalized_counts = counts / np.sum(counts)
 
     #Load the working point from model directory
-    btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_WPs(model_dir, apply_sel, apply_light)
+    btag_wp, btag_ht_wp, _, _, ht_only_wp =  load_bbbb_WPs(model_dir, apply_sel, apply_light)
 
     #Plot a plot comparing the multiclass with ht only selection
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -494,7 +509,7 @@ if __name__ == "__main__":
     """
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
+    parser.add_argument('-m','--model_dir', default='/eos/user/s/stella/TrainTagger/output/baseline', help = 'Input model')
     parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
     parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
@@ -510,11 +525,17 @@ if __name__ == "__main__":
 
     if args.deriveWPs:
         derive_bbbb_WPs(args.model_dir, args.minbias, True, True, n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
         derive_bbbb_WPs(args.model_dir, args.minbias, True, False, n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
         derive_bbbb_WPs(args.model_dir, args.minbias, False, True, n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
         derive_bbbb_WPs(args.model_dir, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
         bbbb_eff(args.model_dir, args.sample, True, True, n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
         bbbb_eff(args.model_dir, args.sample, True, False, n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
         bbbb_eff(args.model_dir, args.sample, False, True, n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
         bbbb_eff(args.model_dir, args.sample, False, False, n_entries=args.n_entries,tree=args.tree)

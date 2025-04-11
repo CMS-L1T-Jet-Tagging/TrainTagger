@@ -234,11 +234,10 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
     WP_path = os.path.join(model_dir, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
-    WP_path_low_HT = os.path.join(model_dir, f"plots/physics/bbbb/working_point_low_HT_{score_type}_{sel_type}.json")
     HT_WP_path = os.path.join(model_dir, f"plots/physics/bbbb/ht_working_point.json")
 
     #Get derived working points
-    if os.path.exists(WP_path) & os.path.exists(HT_WP_path) & os.path.exists(WP_path_low_HT):
+    if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
         with open(WP_path, "r") as f: WPs = json.load(f)
         btag_wp = WPs['NN']
         btag_ht_wp = int(WPs['HT'])

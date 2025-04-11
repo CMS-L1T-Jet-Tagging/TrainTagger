@@ -20,6 +20,8 @@ DeepSet:baseline_4param:
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
      BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124
+     BBTT: ggHHbbtt_PU200.root
+     BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124
@@ -36,6 +38,8 @@ DeepSet:baseline_5param:
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
      BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_5param_221124
+     BBTT: ggHHbbtt_PU200.root
+     BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_5param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_5param_221124
@@ -55,6 +59,8 @@ DeepSet:baseline_4param_extended_trk:
      MINBIAS: MinBias_PU200.root
      BBBB: ggHHbbbb_PU200.root
      BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_221124
+     BBTT: ggHHbbtt_PU200.root
+     BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_4param_221124
@@ -74,6 +80,8 @@ DeepSet:baseline_5param_extended_trk:
      MINBIAS: MinBias_PU200.root
      BBBB:  ggHHbbbb_PU200.root
      BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124
+     BBTT:  ggHHbbtt_PU200.root
+     BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124
      VBFHTAUTAU: VBFHtt_PU200.root
      NTUPLE_TREE: jetntuple/Jets
      EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124
@@ -93,6 +101,8 @@ DeepSet:new_samples_baseline_5param_extended_trk:
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
     BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
+    BBTT: GluGluHHTo2B2Tau_PU200.root
+    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
     VBFHTAUTAU: VBFHToTauTau_PU200.root
     NTUPLE_TREE: outnano/Jets
     EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/

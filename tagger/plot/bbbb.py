@@ -89,7 +89,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, target_rate = 14):
     plt.savefig(f"{plot_dir}/bbbb_rate.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate.png", bbox_inches='tight')
 
-def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.5):
+def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.8):
     """
     Derive the HT only working points (without bb cuts)
     """

@@ -11,7 +11,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 
@@ -30,7 +29,7 @@ tf.config.threading.set_intra_op_parallelism_threads(
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 
 BATCH_SIZE = 1024
-EPOCHS = 100
+EPOCHS = 150
 VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
 
 # Sparsity parameters
@@ -52,7 +51,7 @@ def prune_model(model, num_samples):
     pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
 
     pruned_model.compile(optimizer='adam',
-                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': tf.keras.losses.Huber()},
+                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': 'log_cosh'},
                             metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
 
@@ -72,58 +71,76 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_l
 
     print(f"Test data saved to {out_dir}")
 
-def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True):
+def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['taum', 'taup'], class_weighted = ['taum', 'taup', "b"]):
     """
-    Re-balancing the class weights and then flatten them based on truth pT
+    Assign training weights based on analytic functions as a function of pT
+
+    1. Classification weights: Higher weights for higher pT samples
+    2. Regression weights: Lower weights for higher pT samples (or re-shape the distribution such that we achieve better regression)
     """
     num_samples = y_train.shape[0]
-    num_classes = y_train.shape[1]
-
-    sample_weights = np.ones(num_samples)
+    sample_weights_class = np.ones(num_samples)
+    sample_weights_regress = np.ones(num_samples)
 
     # Define pT bins
-    pt_bins = np.array([
-        15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
-        60, 76, 97, 122, 154, 195, 246, 311,
-        393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
-    ])
+    pt_bins = np.array([0,10,15,20,25,30,35,40,45,50,55,60,70,80,100,
+                        125,150,175, 200, 250, 300, 
+                        400, 500, 600, 800, np.inf])  # Use np.inf to cover all higher values
     
     # Initialize counts per class per pT bin
     class_pt_counts = {}
+    class_pt_counts['total'], _ = np.histogram(truth_pt_train, bins=pt_bins)
     
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
-        class_pt_counts[idx], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
-    
-    # Compute the maximum counts per pT bin over all classes
-    max_counts_per_bin = np.zeros(len(pt_bins)-1)
-    for bin_idx in range(len(pt_bins)-1):
-        counts_in_bin = [class_pt_counts[idx][bin_idx] for idx in class_labels.values()]
-        max_counts_per_bin[bin_idx] = max(counts_in_bin)
-    
-    # Compute weights per class per pT bin
-    weights_per_class_pt_bin = {}
-    for idx in class_labels.values():
-        weights_per_class_pt_bin[idx] = np.zeros(len(pt_bins)-1)
-        for bin_idx in range(len(pt_bins)-1):
-            class_count = class_pt_counts[idx][bin_idx]
-            if class_count == 0:
-                weights_per_class_pt_bin[idx][bin_idx] = 0.
-            else:
-                weights_per_class_pt_bin[idx][bin_idx] = max_counts_per_bin[bin_idx] / class_count
+        class_pt_counts[label], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
 
-    # Assign weights to samples
-    for idx in class_labels.values():
-        class_mask = y_train[:, idx] == 1
-        class_truth_pt = truth_pt_train[class_mask]
-        sample_indices = np.where(class_mask)[0]
-        bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
-        bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
-        sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
+    #Set the class weights
+    for i in range(len(pt_bins) - 1):
+        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+
+        for cat in class_labels.keys():
+            class_mask = y_train[:, class_labels[cat]] == 1
+
+            #Assign the weight in each class in each pT bin
+            combined_mask = class_mask & bin_mask
+            sample_weights_class[combined_mask] = class_pt_counts['total'][i]/ class_pt_counts[cat][i]
+
+    """
+    class_weight_formula = lambda x: pt_bins[-2]/10. if x > pt_bins[-2] else x/10.
+
+    #Balance the classes, and weight higher pT samples more
+    for i in range(len(pt_bins) - 1):
+        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+
+        for cat in class_weighted:
+            class_mask = y_train[:, class_labels[cat]] == 1
+            num_cat = sum(class_mask)
+
+            #Assign the weight in each class in each pT bin
+            combined_mask = class_mask & bin_mask
+            sample_weights_class[combined_mask] = class_weight_formula(pt_bins[i+1])*(num_samples-num_cat)/num_cat
+
     
-    # Normalize sample weights
-    sample_weights = sample_weights / np.mean(sample_weights)
+    #Deacaying sample weights for higher pT for regression loss
+    max_weight_pt = 150 #Maximum weight values for pT re-weighting
+    regress_weight_formula = lambda x: max_weight_pt if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)
+
+    #Assign the weights as a function of pT for classes
+    for i in range(len(pt_bins) - 1):
+        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+        # sample_weights_class[bin_mask] = i+2
+        
+        #Assign the pt regression weight only for classes in regression_weighted
+        for cat in regression_weighted: #cat = categories
+            class_mask = y_train[:, class_labels[cat]] == 1
+            num_cat = sum(class_mask)
+            combined_mask = class_mask & bin_mask
+            sample_weights_regress[combined_mask] = regress_weight_formula(pt_bins[i+1])*(num_cat/num_samples)
+    """
+
+    return sample_weights_class, sample_weights_regress
 
 def train(out_dir, percent, model_name):
 
@@ -150,7 +167,7 @@ def train(out_dir, percent, model_name):
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels)
 
     #Calculate the sample weights for training
-    sample_weight = train_weights(y_train, truth_pt_train, class_labels)
+    sample_weight_class, sample_weight_regress = train_weights(y_train, truth_pt_train, class_labels)
 
     #Get input shape
     input_shape = X_train.shape[1:] #First dimension is batch size
@@ -174,7 +191,8 @@ def train(out_dir, percent, model_name):
 
     history = pruned_model.fit({'model_input': X_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
-                            sample_weight=sample_weight,
+                            sample_weight={'prune_low_magnitude_jet_id_output': sample_weight_class, 
+                                            'prune_low_magnitude_pT_output': sample_weight_regress},
                             epochs=EPOCHS,
                             batch_size=BATCH_SIZE,
                             verbose=2,

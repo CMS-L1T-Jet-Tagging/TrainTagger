@@ -141,7 +141,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.close()
 
-def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
+def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a colormap for unique colors
     colormap = cm.get_cmap('Set1', len(class_labels))  # Use 'tab10' with enough colors
 
@@ -183,6 +183,39 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
     plt.close()
 
     return ROC_dict
+
+def confusion(y_pred, y_test, class_labels, plot_dir):
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    cm = confusion_matrix(
+        np.argmax(y_test, axis=1),
+        np.argmax(y_pred, axis=1),
+        normalize="true",
+        )
+    cm = np.round(cm, 3)
+    class_labels = {v: k for k, v in class_labels.items()}
+    labels = [style.CLASS_LABEL_STYLE[class_labels[i]] for i in range(y_test.shape[1])]
+
+    # Create a plot of the confusion matrix
+    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
+    matrix_display = ConfusionMatrixDisplay(cm, display_labels=labels)
+
+    matrix_display.plot(ax=ax)
+    matrix_display.im_.set_clim(0, 1)
+
+    # Remove default the colorbar
+    matrix_display.im_.colorbar.remove()
+
+    # Adjust colorbar height to match the plot
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.5)
+    plt.colorbar(matrix_display.im_, cax=cax)
+
+    # Save the plot
+    plt.savefig(os.path.join(plot_dir, f"confusion_matrix.png"), bbox_inches='tight')
+    plt.savefig(os.path.join(plot_dir, f"confusion_matrix.pdf"), bbox_inches='tight')
 
 def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     """
@@ -509,94 +542,8 @@ def basic(model_dir):
     #ROC for taus versus jets and taus versus leptons
     ROC_taus(y_pred, y_test, class_labels, plot_dir)
 
-    #Plot pt corrections
-    pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
-
-    #Plot input distributions
-    plot_input_vars(X_test, input_vars, plot_dir)
-
-    #Plot inclusive response and individual flavor
-    response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-
-    #Plot the rms of the residuals vs pt
-    rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-
-    #Plot the shaply feature importance
-    plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
-
-    return ROC_dict
-
-
-def kfolds_basic(model_dir, n_folds):
-
-    folds_dir = f"{model_dir}_{n_folds}folds"
-    n_files = len(os.listdir(folds_dir))
-
-    # Check if all folds are present
-    if n_files != n_folds:
-        raise ValueError(f"Expected {n_folds} validation folds, found {n_files}")
-
-    # Load the metadata for class_label
-    with open(f"{folds_dir}/{os.listdir(folds_dir)[0]}/class_label.json", 'r') as file: class_labels = json.load(file)
-    with open(f"{folds_dir}/{os.listdir(folds_dir)[0]}/input_vars.json", 'r') as file: input_vars = json.load(file)
-
-    ROC_dict = {class_label : 0 for class_label in class_labels}
-
-    X_tests = []
-    y_preds = []
-    y_tests = []
-    truth_pt_tests = []
-    reco_pt_tests = []
-    pt_ratios = []
-
-    from IPython import embed; embed()
-
-    # Make predictions for each fold and collect the results
-    for f in os.listdir(folds_dir):
-        # Load fold data
-        X_test_fold = np.load(f"{folds_dir}/{f}/testing_data/X_test.npy")
-        y_test_fold = np.load(f"{folds_dir}/{f}/testing_data/y_test.npy")
-        truth_pt_test_fold = np.load(f"{folds_dir}/{f}/testing_data/truth_pt_test.npy")
-        reco_pt_test_fold = np.load(f"{folds_dir}/{f}/testing_data/reco_pt_test.npy")
-
-        #Load model
-        model = load_qmodel(f"{folds_dir}/{f}/model/saved_model.h5")
-        y_pred_fold, pt_ratio_fold = model.predict(X_test_fold)
-
-        # collect predictions and truth labels
-        X_tests.append(X_test_fold)
-        y_preds.append(y_pred_fold)
-        y_tests.append(y_test_fold)
-        truth_pt_tests.append(truth_pt_test_fold)
-        reco_pt_tests.append(reco_pt_test_fold)
-        pt_ratios.append(pt_ratio_fold.flatten())
-
-    # Concatenate the predictions and truth labels of the individual folds
-    X_test = np.concatenate(X_tests)
-    y_pred = np.concatenate(y_preds)
-    y_test = np.concatenate(y_tests)
-    truth_pt_test = np.concatenate(truth_pt_tests)
-    reco_pt_test = np.concatenate(reco_pt_tests)
-    pt_ratio = np.concatenate(pt_ratios)
-
-    # Create the plot directory
-    plot_dir = os.path.join(folds_dir, "plots")
-    if os.path.exists(plot_dir):
-        shutil.rmtree(plot_dir)
-    os.makedirs(plot_dir)
-
-    #Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict)
-
-    #Generate all possible pairs of classes
-    for i in class_labels.keys():
-        for j in class_labels.keys():
-            if i != j:
-                class_pair = (i,j)
-                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)
-
-    #ROC for taus versus jets and taus versus leptons
-    ROC_taus(y_pred, y_test, class_labels, plot_dir)
+    # Confusion matrix
+    confusion(y_pred, y_test, class_labels, plot_dir)
 
     #Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
@@ -614,8 +561,3 @@ def kfolds_basic(model_dir, n_folds):
     plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 
     return ROC_dict
-
-
-
-
-

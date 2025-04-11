@@ -101,7 +101,6 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
     """
     #plus, minus range
     RateRange = 0.75
-    from IPython import embed; embed()
 
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)

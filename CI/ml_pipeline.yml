@@ -103,11 +103,18 @@ evaluate:
   - cd data
   - eos cp $EOS_DATA_DIR/$MINBIAS .
   - eos cp $BBBB_EOS_DIR/$BBBB .
+  - eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "bbbb performance"
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE
+  - echo "bbtt performance"
+  - python tagger/plot/bbtt_bb_only.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt_bb_only.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  # - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt_bb_only.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
+  # - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
   - echo "VBF tautau performance"
   - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE

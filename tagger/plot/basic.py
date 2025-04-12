@@ -509,7 +509,7 @@ def basic(model_dir):
 
     plot_dir = os.path.join(model_dir, "plots/training")
 
-    #Load the metada for class_label
+    #Load the metadata for class_label
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 

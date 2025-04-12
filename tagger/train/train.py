@@ -71,7 +71,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_l
 
     print(f"Test data saved to {out_dir}")
 
-def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['taum', 'taup'], class_weighted = ['taum', 'taup', "b"]):
+def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['taum', 'taup'], class_weighted = ['taum', 'taup']):
     """
     Assign training weights based on analytic functions as a function of pT
 
@@ -101,11 +101,12 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
         bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
 
         for cat in class_labels.keys():
-            class_mask = y_train[:, class_labels[cat]] == 1
+            if cat in class_weighted:
+                class_mask = y_train[:, class_labels[cat]] == 1
 
-            #Assign the weight in each class in each pT bin
-            combined_mask = class_mask & bin_mask
-            sample_weights_class[combined_mask] = class_pt_counts['total'][i]/ class_pt_counts[cat][i]
+                #Assign the weight in each class in each pT bin
+                combined_mask = class_mask & bin_mask
+                sample_weights_class[combined_mask] = (class_pt_counts['total'][i]/ class_pt_counts[cat][i])/2.
 
     """
     class_weight_formula = lambda x: pt_bins[-2]/10. if x > pt_bins[-2] else x/10.

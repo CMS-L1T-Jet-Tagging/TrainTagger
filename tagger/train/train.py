@@ -83,63 +83,14 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
     sample_weights_regress = np.ones(num_samples)
 
     # Define pT bins
-    pt_bins = np.array([0,10,15,20,25,30,35,40,45,50,55,60,70,80,100,
-                        125,150,175, 200, 250, 300, 
-                        400, 500, 600, 800, np.inf])  # Use np.inf to cover all higher values
+    pt_bins = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 
+                        60, 76, 97, 122, 154, 195, 246, 311,
+                        393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
+                        ])
     
-    # Initialize counts per class per pT bin
-    class_pt_counts = {}
-    class_pt_counts['total'], _ = np.histogram(truth_pt_train, bins=pt_bins)
-    
-    # Calculate counts per class per pT bin
-    for label, idx in class_labels.items():
-        class_mask = y_train[:, idx] == 1
-        class_pt_counts[label], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
-
-    #Set the class weights
     for i in range(len(pt_bins) - 1):
-        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
-
-        for cat in class_labels.keys():
-            if cat in class_weighted:
-                class_mask = y_train[:, class_labels[cat]] == 1
-
-                #Assign the weight in each class in each pT bin
-                combined_mask = class_mask & bin_mask
-                sample_weights_class[combined_mask] = (class_pt_counts['total'][i]/ class_pt_counts[cat][i])/2.
-
-    """
-    class_weight_formula = lambda x: pt_bins[-2]/10. if x > pt_bins[-2] else x/10.
-
-    #Balance the classes, and weight higher pT samples more
-    for i in range(len(pt_bins) - 1):
-        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
-
-        for cat in class_weighted:
-            class_mask = y_train[:, class_labels[cat]] == 1
-            num_cat = sum(class_mask)
-
-            #Assign the weight in each class in each pT bin
-            combined_mask = class_mask & bin_mask
-            sample_weights_class[combined_mask] = class_weight_formula(pt_bins[i+1])*(num_samples-num_cat)/num_cat
-
-    
-    #Deacaying sample weights for higher pT for regression loss
-    max_weight_pt = 150 #Maximum weight values for pT re-weighting
-    regress_weight_formula = lambda x: max_weight_pt if x < pt_bins[1] else np.exp(6.5)/max(0.25*x, 1e-6) + 1  #Plot this function to see how it changes :)
-
-    #Assign the weights as a function of pT for classes
-    for i in range(len(pt_bins) - 1):
-        bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
-        # sample_weights_class[bin_mask] = i+2
-        
-        #Assign the pt regression weight only for classes in regression_weighted
-        for cat in regression_weighted: #cat = categories
-            class_mask = y_train[:, class_labels[cat]] == 1
-            num_cat = sum(class_mask)
-            combined_mask = class_mask & bin_mask
-            sample_weights_regress[combined_mask] = regress_weight_formula(pt_bins[i+1])*(num_cat/num_samples)
-    """
+            bin_mask = (truth_pt_train >= pt_bins[i]) & (truth_pt_train < pt_bins[i+1])
+            sample_weights_class[bin_mask] = i + 1 
 
     return sample_weights_class, sample_weights_regress
 

@@ -522,6 +522,6 @@ def basic(model_dir):
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
     
     #Plot the shaply feature importance
-    plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
+    # plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 
     return ROC_dict

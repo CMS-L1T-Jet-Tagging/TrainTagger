@@ -122,13 +122,16 @@ def train(out_dir, percent, model_name):
     sample_weight_class, sample_weight_regress = train_weights(y_train, truth_pt_train, class_labels)
 
     #Get input shape
-    input_shape = X_train.shape[1:] #First dimension is batch size
+    model_input_shape = X_train.shape[1:] #First dimension is batch size
+    seed_input_shape = (X_train.shape[2:][0], )
+    print("HERE", model_input_shape)
+    print(seed_input_shape) 
     output_shape = y_train.shape[1:]
 
     #Dynamically get the model
     try:
         model_func = getattr(models, model_name)
-        model = model_func(input_shape, output_shape)  # Assuming the model function doesn't require additional arguments
+        model = model_func([model_input_shape, seed_input_shape], output_shape)  # Assuming the model function doesn't require additional arguments
     except AttributeError:
         raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")
 
@@ -141,7 +144,7 @@ def train(out_dir, percent, model_name):
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
 
-    history = pruned_model.fit({'model_input': X_train},
+    history = pruned_model.fit({'model_input': X_train, 'seed_input': X_train[:, 0, :]},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
                             sample_weight={'prune_low_magnitude_jet_id_output': sample_weight_class},
                             epochs=EPOCHS,

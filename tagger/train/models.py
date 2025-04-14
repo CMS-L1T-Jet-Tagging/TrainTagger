@@ -2,7 +2,7 @@
 Here all the models are defined to be called in train.py
 """
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D
+from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, Concatenate
 
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
@@ -20,7 +20,8 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1):
     }
 
     #Initialize inputs
-    inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+    inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
+    inputs_seed = tf.keras.layers.Input(shape=inputs_shape[1], name='seed_input')
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
@@ -36,6 +37,9 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1):
     # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
     main = QActivation(activation='quantized_bits(18,8)', name = 'act_pool')(main)
     main = GlobalAveragePooling1D(name='avgpool')(main)
+
+    #Add the seed input
+    main = Concatenate(name='concatenate_jet')([main, inputs_seed])
 
     #Now split into jet ID and pt regression
 
@@ -59,7 +63,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1):
                         kernel_initializer='lecun_uniform')(pt_regress)
 
     #Define the model using both branches
-    model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+    model = tf.keras.Model(inputs = [inputs, inputs_seed], outputs = [jet_id, pt_regress])
 
     print(model.summary())
 

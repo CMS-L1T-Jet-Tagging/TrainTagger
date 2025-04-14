@@ -83,7 +83,7 @@ def train_weights(y_train, truth_pt_train, class_labels, regression_weighted=['t
     sample_weights_regress = np.ones(num_samples)
 
     # Define pT bins
-    pt_bins = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 
+    pt_bins = np.array([0, 15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
                         60, 76, 97, 122, 154, 195, 246, 311,
                         393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
                         ])

@@ -136,7 +136,7 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_pred_score, raw_pt_correction = model.predict([raw_inputs, raw_inputs[:,0,:]])
 
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
@@ -302,7 +302,7 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
 
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_pred_score, raw_pt_correction = model.predict([raw_inputs, raw_inputs[:,0,:]])
 
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
@@ -433,7 +433,7 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
 
     #NN related 
     raw_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_pred_score, raw_pt_correction = model.predict([raw_inputs, raw_inputs[:,0,:]])
 
     #Check if the working point have been derived
     WP_path = os.path.join(model_dir, "plots/physics/tautau_topo/working_point.json")

@@ -28,7 +28,7 @@ def nn_bscore_sum(model, jet_nn_inputs, n_jets=4, b_index = 1):
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
     #Get the nn outputs
-    nn_outputs = [model.predict(nn_input) for nn_input in btag_inputs]
+    nn_outputs = [model.predict([nn_input, nn_input[:, 0, :]]) for nn_input in btag_inputs]
 
     #Sum them together
     bscore_sum = sum([pred_score[0][:, b_index] for pred_score in nn_outputs])
@@ -149,7 +149,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, target_rate=14, n_entries=100, tree
     jet_pt, jet_nn_inputs = grouped_arrays
 
     #Btag input list for first 4 jets
-    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i])) for i in range(0,4)]
+    nn_outputs = [model.predict([np.asarray(jet_nn_inputs[:, i]), np.asarray(jet_nn_inputs[:, i])[:,0,:]]) for i in range(0,4)]
 
     #Calculate the output sum
     b_index = class_labels['b']

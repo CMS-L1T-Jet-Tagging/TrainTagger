@@ -134,8 +134,8 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
 
     #Get the NN predictions
     tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
-    pred_score1, ratio1 = model.predict(input1)
-    pred_score2, ratio2 = model.predict(input2)
+    pred_score1, ratio1 = model.predict([input1, input1[:,0,:]])
+    pred_score2, ratio2 = model.predict([input2, input2[:,0,:]])
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())
@@ -206,7 +206,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     #Get the NN predictions
     tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
-    pred_score, ratio = model.predict(nn_inputs[eta_selection])
+    pred_score, ratio = model.predict([nn_inputs[eta_selection], nn_inputs[eta_selection][:,0,:]])
     model_tau = pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
 
     #Emulator tau score
@@ -344,7 +344,7 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
 
     #Get the model prediction
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
-    pred_score, ratio = model.predict(nn_inputs)
+    pred_score, ratio = model.predict([nn_inputs, nn_inputs[:,0,:]])
 
     nn_tauscore_raw = pred_score[:,class_labels['taup'],] + pred_score[:,class_labels['taum']]
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())

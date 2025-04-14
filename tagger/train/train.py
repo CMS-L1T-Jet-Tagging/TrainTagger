@@ -29,7 +29,7 @@ tf.config.threading.set_intra_op_parallelism_threads(
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number 
 BATCH_SIZE = 1024
-EPOCHS = 150
+EPOCHS = 100
 VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
 
 # Sparsity parameters
@@ -51,7 +51,7 @@ def prune_model(model, num_samples):
     pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
 
     pruned_model.compile(optimizer='adam',
-                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': 'log_cosh'},
+                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': tf.keras.losses.Huber()},
                             metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
 
@@ -143,8 +143,7 @@ def train(out_dir, percent, model_name):
 
     history = pruned_model.fit({'model_input': X_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
-                            sample_weight={'prune_low_magnitude_jet_id_output': sample_weight_class, 
-                                            'prune_low_magnitude_pT_output': sample_weight_regress},
+                            sample_weight={'prune_low_magnitude_jet_id_output': sample_weight_class},
                             epochs=EPOCHS,
                             batch_size=BATCH_SIZE,
                             verbose=2,

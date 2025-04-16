@@ -59,6 +59,24 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
         event_mask = np.ones(len(jet_pt), dtype=bool)
     return event_mask
 
+def max_tau_sum(taup_preds, taum_preds):
+    """
+    Calculate the sum of the two highest tau scores
+    """
+    taup_argsort, taum_argsort = np.argsort(taup_preds, axis=1)[:,::-1][:,:2], np.argsort(taum_preds, axis=1)[:,::-1][:,:2]
+    rows = np.arange(len(taup_preds)).reshape((-1, 1))
+    alt_scores = taup_preds[rows, taup_argsort] + taum_preds[rows, taum_argsort][:,::-1]
+    tau_alt_idxs = np.stack((taup_argsort[:,0], taum_argsort[:,1]), axis=-1)
+    tau_alt2_idxs = np.stack((taup_argsort[:,1], taum_argsort[:,0]), axis=-1)
+    tau_alt_idxs[ak.argmax(alt_scores, axis=1) == 1] = tau_alt2_idxs[ak.argmax(alt_scores, axis=1) == 1]
+    tau_scores = taup_preds[rows, taup_argsort[:,0].reshape(-1,1)] + taum_preds[rows, taum_argsort[:,0].reshape(-1,1)]
+    tau_scores = tau_scores.flatten()
+    tau_scores[taup_argsort[:,0] == taum_argsort[:,0]] = ak.max(alt_scores, axis=1)[taup_argsort[:,0] == taum_argsort[:,0]]
+    tau_idxs = np.stack((taup_argsort[:,0], taum_argsort[:,0]), axis=-1)
+    tau_idxs[taup_argsort[:,0] == taum_argsort[:,0]] =  tau_alt_idxs[taup_argsort[:,0] == taum_argsort[:,0]]
+
+    return tau_scores, tau_idxs
+
 def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     #Btag input list for first 4 jets
     nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i]))[0] for i in range(0,n_jets)]
@@ -105,16 +123,10 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
 
-    #Get the coordinates
-    target_rate_bb = np.array([bb_list[i] for i in target_rate_idx]) # NN cut dimension
-    target_rate_tt = np.array([tt_list[i] for i in target_rate_idx]) # NN cut dimension
-    target_rate_ht = np.array([ht_list[i] for i in target_rate_idx]) # HT cut dimension
-    target_rate_eff = np.array([signal_eff[i] for i in target_rate_idx]) # signal efficiency dimension
-
-    # Efficiency at target rate and HT WP
-    target_bb = target_rate_bb[target_rate_ht==ht] # target rate and HT
-    target_tt = target_rate_tt[target_rate_ht==ht] # target rate and HT
-    target_eff = target_rate_eff[target_rate_ht==ht]
+    #Get the coordinates at target rate and ht
+    target_bb = np.array([bb_list[i] for i in target_rate_idx])
+    target_tt = np.array([tt_list[i] for i in target_rate_idx])
+    target_eff = np.array([signal_eff[i] for i in target_rate_idx])
 
     # get max efficiency at target rate and HT WP
     wp_ht_eff_idx = np.argmax(target_eff)
@@ -160,23 +172,6 @@ def make_predictions(data_path, model_dir, n_entries, tree='outnano/Jets', njets
 
     return bscore_sums, tscore_sums, tau_indices, jet_pt, jet_eta, n_events
 
-def max_tau_sum(taup_preds, taum_preds):
-    """
-    Calculate the sum of the two highest tau scores
-    """
-    taup_argsort, taum_argsort = np.argsort(taup_preds, axis=1)[:,::-1][:,:2], np.argsort(taum_preds, axis=1)[:,::-1][:,:2]
-    rows = np.arange(len(taup_preds)).reshape((-1, 1))
-    alt_scores = taup_preds[rows, taup_argsort] + taum_preds[rows, taum_argsort][:,::-1]
-    tau_alt_idxs = np.stack((taup_argsort[:,0], taum_argsort[:,1]), axis=-1)
-    tau_alt2_idxs = np.stack((taup_argsort[:,1], taum_argsort[:,0]), axis=-1)
-    tau_alt_idxs[ak.argmax(alt_scores, axis=1) == 1] = tau_alt2_idxs[ak.argmax(alt_scores, axis=1) == 1]
-    tau_scores = taup_preds[rows, taup_argsort[:,0].reshape(-1,1)] + taum_preds[rows, taum_argsort[:,0].reshape(-1,1)]
-    tau_scores = tau_scores.flatten()
-    tau_scores[taup_argsort[:,0] == taum_argsort[:,0]] = ak.max(alt_scores, axis=1)[taup_argsort[:,0] == taum_argsort[:,0]]
-    tau_idxs = np.stack((taup_argsort[:,0], taum_argsort[:,0]), axis=-1)
-    tau_idxs[taup_argsort[:,0] == taum_argsort[:,0]] =  tau_alt_idxs[taup_argsort[:,0] == taum_argsort[:,0]]
-
-    return tau_scores, tau_idxs
 
 # Callables for studies
 def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange=0.85):
@@ -252,7 +247,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
 
     #Define the histograms (pT edge and NN Score edge)
     ht_edges = list(np.arange(150,500,1)) + [10000] #Make sure to capture everything
-    NN_edges = list([round(i,4) for i in np.arange(0, .6, 0.005)]) + [2.0]
+    NN_edges = list([round(i,4) for i in np.arange(0, .504, 0.006)]) + [2.0]
 
     # Signal preds to pick the working point
     s_bscore_sums, s_tscore_sums, s_tau_indices, signal_pt, signal_eta, s_n_events = make_predictions(signal_path, model_dir, n_entries, tree=tree)
@@ -263,21 +258,30 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
     s_tscore_sums = [t_sum[def_sel] for t_sum, def_sel in zip(s_tscore_sums, s_def_sels)]
 
     # Rate Hists for rate derivation
-    RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
+    RateHistRaw = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
+                    hist.axis.Variable(NN_edges, name="nn_bb", label="nn_bb"),
+                    hist.axis.Variable(NN_edges, name="nn_tt", label="nn_tt"))
+    RateHistQG = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
+                    hist.axis.Variable(NN_edges, name="nn_bb", label="nn_bb"),
+                    hist.axis.Variable(NN_edges, name="nn_tt", label="nn_tt"))
+    SHistRaw = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
+                    hist.axis.Variable(NN_edges, name="nn_bb", label="nn_bb"),
+                    hist.axis.Variable(NN_edges, name="nn_tt", label="nn_tt"))
+    SHistQG = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
                     hist.axis.Variable(NN_edges, name="nn_bb", label="nn_bb"),
                     hist.axis.Variable(NN_edges, name="nn_tt", label="nn_tt"))
 
     # Fill the histograms
     assert(len(jet_ht[def_sels[0]]) == len(bscore_sums[0]))
     assert(len(jet_ht[def_sels[1]]) == len(bscore_sums[1]))
-    RateHistRaw = RateHist.fill(ht = jet_ht[def_sels[0]], nn_bb = bscore_sums[0], nn_tt = tscore_sums[0])
-    RateHistQG = RateHist.fill(ht = jet_ht[def_sels[1]], nn_bb = bscore_sums[1], nn_tt = tscore_sums[1])
+    RateHistRaw.fill(ht = jet_ht[def_sels[0]], nn_bb = bscore_sums[0], nn_tt = tscore_sums[0])
+    RateHistQG.fill(ht = jet_ht[def_sels[1]], nn_bb = bscore_sums[1], nn_tt = tscore_sums[1])
 
     # Signal Rate Hists to pick the working point
     assert(len(signal_ht[s_def_sels[0]]) == len(s_bscore_sums[0]))
     assert(len(signal_ht[s_def_sels[1]]) == len(s_bscore_sums[1]))
-    SHistRaw = RateHist.fill(ht = signal_ht[s_def_sels[0]], nn_bb = s_bscore_sums[0], nn_tt = s_tscore_sums[0])
-    SHistQG = RateHist.fill(ht = signal_ht[s_def_sels[1]], nn_bb = s_bscore_sums[1], nn_tt = s_tscore_sums[1])
+    SHistRaw.fill(ht = signal_ht[s_def_sels[0]], nn_bb = s_bscore_sums[0], nn_tt = s_tscore_sums[0])
+    SHistQG.fill(ht = signal_ht[s_def_sels[1]], nn_bb = s_bscore_sums[1], nn_tt = s_tscore_sums[1])
 
     #Derive the rate
     rate_list_raw, rate_list_qg = [], []
@@ -307,7 +311,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
             ht_list.append(ht_cut)
             bb_list.append(bb)
             tt_list.append(tt)
-
+    from IPython import embed; embed()
     #Pick target rate and plot it
     pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model_dir, n_entries, rate, tree)
     gc.collect()
@@ -449,7 +453,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax2,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz (L1 $HT$ > {} GeV, $\sum$ $\tau\tau$ > {}, $\sum$ bb > {})'.format(rate, ht_wp, round(ttag_wp,2), round(btag_wp,2)))
-    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[3], fmt='o', linewidth=3, label=r'HT-only @ {} kHz (L1 $HT$ > {} GeV)'.format(rate, ht_only_wp))
+    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT-only @ {} kHz (L1 $HT$ > {} GeV)'.format(rate, ht_only_wp))
 
     #Plot other labels
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -499,5 +503,9 @@ if __name__ == "__main__":
         derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
         bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'tau', n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
+        bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'tau', n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
+        bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'all', n_entries=args.n_entries,tree=args.tree)
         gc.collect()
         bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)

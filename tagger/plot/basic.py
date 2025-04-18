@@ -286,7 +286,7 @@ def get_response(truth_pt, reco_pt, pt_ratio):
 
     return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
 
-def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
+def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir, tau_training=False):
     save_dir = os.path.join(plot_dir, 'response')
     os.makedirs(save_dir, exist_ok=True)
 
@@ -326,11 +326,18 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=flavor, plot_name=f"{flavor}_response")
 
     #Taus, jets, leptons rms
-    rms_selection = {
-        'taus': [class_labels['taup'], class_labels['taum']],
-        'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
-        'leptons': [class_labels[key] for key in ['muon', 'electron']]
-    }
+    if(not tau_training):
+        rms_selection = {
+            'taus': [class_labels['taup'], class_labels['taum']],
+            'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
+            'leptons': [class_labels[key] for key in ['muon', 'electron']]
+        }
+    else:
+        rms_selection = {
+            'taus': [class_labels['taus']],
+            'jets': [class_labels['light']],
+            }
+
 
     for key in rms_selection.keys():
         selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
@@ -385,7 +392,7 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
 
     return rms_uncorr, rms_reg, rms_uncorr_err, rms_reg_err
 
-def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
+def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir, tau_training):
 
     save_dir = os.path.join(plot_dir, 'residual_rms')
     os.makedirs(save_dir, exist_ok=True)
@@ -425,11 +432,17 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
         plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
 
     #Taus, jets, leptons rms
-    rms_selection = {
-        'taus': [class_labels['taup'], class_labels['taum']],
-        'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
-        'leptons': [class_labels[key] for key in ['muon', 'electron']]
-    }
+    if(not tau_training):
+        rms_selection = {
+            'taus': [class_labels['taup'], class_labels['taum']],
+            'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
+            'leptons': [class_labels[key] for key in ['muon', 'electron']]
+        }
+    else:
+        rms_selection = {
+            'taus': [class_labels['taus']],
+            'jets': [class_labels['light']],
+            }
 
     for key in rms_selection.keys():
         selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
@@ -501,7 +514,7 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
         plt.savefig(plot_dir+"/shap_summary_reg.png",bbox_inches='tight')
 
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
-def basic(model_dir):
+def basic(model_dir, tau_training):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     Returns a dictionary of ROCs for each class
@@ -539,8 +552,9 @@ def basic(model_dir):
                 class_pair = (i,j)
                 ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)
 
-    #ROC for taus versus jets and taus versus leptons
-    ROC_taus(y_pred, y_test, class_labels, plot_dir)
+    if(not tau_training):
+        #ROC for taus versus jets and taus versus leptons
+        ROC_taus(y_pred, y_test, class_labels, plot_dir)
 
     # Confusion matrix
     confusion(y_pred, y_test, class_labels, plot_dir)
@@ -552,10 +566,10 @@ def basic(model_dir):
     plot_input_vars(X_test, input_vars, plot_dir)
 
     #Plot inclusive response and individual flavor
-    response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir, tau_training=tau_training)
 
     #Plot the rms of the residuals vs pt
-    rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir, tau_training=tau_training)
 
     #Plot the shaply feature importance
     plot_shaply(model, X_test, class_labels, input_vars, plot_dir)

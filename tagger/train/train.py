@@ -3,6 +3,7 @@ import os, shutil, json
 
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
+from tagger.data.tau_tools import make_tau_data
 from tagger.plot.basic import loss_history, basic
 import models
 
@@ -202,6 +203,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
 
+    parser.add_argument('--tau', action='store_true', help='Tau tagger version')
+
     #Making input arguments
     parser.add_argument('--make-data', action='store_true', help='Prepare the data if set.')
     parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/All200.root' , help = 'Path to input training data')
@@ -225,7 +228,11 @@ if __name__ == "__main__":
 
     #Either make data or start the training
     if args.make_data:
-        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        if args.tau:
+            make_tau_data(infile=args.input, step_size=args.step, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+
+        else:
+            make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
     elif args.plot_basic:
         model_dir = args.output
         f = open("mlflow_run_id.txt", "r")
@@ -237,7 +244,7 @@ if __name__ == "__main__":
                             ):
 
             #All the basic plots!
-            results = basic(model_dir)
+            results = basic(model_dir, args.tau)
             for class_label in results.keys():
                 mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
             

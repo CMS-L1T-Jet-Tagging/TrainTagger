@@ -25,6 +25,10 @@ variables:
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
+    SIGNAL: TT_PU200
+    MODEL_LOCATION: ${EOS_STORAGE_DIR}/tags/${TAG}
+    RERUN_ON_TAG: 'True'
+    TAG: 'v0.0.0'
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -57,27 +61,31 @@ data:
   - cd data
   - export EOS_MGM_URL=root://eoscms.cern.ch
   - eos cp $EOS_DATA_DIR/${TRAIN} .
+  - eos cp $EOS_DATA_DIR/${SIGNAL}.root .
   - cd ..
-  - python tagger/train/train.py --make-data -i data/${TRAIN} --tree $NTUPLE_TREE
+  - python tagger/train/train.py --make-data -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
   - tar -cf training_data_$Inputs.tgz training_data
+  - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
   - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
+  - eos cp signal_process_data.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 train:
   extends:
     - .template
   stage: train
+  #tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  #- eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
   - tar -xf training_data_$Inputs.tgz
+  #- tar -xf signal_process_data.tgz
   - source activate tagger
-  - python tagger/train/train.py -n $Name -p 50
-  - python tagger/train/train.py --plot-basic -n $Name
-  - cd output/baseline
+  - ./CI/run_training.sh $RERUN_ON_TAG
   artifacts:
     paths:
       - output
@@ -112,9 +120,9 @@ evaluate:
   - echo "bbtt performance"
   - python tagger/plot/bbtt_bb_only.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbtt_bb_only.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
-  # - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbtt_bb_only.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
-  # - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
   - echo "VBF tautau performance"
   - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE
@@ -215,7 +223,7 @@ profile:
       - output/baseline
     expire_in: 1 day
 
-upload:
+upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
   tags: [k8s-gpu]
@@ -224,6 +232,8 @@ upload:
     KUBERNETES_CPU_REQUEST: 1
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  rules:
+    - if: $RERUN_ON_TAG == "False"
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -259,6 +269,48 @@ upload:
       -n ${Name}
     - eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
     - eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+  artifacts:
+    paths:
+      - $Name
+    expire_in: 1 day
+
+
+upload_tagged_model:
+  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  stage: upload
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_CPU_REQUEST: 1
+  needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  rules:
+    - if: $RERUN_ON_TAG == "True"
+  before_script:
+    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+  script:
+    - source activate tagger
+    - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware
+    - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots
+    - mkdir $Name
+    - cd tagger/firmware
+    - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
+    - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
+    - cd ../..
+    - mkdir $Name/plots
+    - mv output/baseline/plots/emulation $Name/plots
+    - mv output/baseline/plots/profile $Name/plots
+    - mv output/baseline/plots/training/ $Name/plots
+    - mv output/baseline/plots/physics/ $Name/plots
+    - cd ..
+    - rm -rf php-plots
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
+    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
+    - pb_copy_index.py TrainTagger/${Name} --recursive
+    - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
+    - cd TrainTagger/${Name}
+    - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots --recursive --extensions png,pdf
   artifacts:
     paths:
       - $Name

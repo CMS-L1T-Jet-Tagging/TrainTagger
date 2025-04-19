@@ -28,10 +28,10 @@ tf.config.threading.set_intra_op_parallelism_threads(
 )
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
-tf.keras.utils.set_random_seed(420) #not a special number 
+tf.keras.utils.set_random_seed(420) #not a special number
 BATCH_SIZE = 1024
 EPOCHS = 100
-VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
+VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set.
 
 # Sparsity parameters
 I_SPARSITY = 0.0 #Initial sparsity
@@ -87,21 +87,21 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
         60, 76, 97, 122, 154, 195, 246, 311,
         393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
     ])
-    
+
     # Initialize counts per class per pT bin
     class_pt_counts = {}
-    
+
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
         class_pt_counts[idx], _ = np.histogram(truth_pt_train[class_mask], bins=pt_bins)
-    
+
     # Compute the maximum counts per pT bin over all classes
     max_counts_per_bin = np.zeros(len(pt_bins)-1)
     for bin_idx in range(len(pt_bins)-1):
         counts_in_bin = [class_pt_counts[idx][bin_idx] for idx in class_labels.values()]
         max_counts_per_bin[bin_idx] = max(counts_in_bin)
-    
+
     # Compute weights per class per pT bin
     weights_per_class_pt_bin = {}
     for idx in class_labels.values():
@@ -121,7 +121,7 @@ def train_weights(y_train, truth_pt_train, class_labels, pt_flat_weighting=True)
         bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
         bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
         sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
-    
+
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)
 
@@ -137,7 +137,7 @@ def train(out_dir, percent, model_name):
 
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
-    
+
     #Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump output variables
     with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
@@ -181,17 +181,13 @@ def train(out_dir, percent, model_name):
                             validation_split=VALIDATION_SPLIT,
                             callbacks = [callbacks],
                             shuffle=True)
-    
+
     #Export the model
     model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
 
     export_path = os.path.join(out_dir, "model/saved_model.h5")
     model_export.save(export_path)
     print(f"Model saved to {export_path}")
-
-    #Produce some basic plots with the training for diagnostics
-    plot_path = os.path.join(out_dir, "plots/training")
-    os.makedirs(plot_path, exist_ok=True)
 
     #Plot history
     loss_history(plot_path, history)
@@ -214,33 +210,46 @@ if __name__ == "__main__":
     parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
-    parser.add_argument('-t','--tree', default='outnano/jets', help = 'Tree within the ntuple containing the jets')
+    parser.add_argument('-t','--tree', default='outnano/Jets', help = 'Tree within the ntuple containing the jets')
 
     #Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
+    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting')
 
     args = parser.parse_args()
 
     mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
 
+    #create plot folder
+    plot_path = os.path.join(args.output, "plots/training")
+    os.makedirs(plot_path, exist_ok=True)
+
     #Either make data or start the training
     if args.make_data:
         make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        # Format all the signal processes used for plotting later
+        for signal_process in args.signal_processes:
+            from IPython import embed; embed()
+            signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
+            signal_output = os.path.join("signal_process_data", signal_process)
+            if not os.path.exists(signal_output):
+                make_data(infile=signal_input, outdir=signal_output, step_size=args.step, extras=args.extras,ratio=args.ratio, tree=args.tree)
+
     elif args.plot_basic:
         model_dir = args.output
-        f = open("mlflow_run_id.txt", "r")
-        run_id = (f.read())
-        mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
-        with mlflow.start_run(experiment_id=1,
-                            run_name=args.name,
-                            run_id=run_id # pass None to start a new run
-                            ):
+        #All the basic plots!
+        results = basic(model_dir, args.signal_processes)
+        if os.path.isfile("mlflow_run_id.txt"):
+            f = open("mlflow_run_id.txt", "r")
+            run_id = (f.read())
+            mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
+            with mlflow.start_run(experiment_id=1,
+                                run_name=args.name,
+                                run_id=run_id # pass None to start a new run
+                                ):
+                for class_label in results.keys():
+                    mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
 
-            #All the basic plots!
-            results = basic(model_dir)
-            for class_label in results.keys():
-                mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
-            
     else:
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
@@ -251,5 +260,5 @@ if __name__ == "__main__":
         print(run_id, end="", file = sourceFile)
         sourceFile.close()
 
-        
-        
+
+

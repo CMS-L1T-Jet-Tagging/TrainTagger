@@ -2,7 +2,7 @@
 Here all the models are defined to be called in train.py
 """
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, Concatenate
+from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, Concatenate, Flatten
 
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
@@ -38,8 +38,13 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1):
     main = QActivation(activation='quantized_bits(18,8)', name = 'act_pool')(main)
     main = GlobalAveragePooling1D(name='avgpool')(main)
 
-    #Add the seed input
-    main = Concatenate(name='concatenate_jet')([main, inputs_seed])
+    # ---- CHANGE HERE ----
+    # Flatten the seed input into a 1D vector
+    seed_flattened = Flatten(name='flatten_seed')(inputs_seed) # Output shape: (batch_size, product_of_seed_dims)
+    
+    # Concatenate the flattened seed input with the main branch output
+    main = Concatenate(name='concatenate_jet')([main, seed_flattened]) # Use seed_flattened instead of inputs_seed
+    # ---- END CHANGE ----
 
     #Now split into jet ID and pt regression
 

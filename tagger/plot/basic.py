@@ -490,7 +490,7 @@ def basic(model_dir):
     
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5")
-    model_outputs = model.predict([X_test, X_test[:, 0, :]])
+    model_outputs = model.predict([X_test, X_test[:, :2, :]])
 
     #Get classification outputs
     y_pred = model_outputs[0]

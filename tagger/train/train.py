@@ -123,7 +123,7 @@ def train(out_dir, percent, model_name):
 
     #Get input shape
     model_input_shape = X_train.shape[1:] #First dimension is batch size
-    seed_input_shape = (X_train.shape[2:][0], )
+    seed_input_shape = (X_train.shape[2:][0]*2, )
     print("HERE", model_input_shape)
     print(seed_input_shape) 
     output_shape = y_train.shape[1:]
@@ -144,7 +144,7 @@ def train(out_dir, percent, model_name):
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
 
-    history = pruned_model.fit({'model_input': X_train, 'seed_input': X_train[:, 0, :]},
+    history = pruned_model.fit({'model_input': X_train, 'seed_input': X_train[:, :2, :]},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
                             sample_weight={'prune_low_magnitude_jet_id_output': sample_weight_class},
                             epochs=EPOCHS,

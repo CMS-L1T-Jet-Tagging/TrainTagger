@@ -123,7 +123,7 @@ def train(out_dir, percent, model_name):
 
     #Get input shape
     model_input_shape = X_train.shape[1:] #First dimension is batch size
-    seed_input_shape = (X_train.shape[2:][0]*2, )
+    seed_input_shape = (2, X_train.shape[2:][0])
     print("HERE", model_input_shape)
     print(seed_input_shape) 
     output_shape = y_train.shape[1:]

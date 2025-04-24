@@ -50,7 +50,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, 
 
     #Sum them together
     bscore_sum = sum(
-        [x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
+        [x_vs_y(pred_score[:, b_index], pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
         )
 
     return bscore_sum
@@ -180,7 +180,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     l_index = class_labels['light']
     g_index = class_labels['gluon']
     bscore_sum = sum(
-        [x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
+        [x_vs_y(pred_score[:, b_index], pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
         )
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]
     jet_ht = ak.sum(jet_pt, axis=1)

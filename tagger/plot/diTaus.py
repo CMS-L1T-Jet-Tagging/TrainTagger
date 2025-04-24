@@ -31,7 +31,8 @@ def tau_score(preds, class_labels):
 
     tau = preds[:,tau_index[0]] + preds[:,tau_index[1]]
     #denom of just gluon seems to work best
-    bkg = preds[:,class_labels['gluon']]
+    #bkg = preds[:,class_labels['gluon']]
+    bkg = preds[:,class_labels['unmatched']]
 
     return tau / (tau + bkg)
     

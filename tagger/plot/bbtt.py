@@ -95,9 +95,9 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     g_idx = class_labels['gluon']
 
     # vs light preds
-    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
+    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx],  pred_score[:, g_idx]) for pred_score in nn_outputs])
+    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx],  pred_score[:, g_idx]) for pred_score in nn_outputs])
+    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, g_idx]) for pred_score in nn_outputs])
 
     # raw preds
     taup_preds = np.transpose([pred_score[:, tp_idx] for pred_score in nn_outputs])

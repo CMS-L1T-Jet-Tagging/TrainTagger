@@ -25,6 +25,18 @@ from scipy.interpolate import interp1d
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 
+
+def tau_score(preds, class_labels):
+    tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
+
+    tau = preds[:,tau_index[0]] + preds[:,tau_index[1]]
+    #denom of just gluon seems to work best
+    bkg = preds[:,class_labels['gluon']]
+
+    return tau / (tau + bkg)
+    
+
+
 def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28, RateRange = 1.0):
     """
     Pick the working points and plot
@@ -106,6 +118,7 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
+    
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -133,7 +146,6 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
 
     #Get the NN predictions
-    tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
     pred_score1, ratio1 = model.predict(input1)
     pred_score2, ratio2 = model.predict(input2)
 
@@ -141,8 +153,8 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     pt1 = pt1_uncorrected*(ratio1.flatten())
     pt2 = pt2_uncorrected*(ratio2.flatten())
 
-    tau_score1=pred_score1[:,tau_index[0]] + pred_score1[:,tau_index[1]]
-    tau_score2=pred_score2[:,tau_index[0]] + pred_score2[:,tau_index[1]]
+    tau_score1 = tau_score(pred_score1, class_labels)
+    tau_score2 = tau_score(pred_score2, class_labels)
 
     #Put them together
     NN_score = np.vstack([tau_score1, tau_score2]).transpose()
@@ -205,9 +217,8 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     nn_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
 
     #Get the NN predictions
-    tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
     pred_score, ratio = model.predict(nn_inputs[eta_selection])
-    model_tau = pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
+    model_tau = tau_score(pred_score, class_labels)
 
     #Emulator tau score
     cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)[eta_selection]
@@ -232,6 +243,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     #Cut on jet pT to extract the rate
     jet_pt = extract_array(minbias, 'jet_pt', n_entries)[eta_selection]
+
 
     jet_pt_cmssw = extract_array(minbias, 'jet_taupt', n_entries)[eta_selection][cmssw_tau > WPs_CMSSW["tau"]]
     jet_pt_model = (jet_pt*ratio.flatten())[model_tau > tautau_wp]
@@ -346,7 +358,7 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
     pred_score, ratio = model.predict(nn_inputs)
 
-    nn_tauscore_raw = pred_score[:,class_labels['taup'],] + pred_score[:,class_labels['taum']]
+    nn_tauscore_raw = tau_score(pred_score, class_labels) 
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     #selecting the eta region
@@ -434,8 +446,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus') 
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')

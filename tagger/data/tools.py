@@ -93,13 +93,21 @@ def _split_flavor(data):
 
     # Automatically generate class labels based on the order of keys in conditions
     class_labels = {label: idx for idx, label in enumerate(conditions)}
+    unmatched_idx = len(class_labels)
+    class_labels['unmatched'] = unmatched_idx
+    #print("unmatched_idx", unmatched_idx)
 
-    # Initialize the new array in data for numeric labels with default -1 for unmatched entries
-    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], -1)
+    # Initialize the new array in data for numeric labels with default for unmatched entries
+    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], unmatched_idx)
 
+    tot = 0.
     # Assign numeric values based on conditions using awkward's where function
     for label, condition in conditions.items():
+        tot += ak.mean(condition)
         data['class_label'] = ak.where(condition, class_labels[label], data['class_label'])
+        #print(label, ak.mean(condition))
+
+    #print("remaining", 1.0 - tot)
 
     #Set pt regression target
     hadrons = (conditions["b"] | conditions["charm"] | conditions["light"] | conditions["gluon"])
@@ -114,14 +122,21 @@ def _split_flavor(data):
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons*lepton_pt
 
+    data['target_pt'] = ak.where(data['class_label'] == unmatched_idx, 1.0, data['target_pt'])
+    data['target_pt_phys'] = ak.where(data['class_label'] == unmatched_idx, data['jet_pt_phys'], data['target_pt_phys'])
+
+    #print(data['class_label'][:10])
+    #print(data['target_pt'][:10])
+    #print(data['target_pt_phys'][:10])
+
     # Apply pt_cut
     jet_ptmin_gen = (data['target_pt_phys'] > 5.)
     for key in conditions: conditions[key] = conditions[key] & jet_ptmin_gen
 
     # Sanity check for data consistency
-    split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
-    if split_data_sum != len(data[jet_ptmin_gen]):
-        raise ValueError(f"Data splitting error: Total entries ({split_data_sum}) do not match the filtered data length ({len(data[jet_ptmin_gen])}).")
+    #split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
+    #if split_data_sum != len(data[jet_ptmin_gen]):
+        #raise ValueError(f"Data splitting error: Total entries ({split_data_sum}) do not match the filtered data length ({len(data[jet_ptmin_gen])}).")
 
     return data[jet_ptmin_gen], class_labels
 

@@ -40,7 +40,12 @@ def default_selection(jet_pt, jet_eta, apply_sel):
 
     return event_mask
 
-def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, b_index = 0, l_index = 2, g_index = 3):
+def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labels, n_jets=4):
+
+    b_index=class_labels['b'] 
+    l_index=class_labels['light']
+    g_index=class_labels['gluon']
+    u_index=class_labels['unmatched']
 
     #Get the inputs for the first n_jets
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
@@ -48,9 +53,10 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, 
     #Get the nn outputs
     nn_outputs = [model.predict(nn_input)[0] for nn_input in btag_inputs]
 
+
     #Sum them together
     bscore_sum = sum(
-        [x_vs_y(pred_score[:, b_index], pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
+            [x_vs_y(pred_score[:, b_index], pred_score[:,u_index], apply_light) for pred_score in nn_outputs]
         )
 
     return bscore_sum
@@ -172,16 +178,9 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
     jet_nn_inputs = jet_nn_inputs[default_selection(jet_pt, jet_eta, apply_sel)]
 
-    #Btag input list for first 4 jets
-    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i]))[0] for i in range(0,4)]
 
-    #Calculate the output sum
-    b_index = class_labels['b']
-    l_index = class_labels['light']
-    g_index = class_labels['gluon']
-    bscore_sum = sum(
-        [x_vs_y(pred_score[:, b_index], pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
-        )
+    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labels)
+
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]
     jet_ht = ak.sum(jet_pt, axis=1)
 
@@ -317,8 +316,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light,
-        b_index=class_labels['b'], l_index=class_labels['light'], g_index=class_labels['gluon'])
+    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labels)
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)

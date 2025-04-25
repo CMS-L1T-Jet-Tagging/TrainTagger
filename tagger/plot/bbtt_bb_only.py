@@ -67,6 +67,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     b_idx = class_labels['b']
     l_idx = class_labels['light']
     g_idx = class_labels['gluon']
+    u_idx = class_labels['unmatched']
 
     # get sums of 2 leading b scores
     rows = np.arange(len(nn_outputs[0])).reshape((-1, 1))
@@ -77,7 +78,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     b_preds_sums = np.sum(b_preds[rows, b_preds_arg], axis=1)
 
     # vs light preds
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, g_idx]) for pred_score in nn_outputs])
+    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, u_idx]) for pred_score in nn_outputs])
     b_vs_qg_arg = np.argsort(b_vs_qg, axis=1)[:,-2:]
     b_vs_qg_sums = np.sum(b_vs_qg[rows, b_vs_qg_arg], axis=1)
 

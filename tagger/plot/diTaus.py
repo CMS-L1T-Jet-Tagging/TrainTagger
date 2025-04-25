@@ -27,12 +27,12 @@ from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_
 
 
 def tau_score(preds, class_labels):
-    tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
+    tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']] 
 
-    tau = preds[:,tau_index[0]] + preds[:,tau_index[1]]
+    tau = sum([preds[:,idx] for idx in tau_index] )
     #denom of just gluon seems to work best
     #bkg = preds[:,class_labels['gluon']]
-    bkg = preds[:,class_labels['unmatched']]
+    bkg = preds[:,class_labels['unmatched']] + preds[:,class_labels['gluon']]
 
     return tau / (tau + bkg)
     

@@ -52,6 +52,7 @@ def doPlots(model,outputdir,inputdir):
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
+            if("unmatched" in label): continue
             if abs(np.array(data['jet_SC4NGJet_score_'+label])[iJet] - y_hls[iJet][i]) > 0.001 : 
                 print_class = True
         if print_class == True:
@@ -59,6 +60,7 @@ def doPlots(model,outputdir,inputdir):
             print("Inputs: " + str(X_test[iJet]))
             for i, label in enumerate(labels): 
                 print(label  + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_'+label])[iJet]))
+                if("unmatched" in label): continue
                 print(label  + ": hls : " + str(y_hls[iJet][i]))
                 print(label  + ": tf : " + str(y_class[iJet][i]))
 

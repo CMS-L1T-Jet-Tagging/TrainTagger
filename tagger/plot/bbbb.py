@@ -146,7 +146,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     Derive the HH->4b working points
     """
 
-    model=load_model(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_model(os.path.join(model_dir, "model/saved_model.keras"))
 
     #Load input/ouput variables of the NN
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
@@ -253,7 +253,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     Plot HH->4b efficiency w.r.t HT
     """
 
-    model=load_model(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_model(os.path.join(model_dir, "model/saved_model.keras"))
 
     ht_edges = list(np.arange(0,800,20))
     ht_axis = hist.axis.Variable(ht_edges, name = r"$HT^{gen}$")

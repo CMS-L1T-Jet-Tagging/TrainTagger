@@ -10,6 +10,7 @@ import models
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from hgq.utils.sugar import FreeEBOPs
 from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
@@ -151,7 +152,7 @@ def train(out_dir, percent, model_name):
     model = compile_model(model, num_samples)
 
     #Now fit to the data
-    callbacks = [
+    callbacks = [FreeEBOPs(),
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
 
@@ -167,7 +168,7 @@ def train(out_dir, percent, model_name):
 
     #Export the model
 
-    export_path = os.path.join(out_dir, "model/saved_model.h5")
+    export_path = os.path.join(out_dir, "model/saved_model.keras")
     model.save(export_path)
     print(f"Model saved to {export_path}")
 
@@ -201,10 +202,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
-
+    
     #create plot folder
     plot_path = os.path.join(args.output, "plots/training")
+    save_path = os.path.join(args.output, "model")
     os.makedirs(plot_path, exist_ok=True)
+    os.makedirs(save_path, exist_ok=True)
 
     #Either make data or start the training
     if args.make_data:
@@ -235,6 +238,7 @@ if __name__ == "__main__":
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
             mlflow.keras.autolog()
+            print(tf.config.list_physical_devices('GPU'))
             train(args.output, args.percent, model_name=args.model)
             run_id = run.info.run_id
         sourceFile = open('mlflow_run_id.txt', 'w')

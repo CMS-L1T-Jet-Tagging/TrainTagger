@@ -76,7 +76,7 @@ def convert(model, outpath,build=True):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')    
+    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.keras' , help = 'Input model path for conversion')    
     parser.add_argument('-o','--outpath', default='tagger/firmware/L1TSC4NGJetModel' , help = 'Jet tagger synthesized output directory')    
     args = parser.parse_args()
 

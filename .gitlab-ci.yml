@@ -36,5 +36,5 @@ DeepSet:new_samples_baseline_5param_extended_trk:
     SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
-    RERUN_ON_TAG: 'True'
+    RERUN_ON_TAG: 'False'
     TAG: 'v0.0.0'

@@ -28,4 +28,4 @@ if __name__ == "__main__":
         mlflow.log_param("Firmware Archive: ",args.firmware)
         mlflow.log_param("Model Archive: ",args.model)
         mlflow.log_param("Plots Archive: ",args.plots)
-        mlflow.log_artifact("output/baseline/model/saved_model.h5")
+        mlflow.log_artifact("output/baseline/model/saved_model.keras")

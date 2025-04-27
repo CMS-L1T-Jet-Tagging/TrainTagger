@@ -557,7 +557,7 @@ def basic(model_dir,signal_dirs) :
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
 
     #Load model
-    model = load_model(f"{model_dir}/model/saved_model.h5")
+    model = load_model(f"{model_dir}/model/saved_model.keras")
     model_outputs = model.predict(X_test)
 
     #Get classification outputs

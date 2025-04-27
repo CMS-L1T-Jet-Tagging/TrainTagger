@@ -128,7 +128,7 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     topology_score = (tau_p_1 + tau_p_2)*(tau_m_1 + tau_m_2)
     """
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_qmodel(os.path.join(model_dir, "model/saved_model.keras"))
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -280,7 +280,7 @@ def model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus,
 
 def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetntuple/Jets'):
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_qmodel(os.path.join(model_dir, "model/saved_model.keras"))
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -418,7 +418,7 @@ def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
 
 def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=100000):
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_qmodel(os.path.join(model_dir, "model/saved_model.keras"))
 
     #Load the signal data
     signal = uproot.open(tau_eff_filepath)[tree]

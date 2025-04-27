@@ -167,9 +167,9 @@ def train(out_dir, percent, model_name):
                             shuffle=True)
 
     #Export the model
-
-    export_path = os.path.join(out_dir, "model/saved_model.keras")
-    model.save(export_path)
+    export_path = os.path.join(out_dir, "model/")
+    os.makedirs(export_path, exist_ok=True)
+    model.save(export_path+'saved_model.keras')
     print(f"Model saved to {export_path}")
 
     #Plot history
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     plot_path = os.path.join(args.output, "plots/training")
     save_path = os.path.join(args.output, "model")
     os.makedirs(plot_path, exist_ok=True)
-    os.makedirs(save_path, exist_ok=True)
+    
 
     #Either make data or start the training
     if args.make_data:

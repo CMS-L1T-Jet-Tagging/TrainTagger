@@ -1,6 +1,6 @@
 #!/bin/bash
 if [[ "$1" == "False" ]]; then
-    python tagger/train/train.py -n $Name -p 50 
+    python tagger/train/train.py -n $Name -p 100
     python tagger/train/train.py --plot-basic -n $Name -sig $SIGNAL
     cd output/baseline
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model

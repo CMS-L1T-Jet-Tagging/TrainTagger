@@ -10,7 +10,6 @@ from tagger.plot.common import plot_2d
 #Third parties
 import numpy as np
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
 import hls4ml
 from tensorflow.keras.models import load_model
 from sklearn.metrics import roc_curve, auc,precision_recall_curve

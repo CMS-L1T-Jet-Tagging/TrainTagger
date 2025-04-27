@@ -9,23 +9,10 @@ import models
 #Third parties
 import numpy as np
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
-
-num_threads = 8
-os.environ["OMP_NUM_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
-
-tf.config.threading.set_inter_op_parallelism_threads(
-    num_threads
-)
-tf.config.threading.set_intra_op_parallelism_threads(
-    num_threads
-)
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) #not a special number
@@ -37,9 +24,9 @@ VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set.
 I_SPARSITY = 0.0 #Initial sparsity
 F_SPARSITY = 0.1 #Final sparsity
 
-def prune_model(model, num_samples):
+def compile_model(model, num_samples):
     """
-    Pruning settings for the model. Return the pruned model
+    Compile settings for the model. Return the compiled model
     """
 
     print("Begin pruning the model...")
@@ -47,18 +34,14 @@ def prune_model(model, num_samples):
     #Calculate the ending step for pruning
     end_step = np.ceil(num_samples / BATCH_SIZE).astype(np.int32) * EPOCHS
 
-    #Define the pruned model
-    pruning_params = {'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=I_SPARSITY, final_sparsity=F_SPARSITY, begin_step=0, end_step=end_step)}
-    pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
+    model.compile(optimizer='adam',
+                            loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': tf.keras.losses.Huber()},
+                            metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']},
+                            weighted_metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']})
 
-    pruned_model.compile(optimizer='adam',
-                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': tf.keras.losses.Huber()},
-                            metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
-                            weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
+    print(model.summary())
 
-    print(pruned_model.summary())
-
-    return pruned_model
+    return model
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels):
 
@@ -165,15 +148,15 @@ def train(out_dir, percent, model_name):
 
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
-    pruned_model = prune_model(model, num_samples)
+    model = compile_model(model, num_samples)
 
     #Now fit to the data
-    callbacks = [tfmot.sparsity.keras.UpdatePruningStep(),
+    callbacks = [
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
 
-    history = pruned_model.fit({'model_input': X_train},
-                            {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
+    history = model.fit({'model_input': X_train},
+                            {'jet_id_output': y_train, 'pT_output': pt_target_train},
                             sample_weight=sample_weight,
                             epochs=EPOCHS,
                             batch_size=BATCH_SIZE,
@@ -183,10 +166,9 @@ def train(out_dir, percent, model_name):
                             shuffle=True)
 
     #Export the model
-    model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
 
     export_path = os.path.join(out_dir, "model/saved_model.h5")
-    model_export.save(export_path)
+    model.save(export_path)
     print(f"Model saved to {export_path}")
 
     #Plot history

@@ -12,7 +12,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 import hls4ml
-from qkeras.utils import load_qmodel
+from tensorflow.keras.models import load_model
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 
 #Plotting
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #Load the model
-    model=load_qmodel(args.model)
+    model=load_model(args.model)
     print(model.summary())
 
     if args.remake:

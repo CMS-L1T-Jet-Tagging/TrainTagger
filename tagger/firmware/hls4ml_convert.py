@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 #Third party
 import hls4ml
-from qkeras.utils import load_qmodel
+from tensorflow.keras.models import load_model
 import mlflow
 from pathlib import Path
 import numpy as np
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #Load the model
-    model = load_qmodel(args.model)
+    model = load_model(args.model)
     precisions = convert(model,args.outpath)
 
 

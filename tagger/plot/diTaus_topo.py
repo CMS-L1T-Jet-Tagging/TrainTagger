@@ -5,7 +5,7 @@ Script to plot all di-taus topology trigger related physics performance plot
 import os, json
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
+from tensorflow.keras.models import load_model
 import awkward as ak
 import numpy as np
 import uproot

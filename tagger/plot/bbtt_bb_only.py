@@ -2,7 +2,7 @@ import os, json
 import gc
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
+from tensorflow.keras.models import load_model
 import awkward as ak
 import numpy as np
 import uproot
@@ -172,7 +172,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
     Derive the HH->4b working points
     """
 
-    model = load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model = load_model(os.path.join(model_dir, "model/saved_model.h5"))
 
     with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
@@ -256,7 +256,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_model(os.path.join(model_dir, "model/saved_model.h5"))
 
     ht_egdes = list(np.arange(0,800,20))
     ht_axis = hist.axis.Variable(ht_egdes, name = r"$HT^{gen}$")

@@ -4,7 +4,7 @@ Script to plot all di-taus related physics performance plot
 import os, json
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
+from tensorflow.keras.models import load_model
 import awkward as ak
 import numpy as np
 import uproot
@@ -92,7 +92,7 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     Double Puppi Tau Seed, same NN cut and pT (52 GeV) on both taus to give 28 kHZ based on the definition above.
     """
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_model(os.path.join(model_dir, "model/saved_model.h5"))
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -188,7 +188,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     """
 
     #Load metadata from the model directory
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_model(os.path.join(model_dir, "model/saved_model.h5"))
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
     with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
@@ -313,7 +313,7 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
 
     #Load metadata from the model directory
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+    model=load_model(os.path.join(model_dir, "model/saved_model.h5"))
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
     with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 

@@ -3,7 +3,7 @@ import json
 #Third parties
 import shap
 import numpy as np
-from qkeras.utils import load_qmodel
+from tensorflow.keras.models import load_model
 from sklearn.metrics import roc_curve, auc
 from itertools import combinations
 import matplotlib.pyplot as plt
@@ -557,7 +557,7 @@ def basic(model_dir,signal_dirs) :
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
 
     #Load model
-    model = load_qmodel(f"{model_dir}/model/saved_model.h5")
+    model = load_model(f"{model_dir}/model/saved_model.h5")
     model_outputs = model.predict(X_test)
 
     #Get classification outputs

@@ -32,9 +32,10 @@ def loss_history(plot_dir, history):
     ax.set_xlabel('Epoch')
     ax.legend(loc='upper right')
 
-    save_path = os.path.join(plot_dir, "loss_history")
-    plt.savefig(f"{save_path}.png", bbox_inches='tight')
-    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    save_path = os.path.join(plot_dir, "/")
+    os.makedirs(save_path, exist_ok=True)
+    plt.savefig(f"{save_path}loss_history.png", bbox_inches='tight')
+    plt.savefig(f"{save_path}loss_history.pdf", bbox_inches='tight')
 
 def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     """

@@ -205,7 +205,6 @@ if __name__ == "__main__":
     
     #create plot folder
     plot_path = os.path.join(args.output, "plots/training")
-    save_path = os.path.join(args.output, "model")
     os.makedirs(plot_path, exist_ok=True)
     
 

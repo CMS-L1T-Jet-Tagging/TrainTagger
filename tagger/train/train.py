@@ -87,14 +87,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
 
     sample_weights = np.ones(num_samples)
 
-    # Define pT bins
-    # pt_bins = np.array([
-    #     15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
-    #     60, 76, 97, 122, 154, 195, 246, 311,
-    #     393, 496, 627, 792, np.inf  # Use np.inf to cover all higher values
-    # ])
-
-    # Less bins (i.e. cut the high pT part we don't care about)
+    # Define pT bins (without the high pT part we don't care about)
     pt_bins = np.array([
         15, 17, 19, 22, 25, 30, 35, 40, 45, 50,
         60, 76, 97, 122, 154, np.inf  # Use np.inf to cover all higher values

@@ -22,6 +22,13 @@ from scipy.stats import norm
 import pdb
 plt.rcParams.update({'figure.max_open_warning': 0})
 
+# some custom imports for efficiency plots
+import collections
+setattr(collections, "MutableMapping", collections.abc.MutableMapping)
+import histbook
+import pandas
+np.bool = np.bool_
+
 style.set_style()
 
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
@@ -567,11 +574,7 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
         data_eff["wp_loose"] = data_eff["pred"] > wp_loose
         data_eff["wp_medium"] = data_eff["pred"] > wp_medium
         data_eff["wp_tight"] = data_eff["pred"] > wp_tight
-        import collections
-        setattr(collections, "MutableMapping", collections.abc.MutableMapping)
-        import histbook
-        import pandas
-        np.bool = np.bool_
+
         h_wp_loose = histbook.Hist(histbook.split("pt", pt_points), histbook.cut("wp_loose"))
         h_wp_medium = histbook.Hist(histbook.split("pt", pt_points), histbook.cut("wp_medium"))
         h_wp_tight = histbook.Hist(histbook.split("pt", pt_points), histbook.cut("wp_tight"))

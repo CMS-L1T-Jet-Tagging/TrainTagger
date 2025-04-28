@@ -308,8 +308,6 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     Returns:
         awkward.Array: Concatenated data arrays from selected chunks.
     """
-    import json
-    import numpy as np
 
     print("Loading data from: ", outdir)
     print("Loading percentage: ", percentage)

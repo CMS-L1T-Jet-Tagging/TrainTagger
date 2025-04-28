@@ -121,7 +121,7 @@ def format_qactivation(activation, nbits: int, bits_int : int, alpha : float) ->
 
 # baseline DeepSet model
 def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1, 
-            aggregator = "mean", conv1d_layers = [10, 10], class_layers = [32, 16], reg_layers = [16, 8]):
+            aggregator = "mean", conv1d_layers = [10, 10], class_layers = [32, 16], reg_layers = [10]):
 
     # Define a dictionary for common arguments
     common_args = {
@@ -139,7 +139,8 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     # Make Conv1D layers
     for iconv1d, depthconv1d in enumerate(conv1d_layers):
         main = QConv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_'+str(iconv1d+1), **common_args)(main)
-        main = QActivation(activation=quantized_relu(bits, bits_int), name='relu_'+str(iconv1d+1))(main)
+        main = QActivation(activation=quantized_relu(bits, 0), name='relu_'+str(iconv1d+1))(main)
+        #ToDo: fix the bits_int part later, ie use the default not 0
 
     # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
     main = QActivation(activation='quantized_bits(18,8)', name = 'act_pool')(main)
@@ -154,7 +155,8 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
             jet_id = QDense(depthclass, name='Dense_'+str(iclass+1)+'_jetID', **common_args)(main)
         else:
             jet_id = QDense(depthclass, name='Dense_'+str(iclass+1)+'_jetID', **common_args)(jet_id)
-        jet_id = QActivation(activation=quantized_relu(bits, bits_int), name='relu_'+str(iclass+1)+'_jetID')(jet_id)
+        jet_id = QActivation(activation=quantized_relu(bits, 0), name='relu_'+str(iclass+1)+'_jetID')(jet_id)
+        #ToDo: fix the bits_int part later, ie use the default not 0
 
     # Make output layer for classification task
     jet_id = QDense(output_shape[0], name='Dense_'+str(len(class_layers)+1)+'_jetID', **common_args)(jet_id)
@@ -166,7 +168,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
             pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(main)
         else:
             pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(pt_regress)
-        pt_regress = QActivation(activation=quantized_relu(bits, bits_int), name='relu_'+str(ireg+1)+'_pT')(pt_regress)
+        pt_regress = QActivation(activation=quantized_relu(bits, 0), name='relu_'+str(ireg+1)+'_pT')(pt_regress)
 
     pt_regress = QDense(1, name='pT_output',
                         kernel_quantizer=quantized_bits(16, 6, alpha=alpha_val),

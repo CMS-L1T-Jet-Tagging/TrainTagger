@@ -29,6 +29,7 @@ from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_
 def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']] 
 
+    #foo
     tau = sum([preds[:,idx] for idx in tau_index] )
     #bkg = preds[:,class_labels['unmatched']]
     bkg = preds[:,class_labels['unmatched']] + preds[:,class_labels['gluon']]

@@ -36,6 +36,7 @@ def doPlots(model,outputdir,inputdir):
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
+    if("unmatched" in labels): labels.remove("unmatched")
 
     hls_model = convert(model,"temp",build=False)
 
@@ -52,15 +53,13 @@ def doPlots(model,outputdir,inputdir):
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
-            if("unmatched" in label): continue
-            if abs(np.array(data['jet_SC4NGJet_score_'+label])[iJet] - y_hls[iJet][i]) > 0.001 : 
-                print_class = True
+            print_class = True
+
         if print_class == True:
             print("=== " + str(iJet) + " ===")
             print("Inputs: " + str(X_test[iJet]))
             for i, label in enumerate(labels): 
                 print(label  + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_'+label])[iJet]))
-                if("unmatched" in label): continue
                 print(label  + ": hls : " + str(y_hls[iJet][i]))
                 print(label  + ": tf : " + str(y_class[iJet][i]))
 

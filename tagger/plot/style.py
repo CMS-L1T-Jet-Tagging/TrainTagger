@@ -25,7 +25,7 @@ CMSHEADER_SIZE = BIGGER_SIZE
 CLASS_LABEL_STYLE = {'b':'b','charm':'c','light':'light','gluon':'gluon',
                     'taum':'$\\tau_{h}^{-}$','taup':'$\\tau_{h}^{+}$','electron':'Electron','muon':'Muon',
                     'inclusive':'Inclusive','Regression':'Regression',
-                    "taus": "Taus", "jets":"Jets (b, c, light, gluon)","leptons":"Leptons (muon, electron)", "unmatched" : "Unmatched"}
+                    "taus": "Taus", "jets":"Jets (b, c, light, gluon)","leptons":"Leptons (muon, electron)", "pileup" : "Pileup"}
 
 INPUT_FEATURE_STYLE = {'pt':'$p_T$','pt_rel':'relative $p_T$', 'pt_log':'$log(p_T)$','deta':'$\\Delta\\eta$','dphi':'$\\Delta\\phi$',
                        'mass':'mass', 'isPhoton':'PID: photon', 'isElectronPlus':'PID: electron +', 'isElectronMinus':'PID: electron -',

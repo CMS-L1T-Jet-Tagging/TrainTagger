@@ -93,12 +93,11 @@ def _split_flavor(data):
 
     # Automatically generate class labels based on the order of keys in conditions
     class_labels = {label: idx for idx, label in enumerate(conditions)}
-    unmatched_idx = len(class_labels)
-    class_labels['unmatched'] = unmatched_idx
-    #print("unmatched_idx", unmatched_idx)
+    pileup_idx = len(class_labels)
+    class_labels['pileup'] = pileup_idx
 
-    # Initialize the new array in data for numeric labels with default for unmatched entries
-    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], unmatched_idx)
+    # Initialize the new array in data for numeric labels with default for pileup entries
+    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], pileup_idx)
 
     tot = 0.
     # Assign numeric values based on conditions using awkward's where function
@@ -122,8 +121,8 @@ def _split_flavor(data):
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons*lepton_pt
 
-    data['target_pt'] = ak.where(data['class_label'] == unmatched_idx, 1.0, data['target_pt'])
-    data['target_pt_phys'] = ak.where(data['class_label'] == unmatched_idx, data['jet_pt_phys'], data['target_pt_phys'])
+    data['target_pt'] = ak.where(data['class_label'] == pileup_idx, 1.0, data['target_pt'])
+    data['target_pt_phys'] = ak.where(data['class_label'] == pileup_idx, data['jet_pt_phys'], data['target_pt_phys'])
 
     #print(data['class_label'][:10])
     #print(data['target_pt'][:10])

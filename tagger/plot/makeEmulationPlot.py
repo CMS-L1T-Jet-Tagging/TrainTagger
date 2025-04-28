@@ -36,7 +36,7 @@ def doPlots(model,outputdir,inputdir):
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
-    if("unmatched" in labels): labels.remove("unmatched")
+    if("pileup" in labels): labels.remove("pileup")
 
     hls_model = convert(model,"temp",build=False)
 

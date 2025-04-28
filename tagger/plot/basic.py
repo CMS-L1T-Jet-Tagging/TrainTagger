@@ -6,33 +6,46 @@ import numpy as np
 from qkeras.utils import load_qmodel
 from sklearn.metrics import roc_curve, auc
 from itertools import combinations
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import mplhep as hep
 import tensorflow as tf
 import tagger.plot.style as style
+import awkward as ak
 
 import os
 from .common import PT_BINS
 from .common import plot_histo
 from scipy.stats import norm
+import pdb
+plt.rcParams.update({'figure.max_open_warning': 0})
 
 style.set_style()
 
 ###### DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 def loss_history(plot_dir, history):
-    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
-    ax.plot(history.history['loss'], label='Train Loss', linewidth=style.LINEWIDTH)
-    ax.plot(history.history['val_loss'], label='Validation Loss',linewidth=style.LINEWIDTH)
-    ax.grid(True)
-    ax.set_ylabel('Loss')
-    ax.set_xlabel('Epoch')
-    ax.legend(loc='upper right')
 
-    save_path = os.path.join(plot_dir, "loss_history")
-    plt.savefig(f"{save_path}.png", bbox_inches='tight')
-    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    for metric in ["loss", "prune_low_magnitude_jet_id_output_loss", "prune_low_magnitude_pT_output_loss",
+                # "prune_low_magnitude_nll_output_loss",
+                ]:
+
+        fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
+        ax.plot(history.history[metric], label='Train Loss', linewidth=style.LINEWIDTH)
+        ax.plot(history.history['val_'+metric], label='Validation Loss',linewidth=style.LINEWIDTH)
+        ax.grid(True)
+        # ax.set_ylabel('Loss')
+        ax.set_ylabel('Loss '+metric)
+        ax.set_xlabel('Epoch')
+        ax.legend(loc='upper right')
+
+        save_path = os.path.join(plot_dir, "loss_"+metric+"_history")
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+
+        fig.clf()
 
 def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     """
@@ -500,6 +513,83 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
         plt.savefig(plot_dir+"/shap_summary_reg.pdf",bbox_inches='tight')
         plt.savefig(plot_dir+"/shap_summary_reg.png",bbox_inches='tight')
 
+def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
+    
+    save_dir = os.path.join(plot_dir, 'efficiencies')
+    os.makedirs(save_dir, exist_ok=True)
+
+    # pT coordinate points for plotting
+    pt_points = [np.mean((PT_BINS[i], PT_BINS[i + 1])) for i in range(len(PT_BINS) - 1)]
+
+    def plot_efficiency(df_wp_loose, df_wp_medium, df_wp_tight, plot_name):
+        # Plot the efficiency
+        fig = plt.figure(figsize=style.FIGURE_SIZE)
+
+        ax = df_wp_loose.plot.line(x="midpoints", y="wp_loose", yerr="err(wp_loose)", label = "Loose (mistag = 50%)", color="blue", linestyle='-')
+        df_wp_medium.plot.line(x="midpoints", y="wp_medium", yerr="err(wp_medium)", label = "Medium (eff = 20%)", ax = ax, color="orange", linestyle='-')
+        df_wp_tight.plot.line(x="midpoints", y="wp_tight", yerr="err(wp_tight)", label = "Tight (eff = 10%)", ax = ax, color="green", linestyle='-')
+        plt.xlabel(r'Jet $p_T$ [GeV]')
+        plt.ylabel('Tagging efficiency')
+        plt.ylim(0., 1.3)
+        # plt.xlim(0., 1000.)
+        plt.legend()
+
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.CMSHEADER_SIZE)
+
+        # Save the plot
+        save_path = os.path.join(save_dir, plot_name)
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.cla()
+        plt.close()
+
+    eff_selection = {
+        'taus': [class_labels['taup'], class_labels['taum']],
+        'b': [class_labels['b']],
+    }
+
+    for key in eff_selection.keys():
+        selection = sum(y_test[:, idx] for idx in eff_selection[key]) > 0
+        summed_y_true = sum(y_test[:, idx] for idx in eff_selection[key])
+        summed_y_score = sum(y_pred[:, idx] for idx in eff_selection[key])
+
+        # Compute FPR, TPR, and AUC
+        fpr, tpr, thres = roc_curve(summed_y_true, summed_y_score)
+        roc_auc = auc(fpr, tpr)
+
+        # get working points for 50%, 20%, 10%
+        wp_loose = thres[np.argmin(np.abs(np.array(fpr)-0.5))]
+        wp_medium = thres[np.argmin(np.abs(np.array(fpr)-0.2))]
+        wp_tight = thres[np.argmin(np.abs(np.array(fpr)-0.1))]
+
+        # some tricks to get proper uncertainties in the efficiencies
+        data_eff = ak.to_dataframe(ak.Array({"truth": summed_y_true[selection], "pt": reco_pt_test[selection], "pred": summed_y_score[selection]}))
+        data_eff["wp_loose"] = data_eff["pred"] > wp_loose
+        data_eff["wp_medium"] = data_eff["pred"] > wp_medium
+        data_eff["wp_tight"] = data_eff["pred"] > wp_tight
+        import collections
+        setattr(collections, "MutableMapping", collections.abc.MutableMapping)
+        import histbook
+        import pandas
+        np.bool = np.bool_
+        h_wp_loose = histbook.Hist(histbook.split("pt", pt_points), histbook.cut("wp_loose"))
+        h_wp_medium = histbook.Hist(histbook.split("pt", pt_points), histbook.cut("wp_medium"))
+        h_wp_tight = histbook.Hist(histbook.split("pt", pt_points), histbook.cut("wp_tight"))
+        h_wp_loose.fill(data_eff)
+        h_wp_medium.fill(data_eff)
+        h_wp_tight.fill(data_eff)
+        df_wp_loose = h_wp_loose.pandas("wp_loose", error="normal")
+        df_wp_medium = h_wp_medium.pandas("wp_medium", error="normal")
+        df_wp_tight = h_wp_tight.pandas("wp_tight", error="normal")
+        df_wp_loose["midpoints"] = [x[0].mid if isinstance(x[0], pandas.Interval) else np.nan for x in df_wp_loose.index]
+        df_wp_medium["midpoints"] = [x[0].mid if isinstance(x[0], pandas.Interval) else np.nan for x in df_wp_medium.index]
+        df_wp_tight["midpoints"] = [x[0].mid if isinstance(x[0], pandas.Interval) else np.nan for x in df_wp_tight.index]
+
+        plot_name = f"{key}_efficiency"
+        plot_efficiency(df_wp_loose, df_wp_medium, df_wp_tight, plot_name)
+
+    return
+
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 def basic(model_dir):
     """
@@ -521,8 +611,15 @@ def basic(model_dir):
     truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
 
+    from models import AAtt, NodeEdgeProjection, AttentionPooling
+    custom_objects_ = {
+        "AAtt": AAtt,
+        "NodeEdgeProjection": NodeEdgeProjection,
+        "AttentionPooling": AttentionPooling,
+    }
+
     #Load model
-    model = load_qmodel(f"{model_dir}/model/saved_model.h5")
+    model = load_qmodel(f"{model_dir}/model/saved_model.h5", custom_objects=custom_objects_)
     model_outputs = model.predict(X_test)
 
     #Get classification outputs
@@ -541,6 +638,9 @@ def basic(model_dir):
 
     #ROC for taus versus jets and taus versus leptons
     ROC_taus(y_pred, y_test, class_labels, plot_dir)
+
+    # Efficiencies
+    efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir)
 
     # Confusion matrix
     confusion(y_pred, y_test, class_labels, plot_dir)

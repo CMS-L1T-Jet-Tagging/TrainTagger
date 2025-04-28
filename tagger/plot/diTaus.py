@@ -31,8 +31,7 @@ def tau_score(preds, class_labels):
 
     #foo
     tau = sum([preds[:,idx] for idx in tau_index] )
-    #bkg = preds[:,class_labels['unmatched']]
-    bkg = preds[:,class_labels['unmatched']] + preds[:,class_labels['gluon']]
+    bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']]
 
     return tau / (tau + bkg)
     

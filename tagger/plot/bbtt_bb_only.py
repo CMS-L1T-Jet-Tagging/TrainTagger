@@ -67,7 +67,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     b_idx = class_labels['b']
     l_idx = class_labels['light']
     g_idx = class_labels['gluon']
-    u_idx = class_labels['unmatched']
+    u_idx = class_labels['pileup']
 
     # get sums of 2 leading b scores
     rows = np.arange(len(nn_outputs[0])).reshape((-1, 1))

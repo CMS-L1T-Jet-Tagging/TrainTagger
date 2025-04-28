@@ -45,7 +45,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
     b_index=class_labels['b'] 
     l_index=class_labels['light']
     g_index=class_labels['gluon']
-    u_index=class_labels['unmatched']
+    u_index=class_labels['pileup']
 
     #Get the inputs for the first n_jets
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]

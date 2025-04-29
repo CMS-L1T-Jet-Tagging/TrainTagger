@@ -34,8 +34,8 @@ cd ..
 git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
 
 git clone --quiet https://github.com/cms-hls4ml/L1TSC4NGJetModel.git
-git checkout -b emulator_test
 cd L1TSC4NGJetModel
+git checkout -b emulator_test
 
 cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware L1TSC4NGJetModel/
 ./setup.sh
@@ -68,5 +68,5 @@ echo "Temporary workaround to get the input files"
 #curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
 #echo '\nprocess.source.fileNames = ["file:inputs131X_1.root"]' >> runJetNTuple.py
 
-echo process.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ['CMSSW_BASE']+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test") >> runJetNTuple.py
+echo 'process.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ['CMSSW_BASE']+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test")' >> runJetNTuple.py
 cmsRun runJetNTuple.py --tm18 2>&1 | tee cmsRun.log

@@ -30,7 +30,7 @@ variables:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null 
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags:
@@ -68,14 +68,14 @@ train:
   extends:
     - .template
   stage: train
-  needs: 
+  needs:
     - job : data
       optional: true
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/train/train.py -n $Name -p 50 
+  - python tagger/train/train.py -n $Name -p 50
   - python tagger/train/train.py --plot-basic -n $Name
   - cd output/deepset_HGQ
   artifacts:
@@ -92,7 +92,7 @@ evaluate:
   stage: evaluate
   tags: [k8s-gpu]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 2
   needs: [train]
   script:
@@ -132,7 +132,7 @@ hls4ml:
   extends:
     - .template
   stage: hls4ml
-  needs: 
+  needs:
     - job : train
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -153,7 +153,7 @@ synth:
   script:
     - cd tagger/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
-    - vivado -mode batch -source vivado_synth.tcl 
+    - vivado -mode batch -source vivado_synth.tcl
     - cd ../../..
   artifacts:
     paths:
@@ -239,16 +239,16 @@ upload:
     - cd ..
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
-    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin" 
+    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
     - pb_copy_index.py ${EOS_STORAGE_DIR} --recursive
-    - cd TrainTagger/${Name} 
+    - cd TrainTagger/${Name}
     - pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
     - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf
     - cd ..
     - mv CI/mlflow_logger.py .
     - python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR}
-      -f ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware 
+      -f ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware
       -m ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
       -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
       -n ${Name}

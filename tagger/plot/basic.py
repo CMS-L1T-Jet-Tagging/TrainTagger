@@ -70,8 +70,8 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
 
         plt.figure(figsize=style.FIGURE_SIZE)
         hep.cms.label(
-            llabel=style.CMSHEADER_LEFT, 
-            rlabel=style.CMSHEADER_RIGHT, 
+            llabel=style.CMSHEADER_LEFT,
+            rlabel=style.CMSHEADER_RIGHT,
             fontsize=style.CMSHEADER_SIZE
         )
         plt.plot(tpr, fpr, label=f'{label} (AUC = {roc_auc:.2f})', linewidth=style.LINEWIDTH)
@@ -116,7 +116,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
 
     # Combine the labels and scores for binary classification
     selection = (y_true1 == 1) | (y_true2 == 1)
-    y_true_binary = y_true1[selection] 
+    y_true_binary = y_true1[selection]
     y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])  # Normalized probabilities
 
     # Compute FPR, TPR, and AUC
@@ -141,7 +141,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.close()
 
-def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
+def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a colormap for unique colors
     colormap = cm.get_cmap('Set1', len(class_labels))  # Use 'tab10' with enough colors
 
@@ -183,6 +183,39 @@ def ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict):
     plt.close()
 
     return ROC_dict
+
+def confusion(y_pred, y_test, class_labels, plot_dir):
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    cm = confusion_matrix(
+        np.argmax(y_test, axis=1),
+        np.argmax(y_pred, axis=1),
+        normalize="true",
+        )
+    cm = np.round(cm, 3)
+    class_labels = {v: k for k, v in class_labels.items()}
+    labels = [style.CLASS_LABEL_STYLE[class_labels[i]] for i in range(y_test.shape[1])]
+
+    # Create a plot of the confusion matrix
+    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
+    matrix_display = ConfusionMatrixDisplay(cm, display_labels=labels)
+
+    matrix_display.plot(ax=ax)
+    matrix_display.im_.set_clim(0, 1)
+
+    # Remove default the colorbar
+    matrix_display.im_.colorbar.remove()
+
+    # Adjust colorbar height to match the plot
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.5)
+    plt.colorbar(matrix_display.im_, cax=cax)
+
+    # Save the plot
+    plt.savefig(os.path.join(plot_dir, f"confusion_matrix.png"), bbox_inches='tight')
+    plt.savefig(os.path.join(plot_dir, f"confusion_matrix.pdf"), bbox_inches='tight')
 
 def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     """
@@ -291,7 +324,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=flavor, plot_name=f"{flavor}_response")
-    
+
     #Taus, jets, leptons rms
     rms_selection = {
         'taus': [class_labels['taup'], class_labels['taum']],
@@ -301,7 +334,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
     for key in rms_selection.keys():
         selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
-        
+
         uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
         plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor=key, plot_name=f"{key}_response")
 
@@ -439,7 +472,7 @@ def shapPlot(shap_values, feature_names, class_names):
     plt.tight_layout()
 
 def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
-    
+
     labels = list(class_labels.keys())
     model2 = tf.keras.Model(model.input, model.output[0])
     model3 = tf.keras.Model(model.input, model.output[1])
@@ -473,21 +506,21 @@ def basic(model_dir):
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     Returns a dictionary of ROCs for each class
     """
-    
+
     plot_dir = os.path.join(model_dir, "plots/training")
 
     #Load the metada for class_label
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
-    ROC_dict = {class_label : 0 for class_label in class_labels} 
-    
+    ROC_dict = {class_label : 0 for class_label in class_labels}
+
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
-    
+
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5")
     model_outputs = model.predict(X_test)
@@ -495,7 +528,7 @@ def basic(model_dir):
     #Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1].flatten()
-    
+
     #Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
 
@@ -504,10 +537,13 @@ def basic(model_dir):
         for j in class_labels.keys():
             if i != j:
                 class_pair = (i,j)
-                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)        
+                ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair)
 
     #ROC for taus versus jets and taus versus leptons
     ROC_taus(y_pred, y_test, class_labels, plot_dir)
+
+    # Confusion matrix
+    confusion(y_pred, y_test, class_labels, plot_dir)
 
     #Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
@@ -517,10 +553,10 @@ def basic(model_dir):
 
     #Plot inclusive response and individual flavor
     response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    
+
     #Plot the rms of the residuals vs pt
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    
+
     #Plot the shaply feature importance
     plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 

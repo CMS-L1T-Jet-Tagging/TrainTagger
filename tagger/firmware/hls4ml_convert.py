@@ -22,7 +22,7 @@ def convert(model, outpath,build=True):
     #Auxilary variables
     input_precision = 'ap_fixed<24,12,AP_RND,AP_SAT>'
     class_precision = 'ap_ufixed<24,12,AP_RND,AP_SAT>'
-    reg_precision = 'ap_fixed<16,6,AP_RND,AP_SAT>' 
+    reg_precision = 'ap_fixed<16,6>' 
     trace=True
 
     #Create default config
@@ -50,10 +50,10 @@ def convert(model, outpath,build=True):
             config["LayerName"][layer.name]["Trace"] = trace
 
     
-    #config["LayerName"]["jet_id_output"]["Precision"]["result"] = class_precision
-    config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
-    #config["LayerName"]["pT_output"]["Precision"]["result"] = reg_precision
-    config["LayerName"]["pT_output"]["Implementation"] = "latency"
+    config["LayerName"]["act_jet"]["Precision"]["result"] = class_precision
+    config["LayerName"]["act_jet"]["Implementation"] = "latency"
+    config["LayerName"]["pT_out"]["Precision"]["result"] = reg_precision
+    config["LayerName"]["pT_out"]["Implementation"] = "latency"
 
     #Save config  as json file
     print("Saving default config as config.json ...")
@@ -91,9 +91,10 @@ if __name__ == "__main__":
     else:
         data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=0.1)
         X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-        model = load_model(path)
+        model = load_qmodel(path)
+        print(model.summary())
         trace_minmax(model, X_train, cover_factor=1.0)
-        proxy = to_proxy_model(model, aggressive=True)
+        proxy = to_proxy_model(model, aggressive=False)
         precisions = convert(proxy,args.outpath)
 
 

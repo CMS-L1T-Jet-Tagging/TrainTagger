@@ -72,7 +72,7 @@ def convert(model, outpath,build=True):
     #Compile and build the project
     hls_model.compile()
     if build == True:
-        #hls_model.build(csim=False, reset = True)
+        hls_model.build(csim=False, reset = True)
         return [input_precision,class_precision,reg_precision]
     else:
         return hls_model

@@ -115,6 +115,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
     parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')    
+    parser.add_argument('-of','--outpath_firmware', default='output/baseline/model/firmware' , help = 'Jet tagger firmware directory') 
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to profiling data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake profiling data? ')
     parser.add_argument('-n','--name',default='baseline', help= 'Mlfow model name? ')
@@ -137,7 +138,7 @@ if __name__ == "__main__":
                         run_name=args.name,
                         run_id=run_id # pass None to start a new run
                         ):
-        precisions = convert(model,args.outpath)
+        precisions = convert(model,args.outpath_firmware)
         report = getReports('tagger/firmware/L1TSC4NGJetModel')
         mlflow.log_metric('FF',report['ff_rel'])
         mlflow.log_metric('LUT',report['lut_rel'])

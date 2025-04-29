@@ -23,8 +23,8 @@ variables:
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     SCRAM_ARCH: 'el9_amd64_gcc12'
-    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:14_2_pre2_L1TSC4NGJetTagger'
+    CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -142,8 +142,6 @@ hls4ml:
   needs:
     - job : train
   script:
-  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
-  - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py
   artifacts:
@@ -180,10 +178,10 @@ emulation-evaluate:
   script:
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - python tagger/plot/makeEmulationPlot.py -r True
+  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
   artifacts:
     paths:
       - output/deepset_HGQ
@@ -203,7 +201,7 @@ profile:
   - source activate tagger
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - pip uninstall hls4ml -y
   - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
@@ -211,7 +209,7 @@ profile:
   - pip install .[profiling]
   - cd ..
   - ls tagger/firmware/L1TSC4NGJetModel/L1TSC4NGJetModel_prj/solution1/syn/report/
-  - python tagger/firmware/hls4ml_profile.py -r True -n $Name
+  - python tagger/firmware/hls4ml_profile.py -r True -n $Name -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
   artifacts:
     paths:
       - output/deepset_HGQ

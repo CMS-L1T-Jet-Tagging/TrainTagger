@@ -2,7 +2,8 @@ import os, json
 import gc
 from argparse import ArgumentParser
 
-from tensorflow.keras.models import load_model
+from keras.models import load_model
+import hgq
 import awkward as ak
 import numpy as np
 import uproot

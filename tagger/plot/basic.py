@@ -3,7 +3,8 @@ import json
 #Third parties
 import shap
 import numpy as np
-from tensorflow.keras.models import load_model
+from keras.models import load_model
+import hgq
 from sklearn.metrics import roc_curve, auc
 from itertools import combinations
 import matplotlib.pyplot as plt

@@ -11,7 +11,8 @@ from tagger.plot.common import plot_2d
 import numpy as np
 import tensorflow as tf
 import hls4ml
-from tensorflow.keras.models import load_model
+from keras.models import load_model
+import hgq
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 import mlflow
 from pathlib import Path

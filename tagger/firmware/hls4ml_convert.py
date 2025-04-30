@@ -4,7 +4,8 @@ from argparse import ArgumentParser
 
 #Third party
 import hls4ml
-from tensorflow.keras.models import load_model
+from keras.models import load_model
+import hgq
 import mlflow
 from pathlib import Path
 import numpy as np

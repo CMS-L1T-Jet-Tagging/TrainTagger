@@ -11,7 +11,8 @@ import tagger.plot.common as common
 import numpy as np
 import tensorflow as tf
 import hls4ml
-from tensorflow.keras.models import load_model
+from keras.models import load_model
+import hgq
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 
 #Plotting

@@ -163,7 +163,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
     ## Make fully connected dense layers for pt regression task
-    for ireg, depthreg in enumerate(class_layers):
+    for ireg, depthreg in enumerate(reg_layers):
         if ireg == 0:
             pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(main)
         else:
@@ -232,7 +232,7 @@ def DeepSetAttPool(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
     ## Make fully connected dense layers for pt regression task
-    for ireg, depthreg in enumerate(class_layers):
+    for ireg, depthreg in enumerate(reg_layers):
         if ireg == 0:
             pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(main)
         else:

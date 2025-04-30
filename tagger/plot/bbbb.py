@@ -112,7 +112,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light
     plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.png", bbox_inches='tight')
 
-def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.5):
+def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.8):
     """
     Derive the HT only working points (without bb cuts)
     """
@@ -384,7 +384,6 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     plot_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
-    plt.show(block=False)
 
     #Plot a different plot comparing the multiclass with ht only selection
     fig2, ax2 = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -408,8 +407,6 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
-
-    plt.show(block=False)
 
 
 def bbbb_eff_mHH(model_dir,
@@ -482,8 +479,6 @@ def bbbb_eff_mHH(model_dir,
     ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_mHH_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
-
-    plt.show(block=False)
 
     return
 

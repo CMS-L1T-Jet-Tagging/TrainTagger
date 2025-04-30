@@ -11,7 +11,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 

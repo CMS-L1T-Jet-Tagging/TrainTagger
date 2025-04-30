@@ -8,15 +8,15 @@ import models
 
 #Third parties
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+import keras
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from hgq.utils.sugar import FreeEBOPs
 from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
-tf.keras.utils.set_random_seed(420) #not a special number
+keras.utils.set_random_seed(420) #not a special number
 BATCH_SIZE = 1024
 EPOCHS = 100
 VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set.
@@ -34,9 +34,9 @@ def compile_model(model, num_samples):
 
     #Calculate the ending step for pruning
     end_step = np.ceil(num_samples / BATCH_SIZE).astype(np.int32) * EPOCHS
-
-    model.compile(optimizer='adam',
-                            loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': tf.keras.losses.Huber()},
+    opt = keras.optimizers.Adam(learning_rate=0.1)
+    model.compile(optimizer=opt,
+                            loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': keras.losses.Huber()},
                             metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']})
 
@@ -237,7 +237,7 @@ if __name__ == "__main__":
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
             mlflow.keras.autolog()
-            print(tf.config.list_physical_devices('GPU'))
+            print(tensorflow.config.list_physical_devices('GPU'))
             train(args.output, args.percent, model_name=args.model)
             run_id = run.info.run_id
         sourceFile = open('mlflow_run_id.txt', 'w')

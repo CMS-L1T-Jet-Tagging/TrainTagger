@@ -30,7 +30,7 @@ def train_model_wrapper(config):
     os.system('cp -r /builds/ml_l1/TrainTagger/training_data/ .')
     ID = np.random.randint(0,1000)
     out_dir = '/builds/ml_l1/TrainTagger/training_data/output/baseline/trials/'+str(ID)
-    
+    os.makedirs(out_dir, exist_ok=True)
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=50)
 

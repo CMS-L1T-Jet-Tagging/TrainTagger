@@ -14,6 +14,7 @@ from hgq.utils.sugar import FreeEBOPs
 from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
+import tensorflow 
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 keras.utils.set_random_seed(420) #not a special number

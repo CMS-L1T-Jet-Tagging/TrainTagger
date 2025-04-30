@@ -28,7 +28,7 @@ def baseline(inputs_shape, output_shape):
     #main = QActivation(activation=quantized_relu(bits), name='relu_2')(main)
 
     # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-    #main = Activation(activation='quantized_bits(18,8)', name = 'act_pool')(main)
+    main = Activation(activation='linear', name = 'act_pool')(main)
     main = GlobalAveragePooling1D(name='avgpool')(main)
 
     #Now split into jet ID and pt regression

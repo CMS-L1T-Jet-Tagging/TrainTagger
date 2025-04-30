@@ -86,6 +86,7 @@ train:
   - tar -xf training_data_$Inputs.tgz
   - tar -xf signal_process_data.tgz
   - source activate tagger
+  - nproc
   - ./CI/run_training.sh $RERUN_ON_TAG
   artifacts:
     paths:
@@ -106,6 +107,7 @@ hpo:
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
+  - nproc
   - source activate tagger
   - python tagger/train/hpo.py
   artifacts:
@@ -170,6 +172,7 @@ hls4ml:
     - job : train
   script:
   - source activate tagger
+  - nproc
   - python tagger/firmware/hls4ml_convert.py
   artifacts:
     paths:

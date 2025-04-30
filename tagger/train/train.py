@@ -35,7 +35,7 @@ def compile_model(model, num_samples):
 
     #Calculate the ending step for pruning
     end_step = np.ceil(num_samples / BATCH_SIZE).astype(np.int32) * EPOCHS
-    opt = keras.optimizers.Adam(learning_rate=0.1)
+    opt = keras.optimizers.Adam(learning_rate=0.001)
     model.compile(optimizer=opt,
                             loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': keras.losses.Huber()},
                             metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']},
@@ -173,6 +173,9 @@ def train(out_dir, percent, model_name):
     model.save(export_path+'saved_model.keras')
     print(f"Model saved to {export_path}")
 
+    plot_path = os.path.join(out_dir, "plots/training")
+    os.makedirs(plot_path, exist_ok=True)
+
     #Plot history
     loss_history(plot_path, history)
 
@@ -203,11 +206,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
-    
-    #create plot folder
-    plot_path = os.path.join(args.output, "plots/training")
-    os.makedirs(plot_path, exist_ok=True)
-    
 
     #Either make data or start the training
     if args.make_data:

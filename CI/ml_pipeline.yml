@@ -208,7 +208,6 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - ls tagger/firmware/L1TSC4NGJetModel/L1TSC4NGJetModel_prj/solution1/syn/report/
   - python tagger/firmware/hls4ml_profile.py -r True -n $Name -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
   artifacts:
     paths:

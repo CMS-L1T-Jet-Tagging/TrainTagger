@@ -26,7 +26,11 @@ def train_model_wrapper(config):
     VALIDATION_SPLIT = 0.1
     BATCH_SIZE = 1024
     EPOCHS = 100
-
+    os.system('pwd')
+    os.system('cp -r /builds/ml_l1/TrainTagger/training_data/ .')
+    ID = tune.TuneContext.get_trial_id()
+    out_dir = '/builds/ml_l1/TrainTagger/training_data/output/baseline/trials/'+str(ID)
+    
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=50)
 
@@ -87,8 +91,12 @@ def train_model_wrapper(config):
     model.save(export_path+'saved_model.keras')
     print(f"Model saved to {export_path}")
 
+    plot_path = os.path.join(out_dir, "plots/training")
+    os.makedirs(plot_path, exist_ok=True)
+
     #Plot history
     loss_history(plot_path, history)
+    os.system('rm -r training_data')
 
 
 def tune_deepset():

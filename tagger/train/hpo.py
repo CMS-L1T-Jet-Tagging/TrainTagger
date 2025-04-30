@@ -24,9 +24,11 @@ from ray.air.integrations.keras import ReportCheckpointCallback
 def train_model_wrapper(config):
 
     VALIDATION_SPLIT = 0.1
+    BATCH_SIZE = 1024
+    EPOCHS = 100
 
     #Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=50)
 
     #Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump output variables

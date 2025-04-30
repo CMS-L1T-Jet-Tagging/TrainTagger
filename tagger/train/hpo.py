@@ -14,7 +14,7 @@ from hgq.utils.sugar import FreeEBOPs
 from sklearn.utils.class_weight import compute_class_weight
 import mlflow
 from datetime import datetime
-from train import train_weights
+from train import train_weights,save_test_data
 
 
 from ray import tune

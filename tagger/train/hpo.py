@@ -28,7 +28,7 @@ def train_model_wrapper(config):
     EPOCHS = 100
     os.system('pwd')
     os.system('cp -r /builds/ml_l1/TrainTagger/training_data/ .')
-    ID = np..randint(0,1000)
+    ID = np.randint(0,1000)
     out_dir = '/builds/ml_l1/TrainTagger/training_data/output/baseline/trials/'+str(ID)
     
     #Load the data, class_labels and input variables name, not really using input variable names to be honest

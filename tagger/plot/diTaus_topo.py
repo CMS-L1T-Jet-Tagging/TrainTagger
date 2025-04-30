@@ -407,8 +407,8 @@ def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
     ax.set_xlabel(r"Gen. $p_T^1$ [GeV]")
     ax.set_ylabel(r"Gen. $p_T^2$ [GeV]")
 
+    fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
-    plt.show(block=True) 
 
 
 def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=100000):
@@ -543,7 +543,6 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
     # Save and show the plot
     fig.savefig(f'{plot_dir}/topo_vbf_eff.pdf', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/topo_vbf_eff.png', bbox_inches='tight')
-    plt.show(block=True)
 
 
     return

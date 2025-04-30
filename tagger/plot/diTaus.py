@@ -420,7 +420,6 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     figname = f'sc_and_tau_eff_{eta_region}'
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
-    plt.show(block=False)
 
     return
 

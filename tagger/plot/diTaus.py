@@ -31,7 +31,7 @@ def tau_score(preds, class_labels):
 
     #foo
     tau = sum([preds[:,idx] for idx in tau_index] )
-    bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']]
+    bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
 
     return tau / (tau + bkg)
     
@@ -194,7 +194,7 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
 
     return
 
-def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets'):
+def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
@@ -218,7 +218,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     #Get the NN predictions
     pred_score, ratio = model.predict(nn_inputs[eta_selection])
-    model_tau = tau_score(pred_score, class_labels)
+    model_tau = tau_score(pred_score, class_labels )
 
     #Emulator tau score
     cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)[eta_selection]
@@ -315,7 +315,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     return
 
-def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000):
+def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000 ):
     """
     Plot the single tau efficiency for signal in signal_path w.r.t pt
     eta range for barrel: |eta| < 1.5
@@ -358,7 +358,7 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
     pred_score, ratio = model.predict(nn_inputs)
 
-    nn_tauscore_raw = tau_score(pred_score, class_labels) 
+    nn_tauscore_raw = tau_score(pred_score, class_labels ) 
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     #selecting the eta region
@@ -369,6 +369,23 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > model_pt_WP)
     tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP) & (nn_tauscore_raw > model_NN_WP)
     tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt']) & (jet_tauscore_raw > WPs_CMSSW['tau'])
+
+
+    #write out total eff to text file
+    total_eff_nn = np.mean(tau_nume_nn) / np.mean(tau_deno)
+    total_eff_seedcone = np.mean(tau_nume_seedcone) / np.mean(tau_deno)
+    total_eff_cmssw = np.mean(tau_nume_cmssw) / np.mean(tau_deno)
+
+    outname = plot_dir + "/TotalEff_%s.txt" % eta_region
+    with open(outname, "w") as outfile:
+        outfile.write("Total diTau Eff \n")
+        outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
+        outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
+        outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
+
+    
+
+
 
     #Get the needed attributes
     #Basically we want to bin the selected truth pt and divide it by the overall count

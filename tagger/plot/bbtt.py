@@ -122,7 +122,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
 
     return bscore_sums, tscore_sums, tau_indices
 
-def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_type, apply_sel, model_dir, n_entries, rate, tree):
+def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, score_type, apply_sel, model_dir, n_entries, rate, tree):
     """
     Pick the working points and plot
     """
@@ -132,17 +132,25 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = rate, RateRange=RateRange)
 
-    #Get the coordinates at target rate and ht
-    target_bb = np.array([bb_list[i] for i in target_rate_idx])
-    target_tt = np.array([tt_list[i] for i in target_rate_idx])
-    target_eff = np.array([signal_eff[i] for i in target_rate_idx])
+    #Get the coordinates
+    target_rate_bb = np.array([bb_list[i] for i in target_rate_idx]) # NN cut dimension
+    target_rate_tt = np.array([tt_list[i] for i in target_rate_idx]) # NN cut dimension
+    target_rate_ht = np.array([ht_list[i] for i in target_rate_idx]) # HT cut dimension
+    target_rate_eff = np.array([signal_eff[i] for i in target_rate_idx]) # signal efficiency dimension
 
-    # get max efficiency at target rate and HT WP
+    # get max efficiency at target rate
+    best_WP = np.argmax(target_rate_eff)
+    ht = target_rate_ht[best_WP]
+
+    # Efficiency at target rate and HT WP
+    best_bb = target_rate_bb[best_WP] # target rate and HT
+    best_tt = target_rate_tt[best_WP] # target rate and HT
+    best_eff = target_rate_eff[best_WP]
+
     wp_ht_eff_idx = np.argmax(target_eff)
 
     # Export the working point
-    fixed_ht_wp = {"HT": float(ht), "BB": float(target_bb[wp_ht_eff_idx]),
-        "TT": float(target_tt[wp_ht_eff_idx])}
+    fixed_ht_wp = {"HT": float(ht), "BB": float(best_bb), "TT": float(best_tt)}
 
     # save WPs
     plot_dir = os.path.join(model_dir, 'plots/physics/bbtt')
@@ -211,7 +219,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange
     working_point = {"ht_only_cut": float(ht_list[target_rate_idx[0]])}
     json.dump(working_point, open(WP_json, "w"), indent=4)
 
-def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_entries=100, tree='outnano/Jets'):
+def derive_bbtt_WPs(model_dir, minbias_path, apply_sel, signal_path, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
@@ -298,7 +306,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
             return False
 
     # Parallelized loop through the edges and integrate
-    def parallel_in_parallel(tt, bb):
+    def parallel_in_parallel(tt, bb, ht_cut):
         #Calculate the rate
         counts_raw = RateHistRaw[{"ht": slice(ht_cut*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
         rate_raw = (counts_raw / n_events)*MINBIAS_RATE
@@ -318,14 +326,14 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
 
         return np.array([rate_raw, rate_qg, eff_signal_raw, eff_signal_qg, ht_cut, bb, tt])
 
-    def parallel_in_parallel_wrapper(bb, n_threads=2):
+    def parallel_in_parallel_wrapper(bb, ht_cut, n_threads=2):
         with parallel_backend('loky', inner_max_num_threads=n_threads):
-            intermediate_out = Parallel(n_jobs=n_threads)(delayed(parallel_in_parallel)(tt=tt, bb=bb) for tt in NN_edges[:-1])
+            intermediate_out = Parallel(n_jobs=n_threads)(delayed(parallel_in_parallel)(tt=tt, bb=bb, ht_cut=ht_cut) for tt in NN_edges[:-1])
         return intermediate_out
 
     #Parallelized the first loop
     start = time.time()
-    parallel_out = Parallel(n_jobs=3)(delayed(parallel_in_parallel_wrapper)(bb) for bb in tqdm(NN_edges[:-1]))
+    parallel_out = Parallel(n_jobs=3)(delayed(parallel_in_parallel_wrapper)(bb, ht_cut) for bb,ht_cut in tqdm(zip(NN_edges[:-1], ht_edges[:-1])))
     parallel_out = ak.drop_none(parallel_out)
     end = time.time()
     print("Time taken for parallel loop: ", end-start)
@@ -337,13 +345,13 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
     ht_list, bb_list, tt_list = np_out[:,4].tolist(), np_out[:,5].tolist(), np_out[:,6].tolist()
 
     #Pick target rate and plot it
-    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model_dir, n_entries, rate, tree)
+    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, 'raw', apply_sel, model_dir, n_entries, rate, tree)
     gc.collect()
-    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model_dir, n_entries, 14, tree)
+    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, 'raw', apply_sel, model_dir, n_entries, 14, tree)
     gc.collect()
-    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, ht_cut, 'qg', apply_sel, model_dir, n_entries, rate, tree)
+    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, 'qg', apply_sel, model_dir, n_entries, rate, tree)
     gc.collect()
-    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, ht_cut, 'qg', apply_sel, model_dir, n_entries, 14, tree)
+    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, 'qg', apply_sel, model_dir, n_entries, 14, tree)
     gc.collect()
 
     # refill with full ht for ht wp derivation
@@ -542,9 +550,9 @@ if __name__ == "__main__":
     if args.deriveRate:
         derive_rate(args.minbias, args.model_dir, n_entries=args.n_entries,tree=args.tree)
     if args.deriveWPs:
-        derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'tau', args.signal, n_entries=args.n_entries,tree=args.tree)
+        derive_bbtt_WPs(args.model_dir, args.minbias, 'tau', args.signal, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
+        derive_bbtt_WPs(args.model_dir, args.minbias, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
         bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'tau', n_entries=args.n_entries,tree=args.tree)
         gc.collect()

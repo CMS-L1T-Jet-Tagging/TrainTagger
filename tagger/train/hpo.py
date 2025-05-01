@@ -54,7 +54,7 @@ def train_model_wrapper(config):
 
     #Dynamically get the model
     try:
-        model_func = getattr(models, model_name)
+        model_func = getattr(models, 'baseline_hpo')
         model = model_func(input_shape, output_shape)  # Assuming the model function doesn't require additional arguments
     except AttributeError:
         raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")

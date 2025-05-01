@@ -67,13 +67,16 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     b_idx = class_labels['b']
     tp_idx = class_labels['taup']
     tm_idx = class_labels['taum']
+    e_idx = class_labels['electron']
     l_idx = class_labels['light']
     g_idx = class_labels['gluon']
+    u_idx = class_labels['pileup']
 
     # vs light preds
-    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
+    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx] + pred_score[:,e_idx], pred_score[:, g_idx] + pred_score[:, u_idx]) for pred_score in nn_outputs])
+    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx] + pred_score[:,e_idx], pred_score[:, g_idx] + pred_score[:, u_idx]) for pred_score in nn_outputs])
+
+    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, u_idx]) for pred_score in nn_outputs])
 
     # raw preds
     taup_preds = np.transpose([pred_score[:, tp_idx] for pred_score in nn_outputs])
@@ -95,7 +98,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
 
     return bscore_sums, tscore_sums, tau_indices
 
-def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_type, apply_sel, model_dir, n_entries, target_rate, tree):
+def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, score_type, apply_sel, model_dir, n_entries, target_rate, tree):
     """
     Pick the working points and plot
     """
@@ -111,17 +114,19 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
     target_rate_ht = np.array([ht_list[i] for i in target_rate_idx]) # HT cut dimension
     target_rate_eff = np.array([signal_eff[i] for i in target_rate_idx]) # signal efficiency dimension
 
-    # Efficiency at target rate and HT WP
-    target_bb = target_rate_bb[target_rate_ht==ht] # target rate and HT
-    target_tt = target_rate_tt[target_rate_ht==ht] # target rate and HT
-    target_eff = target_rate_eff[target_rate_ht==ht]
+    # get max efficiency at target rate
+    best_WP = np.argmax(target_rate_eff)
+    ht = target_rate_ht[best_WP]
 
-    # get max efficiency at target rate and HT WP
+    # Efficiency at target rate and HT WP
+    best_bb = target_rate_bb[best_WP] # target rate and HT
+    best_tt = target_rate_tt[best_WP] # target rate and HT
+    best_eff = target_rate_eff[best_WP]
+
     wp_ht_eff_idx = np.argmax(target_eff)
 
     # Export the working point
-    fixed_ht_wp = {"HT": float(ht), "BB": float(target_bb[wp_ht_eff_idx]),
-        "TT": float(target_tt[wp_ht_eff_idx])}
+    fixed_ht_wp = {"HT": float(ht), "BB": float(best_bb), "TT": float(best_tt)}
 
     # save WPs
     plot_dir = os.path.join(model_dir, 'plots/physics/bbtt')
@@ -207,7 +212,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange
     working_point = {"ht_only_cut": float(ht_list[target_rate_idx[0]])}
     json.dump(working_point, open(WP_json, "w"), indent=4)
 
-def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_entries=100, tree='outnano/Jets'):
+def derive_bbtt_WPs(model_dir, minbias_path, apply_sel, signal_path, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
@@ -251,7 +256,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
     jet_ht = ak.sum(jet_pt, axis=1)
 
     #Define the histograms (pT edge and NN Score edge)
-    ht_edges = list(np.arange(150,500,1)) + [10000] #Make sure to capture everything
+    ht_edges = list(np.arange(150,500,2)) + [10000] #Make sure to capture everything
     NN_edges = list([round(i,4) for i in np.arange(0, .6, 0.005)]) + [2.0]
 
     # Signal preds to pick the working point
@@ -287,31 +292,32 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
     tt_list = []
 
     #Loop through the edges and integrate
-    for bb in NN_edges[:-1]:
-        for tt in NN_edges[:-1]:
-            #Calculate the rate
-            counts_raw = RateHistRaw[{"ht": slice(ht_cut*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-            rate_list_raw.append((counts_raw / n_events)*MINBIAS_RATE)
+    for ht in ht_edges[:-1]:
+        for bb in NN_edges[:-1]:
+            for tt in NN_edges[:-1]:
+                #Calculate the rate
+                counts_raw = RateHistRaw[{"ht": slice(ht*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+                rate_list_raw.append((counts_raw / n_events)*MINBIAS_RATE)
 
-            counts_qg = RateHistQG[{"ht": slice(ht_cut*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-            rate_list_qg.append((counts_qg / n_events)*MINBIAS_RATE)
+                counts_qg = RateHistQG[{"ht": slice(ht*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+                rate_list_qg.append((counts_qg / n_events)*MINBIAS_RATE)
 
-            # get signal efficiencies
-            counts_signal_raw = SHistRaw[{"ht": slice(ht_cut*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-            eff_list_raw.append(counts_signal_raw / s_n_events)
+                # get signal efficiencies
+                counts_signal_raw = SHistRaw[{"ht": slice(ht*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+                eff_list_raw.append(counts_signal_raw / s_n_events)
 
-            counts_signal_qg = SHistQG[{"ht": slice(ht_cut*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-            eff_list_qg.append(counts_signal_qg / s_n_events)
+                counts_signal_qg = SHistQG[{"ht": slice(ht*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+                eff_list_qg.append(counts_signal_qg / s_n_events)
 
-            #Append the results
-            ht_list.append(ht_cut)
-            bb_list.append(bb)
-            tt_list.append(tt)
+                #Append the results
+                ht_list.append(ht)
+                bb_list.append(bb)
+                tt_list.append(tt)
 
     #Pick target rate and plot it
-    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model_dir, n_entries, rate, tree)
+    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, 'raw', apply_sel, model_dir, n_entries, rate, tree)
     gc.collect()
-    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, ht_cut, 'qg', apply_sel, model_dir, n_entries, rate, tree)
+    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, 'qg', apply_sel, model_dir, n_entries, rate, tree)
     gc.collect()
 
     # refill with full ht for ht wp derivation
@@ -476,7 +482,7 @@ if __name__ == "__main__":
     """
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model_dir', default='/eos/user/s/stella/TrainTagger/output/baseline', help = 'Input model')
+    parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
     parser.add_argument('-s', '--signal', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/GluGluHHTo2B2Tau_PU200.root' , help = 'Signal sample for HH->bbtt')
     parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
@@ -494,9 +500,9 @@ if __name__ == "__main__":
     if args.deriveRate:
         derive_rate(args.minbias, args.model_dir, n_entries=args.n_entries,tree=args.tree)
     if args.deriveWPs:
-        derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'tau', args.signal, n_entries=args.n_entries,tree=args.tree)
+        derive_bbtt_WPs(args.model_dir, args.minbias, 'tau', args.signal, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
+        derive_bbtt_WPs(args.model_dir, args.minbias, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
         bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'tau', n_entries=args.n_entries,tree=args.tree)
         gc.collect()

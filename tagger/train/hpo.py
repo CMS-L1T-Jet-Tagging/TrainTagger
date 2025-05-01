@@ -54,10 +54,10 @@ def train_model_wrapper(config):
 
     #Dynamically get the model
     try:
-        model_func = getattr(models, 'baseline_hpo')
+        model_func = getattr(models, 'baseline')
         model = model_func(input_shape, output_shape)  # Assuming the model function doesn't require additional arguments
     except AttributeError:
-        raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")
+        raise ValueError(f"Model '{'baseline'}' is not defined in the 'models' module.")
 
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)

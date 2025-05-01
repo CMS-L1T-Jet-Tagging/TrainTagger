@@ -61,9 +61,9 @@ def train_model_wrapper(config):
 
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
-    opt = keras.optimizers.Adam(learning_rate=config["learning_rate"],momentum=config["momentum"])
+    opt = keras.optimizers.Adam(learning_rate=config["learning_rate"])
     model.compile(optimizer=opt,
-                            loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': keras.losses.Huber()},
+                            loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': keras.losses.Huber( delta=config["delta"])},
                             metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']},
                             weighted_metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']})
 
@@ -119,7 +119,7 @@ def tune_deepset():
         param_space={
             "threads": 1,
             "learning_rate": tune.uniform(0.001, 0.1),
-            "momentum": tune.uniform(0.1, 0.9),
+            "delta": tune.uniform(0.1, 2.0),
         },
     )
     results = tuner.fit()

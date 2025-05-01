@@ -105,7 +105,7 @@ def tune_deepset():
     )
 
     tuner = tune.Tuner(
-        tune.with_resources(train_model_wrapper, resources={"cpu":2 , "gpu": 0.1}),
+        tune.with_resources(train_model_wrapper, resources={"cpu":12 , "gpu": 0.5}),
         tune_config=tune.TuneConfig(
             metric="val_loss",
             mode="min",

@@ -114,7 +114,7 @@ def tune_deepset():
         ),
         run_config=tune.RunConfig(
             name="exp",
-            stop={"val_loss": 1.0},
+            stop={"training_iteration": 50},
         ),
         param_space={
             "threads": 1,

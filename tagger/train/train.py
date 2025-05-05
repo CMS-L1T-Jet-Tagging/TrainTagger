@@ -4,7 +4,7 @@ import os, shutil, json
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.plot.basic import loss_history, basic
-import models
+from tagger.model.baseline import baselineModel
 
 #Third parties
 import numpy as np
@@ -129,31 +129,16 @@ def train(out_dir, percent, model_name):
     input_shape = X_train.shape[1:] #First dimension is batch size
     output_shape = y_train.shape[1:]
 
-    #Dynamically get the model
-    try:
-        model_func = getattr(models, model_name)
-        model = model_func(input_shape, output_shape)  # Assuming the model function doesn't require additional arguments
-    except AttributeError:
-        raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")
-
+    model = baselineModel(input_shape,output_shape,out_dir)
+    model.build_model()
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
     model.compile_model(num_samples)
-    history = fit(model,X_train,y_train,sample_weight)
-    
-    #Export the model
-    model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
+    history = model.fit(X_train,y_train,sample_weight)
 
-    export_path = os.path.join(out_dir, "model/saved_model.h5")
-    model_export.save(export_path)
-    print(f"Model saved to {export_path}")
+    model.save()
 
-    #Produce some basic plots with the training for diagnostics
-    plot_path = os.path.join(out_dir, "plots/training")
-    os.makedirs(plot_path, exist_ok=True)
-
-    #Plot history
-    loss_history(plot_path, history)
+    model.plot_loss()
 
     return
 

@@ -37,28 +37,11 @@ tf.config.threading.set_intra_op_parallelism_threads(
     num_threads
 )
 
-def prune_model(model, num_samples):
-    """
-    Pruning settings for the model. Return the pruned model
-    """
+# GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
+tf.keras.utils.set_random_seed(420) #not a special number 
 
-    print("Begin pruning the model...")
+VALIDATION_SPLIT = 0.1 # 10% of training set will be used for validation set. 
 
-    #Calculate the ending step for pruning
-    end_step = np.ceil(num_samples / BATCH_SIZE).astype(np.int32) * EPOCHS
-
-    #Define the pruned model
-    pruning_params = {'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=I_SPARSITY, final_sparsity=F_SPARSITY, begin_step=0, end_step=end_step)}
-    pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
-
-    pruned_model.compile(optimizer='adam',
-                            loss={'prune_low_magnitude_jet_id_output': 'categorical_crossentropy', 'prune_low_magnitude_pT_output': tf.keras.losses.Huber()},
-                            metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']},
-                            weighted_metrics = {'prune_low_magnitude_jet_id_output': 'categorical_accuracy', 'prune_low_magnitude_pT_output': ['mae', 'mean_squared_error']})
-
-    print(pruned_model.summary())
-
-    return pruned_model
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels):
 
@@ -165,23 +148,9 @@ def train(out_dir, percent, model_name):
 
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
-    pruned_model = prune_model(model, num_samples)
-
-    #Now fit to the data
-    callbacks = [tfmot.sparsity.keras.UpdatePruningStep(),
-                 EarlyStopping(monitor='val_loss', patience=10),
-                 ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5)]
-
-    history = pruned_model.fit({'model_input': X_train},
-                            {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
-                            sample_weight=sample_weight,
-                            epochs=EPOCHS,
-                            batch_size=BATCH_SIZE,
-                            verbose=2,
-                            validation_split=VALIDATION_SPLIT,
-                            callbacks = [callbacks],
-                            shuffle=True)
-
+    model.compile_model(num_samples)
+    history = fit(model,X_train,y_train,sample_weight)
+    
     #Export the model
     model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
 

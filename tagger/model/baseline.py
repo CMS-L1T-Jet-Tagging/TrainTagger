@@ -1,6 +1,3 @@
-"""
-Here all the models are defined to be called in train.py
-"""
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D
 
@@ -9,7 +6,9 @@ from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.qlayers import QDense, QActivation
 from qkeras import QConv1D
 
-class baseline(JetTagModel):
+from tagger.model.models import JetTagModel
+
+class baselineModel(JetTagModel):
     def __init__(self):
         super().__init__()
 
@@ -102,3 +101,13 @@ class baseline(JetTagModel):
                             shuffle=True)
 
         return history
+
+    def save(self,out_dir=None):  
+        if out_dir is None:
+          out_dir = self.output_directory
+        #Export the model
+        model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
+
+        export_path = os.path.join(out_dir, "model/saved_model.h5")
+        model_export.save(export_path)
+        print(f"Model saved to {export_path}")

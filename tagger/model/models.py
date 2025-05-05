@@ -1,9 +1,10 @@
 
 
 class JetTagModel():
-    def __init__(self,inputs_shape, outputs_shape):
+    def __init__(self,inputs_shape, outputs_shape,output_directory):
         self.inputs_shape = inputs_shape
         self.outputs_shape = outputs_shape
+        self.output_directory = output_directory
 
         self.model = None
 
@@ -39,3 +40,14 @@ class JetTagModel():
 
     def hls4ml_convert(self):
         pass
+
+    def plot_loss(self,out_dir=None):
+        if out_dir is None:
+          out_dir = self.output_directory
+
+        #Produce some basic plots with the training for diagnostics
+        plot_path = os.path.join(out_dir, "plots/training")
+        os.makedirs(plot_path, exist_ok=True)
+
+        #Plot history
+        loss_history(plot_path, history)

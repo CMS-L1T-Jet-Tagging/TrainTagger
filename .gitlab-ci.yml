@@ -2,36 +2,22 @@ include:
   - local: "CI/template.yml"
 
 # Name = Name of child pipeline
-# Inputs = Which input configuration to use
-# N_PARAMS = Number of tracking parameters for the track fit
-# TRACK_ALGO = Tracking Algorithm, baseline or extended
+# Inputs = Which input configuration to ise
 # TRAIN = Which dataset to use for training
 # MINBIAS = Which MinBias to use for rate calculations
 # BBBB = Which dataset to use for HH->BBBB efficiency studies
-# BBBB_EOS_DIR = Which folder to find the BBBB dataset in
-# BBTT = Which dataset to use for BBTauTau efficiency studies
-# BBTT_EOS_DIR = Which folder to find the BBTauTau dataset in
-# VBFHTAUTAU = Which dataset to use for the VBF->H->TauTau studies
-# SIGNAL = Which dataset to use for a specific signal set of ROC curves
 # EOS_DATA_DIR = Data directory on eos containing the  above root files
-# EOS_DATA_DIR = Where to find the train, minbias, vbfhtautau and signal datasets
 # EOS_STORAGE_DIR = Directory to store output products
 # EOS_STORAGE_SUBDIR  = Sub Directory for pipeline specific output
 # EOS_STORAGE_DATADIR = Sub directory to store branch intermediate training files
-# CMSSW_VERSION = Which CMSSW release to run the emulator in
-# CMSSW_L1CT = Which CMSSW fork:branch to run the emulator in
-# CMSSW_EMULATOR_WRAPPER = Which CMSSW emulator wrapper to use 
-# RERUN_ON_TAG = Switch to only run the evaluation and firmware steps on the tagged model and not rerun a training. 
-# Default false to run a full retraining of a model
-# TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
+
+
 
 DeepSet:new_samples_baseline_5param_extended_trk:
   extends: .ml_pipeline
   variables:
     Name: new_samples_baseline_5param_extended_trk
     Inputs: baseline
-    N_PARAMS: 5
-    TRACK_ALGO: extended
     TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
@@ -39,14 +25,11 @@ DeepSet:new_samples_baseline_5param_extended_trk:
     BBTT: GluGluHHTo2B2Tau_PU200.root
     BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
     VBFHTAUTAU: VBFHToTauTau_PU200.root
-    SIGNAL: TT_PU200
+    NTUPLE_TREE: outnano/Jets
     EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
+    SCRAM_ARCH: 'el9_amd64_gcc12'
     CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
-    CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
-    RERUN_ON_TAG: 'False'
-    TAG: 'v0.0.0'
-
+    CMSSW_L1CT:  'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'

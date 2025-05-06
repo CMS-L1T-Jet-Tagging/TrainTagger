@@ -97,7 +97,7 @@ def convert(model, outpath,build=True):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='baseline_pruned' , help = 'model name')    
+    parser.add_argument('-m','--model', default='deepset_HGQ' , help = 'model name')    
     parser.add_argument('-o','--outpath', default='tagger/firmware/L1TSC4NGJetModel' , help = 'Jet tagger synthesized output directory')  
     
     args = parser.parse_args()

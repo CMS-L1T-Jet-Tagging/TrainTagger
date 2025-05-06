@@ -1,4 +1,4 @@
-
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
 class JetTagModel():
     def __init__(self,inputs_shape, outputs_shape,output_directory):
@@ -51,3 +51,31 @@ class JetTagModel():
 
         #Plot history
         loss_history(plot_path, history)
+
+
+
+# class logs(object):
+
+#     _mlflow_file = 'mlflow_run_id.txt'
+
+#     def __init__(self, func):
+#         self.func = func
+
+#     def __call__(self, *args):
+#         log_string = self.func.__name__ + " was called"
+#         print(log_string)
+#         # Open the logfile and append
+#         with open(self._logfile, 'a') as opened_file:
+#             # Now we log to the specified logfile
+#             opened_file.write(log_string + '\n')
+#         # Now, send a notification
+#         self.notify()
+
+#         # return base func
+#         return self.func(*args)
+
+
+
+#     def notify(self):
+#         # logit only logs, no more
+#         pass

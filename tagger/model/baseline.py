@@ -9,8 +9,8 @@ from qkeras import QConv1D
 from tagger.model.models import JetTagModel
 
 class baselineModel(JetTagModel):
-    def __init__(self):
-        super().__init__()
+    def __init__(self,inputs_shape, outputs_shape,output_directory):
+        super().__init__(inputs_shape, outputs_shape,output_directory)
 
     def build_model(self,bits=9, bits_int=2, alpha_val=1):
         # Define a dictionary for common arguments

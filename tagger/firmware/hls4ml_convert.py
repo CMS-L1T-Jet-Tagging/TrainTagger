@@ -28,7 +28,7 @@ def convert(model, outpath,build=True):
     #Create default config
     config = hls4ml.utils.config_from_keras_model(model, granularity='name')
     config['IOType'] = 'io_parallel'
-    config['LayerName']['input_1']['Precision']['result']  = input_precision
+    #config['LayerName']['input_1']['Precision']['result']  = input_precision
 
     #Configuration for conv1d layers
     #hls4ml automatically figures out the paralellization factor
@@ -50,10 +50,10 @@ def convert(model, outpath,build=True):
             config["LayerName"][layer.name]["Trace"] = trace
 
     
-    config["LayerName"]["act_jet"]["Precision"]["result"] = class_precision
-    config["LayerName"]["act_jet"]["Implementation"] = "latency"
-    config["LayerName"]["pT_out"]["Precision"]["result"] = reg_precision
-    config["LayerName"]["pT_out"]["Implementation"] = "latency"
+    #config["LayerName"]["act_jet"]["Precision"]["result"] = class_precision
+    #config["LayerName"]["act_jet"]["Implementation"] = "latency"
+    #config["LayerName"]["pT_out"]["Precision"]["result"] = reg_precision
+    #config["LayerName"]["pT_out"]["Implementation"] = "latency"
 
     #Save config  as json file
     print("Saving default config as config.json ...")
@@ -71,6 +71,23 @@ def convert(model, outpath,build=True):
 
     #Compile and build the project
     hls_model.compile()
+    model_dir="output/baseline_pruned"
+    X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
+    y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
+    truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
+    reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
+    indices = np.random.permutation(16) 
+    #print(indices) 
+    X_test = X_test[:, indices, :] 
+    model_outputs = model.predict(X_test)
+
+    #Get classification outputs
+    y_pred = model_outputs[0]
+    pt_ratio = model_outputs[1].flatten()
+
+   
+    print(y_pred[0],y_test[0])
+
     if build == True:
         #hls_model.build(csim=False, reset = True)
         return [input_precision,class_precision,reg_precision]
@@ -80,12 +97,12 @@ def convert(model, outpath,build=True):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='deepset_HGQ' , help = 'model name')    
+    parser.add_argument('-m','--model', default='baseline_pruned' , help = 'model name')    
     parser.add_argument('-o','--outpath', default='tagger/firmware/L1TSC4NGJetModel' , help = 'Jet tagger synthesized output directory')  
     
     args = parser.parse_args()
     path=f'output/{args.model}/model/saved_model.h5'
-    if args.model=="baseline":
+    if args.model=="baseline_pruned":
         model = load_qmodel(path)
         precisions = convert(model,args.outpath)
     else:

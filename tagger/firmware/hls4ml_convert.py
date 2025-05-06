@@ -71,22 +71,22 @@ def convert(model, outpath,build=True):
 
     #Compile and build the project
     hls_model.compile()
-    model_dir="output/baseline_pruned"
-    X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
-    y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
-    truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
-    reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
-    indices = np.random.permutation(16) 
+    #model_dir="output/baseline_pruned"
+    #X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
+    #y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
+    #truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
+    #reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
+    #indices = np.random.permutation(16) 
     #print(indices) 
-    X_test = X_test[:, indices, :] 
-    model_outputs = model.predict(X_test)
+    #X_test = X_test[:, indices, :] 
+    #model_outputs = model.predict(X_test)
 
     #Get classification outputs
-    y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1].flatten()
+    #y_pred = model_outputs[0]
+    #pt_ratio = model_outputs[1].flatten()
 
    
-    print(y_pred[0],y_test[0])
+    #print(y_pred[0],y_test[0])
 
     if build == True:
         #hls_model.build(csim=False, reset = True)

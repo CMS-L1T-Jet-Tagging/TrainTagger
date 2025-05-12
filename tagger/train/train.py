@@ -35,7 +35,7 @@ def compile_model(model, num_samples):
 
     #Calculate the ending step for pruning
     end_step = np.ceil(num_samples / BATCH_SIZE).astype(np.int32) * EPOCHS
-    opt = keras.optimizers.Adam(learning_rate=0.001)
+    opt = keras.optimizers.Adam(learning_rate=0.005)
     model.compile(optimizer=opt,
                             loss={'jet_id_output': 'categorical_crossentropy', 'pT_output': keras.losses.Huber()},
                             metrics = {'jet_id_output': 'categorical_accuracy', 'pT_output': ['mae', 'mean_squared_error']},

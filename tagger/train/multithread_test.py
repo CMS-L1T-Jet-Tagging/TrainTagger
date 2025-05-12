@@ -1,3 +1,4 @@
+import joblib
 from joblib import Parallel, delayed, parallel_backend
 import os
 from math import sqrt
@@ -28,7 +29,11 @@ def parallel_in_parallel_wrapper(n=10,n_threads=2,backend='loky'):
     #return intermediate_out
 
 
-threads = [1,2,4,8,12,24]
+
+print(joblib.cpu_count())
+print(joblib.cpu_count(only_physical_cores=True))
+
+threads = [1,2,4,8,12,24,-1]
 n_iterations = [10000,1000000]
 
 for thread in threads:

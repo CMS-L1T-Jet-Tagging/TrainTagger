@@ -29,8 +29,9 @@ def baseline(inputs_shape, output_shape):
 
     # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
     #main = Activation(activation='linear', name = 'act_pool')(main)
-    main = AveragePooling1D(L,name='avgpool')(main)
-    main = Flatten()(main)
+    #main = AveragePooling1D(L,name='avgpool')(main)
+    main = GlobalAveragePooling1D(name='avgpool')(main)
+    #main = Flatten()(main)
 
     #Now split into jet ID and pt regression
 
@@ -43,6 +44,7 @@ def baseline(inputs_shape, output_shape):
 
     jet_id = Dense(output_shape[0], name='Dense_3_jetID',activation='relu',kernel_initializer='lecun_uniform')(jet_id)
     jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+    #jet_id = Flatten( name='jet_id_output')(jet_id)
     #jet_id = QSoftmax('softmax', name='jet_id_output')(jet_id)
 
     #pT regression branch
@@ -50,9 +52,10 @@ def baseline(inputs_shape, output_shape):
 
     pt_regress = Dense(1, name='pT_output',
                         kernel_initializer='lecun_uniform')(pt_regress)
+    #pt_regress = Flatten(name='pT_output')(pt_regress)
 
     #Define the model using both branches
-    model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+    model = keras.Model(inputs = [inputs], outputs = [jet_id, pt_regress])
 
     print(model.summary())
 

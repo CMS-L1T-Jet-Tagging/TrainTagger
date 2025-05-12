@@ -100,7 +100,7 @@ hpo:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-h100-2]
+  #tags: [cern-nextgen-h100-2]
   needs:
     - job : data
       optional: true

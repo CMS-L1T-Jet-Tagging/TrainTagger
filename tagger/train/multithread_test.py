@@ -29,7 +29,7 @@ def parallel_in_parallel_wrapper(n=10,n_threads=2,backend='loky'):
 
 
 threads = [1,2,4,8,12,24]
-n_iterations = [10000,1000000,10000000]
+n_iterations = [10000,1000000]
 
 for thread in threads:
     for iterations in n_iterations:
@@ -42,9 +42,6 @@ for thread in threads:
         print("+++++++++++++")
         print("multi thread 2 backend thread loky: ")
         parallel_in_parallel_wrapper(iterations,n_threads=thread,backend='loky')
-        print("+++++++++++++")
-        print("multi thread threading: ")
-        parallel_in_parallel_wrapper(iterations,n_threads=thread,backend='threading')
         print("+++++++++++++")
         print("single thread sequential: ")
         parallel_in_parallel_wrapper(iterations,n_threads=thread,backend='sequential')

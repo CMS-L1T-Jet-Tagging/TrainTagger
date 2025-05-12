@@ -123,7 +123,7 @@ def main():
     threads = [1,2,4,8,12,24]
     for thread in threads:
         print("===================")
-        print("Num threads: "thread)
+        print("Num threads: ",thread)
         nums = [300001 for i in range(thread)]
 
         # Run single-threaded task

@@ -109,6 +109,7 @@ hpo:
   - tar -xf training_data_$Inputs.tgz
   - nproc
   - source activate tagger
+  - python tagger/train/multithread_test.py
   - python tagger/train/hpo.py
   artifacts:
     paths:

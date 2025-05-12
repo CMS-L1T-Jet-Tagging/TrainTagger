@@ -21,38 +21,28 @@ def baseline(inputs_shape, output_shape):
                     
     #First Conv1D
     main = Conv1D(filters=10, kernel_size=1, name='Conv1D_1',activation='relu',kernel_initializer='lecun_uniform')(main)
-    #main = QActivation(activation=quantized_relu(bits), name='relu_1')(main)
-
     #Second Conv1D
     main = Conv1D(filters=10, kernel_size=1, name='Conv1D_2',activation='relu',kernel_initializer='lecun_uniform')(main)
-    #main = QActivation(activation=quantized_relu(bits), name='relu_2')(main)
 
     # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-    #main = Activation(activation='linear', name = 'act_pool')(main)
-    #main = AveragePooling1D(L,name='avgpool')(main)
-    main = GlobalAveragePooling1D(name='avgpool')(main)
-    #main = Flatten()(main)
+    main = AveragePooling1D(L,name='avgpool')(main)
+    main = Flatten()(main)
 
     #Now split into jet ID and pt regression
 
     #jetID branch, 3 layer MLP
     jet_id = Dense(32, name='Dense_1_jetID',activation='relu',kernel_initializer='lecun_uniform')(main)
-    #jet_id = QActivation(activation=quantized_relu(bits), name='relu_1_jetID')(jet_id)
 
     jet_id = Dense(16, name='Dense_2_jetID',activation='relu',kernel_initializer='lecun_uniform')(jet_id)
-    #jet_id = QActivation(activation=quantized_relu(bits), name='relu_2_jetID')(jet_id)
 
-    jet_id = Dense(output_shape[0], name='Dense_3_jetID',activation='relu',kernel_initializer='lecun_uniform')(jet_id)
+    jet_id = Dense(output_shape[0], name='Dense_3_jetID',activation='linear',kernel_initializer='lecun_uniform')(jet_id)
     jet_id = Activation('softmax', name='jet_id_output')(jet_id)
-    #jet_id = Flatten( name='jet_id_output')(jet_id)
-    #jet_id = QSoftmax('softmax', name='jet_id_output')(jet_id)
 
     #pT regression branch
     pt_regress = Dense(10, name='Dense_1_pT',activation='relu',kernel_initializer='lecun_uniform')(main)
 
     pt_regress = Dense(1, name='pT_output',
                         kernel_initializer='lecun_uniform')(pt_regress)
-    #pt_regress = Flatten(name='pT_output')(pt_regress)
 
     #Define the model using both branches
     model = keras.Model(inputs = [inputs], outputs = [jet_id, pt_regress])

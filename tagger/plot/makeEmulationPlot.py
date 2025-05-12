@@ -36,6 +36,7 @@ def doPlots(model,outputdir,inputdir):
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
+    if("pileup" in labels): labels.remove("pileup")
 
     hls_model = convert(model,"temp",build=False)
 
@@ -52,8 +53,8 @@ def doPlots(model,outputdir,inputdir):
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
-            if abs(np.array(data['jet_SC4NGJet_score_'+label])[iJet] - y_hls[iJet][i]) > 0.001 : 
-                print_class = True
+            print_class = True
+
         if print_class == True:
             print("=== " + str(iJet) + " ===")
             print("Inputs: " + str(X_test[iJet]))

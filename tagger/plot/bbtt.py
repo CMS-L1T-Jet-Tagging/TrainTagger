@@ -479,13 +479,14 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     normalized_counts = counts / np.sum(counts)
 
     #Now plot all
+    tau_topo_str = r"$\tau_{topo}$"
     tau_str = r"$\tau_{1,2}$"
     eff_str = r"$\int \epsilon$"
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax.errorbar(baseline_x, baseline_y, yerr=baseline_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'bb$\tau \tau$ seed@ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {} GeV)'.format(rate, eff_str, baseline_efficiency, 220, tau_str, 34))
-    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ $\tau\tau$ > {}, $\sum$ bb > {})'.format(rate, eff_str, model_efficiency, ht_wp, round(ttag_wp,2), round(btag_wp,2)))
+    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(rate, eff_str, model_efficiency, ht_wp, tau_topo_str, round(ttag_wp,2), round(btag_wp,2)))
 
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -507,7 +508,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     fig2,ax2 = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax2,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
-    ax2.errorbar(model_x_14, model_y_14, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ $\tau\tau$ > {}, $\sum$ bb > {})'.format(14, eff_str, model_14_efficiency, ht_wp, round(ttag_wp_14,2), round(btag_wp_14,2)))
+    ax2.errorbar(model_x_14, model_y_14, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(14, eff_str, model_14_efficiency, ht_wp, tau_topo_str, round(ttag_wp_14,2), round(btag_wp_14,2)))
     ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT-only + QuadJets @ {} kHz, {}={} (L1 $HT$ > {} GeV)'.format(14, eff_str, ht_only_efficiency, ht_only_wp))
 
     #Plot other labels

@@ -178,7 +178,7 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
         "TT": float(target_tt[wp_ht_eff_idx])}
 
     # save WPs
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt2')
+    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt')
     os.makedirs(plot_dir, exist_ok=True)
     with open(os.path.join(plot_dir, f"bbtt_fixed_wp_{score_type}_{apply_sel}_{rate}.json"), "w") as f:
         json.dump(fixed_ht_wp, f, indent=4)
@@ -221,7 +221,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange
     Derive the HT only working points (without bb cuts)
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt2')
+    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt')
 
     #Derive the rate
     rate_list = []
@@ -378,9 +378,9 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     ht_axis = hist.axis.Variable(ht_egdes, name = r"$HT^{gen}$")
 
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, f"plots/physics/bbtt2/bbtt_fixed_wp_{score_type}_{apply_sel}_{rate}.json")
-    WP_path_14 = os.path.join(model_dir, f"plots/physics/bbtt2/bbtt_fixed_wp_{score_type}_{apply_sel}_14.json")
-    HT_path = os.path.join(model_dir, "plots/physics/bbtt2/ht_working_point.json")
+    WP_path = os.path.join(model_dir, f"plots/physics/bbtt/bbtt_fixed_wp_{score_type}_{apply_sel}_{rate}.json")
+    WP_path_14 = os.path.join(model_dir, f"plots/physics/bbtt/bbtt_fixed_wp_{score_type}_{apply_sel}_14.json")
+    HT_path = os.path.join(model_dir, "plots/physics/bbtt/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_path) & os.path.exists(WP_path_14):
@@ -498,7 +498,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbtt2/HHbbtt_eff_bbtt_seed_{score_type}_{apply_sel}")
+    plot_path = os.path.join(model_dir, f"plots/physics/bbtt/HHbbtt_eff_bbtt_seed_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.show(block=False)
@@ -521,7 +521,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbtt2/HHbbtt_eff_HT_only_{score_type}_{apply_sel}")
+    plot_path = os.path.join(model_dir, f"plots/physics/bbtt/HHbbtt_eff_HT_only_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.show(block=False)

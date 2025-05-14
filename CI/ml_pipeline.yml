@@ -113,7 +113,7 @@ evaluate:
   - cd ..
   - echo "bbtt performance"
   - python tagger/plot/bbtt_bb_only.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
-  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
   - python tagger/plot/bbtt_bb_only.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbtt_bb_only.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE

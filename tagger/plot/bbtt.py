@@ -112,7 +112,7 @@ def max_tau_sum(taup_preds, taum_preds):
     taum_sum = np.sum(taum_preds[rows,tau_idxs], axis=1)
     tau_scores2 = np.multiply(taup_sum, taum_sum)
 
-    return tau_scores1, tau_idxs
+    return tau_scores2, tau_idxs
 
 def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     #Btag input list for first 4 jets

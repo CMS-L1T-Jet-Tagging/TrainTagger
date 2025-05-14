@@ -296,7 +296,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
 
     #Define the histograms (pT edge and NN Score edge)
     ht_edges = list(np.arange(150,500,1)) + [10000] #Make sure to capture everything
-    NN_edges = list([round(i,4) for i in np.arange(0.01, .4, 0.005)]) + [2.0]
+    NN_edges = list([round(i,4) for i in np.arange(0.01, .4, 0.0025)]) + [2.0]
 
     # Signal preds to pick the working point
     global s_n_events

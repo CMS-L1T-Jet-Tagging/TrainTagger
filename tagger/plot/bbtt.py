@@ -156,6 +156,7 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
     """
     #plus, minus range
     RateRange = 0.85
+    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt')
 
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = rate, RateRange=RateRange)
@@ -163,7 +164,10 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
         # If the rate is not found, find the closest lower value
         rate_list = np.where(rate_list > rate, -1, rate_list)
         target_rate_idx = [np.argmax(rate_list)]
-        warnings.warn(f"Target rate {rate} not found for Multiclass WP,using closest lower value {rate_list[target_rate_idx[0]]} instead.")
+        new_rate = {'rate': rate_list[target_rate_idx[0]]}
+        warnings.warn(f"Target rate {rate} not found for Multiclass WP,using closest lower value {new_rate['rate']} instead.")
+        with open(os.path.join(plot_dir, f"bbtt_fixed_wp_{score_type}_{apply_sel}_{rate}_rate.json"), "w") as f:
+            json.dump(new_rate, f, indent=4)
 
     #Get the coordinates at target rate and ht
     target_bb = np.array([bb_list[i] for i in target_rate_idx])
@@ -178,7 +182,6 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
         "TT": float(target_tt[wp_ht_eff_idx])}
 
     # save WPs
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt')
     os.makedirs(plot_dir, exist_ok=True)
     with open(os.path.join(plot_dir, f"bbtt_fixed_wp_{score_type}_{apply_sel}_{rate}.json"), "w") as f:
         json.dump(fixed_ht_wp, f, indent=4)
@@ -242,7 +245,10 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange
         # If the rate is not found, find the closest lower value
         rate_list = np.where(rate_list > target_rate, -1, rate_list)
         target_rate_idx = [np.argmax(rate_list)]
-        warnings.warn(f"Target rate {target_rate} not found for HT WP,using closest lower value {rate_list[target_rate_idx[0]]} instead.")
+        new_rate = rate_list[target_rate_idx[0]]
+        warnings.warn(f"Target rate {target_rate} not found for HT WP,using closest lower value {new_rate['rate']} instead.")
+        with open(os.path.join(plot_dir, f"ht_working_point_rate.json"), "w") as f:
+            json.dump(new_rate, f, indent=4)
 
     #Read WPs dict and add HT cut
     WP_json = os.path.join(plot_dir, "ht_working_point.json")
@@ -296,7 +302,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
 
     #Define the histograms (pT edge and NN Score edge)
     ht_edges = list(np.arange(150,500,1)) + [10000] #Make sure to capture everything
-    NN_edges = list([round(i,4) for i in np.arange(0.01, .4, 0.0025)]) + [2.0]
+    NN_edges = list([round(i,4) for i in np.arange(0.01, .4, 0.01)]) + [2.0]
 
     # Signal preds to pick the working point
     global s_n_events
@@ -365,6 +371,16 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
     derive_HT_WP(RateHist, ht_edges, n_events, model_dir, 14)
     return
 
+def find_alt_rate(path, model_dir, rate):
+    idx = path.find('.j')
+    path = path[:idx] + '_rate' + path[idx:]
+    try:
+        with open(path, "r") as f: rate = json.load(f)
+        alt_rate = np.round(rate['rate'], 1)
+    except:
+        alt_rate = rate
+    return alt_rate
+
 def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
@@ -381,6 +397,9 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     WP_path = os.path.join(model_dir, f"plots/physics/bbtt/bbtt_fixed_wp_{score_type}_{apply_sel}_{rate}.json")
     WP_path_14 = os.path.join(model_dir, f"plots/physics/bbtt/bbtt_fixed_wp_{score_type}_{apply_sel}_14.json")
     HT_path = os.path.join(model_dir, "plots/physics/bbtt/ht_working_point.json")
+    model_alt_rate = find_alt_rate(WP_path, model_dir, rate)
+    model_alt_rate_14 = find_alt_rate(WP_path_14, model_dir, 14)
+    ht_alt_rate = find_alt_rate(HT_path, model_dir, 14)
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_path) & os.path.exists(WP_path_14):
@@ -486,7 +505,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax.errorbar(baseline_x, baseline_y, yerr=baseline_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'bb$\tau \tau$ seed@ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {} GeV)'.format(rate, eff_str, baseline_efficiency, 220, tau_str, 34))
-    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(rate, eff_str, model_efficiency, ht_wp, tau_topo_str, round(ttag_wp,2), round(btag_wp,2)))
+    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(model_alt_rate, eff_str, model_efficiency, ht_wp, tau_topo_str, round(ttag_wp,2), round(btag_wp,2)))
 
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -508,8 +527,8 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     fig2,ax2 = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax2,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
-    ax2.errorbar(model_x_14, model_y_14, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(14, eff_str, model_14_efficiency, ht_wp, tau_topo_str, round(ttag_wp_14,2), round(btag_wp_14,2)))
-    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT-only + QuadJets @ {} kHz, {}={} (L1 $HT$ > {} GeV)'.format(14, eff_str, ht_only_efficiency, ht_only_wp))
+    ax2.errorbar(model_x_14, model_y_14, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(model_alt_rate_14, eff_str, model_14_efficiency, ht_wp, tau_topo_str, round(ttag_wp_14,2), round(btag_wp_14,2)))
+    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT-only + QuadJets @ {} kHz, {}={} (L1 $HT$ > {} GeV)'.format(ht_alt_rate, eff_str, ht_only_efficiency, ht_only_wp))
 
     #Plot other labels
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)

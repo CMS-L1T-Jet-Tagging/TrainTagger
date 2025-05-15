@@ -67,7 +67,8 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     # Define class label groups
     tau_indices = [class_labels['taup'], class_labels['taum']]
     jet_indices = [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']]
-    lepton_indices = [class_labels[key] for key in ['muon', 'electron']]
+    muon_indices = [class_labels['muon']]
+    electron_indices = [class_labels['electron']]
 
     #Function to calculate the roc inputs for plotting
     def compute_roc_inputs(y_pred, y_test, signal_indices, background_indices):
@@ -83,38 +84,42 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
 
         return signal_mask[total_mask], (signal_scores / total_scores)[total_mask]
 
-    def plot_roc(y_true, y_score, label, save_path):
-        """
-        Plot and save a single ROC curve.
-        """
+    # Compute ROC data
+    roc_data = []
+
+    for label, bkg_indices in [
+        (r'$\tau$ vs Jets (b, c, light, gluon)', jet_indices),
+        (r'$\tau$ vs Muons', muon_indices),
+        (r'$\tau$ vs Electrons', electron_indices)
+    ]:
+        y_true, y_score = compute_roc_inputs(y_pred, y_test, tau_indices, bkg_indices)
         fpr, tpr, _ = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
+        roc_data.append((tpr, fpr, roc_auc, label))
 
-        plt.figure(figsize=style.FIGURE_SIZE)
-        hep.cms.label(
-            llabel=style.CMSHEADER_LEFT,
-            rlabel=style.CMSHEADER_RIGHT,
-            fontsize=style.CMSHEADER_SIZE
-        )
+    # Plot all ROC curves in one figure
+    plt.figure(figsize=style.FIGURE_SIZE)
+    hep.cms.label(
+        llabel=style.CMSHEADER_LEFT,
+        rlabel=style.CMSHEADER_RIGHT,
+        fontsize=style.CMSHEADER_SIZE
+    )
+
+    for tpr, fpr, roc_auc, label in roc_data:
         plt.plot(tpr, fpr, label=f'{label} (AUC = {roc_auc:.2f})', linewidth=style.LINEWIDTH)
-        plt.grid(True)
-        plt.xlabel('Signal Efficiency')
-        plt.ylabel('Mistag Rate')
-        plt.yscale('log')
-        plt.ylim(1e-3, 1.1)
-        plt.legend(loc='lower right')
 
-        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
-        plt.savefig(f"{save_path}.png", bbox_inches='tight')
-        plt.close()
+    plt.grid(True)
+    plt.xlabel('Signal Efficiency')
+    plt.ylabel('Mistag Rate')
+    plt.yscale('log')
+    plt.ylim(1e-3, 1.1)
+    plt.legend(loc='lower right')
 
-    #Plot taus versus jets ROC
-    y_true_taus_vs_jets, y_score_taus_vs_jets = compute_roc_inputs(y_pred, y_test, tau_indices, jet_indices)
-    plot_roc(y_true_taus_vs_jets, y_score_taus_vs_jets, r'$\tau = \tau_{{h}}^{{+}} + \tau_{{h}}^{{-}}$ vs Jets (b, c, light, gluon)', os.path.join(save_dir, "ROC_taus_vs_jets"))
+    save_path = os.path.join(save_dir, "ROC_taus_combined")
+    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.close()
 
-    #Plot taus versus leptons ROC
-    y_true_taus_vs_leptons, y_score_taus_vs_leptons = compute_roc_inputs(y_pred, y_test, tau_indices, lepton_indices)
-    plot_roc(y_true_taus_vs_leptons, y_score_taus_vs_leptons, r'$\tau = \tau_{{h}}^{{+}} + \tau_{{h}}^{{-}}$ vs Leptons (muon, electron)', os.path.join(save_dir, "ROC_taus_vs_leptons"))
 
 
 def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair , signal_proc=None):
@@ -490,7 +495,7 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.spines['left'].set_visible(False)
     ax.tick_params(color=axis_color, labelcolor=axis_color)
     ax.set_yticks(range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order],fontsize=30)
-    ax.set_xlabel("mean (shapley value) - (average impact on model output magnitude)",fontsize=30)
+    ax.set_xlabel("mean (Shapley value) - (average impact on model output magnitude)",fontsize=30)
     plt.tight_layout()
 
 def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
@@ -595,6 +600,66 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
     return
 
+def ROC_jets(y_pred, y_test, class_labels, save_dir, process_label=None):
+    """
+    Plot combined ROC for light vs b, charm, gluon in one plot.
+    """
+
+    light_idx = [class_labels['light']]
+    targets = {
+        'b': [class_labels['b']],
+        'charm': [class_labels['charm']],
+        'gluon': [class_labels['gluon']],
+    }
+
+    def compute_roc_inputs(signal_indices, background_indices):
+        signal_mask = sum(y_test[:, idx] for idx in signal_indices) > 0
+        background_mask = sum(y_test[:, idx] for idx in background_indices) > 0
+        total_mask = signal_mask | background_mask
+
+        signal_scores = sum(y_pred[:, idx] for idx in signal_indices)
+        background_scores = sum(y_pred[:, idx] for idx in background_indices)
+        total_scores = signal_scores + background_scores
+
+        y_true = signal_mask[total_mask]
+        y_score = (signal_scores / total_scores)[total_mask]
+        return y_true, y_score
+
+    # Collect all ROC data
+    roc_data = []
+    for label, bkg_idx in targets.items():
+        y_true, y_score = compute_roc_inputs(light_idx, bkg_idx)
+        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc_auc = auc(fpr, tpr)
+        roc_data.append((tpr, fpr, roc_auc, label))
+
+    # Plot all in one
+    plt.figure(figsize=style.FIGURE_SIZE)
+    hep.cms.label(
+        llabel=style.CMSHEADER_LEFT,
+        rlabel=style.CMSHEADER_RIGHT,
+        fontsize=style.CMSHEADER_SIZE
+    )
+
+    for tpr, fpr, roc_auc, label in roc_data:
+        formatted = f"light vs {label} (AUC = {roc_auc:.2f})"
+        plt.plot(tpr, fpr, label=formatted, linewidth=style.LINEWIDTH)
+
+    plt.grid(True)
+    plt.xlabel('Signal Efficiency')
+    plt.ylabel('Mistag Rate')
+    plt.yscale('log')
+    plt.ylim(1e-3, 1.1)
+    if process_label:
+        plt.title(process_label)
+    plt.legend(loc='lower right')
+
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, "ROC_light_vs_all_jets")
+    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.close()
+
 # Helper functions for signal specific plotting
 def filter_process(test_data, process_dir):
     """
@@ -613,7 +678,6 @@ def filter_process(test_data, process_dir):
     filtered_indices = indices_unique_test_data[process_indices]
 
     return filtered_indices, train, test
-
 
 # fancy signal process labels
 def process_labels(process_key):
@@ -675,7 +739,9 @@ def basic(model_dir,signal_dirs) :
 
     # Make ROC binaries for complete test set and each signal process
     for i in range(-1, len(signal_dirs), 1):
+
         sample_plot_dir = os.path.join(model_dir, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
+
         if i == -1:
             y_p, y_t = y_pred, y_test
             process_label = None
@@ -687,6 +753,8 @@ def basic(model_dir,signal_dirs) :
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)
+
+        #Plot the binary ROCs for each class pair
         for class_pair in class_pairs:
             binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
             ROC_binary(y_p, y_t, class_labels, binary_dir, class_pair, process_label)
@@ -694,7 +762,13 @@ def basic(model_dir,signal_dirs) :
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
                 ROC_binary(sample_preds, sample_labels, class_labels, binary_dir, class_pair, process_label)
 
+        #Add light vs b/charm/gluon combined plot
+        binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
+        ROC_jets(y_p, y_t, class_labels, binary_dir_test, process_label)
 
+        if i != -1:
+            binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
+            ROC_jets(sample_preds, sample_labels, class_labels, binary_dir_full, process_label)
 
     #ROC for taus versus jets and taus versus leptons
     ROC_taus(y_pred, y_test, class_labels, plot_dir)

@@ -410,8 +410,8 @@ def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
     im = ax.imshow(ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
     fig.colorbar(im, ax=ax)
 
-    ax.set_xlabel(r"Gen. $p_T^1$ [GeV]")
-    ax.set_ylabel(r"Gen. $p_T^2$ [GeV]")
+    ax.set_xlabel(r"Gen. $\tau_h$ $p_T^1$ [GeV]")
+    ax.set_ylabel(r"Gen. $\tau_h$ $p_T^2$ [GeV]")
 
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')

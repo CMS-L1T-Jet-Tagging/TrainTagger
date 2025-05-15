@@ -32,7 +32,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
 
     plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
     os.makedirs(plot_dir, exist_ok=True)
-    
+
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s',
@@ -45,7 +45,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
 
     ax.set_ylabel(r"Min L1 $p_T$ [GeV]")
     ax.set_xlabel(r"Min Tau NN ($\tau^{+} + \tau^{-}$) Score")
-    
+
     ax.set_xlim([0,0.4])
     ax.set_ylim([10,100])
 
@@ -67,29 +67,29 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
 
     with open(os.path.join(plot_dir, "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
-    
+
     # Generate 100 points spanning the entire pT range visible on the plot.
     pT_full = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 100)
-    
+
     # Evaluate the interpolation function to obtain NN values for these pT points.
     NN_full = interp_func(pT_full)
     ax.plot(NN_full, pT_full, linewidth=style.LINEWIDTH, color ='firebrick', label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
 
     #Just plot the points instead of the interpolation
     #ax.plot(target_rate_NN, target_rate_PT, linewidth=style.LINEWIDTH, color ='firebrick', label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
-    
+
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
     plt.savefig(f"{plot_dir}/tautau_WPs.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/tautau_WPs.png", bbox_inches='tight')
 
 def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tree='jetntuple/Jets'):
     """
-    Derive the di-tau rate. 
+    Derive the di-tau rate.
     Seed definition can be found here (2024 Annual Review):
 
     https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
 
-    Double Puppi Tau Seed, same NN cut and pT (52 GeV) on both taus to give 28 kHZ based on the definition above.  
+    Double Puppi Tau Seed, same NN cut and pT (52 GeV) on both taus to give 28 kHZ based on the definition above.
     """
 
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
@@ -168,12 +168,12 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     #Loop through the edges and integrate
     for pt in pT_edges[:-1]:
         for NN in NN_edges[:-1]:
-            
+
             #Calculate the rate
             rate = RateHist[{"pt": slice(pt*1j, None, sum)}][{"nn": slice(NN*1.0j, None, sum)}]/n_events
             rate_list.append(rate*MINBIAS_RATE)
 
-            #Append the results   
+            #Append the results
             pt_list.append(pt)
             nn_list.append(NN)
 
@@ -192,7 +192,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
     with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
-    pt_cuts = list(np.arange(0,250,10)) 
+    pt_cuts = list(np.arange(0,250,10))
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -227,7 +227,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
         tautau_pt_wp = WPs['PT']
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
-    
+
     event_id_model = event_id[model_tau > tautau_wp]
 
     #Cut on jet pT to extract the rate
@@ -269,25 +269,25 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     # Plot the trigger rates
     ax.plot([],[], linestyle='none', label=r'$|\eta| < 2.5$')
-    ax.plot(pt_cuts, minbias_rate_no_nn, c=style.color_cycle[0], label=r'No ID/$p_T$ correction', linewidth=style.LINEWIDTH)
-    ax.plot(pt_cuts, minbias_rate_cmssw, c=style.color_cycle[1], label=r'CMSSW PuppiTau Emulator', linewidth=style.LINEWIDTH)
-    ax.plot(pt_cuts, minbias_rate_model, c=style.color_cycle[2],label=r'SeedCone Tau', linewidth=style.LINEWIDTH)
-    
+    ax.plot(pt_cuts, minbias_rate_no_nn, c=style.color_cycle[2], label=r'No ID/$p_T$ correction', linewidth=style.LINEWIDTH)
+    ax.plot(pt_cuts, minbias_rate_cmssw, c=style.color_cycle[0], label=r'CMSSW PuppiTau Emulator', linewidth=style.LINEWIDTH)
+    ax.plot(pt_cuts, minbias_rate_model, c=style.color_cycle[1],label=r'SeedCone Tau', linewidth=style.LINEWIDTH)
+
     # Add uncertainty bands
     ax.fill_between(pt_cuts,
                     np.array(minbias_rate_no_nn) - np.array(uncertainty_no_nn),
                     np.array(minbias_rate_no_nn) + np.array(uncertainty_no_nn),
-                    color=style.color_cycle[0],
+                    color=style.color_cycle[2],
                     alpha=0.3)
     ax.fill_between(pt_cuts,
                     np.array(minbias_rate_cmssw) - np.array(uncertainty_cmssw),
                     np.array(minbias_rate_cmssw) + np.array(uncertainty_cmssw),
-                    color=style.color_cycle[1],
+                    color=style.color_cycle[0],
                     alpha=0.3)
     ax.fill_between(pt_cuts,
                     np.array(minbias_rate_model) - np.array(uncertainty_model),
                     np.array(minbias_rate_model) + np.array(uncertainty_model),
-                    color=style.color_cycle[2],
+                    color=style.color_cycle[1],
                     alpha=0.3)
 
     # Set plot properties
@@ -400,9 +400,9 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
         ax.plot([], [], 'none', label=eta_label)
 
     # Plot errorbars for both sets of efficiencies
-    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
-    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 28kHz')
-    ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 28kHz')
+    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 28kHz')
+    ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 28kHz')
 
     # Plot a horizontal dashed line at y=1
     ax.axhline(1, xmin=0, xmax=150, linestyle='dashed', color='black', linewidth=3)
@@ -433,8 +433,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus') 
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')

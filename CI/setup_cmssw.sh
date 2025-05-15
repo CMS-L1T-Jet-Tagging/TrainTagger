@@ -33,7 +33,7 @@ make install
 cd ..
 git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
 
-git clone --quiet https://github.com/cms-hls4ml/L1TSC4NGJetModel.git
+git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
 git checkout emulator_test
 

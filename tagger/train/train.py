@@ -14,7 +14,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCh
 import mlflow
 from datetime import datetime
 
-num_threads = 8
+num_threads = 24
 os.environ["OMP_NUM_THREADS"] = str(num_threads)
 os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
 os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
@@ -99,7 +99,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
     
     # Initialize counts per class per pT bin
     class_pt_counts = {}
-    
+
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
@@ -279,29 +279,41 @@ if __name__ == "__main__":
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
+    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting')
 
     args = parser.parse_args()
 
     mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
 
-    # Either make data or start the training
+    #create plot folder
+    plot_path = os.path.join(args.output, "plots/training")
+    os.makedirs(plot_path, exist_ok=True)
+
+    #Either make data or start the training
     if args.make_data:
-        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) # Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        # Format all the signal processes used for plotting later
+        for signal_process in args.signal_processes:
+            signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
+            signal_output = os.path.join("signal_process_data", signal_process)
+            if not os.path.exists(signal_output):
+                make_data(infile=signal_input, outdir=signal_output, step_size=args.step, extras=args.extras,ratio=args.ratio, tree=args.tree)
+
     elif args.plot_basic:
         model_dir = args.output
-        f = open("mlflow_run_id.txt", "r")
-        run_id = (f.read())
-        mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
-        with mlflow.start_run(experiment_id=1,
-                            run_name=args.name,
-                            run_id=run_id # pass None to start a new run
-                            ):
+        #All the basic plots!
+        results = basic(model_dir, args.signal_processes)
+        if os.path.isfile("mlflow_run_id.txt"):
+            f = open("mlflow_run_id.txt", "r")
+            run_id = (f.read())
+            mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
+            with mlflow.start_run(experiment_id=1,
+                                run_name=args.name,
+                                run_id=run_id # pass None to start a new run
+                                ):
+                for class_label in results.keys():
+                    mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
 
-            # All the basic plots!
-            results = basic(model_dir)
-            for class_label in results.keys():
-                mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
-            
     else:
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
@@ -312,5 +324,5 @@ if __name__ == "__main__":
         print(run_id, end="", file = sourceFile)
         sourceFile.close()
 
-        
-        
+
+

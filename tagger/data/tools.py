@@ -387,6 +387,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
 
     #Loop through the entries
     num_entries = uproot.open(infile)[tree].num_entries
+    print(num_entries)
     num_entries_done = 0
     chunk = 0
 

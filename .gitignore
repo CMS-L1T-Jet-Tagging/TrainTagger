@@ -20,6 +20,7 @@ output/*
 data/*
 emulation_data/** 
 profiling_data/** 
+signal_process_data/** 
 temp/** 
 mlruns/**
 mlflow_*.txt

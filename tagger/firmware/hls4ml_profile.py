@@ -25,7 +25,7 @@ style.set_style()
 
 def getReports(indir):
     data_ = {}
-    
+
     report_csynth = Path('{}/L1TSC4NGJetModel_test_prj/solution1/syn/report/L1TSC4NGJetModel_test_csynth.rpt'.format(indir))
 
     if report_csynth.is_file():
@@ -59,13 +59,13 @@ def doPlots(model,outputdir,inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     modelsAndNames = {"model":model}
-    
+
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100,test_ratio=0.0)
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)
 
     labels = list(class_labels.keys())
 
-    hls_model = convert(model,"temp",build=False) 
+    hls_model = convert(model,"temp",build=False)
     y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
     y_class, y_ptreg = model.predict(np.ascontiguousarray(X_test))
 
@@ -85,7 +85,7 @@ def doPlots(model,outputdir,inputdir):
     plt.savefig("%s/%s_score_2D.png" % (outputdir,"Regression"),bbox_inches='tight')
     plt.savefig("%s/%s_score_2D.pdf" % (outputdir,"Regression"),bbox_inches='tight')
     plt.close()
-    
+
     wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model, hls_model=hls_model, X=X_test)
     ap.savefig(outputdir+"/model_activations_profile.png")
     wp.savefig(outputdir+"/model_weights_profile.png")
@@ -111,11 +111,11 @@ def doPlots(model,outputdir,inputdir):
     return
 
 if __name__ == "__main__":
-    
+
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
-    parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')    
-    parser.add_argument('-of','--outpath_firmware', default='output/baseline/model/firmware' , help = 'Jet tagger firmware directory') 
+    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')
+    parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')
+    parser.add_argument('-of','--outpath_firmware', default='output/baseline/model/firmware' , help = 'Jet tagger firmware directory')
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to profiling data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake profiling data? ')
     parser.add_argument('-n','--name',default='baseline', help= 'Mlfow model name? ')
@@ -131,25 +131,42 @@ if __name__ == "__main__":
 
     doPlots(model,args.outpath,"profiling_data/")
 
-    f = open("mlflow_run_id.txt", "r")
-    run_id = (f.read())
-    mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
-    with mlflow.start_run(experiment_id=1,
-                        run_name=args.name,
-                        run_id=run_id # pass None to start a new run
-                        ):
-        precisions = convert(model,args.outpath_firmware)
-        report = getReports('tagger/firmware/L1TSC4NGJetModel')
-        mlflow.log_metric('FF',report['ff_rel'])
-        mlflow.log_metric('LUT',report['lut_rel'])
-        mlflow.log_metric('BRAM',report['bram_rel'])
-        mlflow.log_metric('DSP',report['dsp_rel'])
-        mlflow.log_metric('Latency cc',report['latency_clks'])
-        mlflow.log_metric('Latency us',report['latency_mus'])
-        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
-        mlflow.log_metric('Initiation Interval ',report['latency_ii'])
+    precisions = convert(model,args.outpath_firmware)
+    report = getReports('tagger/firmware/L1TSC4NGJetModel')
+    
+    if os.path.isfile("mlflow_run_id.txt"):
 
-        mlflow.log_param('Input Precision ',precisions[0])
-        mlflow.log_param('Class Precision ',precisions[1])
-        mlflow.log_param('Regression Precision ',precisions[2])
+        f = open("mlflow_run_id.txt", "r")
+        run_id = (f.read())
+        mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
+        with mlflow.start_run(experiment_id=1,
+                            run_name=args.name,
+                            run_id=run_id # pass None to start a new run
+                            ):
+            mlflow.log_metric('FF',report['ff_rel'])
+            mlflow.log_metric('LUT',report['lut_rel'])
+            mlflow.log_metric('BRAM',report['bram_rel'])
+            mlflow.log_metric('DSP',report['dsp_rel'])
+            mlflow.log_metric('Latency cc',report['latency_clks'])
+            mlflow.log_metric('Latency us',report['latency_mus'])
+            mlflow.log_metric('Initiation Interval ',report['latency_ii'])
+    
+            mlflow.log_param('Input Precision ',precisions[0])
+            mlflow.log_param('Class Precision ',precisions[1])
+            mlflow.log_param('Regression Precision ',precisions[2])
+
+    print("===================")
+    print('Input Precision : ',  precisions[0])
+    print('Class Precision : ', precisions[1])
+    print('Regression Precision : ', precisions[2],' %')
+    print(" Resource Usage of a VU13P")
+    print('Flip Flops : ', report['ff_rel'],' %')
+    print('Look Up Tables : ', report['lut_rel'],' %')
+    print('Block RAM : ', report['bram_rel'],' %')
+    print('Digital Signal Processors : ', report['dsp_rel'],' %')
+    print('Latency : ', report['latency_clks'],' clock cycles')
+    print('Latency : ', report['latency_mus'],' mus')
+    print('Initiation Interval : ', report['latency_mus'],' clock cycles')
+    print("===================")
+        
 

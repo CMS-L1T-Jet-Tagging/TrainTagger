@@ -78,6 +78,8 @@ def doPlots(model,outputdir,inputdir):
 
     plt.clf()
     figure = common.plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_SC4NGJet_score_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",'Regression Output','a.u.',range=(0,2))
+    bit_accurate = np.count_nonzero((np.array(data['jet_SC4NGJet_score_regression']) - np.array(modelsAndNames['Y_hls_predict_reg'][:,0])))
+    print("Percent bit accuracy between CMSSW emulator and hls4ml for regression is",100 - 100*bit_accurate/len(np.array(data['jet_SC4NGJet_score_regression'])), "%")
     plt.savefig("%s/jetRegression_1D.png" % outputdir,bbox_inches='tight')
     plt.savefig("%s/jetRegression_1D.pdf" % outputdir,bbox_inches='tight')
 
@@ -85,6 +87,9 @@ def doPlots(model,outputdir,inputdir):
         plt.close()
         plt.clf()
         figure = common.plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_SC4NGJet_score_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",style.CLASS_LABEL_STYLE[label]+' score','a.u.',range=(0,1))
+        bit_accurate = np.count_nonzero((np.array(data['jet_SC4NGJet_score_'+label]) - np.array(modelsAndNames['Y_hls_predict'][:,i])))
+        print("Percent bit accuracy between CMSSW emulator and hls4ml for " + label + " classification is",  100 - 100*bit_accurate/len(np.array(data['jet_SC4NGJet_score_'+label])), "%")
+
         plt.savefig("%s/%s_score_1D.png" % (outputdir,label),bbox_inches='tight')
         plt.savefig("%s/%s_score_1D.pdf" % (outputdir,label),bbox_inches='tight')
 

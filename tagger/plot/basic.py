@@ -113,7 +113,7 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    plt.legend(loc='lower right', fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    plt.legend(loc='upper left', fontsize=style.SMALL_SIZE+3, title=signal_proc)
 
     save_path = os.path.join(save_dir, "ROC_taus_combined")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
@@ -600,10 +600,13 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
     return
 
-def ROC_jets(y_pred, y_test, class_labels, save_dir, process_label=None):
+def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
     """
     Plot combined ROC for light vs b, charm, gluon in one plot.
     """
+
+    save_dir = os.path.join(plot_dir, 'roc_jets')
+    os.makedirs(save_dir, exist_ok=True)
 
     light_idx = [class_labels['light']]
     targets = {
@@ -650,9 +653,8 @@ def ROC_jets(y_pred, y_test, class_labels, save_dir, process_label=None):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    plt.legend(loc='upper left', fontsize=style.SMALL_SIZE+3, title=process_label)
+    plt.legend(loc='lower right', fontsize=style.SMALL_SIZE+3, title=process_label)
 
-    os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, "ROC_light_vs_all_jets")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}.png", bbox_inches='tight')

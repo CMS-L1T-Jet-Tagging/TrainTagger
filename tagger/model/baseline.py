@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D
+import tensorflow_model_optimization as tfmot
 
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
@@ -7,6 +8,10 @@ from qkeras.qlayers import QDense, QActivation
 from qkeras import QConv1D
 
 from tagger.model.models import JetTagModel
+
+import numpy as np
+
+import os
 
 class baselineModel(JetTagModel):
     def __init__(self,inputs_shape, outputs_shape,output_directory):
@@ -47,7 +52,7 @@ class baselineModel(JetTagModel):
         jet_id = QDense(16, name='Dense_2_jetID', **common_args)(jet_id)
         jet_id = QActivation(activation=quantized_relu(bits), name='relu_2_jetID')(jet_id)
 
-        jet_id = QDense(self.output_shape[0], name='Dense_3_jetID', **common_args)(jet_id)
+        jet_id = QDense(self.outputs_shape[0], name='Dense_3_jetID', **common_args)(jet_id)
         jet_id = Activation('softmax', name=self.output_id_name )(jet_id)
 
         #pT regression branch
@@ -61,8 +66,9 @@ class baselineModel(JetTagModel):
 
         #Define the model using both branches
         self.model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+        print(self.model.summary())
 
-    def _prune_model(model, num_samples):
+    def _prune_model(self, num_samples):
         """
         Pruning settings for the model. Return the pruned model
         """
@@ -89,7 +95,7 @@ class baselineModel(JetTagModel):
                             metrics = {self.loss_name+self.output_id_name: 'categorical_accuracy', self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']},
                             weighted_metrics = {self.loss_name+self.output_id_name: 'categorical_accuracy', self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']})
 
-    def fit(self,X_train,y_train,sample_weight):
+    def fit(self,X_train,y_train,pt_target_train,sample_weight):
         history = self.model.fit({'model_input': X_train},
                             {self.loss_name+self.output_id_name: y_train, self.loss_name+self.output_pt_name: pt_target_train},
                             sample_weight=sample_weight,
@@ -106,7 +112,7 @@ class baselineModel(JetTagModel):
         if out_dir is None:
           out_dir = self.output_directory
         #Export the model
-        model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
+        model_export = tfmot.sparsity.keras.strip_pruning(self.model)
 
         export_path = os.path.join(out_dir, "model/saved_model.h5")
         model_export.save(export_path)

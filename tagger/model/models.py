@@ -1,4 +1,8 @@
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+import os
+from tagger.plot.basic import loss_history, basic
+
+
 
 class JetTagModel():
     def __init__(self,inputs_shape, outputs_shape,output_directory):
@@ -9,12 +13,14 @@ class JetTagModel():
         self.model = None
 
         self.hyperparameters = {'batch_size':1024,
-                                'epochs':100,
+                                'epochs':10,
                                 'initial_sparsity':0.0,
-                                'final_sparsity':0.1}
+                                'final_sparsity':0.1,
+                                'validation_split':0.1}
 
         self.output_id_name = 'jet_id_output'
         self.output_pt_name = 'pT_output'
+        self.loss_name = ''
 
 
         self.callbacks = [EarlyStopping(monitor='val_loss', patience=10),

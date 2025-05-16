@@ -3,8 +3,9 @@ import os, shutil, json
 
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
-from tagger.plot.basic import loss_history, basic
 from tagger.model.baseline import baselineModel
+from tagger.model.baseline_fp import baselineFPModel
+from tagger.plot.basic import loss_history, basic
 
 #Third parties
 import numpy as np
@@ -138,12 +139,13 @@ def train(out_dir, percent, model_name):
     input_shape = X_train.shape[1:] #First dimension is batch size
     output_shape = y_train.shape[1:]
 
-    model = baselineModel(input_shape,output_shape,out_dir)
+    model = baselineFPModel(input_shape,output_shape,out_dir)
+    #model = baselineModel(input_shape,output_shape,out_dir)
     model.build_model()
     #Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - VALIDATION_SPLIT)
     model.compile_model(num_samples)
-    history = model.fit(X_train,y_train,sample_weight)
+    history = model.fit(X_train,y_train,pt_target_train,sample_weight)
 
     model.save()
 

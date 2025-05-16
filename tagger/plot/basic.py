@@ -56,7 +56,7 @@ def loss_history(plot_dir, history):
 
         fig.clf()
 
-def ROC_taus(y_pred, y_test, class_labels, plot_dir):
+def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     """
     Plot ROC curves for taus vs jets and leptons
     """
@@ -88,9 +88,9 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     roc_data = []
 
     for label, bkg_indices in [
-        (r'$\tau$ vs Jets (b, c, light, gluon)', jet_indices),
-        (r'$\tau$ vs Muons', muon_indices),
-        (r'$\tau$ vs Electrons', electron_indices)
+        (r'$\tau_h = \tau_h^{+} + \tau_h^{-}$ vs Jets (b, c, light, gluon)', jet_indices),
+        (r'$\tau_h = \tau_h^{+} + \tau_h^{-}$ vs Muons', muon_indices),
+        (r'$\tau_h = \tau_h^{+} + \tau_h^{-}$ vs Electrons', electron_indices)
     ]:
         y_true, y_score = compute_roc_inputs(y_pred, y_test, tau_indices, bkg_indices)
         fpr, tpr, _ = roc_curve(y_true, y_score)
@@ -113,7 +113,7 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    plt.legend(loc='lower right')
+    plt.legend(loc='lower right', fontsize=style.SMALL_SIZE+3, title=signal_proc)
 
     save_path = os.path.join(save_dir, "ROC_taus_combined")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
@@ -650,9 +650,7 @@ def ROC_jets(y_pred, y_test, class_labels, save_dir, process_label=None):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    if process_label:
-        plt.title(process_label)
-    plt.legend(loc='lower right')
+    plt.legend(loc='upper left', fontsize=style.SMALL_SIZE+3, title=process_label)
 
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, "ROC_light_vs_all_jets")
@@ -765,13 +763,13 @@ def basic(model_dir,signal_dirs) :
         #Add light vs b/charm/gluon combined plot
         binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
         ROC_jets(y_p, y_t, class_labels, binary_dir_test, process_label)
+        ROC_taus(y_p, y_t, class_labels, binary_dir_test, process_label)
+
 
         if i != -1:
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
             ROC_jets(sample_preds, sample_labels, class_labels, binary_dir_full, process_label)
-
-    #ROC for taus versus jets and taus versus leptons
-    ROC_taus(y_pred, y_test, class_labels, plot_dir)
+            ROC_taus(sample_preds, sample_labels, class_labels, binary_dir_full, process_label)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir)

@@ -410,8 +410,8 @@ def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
     im = ax.imshow(ratio.T, origin='lower', extent=extent, vmin=0, vmax=0.5, aspect='auto')
     fig.colorbar(im, ax=ax)
 
-    ax.set_xlabel(r"Gen. $p_T^1$ [GeV]")
-    ax.set_ylabel(r"Gen. $p_T^2$ [GeV]")
+    ax.set_xlabel(r"Gen. $\tau_h$ $p_T^1$ [GeV]")
+    ax.set_ylabel(r"Gen. $\tau_h$ $p_T^2$ [GeV]")
 
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
@@ -539,15 +539,15 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
 
     # Plot first efficiency ratio (e.g., CMSSW efficiency)
     im0 = axes[0].pcolormesh(pt_edges, pt_edges, cmssw_ratio.T, vmin=0, vmax=0.5)
-    axes[0].set_xlabel(r"Gen. $p_T^1$ [GeV]")
-    axes[0].set_ylabel(r"Gen. $p_T^2$ [GeV]")
+    axes[0].set_xlabel(r"Gen. $\tau_h$ $p_T^1$ [GeV]")
+    axes[0].set_ylabel(r"Gen. $\tau_h$ $p_T^2$ [GeV]")
     axes[0].set_title("PuppiTau CMSSW Efficiency", pad=45)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=axes[0], fontsize=style.MEDIUM_SIZE-2)
 
     # Plot second efficiency ratio (e.g., Model efficiency)
     im1 = axes[1].pcolormesh(pt_edges, pt_edges, model_ratio.T, vmin=0, vmax=0.5)
-    axes[1].set_xlabel(r"Gen. $p_T^1$ [GeV]")
-    axes[1].set_ylabel(r"Gen. $p_T^2$ [GeV]")
+    axes[1].set_xlabel(r"Gen. $\tau_h$ $p_T^1$ [GeV]")
+    axes[1].set_ylabel(r"Gen. $\tau_h$ $p_T^2$ [GeV]")
     axes[1].set_title("Jet Tagger Efficiency", pad=45)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=axes[1], fontsize=style.MEDIUM_SIZE-2)
 
@@ -573,8 +573,8 @@ def topo_eff(model_dir, tau_eff_filepath, tree='jetntuple/Jets', n_entries=10000
     model_vs_cmssw_ratio[np.isinf(model_vs_cmssw_ratio)] = np.nan
     divnorm = matplotlib.colors.TwoSlopeNorm(vmin=0., vcenter=1., vmax=5.)
     im = ax_main.pcolormesh(pt_edges, pt_edges, model_vs_cmssw_ratio.T, norm=divnorm, cmap='coolwarm')
-    ax_main.set_xlabel(r"Gen. $p_T^1$ [GeV]")
-    ax_main.set_ylabel(r"Gen. $p_T^2$ [GeV]")
+    ax_main.set_xlabel(r"Gen. $\tau_h$ $p_T^1$ [GeV]")
+    ax_main.set_ylabel(r"Gen. $\tau_h$ $p_T^2$ [GeV]")
     ax_main.set_xticks(ax_main.get_xticks()[:-1])
 
     # Top histogram

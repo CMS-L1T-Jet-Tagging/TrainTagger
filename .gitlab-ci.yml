@@ -25,22 +25,47 @@ include:
 # Default false to run a full retraining of a model
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 
-DeepSet:new_samples_baseline_5param_extended_trk:
+DeepSet:baseline_4param_prompt_trk:
   extends: .ml_pipeline
   variables:
-    Name: new_samples_baseline_5param_extended_trk
+    Name: baseline_4param_prompt_trk_15X
+    Inputs: baseline
+    N_PARAMS: 4
+    TRACK_ALGO: baseline
+    TRAIN: All200.root
+    MINBIAS: MinBias_PU200.root
+    BBBB: GluGluHHTo4B_PU200.root
+    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_150525_15X/merged_baseline_5/
+    BBTT: GluGluHHTo2B2Tau_PU200.root
+    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_150525_15X/merged_baseline_5/
+    VBFHTAUTAU: VBFHToTauTau_PU200.root
+    SIGNAL: TT_PU200
+    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_150525_15X/merged_baseline_5/
+    EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
+    EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
+    EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
+    CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
+    CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
+    RERUN_ON_TAG: 'False'
+    TAG: 'v0.0.0'
+
+DeepSet:baseline_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: baseline_5param_extended_trk_15X
     Inputs: baseline
     N_PARAMS: 5
     TRACK_ALGO: extended
     TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
-    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
+    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_150525_15X/merged_extended_5/
     BBTT: GluGluHHTo2B2Tau_PU200.root
-    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
+    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_150525_15X/merged_extended_5/
     VBFHTAUTAU: VBFHToTauTau_PU200.root
     SIGNAL: TT_PU200
-    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
+    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_150525_15X/merged_extended_5/
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles

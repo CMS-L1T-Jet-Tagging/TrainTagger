@@ -31,7 +31,7 @@ def doPlots(model,outputdir,inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     modelsAndNames = {"model":model}
-    
+
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100,test_ratio=0.0)
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
@@ -52,12 +52,12 @@ def doPlots(model,outputdir,inputdir):
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
-            if abs(np.array(data['jet_SC4NGJet_score_'+label])[iJet] - y_hls[iJet][i]) > 0.001 : 
+            if abs(np.array(data['jet_SC4NGJet_score_'+label])[iJet] - y_hls[iJet][i]) > 0.001 :
                 print_class = True
         if print_class == True:
             print("=== " + str(iJet) + " ===")
             print("Inputs: " + str(X_test[iJet]))
-            for i, label in enumerate(labels): 
+            for i, label in enumerate(labels):
                 print(label  + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_'+label])[iJet]))
                 print(label  + ": hls : " + str(y_hls[iJet][i]))
                 print(label  + ": tf : " + str(y_class[iJet][i]))
@@ -78,6 +78,8 @@ def doPlots(model,outputdir,inputdir):
 
     plt.clf()
     figure = common.plot_histo([modelsAndNames["Y_predict_reg"][:,0],np.array(data['jet_SC4NGJet_score_regression']),np.array(modelsAndNames["Y_hls_predict_reg"][:,0])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",'Regression Output','a.u.',range=(0,2))
+    bit_accurate = np.count_nonzero((np.array(data['jet_SC4NGJet_score_regression']) - np.array(modelsAndNames['Y_hls_predict_reg'][:,0])))
+    print("Percent bit accuracy between CMSSW emulator and hls4ml for regression is",100 - 100*bit_accurate/len(np.array(data['jet_SC4NGJet_score_regression'])), "%")
     plt.savefig("%s/jetRegression_1D.png" % outputdir,bbox_inches='tight')
     plt.savefig("%s/jetRegression_1D.pdf" % outputdir,bbox_inches='tight')
 
@@ -85,6 +87,9 @@ def doPlots(model,outputdir,inputdir):
         plt.close()
         plt.clf()
         figure = common.plot_histo([np.array(modelsAndNames['Y_predict'][:,i]),np.array(data['jet_SC4NGJet_score_'+label]),np.array(modelsAndNames['Y_hls_predict'][:,i])],["Tensorflow","CMSSW Emulation", "hls4ml"],"",style.CLASS_LABEL_STYLE[label]+' score','a.u.',range=(0,1))
+        bit_accurate = np.count_nonzero((np.array(data['jet_SC4NGJet_score_'+label]) - np.array(modelsAndNames['Y_hls_predict'][:,i])))
+        print("Percent bit accuracy between CMSSW emulator and hls4ml for " + label + " classification is",  100 - 100*bit_accurate/len(np.array(data['jet_SC4NGJet_score_'+label])), "%")
+
         plt.savefig("%s/%s_score_1D.png" % (outputdir,label),bbox_inches='tight')
         plt.savefig("%s/%s_score_1D.pdf" % (outputdir,label),bbox_inches='tight')
 
@@ -153,17 +158,17 @@ def doPlots(model,outputdir,inputdir):
                         ["Emulation" + " median: "+str(np.round(np.median(response_emu),3))+" rms: "+str(np.round(rms(response_emu),3)),
                          "Tensorflow" + " median: "+str(np.round(np.median(response_reg),3))+" rms: "+str(np.round(rms(response_reg),3)),
                          "hls4ml" + " median: "+str(np.round(np.median(response_hls),3))+" rms: "+str(np.round(rms(response_hls),3)),],
-                        "Jet Regression",'Jet Response (reco/gen)','a.u.',range=(0,2))
+                        "Jet Regression",'Jet Response (L1/Gen)','a.u.',range=(0,2))
     plt.savefig(outputdir+"/response_emulation"+".png",bbox_inches='tight')
     plt.savefig(outputdir+"/response_emulation"+".pdf",bbox_inches='tight')
     plt.close()
     return
 
 if __name__ == "__main__":
-    
+
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
-    parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')    
+    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')
+    parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to emulation data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake emulation data? ')
 

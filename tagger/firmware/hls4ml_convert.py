@@ -58,7 +58,7 @@ def convert(model, outpath,build=True):
     #Write HLS
     hls_model = hls4ml.converters.convert_from_keras_model(model,
                                                        backend='Vitis',
-                                                       project_name='L1TSC4NGJetModel',
+                                                       project_name='L1TSC4NGJetModel_test',
                                                        clock_period=2.8, #1/360MHz = 2.8ns
                                                        hls_config=config,
                                                        output_dir=f'{outpath}',

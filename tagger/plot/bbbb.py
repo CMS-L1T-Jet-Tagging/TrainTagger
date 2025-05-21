@@ -112,7 +112,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light
     plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.png", bbox_inches='tight')
 
-def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.5):
+def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.8):
     """
     Derive the HT only working points (without bb cuts)
     """
@@ -267,12 +267,13 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     #Load the signal data
     signal = uproot.open(signal_path)[tree]
 
-    # Calculate the truth HT
     raw_event_id = extract_array(signal, 'event', n_entries)
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
     raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
+
+    n_events = len(np.unique(raw_event_id))
 
     # Try to extract genHH_mass, set to None if not found
     try:
@@ -320,8 +321,11 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
         b_index=class_labels['b'], l_index=class_labels['light'], g_index=class_labels['gluon'])
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
+    cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
     model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
+    model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
     ht_only_selection = jet_ht > ht_only_wp
+    ht_only_efficiency = np.round(ak.sum(ht_only_selection) / n_events, 2)
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
     if all_event_gen_mHH is not None and event_gen_mHH is not None:
@@ -329,6 +333,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
                     all_event_gen_mHH,
                     event_gen_mHH,
                     cmssw_selection, model_selection, ht_only_selection,
+                    n_events,
                     apply_sel,
                     apply_light)
     else:
@@ -363,11 +368,12 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     normalized_counts = counts / np.sum(counts)
 
     #Now plot all
+    eff_str = r"$\int \epsilon$"
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$HT^{gen}$")
-    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(cmssw_btag_ht, cmssw_btag))
-    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp,2)))
+    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'BTag CMSSW Emulator @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, cmssw_efficiency, cmssw_btag_ht, cmssw_btag))
+    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp,2)))
 
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -384,16 +390,15 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     plot_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
-    plt.show(block=False)
 
     #Plot a different plot comparing the multiclass with ht only selection
     fig2, ax2 = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax2, fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
-                label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp, 2)))
+                label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)))
     ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
-                label=r'HT-only + QuadJets @ 14 kHz (L1 $HT$ > {} GeV)'.format(ht_only_wp))
+                label=r'HT + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
 
     # Common plot settings for second plot
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -409,13 +414,12 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 
-    plt.show(block=False)
-
 
 def bbbb_eff_mHH(model_dir,
                 all_event_gen_mHH,
                 event_gen_mHH,
                 cmssw_selection, model_selection, ht_only_selection,
+                n_events,
                 apply_sel,
                 apply_light):
     """
@@ -425,6 +429,11 @@ def bbbb_eff_mHH(model_dir,
     #Define the histogram edges
     mHH_edges = list(np.arange(0,1000,20))
     mHH_axis = hist.axis.Variable(mHH_edges, name = r"$HT^{gen}$")
+
+    # Efficiencies
+    cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
+    model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
+    ht_only_efficiency = np.round(ak.sum(ht_only_selection) / n_events, 2)
 
     #Create the histograms
     all_events = Hist(mHH_axis)
@@ -457,14 +466,15 @@ def bbbb_eff_mHH(model_dir,
     btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_WPs(model_dir, apply_sel, apply_light)
 
     #Plot a plot comparing the multiclass with ht only selection
+    eff_str = r"$\int \epsilon$"
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE-2)
 
     hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$mHH^{gen}$")
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
-                label=r'Multiclass @ 14 kHz (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(btag_ht_wp, round(btag_wp, 2)))
+                label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)))
     ax.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
-                label=r'HT-only + QuadJets @ 14 kHz (L1 $HT$ > {} GeV)'.format(ht_only_wp))
+                label=r'HT + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
 
 
     # Common plot settings for second plot
@@ -482,8 +492,6 @@ def bbbb_eff_mHH(model_dir,
     ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_mHH_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
-
-    plt.show(block=False)
 
     return
 

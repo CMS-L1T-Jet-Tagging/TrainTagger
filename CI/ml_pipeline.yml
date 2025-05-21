@@ -18,13 +18,18 @@ variables:
     Name:  baseline_4_params
     Inputs: baseline
     TRAIN: All200.root
+    NTUPLE_TREE: outnano/Jets
     EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
     EOS_STORAGE_DIR: /eos/cms/store/cmst3/group/l1tr/MultiJetTagger
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     SCRAM_ARCH: 'el9_amd64_gcc12'
-    CMSSW_VERSION: 'CMSSW_14_2_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:14_2_pre2_L1TSC4NGJetTagger'
+    CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
+    SIGNAL: TT_PU200
+    MODEL_LOCATION: ${EOS_STORAGE_DIR}/tags/${TAG}
+    RERUN_ON_TAG: 'True'
+    TAG: 'v0.0.0'
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -57,17 +62,21 @@ data:
   - cd data
   - export EOS_MGM_URL=root://eoscms.cern.ch
   - eos cp $EOS_DATA_DIR/${TRAIN} .
+  - eos cp $EOS_DATA_DIR/${SIGNAL}.root .
   - cd ..
-  - python tagger/train/train.py --make-data -i data/${TRAIN} --tree $NTUPLE_TREE
+  - python tagger/train/train.py --make-data -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
   - tar -cf training_data_$Inputs.tgz training_data
+  - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
   - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
   - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
+  - eos cp signal_process_data.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 train:
   extends:
     - .template
   stage: train
+  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true
@@ -75,9 +84,7 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/train/train.py -n $Name -p 50
-  - python tagger/train/train.py --plot-basic -n $Name
-  - cd output/baseline
+  - ./CI/run_training.sh $RERUN_ON_TAG
   artifacts:
     paths:
       - output
@@ -90,12 +97,9 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 2
   needs: [train]
   script:
+  - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
@@ -105,7 +109,9 @@ evaluate:
   - eos cp $BBBB_EOS_DIR/$BBBB .
   - eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
+  - eos cp $EOS_DATA_DIR/GluGluHHTo2B2Tau_PU200.root .
   - cd ..
+<<<<<<< HEAD
   - echo "bbbb performance"
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE
@@ -113,6 +119,8 @@ evaluate:
   - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
+=======
+>>>>>>> 459c92282e6ca793fbfb88b6dcee66049a7b55f2
   - echo "VBF tautau performance"
   - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE
@@ -121,13 +129,17 @@ evaluate:
   - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE
+  - echo "bbbb performance"
+  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE
   artifacts:
     paths:
       - output
       - mlflow_run_id.txt
+    when: always
     exclude:
       - .npy
-    expire_in: 1 day
+    expire_in: 7 days
 
 hls4ml:
   tags: [k8s-gpu]
@@ -176,10 +188,10 @@ emulation-evaluate:
   script:
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - python tagger/plot/makeEmulationPlot.py -r True
+  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
   artifacts:
     paths:
       - output/baseline
@@ -199,21 +211,20 @@ profile:
   - source activate tagger
   - mkdir data
   - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root .
+  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - pip uninstall hls4ml -y
   - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - ls tagger/firmware/L1TSC4NGJetModel/L1TSC4NGJetModel_prj/solution1/syn/report/
-  - python tagger/firmware/hls4ml_profile.py -r True -n $Name
+  - python tagger/firmware/hls4ml_profile.py -r True -n $Name -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
   artifacts:
     paths:
       - output/baseline
     expire_in: 1 day
 
-upload:
+upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
   tags: [k8s-gpu]
@@ -222,6 +233,8 @@ upload:
     KUBERNETES_CPU_REQUEST: 1
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  rules:
+    - if: $RERUN_ON_TAG == "False"
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -257,6 +270,48 @@ upload:
       -n ${Name}
     - eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
     - eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+  artifacts:
+    paths:
+      - $Name
+    expire_in: 1 day
+
+
+upload_tagged_model:
+  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  stage: upload
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_CPU_REQUEST: 1
+  needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  rules:
+    - if: $RERUN_ON_TAG == "True"
+  before_script:
+    - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+  script:
+    - source activate tagger
+    - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware
+    - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots
+    - mkdir $Name
+    - cd tagger/firmware
+    - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
+    - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
+    - cd ../..
+    - mkdir $Name/plots
+    - mv output/baseline/plots/emulation $Name/plots
+    - mv output/baseline/plots/profile $Name/plots
+    - mv output/baseline/plots/training/ $Name/plots
+    - mv output/baseline/plots/physics/ $Name/plots
+    - cd ..
+    - rm -rf php-plots
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
+    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
+    - pb_copy_index.py TrainTagger/${Name} --recursive
+    - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
+    - cd TrainTagger/${Name}
+    - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots --recursive --extensions png,pdf
   artifacts:
     paths:
       - $Name

@@ -226,6 +226,7 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
     metadata_file = os.path.join(outdir, "metadata.json")
     _save_chunk_metadata(metadata_file, chunk, len(data_split), outfile) #Chunk, Entries, Outfile
 
+    del data_split, filtered_data, outfile
     #Delete the variables to save memory
     gc.collect()
 
@@ -307,10 +308,10 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     Returns:
         awkward.Array: Concatenated data arrays from selected chunks.
     """
-    import json
-    import numpy as np
 
     print("Loading data from: ", outdir)
+    print("Loading percentage: ", percentage)
+    print("With test ratio of: ", test_ratio)
 
     # Load metadata to determine chunks to load
     metadata_file = os.path.join(outdir, "metadata.json")
@@ -386,11 +387,14 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
 
     #Loop through the entries
     num_entries = uproot.open(infile)[tree].num_entries
+    print(num_entries)
     num_entries_done = 0
     chunk = 0
 
     for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=8):
         
+        num_entries_done += len(data) # count before cuts
+
         #Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
         data = data[jet_cut]
@@ -408,6 +412,5 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
 
         #Number of chunk for indexing files
         chunk += 1
-        num_entries_done += len(data)
         print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
         if num_entries_done / num_entries >= ratio: break

@@ -549,13 +549,4 @@ if __name__ == "__main__":
         gc.collect()
         bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)
 
-        derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
-    elif args.eff:
-        bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'tau', n_entries=args.n_entries,tree=args.tree)
-        gc.collect()
-        bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'tau', n_entries=args.n_entries,tree=args.tree)
-        gc.collect()
-        bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'all', n_entries=args.n_entries,tree=args.tree)
-        gc.collect()
-        bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)
 

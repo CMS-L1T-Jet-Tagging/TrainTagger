@@ -88,9 +88,9 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     roc_data = []
 
     for label, bkg_indices in [
-        (r'$\tau_h = \tau_h^{\pm}$ vs Jets (b, c, light, gluon)', jet_indices),
-        (r'$\tau_h = \tau_h^{\pm}$ vs Muons', muon_indices),
-        (r'$\tau_h = \tau_h^{\pm}$ vs Electrons', electron_indices)
+        (r'$\tau_h^{\pm}$ vs Jets (b, c, light, gluon)', jet_indices),
+        (r'$\tau_h^{\pm}$ vs Muons', muon_indices),
+        (r'$\tau_h^{\pm}$ vs Electrons', electron_indices)
     ]:
         y_true, y_score = compute_roc_inputs(y_pred, y_test, tau_indices, bkg_indices)
         fpr, tpr, _ = roc_curve(y_true, y_score)

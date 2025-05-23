@@ -2,7 +2,6 @@ import os, json
 import gc
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
 import awkward as ak
 import numpy as np
 import uproot
@@ -46,7 +45,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, 
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
     #Get the nn outputs
-    nn_outputs = [model.predict(nn_input)[0] for nn_input in btag_inputs]
+    nn_outputs = [model.model.predict(nn_input)[0] for nn_input in btag_inputs]
 
     #Sum them together
     bscore_sum = sum(
@@ -141,16 +140,10 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, Rate
     json.dump(working_point, open(WP_json, "w"), indent=4)
 
 # WPs
-def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate=14, n_entries=100, tree='outnano/Jets'):
+def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
-
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-
-    #Load input/ouput variables of the NN
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -158,7 +151,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -173,12 +166,12 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     jet_nn_inputs = jet_nn_inputs[default_selection(jet_pt, jet_eta, apply_sel)]
 
     #Btag input list for first 4 jets
-    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i]))[0] for i in range(0,4)]
+    nn_outputs = [model.model.predict(np.asarray(jet_nn_inputs[:, i]))[0] for i in range(0,4)]
 
     #Calculate the output sum
-    b_index = class_labels['b']
-    l_index = class_labels['light']
-    g_index = class_labels['gluon']
+    b_index = model.class_labels['b']
+    l_index = model.class_labels['light']
+    g_index = model.class_labels['gluon']
     bscore_sum = sum(
         [x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light) for pred_score in nn_outputs]
         )
@@ -229,7 +222,6 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     """
     Check and lodad all bbbb working points
     """
-
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
@@ -248,12 +240,10 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     return btag_wp, btag_ht_wp, ht_only_wp
 
 # Efficiency
-def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
+def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
-
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
     ht_edges = list(np.arange(0,800,20))
     ht_axis = hist.axis.Variable(ht_edges, name = r"$HT^{gen}$")
@@ -262,7 +252,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     cmssw_btag = WPs_CMSSW['btag']
     cmssw_btag_ht =  WPs_CMSSW['btag_l1_ht']
 
-    btag_wp, btag_ht_wp, ht_only_wp = load_bbbb_WPs(model_dir, apply_sel, apply_light)
+    btag_wp, btag_ht_wp, ht_only_wp = load_bbbb_WPs(model.output_directory, apply_sel, apply_light)
 
     #Load the signal data
     signal = uproot.open(signal_path)[tree]
@@ -283,9 +273,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
         raw_gen_mHH = None
 
     # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
-    raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
 
     #Group event_id, gen_mHH, and genpt separately
     if raw_gen_mHH is not None:
@@ -329,7 +317,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
     if all_event_gen_mHH is not None and event_gen_mHH is not None:
-        bbbb_eff_mHH(model_dir,
+        bbbb_eff_mHH(model.output_directory,
                     all_event_gen_mHH,
                     event_gen_mHH,
                     cmssw_selection, model_selection, ht_only_selection,
@@ -516,21 +504,24 @@ if __name__ == "__main__":
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
+    
     args = parser.parse_args()
+    #Load the model
+    model = fromFolder(args.model_dir)
 
     if args.deriveWPs:
-        derive_bbbb_WPs(args.model_dir, args.minbias, True, True, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, True, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbbb_WPs(args.model_dir, args.minbias, True, False, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, True, False, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbbb_WPs(args.model_dir, args.minbias, False, True, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, False, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbbb_WPs(args.model_dir, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
-        bbbb_eff(args.model_dir, args.sample, True, True, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, True, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbbb_eff(args.model_dir, args.sample, True, False, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, True, False, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbbb_eff(args.model_dir, args.sample, False, True, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, False, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbbb_eff(args.model_dir, args.sample, False, False, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, False, False, n_entries=args.n_entries,tree=args.tree)

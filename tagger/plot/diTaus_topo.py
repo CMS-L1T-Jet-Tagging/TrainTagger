@@ -120,7 +120,7 @@ def pick_and_plot_topo(rate_list, pt_list, nn_list, model_dir, target_rate = 28,
     plt.savefig(f"{plot_dir}/tautau_topo_WPs.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/tautau_topo_WPs.png", bbox_inches='tight')
 
-def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntuple/Jets', target_rate=28):
+def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/Jets', target_rate=28):
     """
     Derive ditau topology working points.
     Using a new score that uses the charge definition in the jet tagger.
@@ -128,25 +128,19 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     topology_score = (tau_p_1 + tau_p_2)*(tau_m_1 + tau_m_2)
     """
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
-
-    # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
+    raw_pred_score, raw_pt_correction = model.model.predict(raw_inputs)
 
-    raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
-    raw_tau_plus = raw_pred_score[:,class_labels['taup']]
-    raw_tau_minus = raw_pred_score[:, class_labels['taum']]
+    raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
+    raw_tau_plus = raw_pred_score[:,model.class_labels['taup']]
+    raw_tau_minus = raw_pred_score[:, model.class_labels['taum']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -278,19 +272,13 @@ def model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus,
 
     return event_id[cuts], pt_min, tau_topo_score[cuts]
 
-def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetntuple/Jets'):
-
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple/Jets'):
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
 
-    # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
-
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tautau_topo/working_point.json")
+    WP_path = os.path.join(model.output_directory, "plots/physics/tautau_topo/working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path):
@@ -307,12 +295,12 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
     raw_cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
 
-    raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
+    raw_pred_score, raw_pt_correction = model.model.predict(raw_inputs)
 
-    raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
-    raw_tau_plus = raw_pred_score[:,class_labels['taup']]
-    raw_tau_minus = raw_pred_score[:, class_labels['taum']]
+    raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
+    raw_tau_plus = raw_pred_score[:,model.class_labels['taup']]
+    raw_tau_minus = raw_pred_score[:, model.class_labels['taum']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -627,10 +615,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    model = fromFolder(args.model_dir)
+
     if args.deriveWPs:
-        derive_diTaus_topo_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        derive_diTaus_topo_WPs(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.BkgRate:
-        plot_bkg_rate_ditau_topo(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        plot_bkg_rate_ditau_topo(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        topo_eff(args.model_dir, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)
+        topo_eff(model, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)
     #     eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)

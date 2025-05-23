@@ -36,11 +36,10 @@ def doPlots(model,outputdir,inputdir):
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
+    model.hls4ml_convert("temp",build=False)
 
-    hls_model = convert(model,"temp",build=False)
-
-    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
-    y_class, y_ptreg = model.predict(np.ascontiguousarray(X_test))
+    y_hls, y_ptreg_hls = model.hls_model.predict(np.ascontiguousarray(X_test))
+    y_class, y_ptreg = model.model.predict(np.ascontiguousarray(X_test))
     jet_pt_phys = np.array(data['jet_pt_phys'])
 
     modelsAndNames["Y_predict"] = y_class
@@ -167,7 +166,7 @@ def doPlots(model,outputdir,inputdir):
 if __name__ == "__main__":
     
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
+    parser.add_argument('-m','--model_path', default='output/baseline' , help = 'Input model path for comparison')    
     parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')    
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to emulation data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake emulation data? ')
@@ -175,8 +174,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #Load the model
-    model=load_qmodel(args.model)
-    print(model.summary())
+    model = fromFolder(args.model_path)
 
     if args.remake:
         make_data(infile=args.input,outdir="emulation_data/",extras='extra_emulation_fields',tree="outnano/Jets")

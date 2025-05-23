@@ -1,21 +1,14 @@
 from argparse import ArgumentParser
 import os, shutil, json
+from pathlib import Path
 
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
-from tagger.firmware.hls4ml_convert import convert
-import tagger.train.models
 from tagger.plot.common import plot_2d
+from tagger.model.modelLoader import fromFolder
 
-#Third parties
 import numpy as np
-import tensorflow as tf
-import tensorflow_model_optimization as tfmot
 import hls4ml
-from qkeras.utils import load_qmodel
-from sklearn.metrics import roc_curve, auc,precision_recall_curve
-import mlflow
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -65,9 +58,9 @@ def doPlots(model,outputdir,inputdir):
 
     labels = list(class_labels.keys())
 
-    hls_model = convert(model,"temp",build=False)
-    y_hls, y_ptreg_hls = hls_model.predict(np.ascontiguousarray(X_test))
-    y_class, y_ptreg = model.predict(np.ascontiguousarray(X_test))
+    model.hls4ml_convert("temp",build=False)
+    y_hls, y_ptreg_hls = model.hls_model.predict(np.ascontiguousarray(X_test))
+    y_class, y_ptreg = model.model.predict(np.ascontiguousarray(X_test))
 
     for i, label in enumerate(labels):
         plt.clf()
@@ -86,14 +79,14 @@ def doPlots(model,outputdir,inputdir):
     plt.savefig("%s/%s_score_2D.pdf" % (outputdir,"Regression"),bbox_inches='tight')
     plt.close()
 
-    wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model, hls_model=hls_model, X=X_test)
+    wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model.model, hls_model=model.hls_model, X=X_test)
     ap.savefig(outputdir+"/model_activations_profile.png")
     wp.savefig(outputdir+"/model_weights_profile.png")
     aph.savefig(outputdir+"/model_activations_profile_opt.png")
     wph.savefig(outputdir+"/model_weights_profile_opt.png")
 
-    y_hls, hls4ml_trace = hls_model.trace(np.ascontiguousarray(X_test))
-    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model, X_test)
+    y_hls, hls4ml_trace = model.hls_model.trace(np.ascontiguousarray(X_test))
+    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model.model, X_test)
 
     for layer in hls4ml_trace.keys():
         print ("Doing profiling 2d for layer", layer)
@@ -113,52 +106,49 @@ def doPlots(model,outputdir,inputdir):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')
-    parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')
-    parser.add_argument('-of','--outpath_firmware', default='output/baseline/model/firmware' , help = 'Jet tagger firmware directory')
+    parser.add_argument('-m','--model_path', default='output/baseline_larger' , help = 'Input model path for comparison')
+    parser.add_argument('-o','--outpath', default='output/baseline_larger/plots/profile' , help = 'Jet tagger plotting directory')
+    parser.add_argument('-of','--outpath_firmware', default='output/baseline_larger/model/firmware' , help = 'Jet tagger firmware directory')
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to profiling data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake profiling data? ')
-    parser.add_argument('-n','--name',default='baseline', help= 'Mlfow model name? ')
+    parser.add_argument('-y','--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help = 'YAML config for model')
 
     args = parser.parse_args()
 
-    #Load the model
-    model=load_qmodel(args.model)
-    print(model.summary())
+    model = fromFolder(args.model_path)
 
     if args.remake:
         make_data(infile=args.input,outdir="profiling_data/",extras='extra_emulation_fields',tree="outnano/Jets")
 
     doPlots(model,args.outpath,"profiling_data/")
 
-    precisions = convert(model,args.outpath_firmware)
     report = getReports('tagger/firmware/L1TSC4NGJetModel')
     
-    if os.path.isfile("mlflow_run_id.txt"):
+    # if os.path.isfile("mlflow_run_id.txt"):
 
-        f = open("mlflow_run_id.txt", "r")
-        run_id = (f.read())
-        mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
-        with mlflow.start_run(experiment_id=1,
-                            run_name=args.name,
-                            run_id=run_id # pass None to start a new run
-                            ):
-            mlflow.log_metric('FF',report['ff_rel'])
-            mlflow.log_metric('LUT',report['lut_rel'])
-            mlflow.log_metric('BRAM',report['bram_rel'])
-            mlflow.log_metric('DSP',report['dsp_rel'])
-            mlflow.log_metric('Latency cc',report['latency_clks'])
-            mlflow.log_metric('Latency us',report['latency_mus'])
-            mlflow.log_metric('Initiation Interval ',report['latency_ii'])
+    #     f = open("mlflow_run_id.txt", "r")
+    #     run_id = (f.read())
+    #     mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
+    #     with mlflow.start_run(experiment_id=1,
+    #                         run_name=args.name,
+    #                         run_id=run_id # pass None to start a new run
+    #                         ):
+    #         mlflow.log_metric('FF',report['ff_rel'])
+    #         mlflow.log_metric('LUT',report['lut_rel'])
+    #         mlflow.log_metric('BRAM',report['bram_rel'])
+    #         mlflow.log_metric('DSP',report['dsp_rel'])
+    #         mlflow.log_metric('Latency cc',report['latency_clks'])
+    #         mlflow.log_metric('Latency us',report['latency_mus'])
+    #         mlflow.log_metric('Initiation Interval ',report['latency_ii'])
     
-            mlflow.log_param('Input Precision ',precisions[0])
-            mlflow.log_param('Class Precision ',precisions[1])
-            mlflow.log_param('Regression Precision ',precisions[2])
+    #         mlflow.log_param('Input Precision ',precisions[0])
+    #         mlflow.log_param('Class Precision ',precisions[1])
+    #         mlflow.log_param('Regression Precision ',precisions[2])
 
     print("===================")
-    print('Input Precision : ',  precisions[0])
-    print('Class Precision : ', precisions[1])
-    print('Regression Precision : ', precisions[2],' %')
+    print('Input Precision : ',  model.hls4ml_config['input_precision'])
+    print('Class Precision : ', model.hls4ml_config['class_precision'])
+    print('Regression Precision : ', model.hls4ml_config['reg_precision'])
     print(" Resource Usage of a VU13P")
     print('Flip Flops : ', report['ff_rel'],' %')
     print('Look Up Tables : ', report['lut_rel'],' %')

@@ -116,7 +116,6 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir):
     y_true_taus_vs_leptons, y_score_taus_vs_leptons = compute_roc_inputs(y_pred, y_test, tau_indices, lepton_indices)
     plot_roc(y_true_taus_vs_leptons, y_score_taus_vs_leptons, r'$\tau = \tau_{{h}}^{{+}} + \tau_{{h}}^{{-}}$ vs Leptons (muon, electron)', os.path.join(save_dir, "ROC_taus_vs_leptons"))
 
-
 def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair , signal_proc=None):
     """
     Generate ROC curves comparing between two specific class labels.
@@ -496,8 +495,8 @@ def shapPlot(shap_values, feature_names, class_names):
 def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
 
     labels = list(class_labels.keys())
-    model2 = tf.keras.Model(model.input, model.output[0])
-    model3 = tf.keras.Model(model.input, model.output[1])
+    model2 = tf.keras.Model(model.model.input, model.model.output[0])
+    model3 = tf.keras.Model(model.model.input, model.model.output[1])
 
     for explainer, name  in [(shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"), ]:
         print("... {0}: explainer.shap_values(X)".format(name))
@@ -628,54 +627,41 @@ def process_labels(process_key):
     return processes[process_key]
 
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
-def basic(model_dir,signal_dirs) :
+def basic(model,signal_dirs) :
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     Returns a dictionary of ROCs for each class
     """
 
-    plot_dir = os.path.join(model_dir, "plots/training")
+    plot_dir = os.path.join(model.output_directory, "plots/training")
 
-    #Load the metadata for class_label
-    with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
-    with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
-
-    ROC_dict = {class_label : 0 for class_label in class_labels}
+    ROC_dict = {class_label : 0 for class_label in model.class_labels}
 
     #Load the testing data
-    X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
-    y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
-    truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
-    reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
+    X_test = np.load(f"{model.output_directory}/testing_data/X_test.npy")
+    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
+    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
+    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
-    from models import AAtt, NodeEdgeProjection, AttentionPooling
-    custom_objects_ = {
-        "AAtt": AAtt,
-        "NodeEdgeProjection": NodeEdgeProjection,
-        "AttentionPooling": AttentionPooling,
-    }
-
-    #Load model
-    model = load_qmodel(f"{model_dir}/model/saved_model.h5", custom_objects=custom_objects_)
     model_outputs = model.predict(X_test)
 
     #Get classification outputs
     y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1].flatten()
+    pt_ratio = model_outputs[1]
 
     #Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
+    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir,ROC_dict)
     class_pairs = []
     #Generate all possible pairs of classes
-    for i in class_labels.keys():
-        for j in class_labels.keys():
+    for i in model.class_labels.keys():
+        for j in model.class_labels.keys():
             if i != j:
                 class_pair = [i,j]
                 class_pairs.append(class_pair)
 
     # Make ROC binaries for complete test set and each signal process
     for i in range(-1, len(signal_dirs), 1):
-        sample_plot_dir = os.path.join(model_dir, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
+        sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
         if i == -1:
             y_p, y_t = y_pred, y_test
             process_label = None
@@ -683,41 +669,41 @@ def basic(model_dir,signal_dirs) :
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.predict(sample_data)[0]
+            sample_preds = model.model.predict(sample_data)[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)
         for class_pair in class_pairs:
             binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-            ROC_binary(y_p, y_t, class_labels, binary_dir, class_pair, process_label)
+            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_labels, class_labels, binary_dir, class_pair, process_label)
+                ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
 
 
 
     #ROC for taus versus jets and taus versus leptons
-    ROC_taus(y_pred, y_test, class_labels, plot_dir)
+    ROC_taus(y_pred, y_test, model.class_labels, plot_dir)
 
     # Efficiencies
-    efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir)
+    efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
 
     # Confusion matrix
-    confusion(y_pred, y_test, class_labels, plot_dir)
+    confusion(y_pred, y_test, model.class_labels, plot_dir)
 
     #Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     #Plot input distributions
-    plot_input_vars(X_test, input_vars, plot_dir)
+    plot_input_vars(X_test, model.input_vars, plot_dir)
 
     #Plot inclusive response and individual flavor
-    response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     #Plot the rms of the residuals vs pt
-    rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     #Plot the shaply feature importance
-    plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
+    plot_shaply(model, X_test, model.class_labels, model.input_vars, plot_dir)
 
     return ROC_dict

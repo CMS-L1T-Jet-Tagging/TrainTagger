@@ -9,6 +9,7 @@ from tensorflow.keras.layers import BatchNormalization, Input, Activation, Globa
 from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.qlayers import QDense, QActivation
 from qkeras import QConv1D
+from qkeras.utils import load_qmodel
 import itertools
 import numpy as np
 

@@ -1,0 +1,27 @@
+from argparse import ArgumentParser
+import os, shutil, json, yaml
+
+# Import from other modules
+from tagger.data.tools import make_data, load_data, to_ML
+
+if __name__ == "__main__":
+
+    parser = ArgumentParser()
+    # Making input arguments
+    parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root' , help = 'Path to input training data')
+    parser.add_argument('-r','--ratio', default=1, type=float, help = 'Ratio (0-1) of the input data root file to process')
+    parser.add_argument('-s','--step', default='100MB' , help = 'The maximum memory size to process input root file')
+    parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, in pfcand_fields.yml')
+    parser.add_argument('-t','--tree', default='outnano/Jets', help = 'Tree within the ntuple containing the jets')
+
+    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting')
+
+    args = parser.parse_args()
+
+    make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+    # Format all the signal processes used for plotting later
+    for signal_process in args.signal_processes:
+        signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
+        signal_output = os.path.join("signal_process_data", signal_process)
+        if not os.path.exists(signal_output):
+            make_data(infile=signal_input, outdir=signal_output, step_size=args.step, extras=args.extras,ratio=args.ratio, tree=args.tree)

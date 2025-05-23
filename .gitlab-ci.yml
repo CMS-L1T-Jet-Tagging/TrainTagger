@@ -30,6 +30,7 @@ DeepSet:new_samples_baseline_5param_extended_trk:
   variables:
     Name: new_samples_baseline_5param_extended_trk
     Inputs: baseline
+    Model: baseline
     N_PARAMS: 5
     TRACK_ALGO: extended
     TRAIN: All200.root

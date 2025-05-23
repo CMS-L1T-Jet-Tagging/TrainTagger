@@ -1,9 +1,9 @@
 #!/bin/bash
 if [[ "$1" == "False" ]]; then
-    python tagger/train/train.py -n $Name -p 50 
+    python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model
     eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
     tar -xf signal_process_data.tgz
-    python tagger/train/train.py --plot-basic -n $Name -sig $SIGNAL
+    python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
     cd output/baseline
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
     eos cp model/saved_model.h5 ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/saved_model.h5 .
@@ -16,5 +16,5 @@ else
     eos cp ${MODEL_LOCATION}/testing_data/* output/baseline/testing_data
     eos cp ${MODEL_LOCATION}/signal_process_data.tgz .
     tar -xf signal_process_data.tgz
-    python tagger/train/train.py --plot-basic -n $Name -sig $SIGNAL
+    python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
 fi

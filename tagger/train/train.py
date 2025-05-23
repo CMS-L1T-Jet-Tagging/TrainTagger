@@ -4,8 +4,7 @@ import os, shutil, json, yaml
 # Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.plot.basic import loss_history, basic
-from tagger.model.modelLoader import fromYaml, fromFolder
-
+from tagger.model.common import fromYaml, fromFolder
 
 # Third parties
 import numpy as np

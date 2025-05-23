@@ -1,3 +1,5 @@
+import os,json
+
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
@@ -9,27 +11,12 @@ from qkeras.qlayers import QDense, QActivation
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 
-from tagger.model.models import JetTagModel, JetModelFactory
+from tagger.model.JetTagModel import JetTagModel, JetModelFactory
+from tagger.model.common import choose_aggregator
 
 import hls4ml
 
 import numpy as np
-
-import os,json
-
-def choose_aggregator(choice : str, name : str, bits=9, bits_int=2, alpha_val=1, **common_args) -> tf.keras.layers.Layer:
-    """Choose the aggregator keras object based on an input string."""
-    if choice not in ["mean", "max", "attention"]:
-        raise ValueError(
-            "Given aggregation string is not implemented in choose_aggregator(). "
-            "See models.py and add string and corresponding object there."
-        )
-    if choice == "mean":
-        return GlobalAveragePooling1D(name = name)
-    elif choice == "max":
-        return GlobalMaxPooling1D(name = name)
-    elif choice == "attention":
-        return AttentionPooling(name = name, bits=bits, bits_int=bits_int, alpha_val=alpha_val, **common_args)
 
 @JetModelFactory.register('DeepSetModel')
 class DeepSetModel(JetTagModel):

@@ -1,9 +1,8 @@
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 import os
 import yaml,json
 from tagger.plot.basic import loss_history, basic
 import functools
-from abc import ABC
+from abc import ABC, abstractmethod
 
 class JetTagModel(ABC):
     def __init__(self,output_dir):
@@ -48,7 +47,6 @@ class JetTagModel(ABC):
     def fit(self):
         pass
 
-    @abstractmethod
     def predict(self,X_test):
         model_outputs = self.model.predict(X_test)
         y_pred = model_outputs[0]
@@ -95,7 +93,6 @@ class JetTagModel(ABC):
 
         #Plot history
         loss_history(plot_path, self.history)
-
 
 class JetModelFactory:
     """ The factory class for creating Jet Tag Models"""

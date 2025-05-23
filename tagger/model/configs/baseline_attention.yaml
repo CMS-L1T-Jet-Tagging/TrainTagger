@@ -1,16 +1,15 @@
-model: InteractionNetModel
+model: DeepSetModel
 run_config :
   verbose : 2
   debug : True
     
 model_config : 
-  name : interactionnet
-  effects_layers : [16, 16, 16]
-  objects_layers : [16]
-  classification_layers : [32,16,8]
-  regression_layers : [16,8,4]
+  name : baseline
+  conv1d_layers : [10,10]
+  classification_layers : [32,16]
+  regression_layers : [10]
   kernel_initializer : 'lecun_uniform'
-  aggregator : 'mean'
+  aggregator : 'attention'
 
 quantization_config:
   quantizer_bits : 9
@@ -40,7 +39,3 @@ hls4ml_config:
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
   
   project_name: 'L1TSC4NGJetModel_test'
-
-
-
-

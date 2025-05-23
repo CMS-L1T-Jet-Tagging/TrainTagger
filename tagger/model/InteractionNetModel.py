@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D
+from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, GlobalMaxPooling1D, Concatenate, Layer
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 import tensorflow_model_optimization as tfmot
 
@@ -9,9 +9,12 @@ from qkeras.qlayers import QDense, QActivation
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 
-from tagger.model.models import JetTagModel, JetModelFactory
+from tagger.model.JetTagModel import JetTagModel, JetModelFactory
+from tagger.model.common import choose_aggregator
 
 import hls4ml
+
+import itertools
 
 import numpy as np
 
@@ -103,137 +106,138 @@ class InteractionNetModel(JetTagModel):
 
     def build_model(self,inputs_shape,outputs_shape):
 
-    """Interaction network model from https://arxiv.org/abs/1612.00222.
+        """Interaction network model from https://arxiv.org/abs/1612.00222.
 
-    Attributes:
-        input_size: Tuple with the shape of the input data.
-        effects_layers: List of number of nodes for each layer of the effects MLP.
-        objects_layers: List of number of nodes for each layer of the objects MLP.
-        classifier_layers: List of number of nodes for each layer of the classifier MLP.
-        activ: String that specifies Activation function to use between the dense layers.
-        aggreg: String that specifies the type of aggregator to use after the obj net.
-        output_dim: The output dimension of the network. For a supervised task, this is
-            equal to the number of classes, which in our case is 5.
-        nbits: Number of bits that the model is quantised to.
-    """
+        Attributes:
+            input_size: Tuple with the shape of the input data.
+            effects_layers: List of number of nodes for each layer of the effects MLP.
+            objects_layers: List of number of nodes for each layer of the objects MLP.
+            classifier_layers: List of number of nodes for each layer of the classifier MLP.
+            activ: String that specifies Activation function to use between the dense layers.
+            aggreg: String that specifies the type of aggregator to use after the obj net.
+            output_dim: The output dimension of the network. For a supervised task, this is
+                equal to the number of classes, which in our case is 5.
+            nbits: Number of bits that the model is quantised to.
+        """
 
-    # Define a dictionary for common arguments
-    common_args = {
-            'kernel_quantizer': quantized_bits(self.quantization_config['quantizer_bits'], 
-                                               self.quantization_config['quantizer_bits_int'], 
-                                         alpha=self.quantization_config['quantizer_alpha_val']),
-            'bias_quantizer':   quantized_bits(self.quantization_config['quantizer_bits'], 
-                                               self.quantization_config['quantizer_bits_int'], 
-                                         alpha=self.quantization_config['quantizer_alpha_val']),
-            'kernel_initializer': self.model_config['kernel_initializer']
-        }
+        # Define a dictionary for common arguments
+        common_args = {
+                'kernel_quantizer': quantized_bits(self.quantization_config['quantizer_bits'], 
+                                                self.quantization_config['quantizer_bits_int'], 
+                                            alpha=self.quantization_config['quantizer_alpha_val']),
+                'bias_quantizer':   quantized_bits(self.quantization_config['quantizer_bits'], 
+                                                self.quantization_config['quantizer_bits_int'], 
+                                            alpha=self.quantization_config['quantizer_alpha_val']),
+                'kernel_initializer': self.model_config['kernel_initializer']
+            }
 
-    #Initialize inputs
-    inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+        #Initialize inputs
+        inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+            
+        #Main branch
+        main = BatchNormalization(name='norm_input')(inputs)
+
+        receiver_matrix = NodeEdgeProjection(
+            name="receiver_matrix", receiving=True, node_to_edge=True
+        )(main)
+        sender_matrix = NodeEdgeProjection(
+            name="sender_matrix", receiving=False, node_to_edge=True
+        )(main)
+
+        input_effects = Concatenate(axis=-1, name="concat_eff")(
+            [receiver_matrix, sender_matrix]
+        )
+
+        x = QConv1D(
+            self.model_config['effects_layers'][0],
+            kernel_size=1,
+            name=f"effects_{1}",
+            **common_args,
+        )(input_effects)
+
+        x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'],
+                            self.quantization_config['quantizer_bits_int']))(x)
         
-    #Main branch
-    main = BatchNormalization(name='norm_input')(inputs)
+        for i, layer in enumerate(self.model_config['effects_layers'][1:]):
+            x = QConv1D(
+                layer,
+                kernel_size=1,
+                **common_args,
+                name=f"effects_{i+2}",
+            )(x)
+            x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'],
+                            self.quantization_config['quantizer_bits_int']))(x)
 
-    receiver_matrix = NodeEdgeProjection(
-        name="receiver_matrix", receiving=True, node_to_edge=True
-    )(main)
-    sender_matrix = NodeEdgeProjection(
-        name="sender_matrix", receiving=False, node_to_edge=True
-    )(main)
+        x = NodeEdgeProjection(
+                name="prj_effects", receiving=True, node_to_edge=False
+            )(x)
+        
+        input_objects = Concatenate(axis=-1, name="concat_obj")([inputs, x])
 
-    input_effects = Concatenate(axis=-1, name="concat_eff")(
-        [receiver_matrix, sender_matrix]
-    )
-
-    x = QConv1D(
-        self.model_config['effects_layers'][0],
-        kernel_size=1,
-        name=f"effects_{1}",
-        **common_args,
-    )(input_effects)
-
-    x = QActivation(activation=quantized_relu(bits, bits_int))(x)
-    
-    for i, layer in enumerate(self.model_config['effects_layers'][1:]):
+        # Objects network.
         x = QConv1D(
-            layer,
+            self.model_config['objects_layers'][0],
             kernel_size=1,
             **common_args,
-            name=f"effects_{i+2}",
-        )(x)
+            name=f"objects_{1}",
+        )(input_objects)
         x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'],
-                        self.quantization_config['quantizer_bits_int']))(x)
+                            self.quantization_config['quantizer_bits_int']))(x)
+        for i, layer in enumerate(self.model_config['objects_layers'][1:]):
+            x = QConv1D(
+                layer,
+                kernel_size=1,
+                **common_args,
+                name=f"objects_{i+2}",
+            )(x)
+            x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'],
+                            self.quantization_config['quantizer_bits_int']))(x)
 
-    x = NodeEdgeProjection(
-            name="prj_effects", receiving=True, node_to_edge=False
-        )(x)
-    
-    input_objects = Concatenate(axis=-1, name="concat_obj")([inputs, x])
+        # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
+        x = QActivation(activation='quantized_bits(18,8)', name = 'act_pool')(x)
 
-    # Objects network.
-    x = QConv1D(
-        self.model_config['objects_layers'][0],
-        kernel_size=1,
-        **common_args,
-        name=f"objects_{1}",
-    )(input_objects)
-    x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'],
-                        self.quantization_config['quantizer_bits_int']))(x)
-    for i, layer in enumerate(self.model_config['objects_layers'][1:]):
-        x = QConv1D(
-            layer,
-            kernel_size=1,
-            **common_args,
-            name=f"objects_{i+2}",
-        )(x)
-        x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'],
-                        self.quantization_config['quantizer_bits_int']))(x)
+        # Aggregator
+        agg = choose_aggregator(choice = self.model_config['aggregator'], name = "pool")
+        main = agg(x)
+        
+    #Now split into jet ID and pt regression
 
-    # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-    x = QActivation(activation='quantized_bits(18,8)', name = 'act_pool')(x)
+        # Make fully connected dense layers for classification task
+        for iclass, depthclass in enumerate(self.model_config['classification_layers']):
+            if iclass == 0:
+                jet_id = QDense(depthclass, name='Dense_'+str(iclass+1)+'_jetID', **common_args)(main)
+            else:
+                jet_id = QDense(depthclass, name='Dense_'+str(iclass+1)+'_jetID', **common_args)(jet_id)
+            jet_id = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_'+str(iclass+1)+'_jetID')(jet_id)
+                #ToDo: fix the bits_int part later, ie use the default not 0
 
-    # Aggregator
-    agg = choose_aggregator(choice = self.model_config['aggregator'], name = "pool")
-    main = agg(x)
-    
-#Now split into jet ID and pt regression
+        # Make output layer for classification task
+        jet_id = QDense(outputs_shape[0], name='Dense_'+str(iclass+2)+'_jetID', **common_args)(jet_id)
+        jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-    # Make fully connected dense layers for classification task
-    for iclass, depthclass in enumerate(self.model_config['classification_layers']):
-        if iclass == 0:
-            jet_id = QDense(depthclass, name='Dense_'+str(iclass+1)+'_jetID', **common_args)(main)
-        else:
-            jet_id = QDense(depthclass, name='Dense_'+str(iclass+1)+'_jetID', **common_args)(jet_id)
-        jet_id = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_'+str(iclass+1)+'_jetID')(jet_id)
-            #ToDo: fix the bits_int part later, ie use the default not 0
+        ## Make fully connected dense layers for pt regression task
+        for ireg, depthreg in enumerate(self.model_config['regression_layers']):
+            if ireg == 0:
+                pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(main)
+            else:
+                pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(pt_regress)
+            pt_regress = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_'+str(ireg+1)+'_pT')(pt_regress)
 
-    # Make output layer for classification task
-    jet_id = QDense(outputs_shape[0], name='Dense_'+str(iclass+2)+'_jetID', **common_args)(jet_id)
-    jet_id = Activation('softmax', name='jet_id_output')(jet_id)
-
-    ## Make fully connected dense layers for pt regression task
-    for ireg, depthreg in enumerate(self.model_config['regression_layers']):
-        if ireg == 0:
-            pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(main)
-        else:
-            pt_regress = QDense(depthreg, name='Dense_'+str(ireg+1)+'_pT', **common_args)(pt_regress)
-        pt_regress = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_'+str(ireg+1)+'_pT')(pt_regress)
-
-    pt_regress = QDense(1, name='pT_output',
-                        kernel_quantizer=quantized_bits(self.quantization_config['pt_output_quantization'][0],
+        pt_regress = QDense(1, name='pT_output',
+                            kernel_quantizer=quantized_bits(self.quantization_config['pt_output_quantization'][0],
+                                                                self.quantization_config['pt_output_quantization'][1], 
+                                                                alpha=self.quantization_config['quantizer_alpha_val']),
+                            bias_quantizer=quantized_bits(self.quantization_config['pt_output_quantization'][0],
                                                             self.quantization_config['pt_output_quantization'][1], 
                                                             alpha=self.quantization_config['quantizer_alpha_val']),
-                        bias_quantizer=quantized_bits(self.quantization_config['pt_output_quantization'][0],
-                                                          self.quantization_config['pt_output_quantization'][1], 
-                                                          alpha=self.quantization_config['quantizer_alpha_val']),
-                        kernel_initializer='lecun_uniform')(pt_regress)
+                            kernel_initializer='lecun_uniform')(pt_regress)
 
-        #Define the model using both branches
-    self.model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+            #Define the model using both branches
+        self.model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
-    print(self.model.summary())
+        print(self.model.summary())
 
-    return model
+        return self.model
 
     def _prune_model(self, num_samples):
         """

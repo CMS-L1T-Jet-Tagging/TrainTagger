@@ -269,6 +269,7 @@ class InteractionNetModel(JetTagModel):
         self._prune_model(num_samples)
 
         self.model.compile(optimizer='adam',
+                           loss_weights=self.training_config['loss_weights'],
                             loss={self.loss_name+self.output_id_name: 'categorical_crossentropy', self.loss_name+self.output_pt_name: tf.keras.losses.Huber()},
                             metrics = {self.loss_name+self.output_id_name: 'categorical_accuracy', self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']},
                             weighted_metrics = {self.loss_name+self.output_id_name: 'categorical_accuracy', self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']})

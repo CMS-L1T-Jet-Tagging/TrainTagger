@@ -24,6 +24,8 @@ training_config :
   learning_rate : 0.001
   validation_split : 0.1
 
+  loss_weights : [1,1]
+
   initial_sparsity : 0.0
   final_sparsity : 0.1
     

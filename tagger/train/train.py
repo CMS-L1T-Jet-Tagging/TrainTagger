@@ -24,11 +24,7 @@ from datetime import datetime
 # )
 
 # # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
-# tf.keras.utils.set_random_seed(420) # not a special number 
-LOSS_WEIGHTS = [1., 1.]
-WEIGHT_METHOD = "onlyclass"
-DEBUG = True
-
+# tf.keras.utils.set_random_seed(420) # not a special number
 
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
@@ -42,7 +38,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
     print(f"Test data saved to {out_dir}")
 
-def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT_METHOD):
+def train_weights(y_train, reco_pt_train, class_labels,weightingMethod,debug):
     """
     Re-balancing the class weights and then flatten them based on truth pT
     """
@@ -125,7 +121,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
         sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
     
         # Print weighted jets as closure test in debug mode
-        if DEBUG and weightingMethod != "none":
+        if debug and weightingMethod != "none":
             print ("DEBUG - Checking jets weighted by sample_weights as a function of pT:")
             print (np.histogram(class_truth_pt, bins = pt_bins, weights = sample_weights[sample_indices]))
 
@@ -152,7 +148,7 @@ def train(model,out_dir,yaml_path,percent):
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
-    sample_weight = train_weights(y_train, reco_pt_train, class_labels,weightingMethod = model.training_config['weight_method'] )
+    sample_weight = train_weights(y_train, reco_pt_train, class_labels,weightingMethod = model.training_config['weight_method'], debug = model.training_config['debug'] )
     if model.run_config['debug']:
         print ("DEBUG - Checking sample_weight:")
         print (sample_weight)

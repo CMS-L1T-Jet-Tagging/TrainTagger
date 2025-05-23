@@ -3,8 +3,9 @@ import os
 import yaml,json
 from tagger.plot.basic import loss_history, basic
 import functools
+from abc import ABC
 
-class JetTagModel():
+class JetTagModel(ABC):
     def __init__(self,output_dir):
         self.output_directory = output_dir
         
@@ -34,16 +35,20 @@ class JetTagModel():
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
         self.hls4ml_config = yaml_dict['hls4ml_config']
-
+ 
+    @abstractmethod
     def build_model(self):
         pass
 
+    @abstractmethod
     def compile_model(self):
         pass
 
+    @abstractmethod
     def fit(self):
         pass
 
+    @abstractmethod
     def predict(self,X_test):
         model_outputs = self.model.predict(X_test)
         y_pred = model_outputs[0]
@@ -75,7 +80,8 @@ class JetTagModel():
         self.input_vars = input_vars
         self.extra_vars = extra_vars
         self.class_labels = class_labels
-    
+
+    @abstractmethod
     def hls4ml_convert(self):
         pass
 

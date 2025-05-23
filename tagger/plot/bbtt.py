@@ -528,7 +528,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax2,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax2.errorbar(model_x_14, model_y_14, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(model_alt_rate_14, eff_str, model_14_efficiency, ht_wp, tau_topo_str, round(ttag_wp_14,2), round(btag_wp_14,2)))
-    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT-only + QuadJets @ {} kHz, {}={} (L1 $HT$ > {} GeV)'.format(ht_alt_rate, eff_str, ht_only_efficiency, ht_only_wp))
+    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT + QuadJets @ {} kHz, {}={} (L1 $HT$ > {} GeV)'.format(ht_alt_rate, eff_str, ht_only_efficiency, ht_only_wp))
 
     #Plot other labels
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)

@@ -31,7 +31,7 @@ def doPlots(model,outputdir,inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     modelsAndNames = {"model":model}
-    
+
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100,test_ratio=0.0)
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels) #Last thing was reconstructed pt
 
@@ -53,12 +53,17 @@ def doPlots(model,outputdir,inputdir):
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
+<<<<<<< HEAD
             print_class = True
 
+=======
+            if abs(np.array(data['jet_SC4NGJet_score_'+label])[iJet] - y_hls[iJet][i]) > 0.001 :
+                print_class = True
+>>>>>>> 74a1c29 (Cosmetics (#44))
         if print_class == True:
             print("=== " + str(iJet) + " ===")
             print("Inputs: " + str(X_test[iJet]))
-            for i, label in enumerate(labels): 
+            for i, label in enumerate(labels):
                 print(label  + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_'+label])[iJet]))
                 print(label  + ": hls : " + str(y_hls[iJet][i]))
                 print(label  + ": tf : " + str(y_class[iJet][i]))
@@ -159,17 +164,17 @@ def doPlots(model,outputdir,inputdir):
                         ["Emulation" + " median: "+str(np.round(np.median(response_emu),3))+" rms: "+str(np.round(rms(response_emu),3)),
                          "Tensorflow" + " median: "+str(np.round(np.median(response_reg),3))+" rms: "+str(np.round(rms(response_reg),3)),
                          "hls4ml" + " median: "+str(np.round(np.median(response_hls),3))+" rms: "+str(np.round(rms(response_hls),3)),],
-                        "Jet Regression",'Jet Response (reco/gen)','a.u.',range=(0,2))
+                        "Jet Regression",'Jet Response (L1/Gen)','a.u.',range=(0,2))
     plt.savefig(outputdir+"/response_emulation"+".png",bbox_inches='tight')
     plt.savefig(outputdir+"/response_emulation"+".pdf",bbox_inches='tight')
     plt.close()
     return
 
 if __name__ == "__main__":
-    
+
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')    
-    parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')    
+    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for comparison')
+    parser.add_argument('-o','--outpath', default='output/baseline/plots/emulation' , help = 'Jet tagger plotting directory')
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to emulation data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake emulation data? ')
 

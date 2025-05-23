@@ -178,7 +178,7 @@ emulation-evaluate:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
   rules:
-    - if: $RUN_EMULATION == "True" and  $RUN_SYNTHESIS == "True"
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
   dependencies: [emulate,train,hls4ml]
   script:
@@ -204,7 +204,7 @@ profile:
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:
-    - if: $RUN_EMULATION == "True" and  $RUN_SYNTHESIS == "True"
+    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
   - mkdir data

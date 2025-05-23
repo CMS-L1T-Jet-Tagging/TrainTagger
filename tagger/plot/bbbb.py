@@ -398,7 +398,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
                 label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)))
     ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
-                label=r'HT-only + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
+                label=r'HT + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
 
     # Common plot settings for second plot
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -474,7 +474,7 @@ def bbbb_eff_mHH(model_dir,
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
                 label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)))
     ax.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
-                label=r'HT-only + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
+                label=r'HT + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
 
 
     # Common plot settings for second plot

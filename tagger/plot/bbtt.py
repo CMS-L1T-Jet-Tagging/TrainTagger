@@ -548,4 +548,3 @@ if __name__ == "__main__":
         bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'all', n_entries=args.n_entries,tree=args.tree)
         gc.collect()
         bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)
-

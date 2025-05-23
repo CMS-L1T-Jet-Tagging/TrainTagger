@@ -88,9 +88,9 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     roc_data = []
 
     for label, bkg_indices in [
-        (r'$\tau_h = \tau_h^{+} + \tau_h^{-}$ vs Jets (b, c, light, gluon)', jet_indices),
-        (r'$\tau_h = \tau_h^{+} + \tau_h^{-}$ vs Muons', muon_indices),
-        (r'$\tau_h = \tau_h^{+} + \tau_h^{-}$ vs Electrons', electron_indices)
+        (r'$\tau_h^{\pm}$ vs Jets (b, c, light, gluon)', jet_indices),
+        (r'$\tau_h^{\pm}$ vs Muons', muon_indices),
+        (r'$\tau_h^{\pm}$ vs Electrons', electron_indices)
     ]:
         y_true, y_score = compute_roc_inputs(y_pred, y_test, tau_indices, bkg_indices)
         fpr, tpr, _ = roc_curve(y_true, y_score)
@@ -329,7 +329,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
         ax.errorbar(pt_points, regressed_response, yerr=regressed_errors, fmt='o', label=f"Regressed - {style.CLASS_LABEL_STYLE[flavor]}", capsize=4,ms=8,elinewidth=3)
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
-        ax.set_ylabel("Response (Reco/Gen)")
+        ax.set_ylabel("Response (L1/Gen)")
         ax.legend()
         ax.grid()
 
@@ -528,7 +528,7 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
         plt.savefig(plot_dir+"/shap_summary_reg.png",bbox_inches='tight')
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
-    
+
     save_dir = os.path.join(plot_dir, 'efficiencies')
     os.makedirs(save_dir, exist_ok=True)
 

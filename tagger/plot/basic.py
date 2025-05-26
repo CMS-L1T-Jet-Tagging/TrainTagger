@@ -754,8 +754,8 @@ def basic(model,signal_dirs) :
 
         if i != -1:
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-            ROC_jets(sample_preds, model.sample_labels, model.class_labels, binary_dir_full, process_label)
-            ROC_taus(sample_preds, model.sample_labels, model.class_labels, binary_dir_full, process_label)
+            ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+            ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)

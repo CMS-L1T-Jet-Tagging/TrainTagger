@@ -208,14 +208,14 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
             nn_list.append(NN)
 
     #Pick target rate and plot it
-    pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light, target_rate=target_rate)
+    pick_and_plot(rate_list, ht_list, nn_list, model.output_directory, apply_sel, apply_light, target_rate=target_rate)
 
     # refill with full ht for ht wp derivation
     RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
 
     RateHist.fill(ht = jet_ht, nn = np.zeros(len(jet_ht)))
-    derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate=target_rate)
+    derive_HT_WP(RateHist, ht_edges, n_events,  model.output_directory, target_rate=target_rate)
 
     return
 

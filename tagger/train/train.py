@@ -148,7 +148,7 @@ def train(model,out_dir,yaml_path,percent):
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
-    sample_weight = train_weights(y_train, reco_pt_train, class_labels,weightingMethod = model.training_config['weight_method'], debug = model.training_config['debug'] )
+    sample_weight = train_weights(y_train, reco_pt_train, class_labels,weightingMethod = model.training_config['weight_method'], debug = model.run_config['debug'] )
     if model.run_config['debug']:
         print ("DEBUG - Checking sample_weight:")
         print (sample_weight)

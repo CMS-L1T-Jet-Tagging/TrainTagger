@@ -107,6 +107,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
+  tags: [cern-nextgen-h100]
   needs:
     - job : train
       optional: true
@@ -158,10 +159,10 @@ hls4ml:
       optional: true
   script:
   - source activate tagger
-  - python tagger/firmware/hls4ml_convert.py -m output/$Model
+  - python tagger/firmware/hls4ml_convert.py -m output/$Model -o firmware/L1TSC4NGJetModel_test
   artifacts:
     paths:
-      - tagger/firmware
+      - output/$Model/firmware
     expire_in: 1 day
 
 synth:
@@ -173,13 +174,13 @@ synth:
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:
-    - cd tagger/firmware/L1TSC4NGJetModel
+    - cd output/$Model/firmware/L1TSC4NGJetModel_test
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../..
   artifacts:
     paths:
-      - tagger/firmware/L1TSC4NGJetModel
+      - output/$Model/firmware/L1TSC4NGJetModel_test
     expire_in: 1 day
 
 emulation-evaluate:
@@ -250,10 +251,10 @@ upload_new_model:
       optional: true
   needs: 
     - job: train
-    - optional: true
+    - optional: false
   needs: 
     - job: evaluate
-    - optional: true
+    - optional: false
   needs: 
     - job: profile
       optional: true

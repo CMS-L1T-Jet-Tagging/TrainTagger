@@ -3,8 +3,7 @@ import os, shutil, json
 
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
-from tagger.firmware.hls4ml_convert import convert
-import tagger.train.models
+from tagger.model.common import fromFolder
 import tagger.plot.common as common
 
 #Third parties
@@ -12,7 +11,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 import hls4ml
-from qkeras.utils import load_qmodel
 from sklearn.metrics import roc_curve, auc,precision_recall_curve
 
 #Plotting

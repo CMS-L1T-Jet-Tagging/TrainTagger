@@ -23,8 +23,9 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
+from tagger.model.common import fromFolder
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from tagger.plot.common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
 # Helpers
 def bbtt_seed(jet_pt, tau_pt):
@@ -153,7 +154,7 @@ def make_predictions(model,data_path, n_entries, tree='outnano/Jets', njets=4):
     raw_event_id = extract_array(data, 'event', n_entries)
     raw_jet_pt = extract_array(data, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(data, 'jet_eta_phys', n_entries)
-    raw_inputs = extract_nn_inputs(data, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(data, model.input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -321,13 +322,13 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     ht_list, bb_list, tt_list = np_out[:,4].tolist(), np_out[:,5].tolist(), np_out[:,6].tolist()
 
     #Pick target rate and plot it
-    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model_dir, n_entries, rate, tree)
+    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model.output_directory, n_entries, rate, tree)
     gc.collect()
-    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model_dir, n_entries, 14, tree)
+    pick_and_plot(rate_list_raw, eff_list_raw, ht_list, bb_list, tt_list, ht_cut, 'raw', apply_sel, model.output_directory, n_entries, 14, tree)
     gc.collect()
-    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, ht_cut, 'qg', apply_sel, model_dir, n_entries, rate, tree)
+    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, ht_cut, 'qg', apply_sel, model.output_directory, n_entries, rate, tree)
     gc.collect()
-    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, ht_cut, 'qg', apply_sel, model_dir, n_entries, 14, tree)
+    pick_and_plot(rate_list_qg, eff_list_qg, ht_list, bb_list, tt_list, ht_cut, 'qg', apply_sel, model.output_directory, n_entries, 14, tree)
     gc.collect()
 
     # refill with full ht for ht wp derivation
@@ -465,7 +466,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbtt/HHbbtt_eff_bbtt_seed_{score_type}_{apply_sel}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbtt/HHbbtt_eff_bbtt_seed_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.clf()
@@ -487,7 +488,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbtt/HHbbtt_eff_HT_only_{score_type}_{apply_sel}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbtt/HHbbtt_eff_HT_only_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 

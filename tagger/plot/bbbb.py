@@ -19,8 +19,9 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
+from tagger.model.common import fromFolder
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from tagger.plot.common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
 # Helpers
 def x_vs_y(x, y, apply_light):
@@ -306,7 +307,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
     model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light,
-        b_index=class_labels['b'], l_index=class_labels['light'], g_index=class_labels['gluon'])
+        b_index=model.class_labels['b'], l_index=model.class_labels['light'], g_index=model.class_labels['gluon'])
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
@@ -398,7 +399,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     ax2.legend(loc='upper left')
 
     # Save second plot
-    ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
+    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 

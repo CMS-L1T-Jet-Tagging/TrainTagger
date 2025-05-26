@@ -5,7 +5,6 @@ Script to plot all di-taus topology trigger related physics performance plot
 import os, json
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
 import awkward as ak
 import numpy as np
 import uproot
@@ -24,7 +23,8 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
+from tagger.model.common import fromFolder
+from tagger.plot.common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -203,7 +203,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
             pt_list.append(pt)
             nn_list.append(NN)
 
-    pick_and_plot_topo(rate_list, pt_list, nn_list, model_dir, target_rate=28)
+    pick_and_plot_topo(rate_list, pt_list, nn_list, model.output_directory, target_rate=28)
 
 #-------- Plot the background rate
 def cmssw_pt_score(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt):
@@ -377,7 +377,7 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
 
     # Save the plot
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau_topo')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tautau_topo')
     fig.savefig(os.path.join(plot_dir, "tautau_topo_BkgRate.pdf"), bbox_inches='tight')
     fig.savefig(os.path.join(plot_dir, "tautau_topo_BkgRate.png"), bbox_inches='tight')
     return
@@ -404,16 +404,11 @@ def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
 
-def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_entries=100000):
+def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_entries=100000):
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
     #Load the signal data
     signal = uproot.open(tau_eff_filepath)[tree]
-
-    # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     # mask non visible gen taus
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
@@ -432,11 +427,11 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     raw_cmssw_taupt = extract_array(signal, 'jet_taupt', n_entries)[pt_mask]
 
     #NN related
-    raw_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))[pt_mask]
+    raw_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))[pt_mask]
     raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
 
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tautau_topo/working_point.json")
+    WP_path = os.path.join(model.output_directory, "plots/physics/tautau_topo/working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path):
@@ -446,9 +441,9 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
-    raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:,class_labels['taum']]
-    raw_tau_plus = raw_pred_score[:,class_labels['taup']]
-    raw_tau_minus = raw_pred_score[:,class_labels['taum']]
+    raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:,model.class_labels['taum']]
+    raw_tau_plus = raw_pred_score[:,model.class_labels['taup']]
+    raw_tau_minus = raw_pred_score[:,model.class_labels['taum']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -516,7 +511,7 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     model_ratio = ratio_2D(model_pt, all_genpt)
     model_vs_cmssw_ratio = ratio_2D(model_pt, cmssw_pt)
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau_topo')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tautau_topo')
 
     #Plot them side by side
     fig_width = 2.5 * style.FIGURE_SIZE[0]

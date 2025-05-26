@@ -20,8 +20,9 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
+from tagger.model.common import fromFolder
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from tagger.plot.common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
 # Helpers
 def bbtt_seed(jet_pt, tau_pt):
@@ -59,7 +60,7 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
         event_mask = np.ones(len(jet_pt), dtype=bool)
     return event_mask
 
-def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
+def nn_score_sums(model, jet_nn_inputs, n_jets=4):
     #Btag input list for first 4 jets
     nn_outputs = [model.model.predict(np.asarray(jet_nn_inputs[:, i]))[0] for i in range(0,n_jets)]
 
@@ -172,11 +173,11 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     Derive the HH->4b working points
     """
 
-    with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
+    with open(os.path.join(model.output_directory, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
 
     #Load input/ouput variables of the NN
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+    with open(os.path.join(model.output_directory, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -238,27 +239,27 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
             bb_list.append(bb)
 
         #Pick target rate and plot it
-        pick_and_plot(rate_list, ht_list, bb_list, ht_cut, raw, apply_sel, model_dir, signal_path, n_entries, rate, tree)
+        pick_and_plot(rate_list, ht_list, bb_list, ht_cut, raw, apply_sel, model.output_directory, signal_path, n_entries, rate, tree)
         gc.collect()
         raw = False
 
     #Derive the HT working point
-    derive_HT_WP(RateHist, ht_edges, n_events, model_dir, rate)
+    derive_HT_WP(RateHist, ht_edges, n_events, model.output_directory, rate)
     return
 
 def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
-    with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
+    with open(os.path.join(model.output_directory, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
 
     ht_egdes = list(np.arange(0,800,20))
     ht_axis = hist.axis.Variable(ht_egdes, name = r"$HT^{gen}$")
 
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/bbtt_fixed_wp_{score_type}_{apply_sel}.json")
-    HT_path = os.path.join(model_dir, "plots/physics/bbtt_bb_only/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbtt_bb_only/bbtt_fixed_wp_{score_type}_{apply_sel}.json")
+    HT_path = os.path.join(model.output_directory, "plots/physics/bbtt_bb_only/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_path):
@@ -375,7 +376,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/HHbbtt_HT_only_eff_{score_type}_{apply_sel}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbtt_bb_only/HHbbtt_HT_only_eff_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 

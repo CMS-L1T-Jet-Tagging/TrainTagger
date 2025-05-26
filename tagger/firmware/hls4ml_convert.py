@@ -1,7 +1,7 @@
 import os, sys
 import json
 from argparse import ArgumentParser
-from tagger.model.modelLoader import fromFolder
+from tagger.model.common import fromFolder
 
 #Third party
 from pathlib import Path

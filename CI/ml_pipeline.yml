@@ -247,10 +247,10 @@ upload_new_model:
       optional: true
   needs: 
     - job: train
-      optional: true
+      optional: false
   needs: 
     - job: evaluate
-      optional: true
+      optional: false
   needs: 
     - job: profile
       optional: true

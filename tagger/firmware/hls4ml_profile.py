@@ -5,7 +5,7 @@ from pathlib import Path
 #Import from other modules
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.plot.common import plot_2d
-from tagger.model.modelLoader import fromFolder
+from tagger.model.common import fromFolder
 
 import numpy as np
 import hls4ml

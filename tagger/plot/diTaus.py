@@ -4,7 +4,6 @@ Script to plot all di-taus related physics performance plot
 import os, json
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
 import awkward as ak
 import numpy as np
 import uproot
@@ -16,6 +15,8 @@ import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
 
+from tagger.model.common import fromFolder
+
 style.set_style()
 
 #Interpolation of working point
@@ -23,7 +24,7 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
+from tagger.plot.common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 
 def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28, RateRange = 1.0):
     """
@@ -286,7 +287,7 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
 
     # Save the plot
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tautau')
     fig.savefig(os.path.join(plot_dir, "tautau_BkgRate.pdf"), bbox_inches='tight')
     fig.savefig(os.path.join(plot_dir, "tautau_BkgRate.png"), bbox_inches='tight')
 
@@ -299,7 +300,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     eta range for endcap: 1.5 < |eta| < 2.5
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tautau')
 
     #Check if the working point have been derived
     WP_path = os.path.join(model.output_directory, "plots/physics/tautau/working_point.json")
@@ -436,7 +437,7 @@ if __name__ == "__main__":
     if args.deriveWPs:
         derive_diTaus_WPs(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.BkgRate:
-        plot_bkg_rate_ditau(model args.minbias, n_entries=args.n_entries, tree=args.tree)
+        plot_bkg_rate_ditau(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree)
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)

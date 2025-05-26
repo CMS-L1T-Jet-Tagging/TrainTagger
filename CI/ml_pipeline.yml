@@ -243,18 +243,13 @@ upload_new_model:
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
+  dependencies: [train,evaluate]
   needs: 
     - job: emulation-evaluate
       optional: true
   needs: 
     - job: hls4ml
       optional: true
-  dependencies: 
-    - job: train
-    - optional: false
-  dependencies: 
-    - job: evaluate
-    - optional: false
   needs: 
     - job: profile
       optional: true

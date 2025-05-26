@@ -12,6 +12,7 @@ from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 
 from tagger.model.JetTagModel import JetTagModel, JetModelFactory
+from tagger.model.common import AAtt, AttentionPooling
 from tagger.model.common import choose_aggregator
 
 import hls4ml
@@ -162,7 +163,11 @@ class DeepSetModel(JetTagModel):
     @JetTagModel.load_decorator
     def load(self,out_dir=None):
         #Load model
-        self.model = load_qmodel(f"{out_dir}/model/saved_model.h5")
+        custom_objects_ = {
+                "AAtt": AAtt,
+                "AttentionPooling": AttentionPooling,
+        }
+        self.model = load_qmodel(f"{out_dir}/model/saved_model.h5", custom_objects=custom_objects_)
        
     def hls4ml_convert(self,firmware_dir,build=False):
 

@@ -312,7 +312,11 @@ class InteractionNetModel(JetTagModel):
     @JetTagModel.load_decorator
     def load(self,out_dir=None):
         #Load model
-        self.model = load_qmodel(f"{out_dir}/model/saved_model.h5")
+        custom_objects_ = {
+                "NodeEdgeProjection": NodeEdgeProjection,
+        }
+        self.model = load_qmodel(f"{out_dir}/model/saved_model.h5", custom_objects=custom_objects_)
+       
        
     def hls4ml_convert(self,firmware_dir,build=False):
 

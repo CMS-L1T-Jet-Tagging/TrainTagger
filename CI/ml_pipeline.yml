@@ -107,7 +107,9 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  needs: [train]
+  needs:
+    - job : train
+      optional: true
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -153,6 +155,7 @@ hls4ml:
   stage: hls4ml
   needs:
     - job : train
+      optional: true
   script:
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py -m output/$Model
@@ -247,15 +250,10 @@ upload_new_model:
       optional: true
   needs: 
     - job: train
-      optional: false
   needs: 
     - job: evaluate
-      optional: false
   needs: 
     - job: profile
-      optional: true
-  needs: 
-    - job: data
       optional: true
   rules:
     - if: $RERUN_ON_TAG == "False"

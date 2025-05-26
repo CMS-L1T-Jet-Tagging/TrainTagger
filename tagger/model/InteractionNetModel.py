@@ -20,6 +20,22 @@ import numpy as np
 
 import os,json
 
+num_threads = 24
+os.environ["OMP_NUM_THREADS"] = str(num_threads)
+os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
+os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
+
+tf.config.threading.set_inter_op_parallelism_threads(
+    num_threads
+)
+tf.config.threading.set_intra_op_parallelism_threads(
+    num_threads
+)
+
+# GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
+tf.keras.utils.set_random_seed(420) # not a special number
+
+
 # Custom NodeEdgeProjection needed for the InteractionNet
 class NodeEdgeProjection(Layer, tfmot.sparsity.keras.PrunableLayer):
     """Layer that build the adjacency matrix for the interaction network graph.

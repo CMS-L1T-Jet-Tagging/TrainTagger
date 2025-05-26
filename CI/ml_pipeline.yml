@@ -27,6 +27,7 @@ variables:
     BBTT: GluGluHHTo2B2Tau_PU200.root
     BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
     VBFHTAUTAU: VBFHToTauTau_PU200.root
+    NTUPLE_TREE: outnano/Jets
     SIGNAL: TT_PU200
     EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
@@ -250,6 +251,9 @@ upload_new_model:
     - job: evaluate
   needs: 
     - job: profile
+      optional: true
+  needs: 
+    - job: data
       optional: true
   rules:
     - if: $RERUN_ON_TAG == "False"

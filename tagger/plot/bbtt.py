@@ -336,7 +336,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
 
     RateHist.fill(ht = jet_ht, nn = np.zeros(len(jet_ht)))
-    derive_HT_WP(RateHist, ht_edges, n_events, model_dir, 14)
+    derive_HT_WP(RateHist, ht_edges, n_events, model.output_directory, 14)
     return
 
 def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tree='outnano/Jets'):

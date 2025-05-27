@@ -201,7 +201,7 @@ emulation-evaluate:
   - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model
   artifacts:
     paths:
-      - output/baseline
+      - output/$Model
     expire_in: 1 day
 
 profile:
@@ -288,10 +288,10 @@ upload_tagged_model:
     - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
     - cd ../..
     - mkdir $Name/plots
-    - mv output/baseline/plots/emulation $Name/plots
-    - mv output/baseline/plots/profile $Name/plots
-    - mv output/baseline/plots/training/ $Name/plots
-    - mv output/baseline/plots/physics/ $Name/plots
+    - mv output/$Model/plots/emulation $Name/plots
+    - mv output/$Model/plots/profile $Name/plots
+    - mv output/$Model/plots/training/ $Name/plots
+    - mv output/$Model/plots/physics/ $Name/plots
     - cd ..
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping

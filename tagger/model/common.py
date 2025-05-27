@@ -1,14 +1,19 @@
-import os,yaml,shutil
+import os
+import shutil
+import yaml
+
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D, Layer
-import tagger.model
+from qkeras.qlayers import QDense
+
 from tagger.model.JetTagModel import JetModelFactory
-from qkeras.qlayers import QDense, QActivation
 
 # Attention layers in case we want to try at some point
+
+
 class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
-    def __init__(self, d_model = 16, nhead = 2, bits=9, bits_int=2, alpha_val=1, **kwargs):
+    def __init__(self, d_model=16, nhead=2, bits=9, bits_int=2, alpha_val=1, **kwargs):
         super(AAtt, self).__init__(**kwargs)
 
         self.d_model = d_model
@@ -37,38 +42,39 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
         input_shape = input.shape
         shape_ = (-1, input_shape[1], self.n_head, self.d_model//self.n_head)
         perm_ = (0, 2, 1, 3)
-        
+
         q = self.qD(input)
-        q = tf.reshape(q, shape = shape_)
-        q = tf.transpose(q, perm = perm_)
+        q = tf.reshape(q, shape=shape_)
+        q = tf.transpose(q, perm=perm_)
 
         k = self.kD(input)
-        k = tf.reshape(k, shape = shape_)
-        k = tf.transpose(k, perm = perm_)
+        k = tf.reshape(k, shape=shape_)
+        k = tf.transpose(k, perm=perm_)
 
         v = self.vD(input)
-        v = tf.reshape(v, shape = shape_)
-        v = tf.transpose(v, perm = perm_)
+        v = tf.reshape(v, shape=shape_)
+        v = tf.transpose(v, perm=perm_)
 
         a = tf.matmul(q, k, transpose_b=True)
-        a = tf.nn.softmax(a / q.shape[3]**0.5, axis = 3)
+        a = tf.nn.softmax(a / q.shape[3]**0.5, axis=3)
 
         out = tf.matmul(a, v)
-        out = tf.transpose(out, perm = perm_)
-        out = tf.reshape(out, shape = (-1, input_shape[1], self.d_model))
+        out = tf.transpose(out, perm=perm_)
+        out = tf.reshape(out, shape=(-1, input_shape[1], self.d_model))
         out = self.outD(out)
 
         return out
-    
+
     # define all prunable weights
     def get_prunable_weights(self):
         return self.qD._trainable_weights + self.kD._trainable_weights + \
-        self.vD._trainable_weights + self.outD._trainable_weights
+            self.vD._trainable_weights + self.outD._trainable_weights
+
 
 class AttentionPooling(Layer, tfmot.sparsity.keras.PrunableLayer):
     def __init__(self, bits, bits_int, alpha_val, **kwargs):
         super().__init__(**kwargs)
-        
+
         self.score_dense = QDense(1, use_bias=False, **kwargs)
 
     def call(self, x):  # (B, N, d) -> (B,d) pooling via simple softmax
@@ -76,14 +82,15 @@ class AttentionPooling(Layer, tfmot.sparsity.keras.PrunableLayer):
         a = tf.squeeze(self.score_dense(x), axis=-1)
         a = tf.nn.softmax(a, axis=1)
 
-        out = tf.matmul(a[:, tf.newaxis, :], x) 
-        return tf.squeeze(out, axis=1) 
+        out = tf.matmul(a[:, tf.newaxis, :], x)
+        return tf.squeeze(out, axis=1)
 
     # define all prunable weights
     def get_prunable_weights(self):
         return self.score_dense._trainable_weights
 
-def choose_aggregator(choice : str, name : str, bits=9, bits_int=2, alpha_val=1, **common_args) -> tf.keras.layers.Layer:
+
+def choose_aggregator(choice: str, name: str, bits=9, bits_int=2, alpha_val=1, **common_args) -> tf.keras.layers.Layer:
     """Choose the aggregator keras object based on an input string."""
     if choice not in ["mean", "max", "attention"]:
         raise ValueError(
@@ -91,16 +98,17 @@ def choose_aggregator(choice : str, name : str, bits=9, bits_int=2, alpha_val=1,
             "See models.py and add string and corresponding object there."
         )
     if choice == "mean":
-        return GlobalAveragePooling1D(name = name)
+        return GlobalAveragePooling1D(name=name)
     elif choice == "max":
-        return GlobalMaxPooling1D(name = name)
+        return GlobalMaxPooling1D(name=name)
     elif choice == "attention":
-        return AttentionPooling(name = name, bits=bits, bits_int=bits_int, alpha_val=alpha_val, **common_args)
+        return AttentionPooling(name=name, bits=bits, bits_int=bits_int, alpha_val=alpha_val, **common_args)
 
-def fromYaml(yaml_path,folder,recreate=True):
+
+def fromYaml(yaml_path, folder, recreate=True):
     with open(yaml_path, 'r') as stream:
         yaml_dict = yaml.safe_load(stream)
-    model = JetModelFactory.create_JetTagModel(yaml_dict['model'],folder)
+    model = JetModelFactory.create_JetTagModel(yaml_dict['model'], folder)
     model.load_yaml(yaml_path)
     if recreate:
         # Remove output dir if exists
@@ -112,18 +120,19 @@ def fromYaml(yaml_path,folder,recreate=True):
         os.system('cp '+yaml_path+' '+folder)
     return model
 
-def fromFolder(save_path,newoutput_dir=None):
+
+def fromFolder(save_path, newoutput_dir=None):
     if newoutput_dir != None:
         folder = newoutput_dir
         recreate = True
     else:
         folder = save_path
         recreate = False
-    
+
     for file in os.listdir(folder):
         if file.endswith(".yaml"):
             yaml_path = os.path.join(folder, file)
-    
-    model = fromYaml(yaml_path,folder,recreate=recreate)
+
+    model = fromYaml(yaml_path, folder, recreate=recreate)
     model.load(folder)
     return model

@@ -12,13 +12,14 @@ from qkeras.qlayers import QDense, QActivation
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 
+import numpy as np
+
 from tagger.model.JetTagModel import JetTagModel, JetModelFactory
 from tagger.model.common import AAtt, AttentionPooling
 from tagger.model.common import choose_aggregator
 
 import hls4ml
 
-import numpy as np
 
 num_threads = 24
 os.environ["OMP_NUM_THREADS"] = str(num_threads)

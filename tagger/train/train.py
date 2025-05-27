@@ -1,20 +1,18 @@
+import os
 from argparse import ArgumentParser
-import os, shutil, json, yaml
-
-# Import from other modules
-from tagger.data.tools import make_data, load_data, to_ML
-from tagger.plot.basic import loss_history, basic
-from tagger.model.common import fromYaml, fromFolder
 
 # Third parties
 import numpy as np
-import mlflow
-from datetime import datetime
+
+# Import from other modules
+from tagger.data.tools import load_data, to_ML
+from tagger.plot.basic import basic
+from tagger.model.common import fromYaml, fromFolder
 
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
-    os.makedirs(os.path.join(out_dir,'testing_data'), exist_ok=True)
+    os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
 
     np.save(os.path.join(out_dir, "testing_data/X_test.npy"), X_test)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
@@ -23,12 +21,14 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
     print(f"Test data saved to {out_dir}")
 
-def train_weights(y_train, reco_pt_train, class_labels,weightingMethod,debug):
+
+def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     """
     Re-balancing the class weights and then flatten them based on truth pT
     """
     if weightingMethod not in ["none", "ptref", "onlyclass"]:
-        raise ValueError("Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass.")
+        raise ValueError(
+            "Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass.")
     num_samples = y_train.shape[0]
     num_classes = y_train.shape[1]
 
@@ -44,32 +44,34 @@ def train_weights(y_train, reco_pt_train, class_labels,weightingMethod,debug):
         pt_bins = np.array([
             0., np.inf  # Use np.inf to cover all higher values
         ])
-    
+
     # Initialize counts per class per pT bin
     class_pt_counts = {}
 
     # Calculate counts per class per pT bin
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
-        class_pt_counts[idx], _ = np.histogram(reco_pt_train[class_mask], bins=pt_bins)
-    
+        class_pt_counts[idx], _ = np.histogram(
+            reco_pt_train[class_mask], bins=pt_bins)
+
     # Compute the maximum counts per pT bin over all classes
     max_counts_per_bin = np.zeros(len(pt_bins)-1)
     min_counts_per_bin = np.zeros(len(pt_bins)-1)
     for bin_idx in range(len(pt_bins)-1):
-        counts_in_bin = [class_pt_counts[idx][bin_idx] for idx in class_labels.values()]
+        counts_in_bin = [class_pt_counts[idx][bin_idx]
+                         for idx in class_labels.values()]
         max_counts_per_bin[bin_idx] = max(counts_in_bin)
         min_counts_per_bin[bin_idx] = min(counts_in_bin)
 
     # Weight all to one base class (b = 0)
     counts_per_bin = class_pt_counts[0]
-    
+
     if weightingMethod == "ptref":
         # Try minimum and flat
         counts_per_bin = [min(min_counts_per_bin) for __ in min_counts_per_bin]
         # Try maximum and flat
         # counts_per_bin = [max(max_counts_per_bin) for __ in max_counts_per_bin]
-    
+
     # Compute weights per class per pT bin
     weights_per_class_pt_bin = {}
     for idx in class_labels.values():
@@ -84,69 +86,78 @@ def train_weights(y_train, reco_pt_train, class_labels,weightingMethod,debug):
     # Multiply by some custom class weights
     # All same weight
     weights_per_class = {
-        0: 1, # b
-        1: 1, # charm
-        2: 1., # light
-        3: 1., # gluon
-        4: 1., # taup
-        5: 1., # taum
-        6: 1., # muon
-        7: 1. # electron
+        0: 1,  # b
+        1: 1,  # charm
+        2: 1.,  # light
+        3: 1.,  # gluon
+        4: 1.,  # taup
+        5: 1.,  # taum
+        6: 1.,  # muon
+        7: 1.  # electron
     }
     for idx in class_labels.values():
-        weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * weights_per_class[idx]
+        weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * \
+            weights_per_class[idx]
 
     # Assign weights to samples
     for idx in class_labels.values():
         class_mask = y_train[:, idx] == 1
         class_truth_pt = reco_pt_train[class_mask]
         sample_indices = np.where(class_mask)[0]
-        bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
-        bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
+        # Subtract 1 to get 0-based index
+        bin_indices = np.digitize(class_truth_pt, pt_bins) - 1
+        # Handle right edge
+        bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2
         sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
-    
+
         # Print weighted jets as closure test in debug mode
         if debug and weightingMethod != "none":
-            print ("DEBUG - Checking jets weighted by sample_weights as a function of pT:")
-            print (np.histogram(class_truth_pt, bins = pt_bins, weights = sample_weights[sample_indices]))
+            print("DEBUG - Checking jets weighted by sample_weights as a function of pT:")
+            print(np.histogram(class_truth_pt, bins=pt_bins,
+                  weights=sample_weights[sample_indices]))
 
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)
-
 
     if weightingMethod == "none":
         return None
     else:
         return sample_weights
 
-def train(model,out_dir,yaml_path,percent):
+
+def train(model, out_dir, yaml_path, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
-    model.set_labels(input_vars,extra_vars,class_labels,)
-    
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data(
+        "training_data/", percentage=percent)
+    model.set_labels(input_vars, extra_vars, class_labels,)
+
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(
+        data_train, class_labels)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
+    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(
+        data_test, class_labels)
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
-    sample_weight = train_weights(y_train, reco_pt_train, class_labels,weightingMethod = model.training_config['weight_method'], debug = model.run_config['debug'] )
+    sample_weight = train_weights(y_train, reco_pt_train, class_labels,
+                                  weightingMethod=model.training_config['weight_method'], debug=model.run_config['debug'])
     if model.run_config['debug']:
-        print ("DEBUG - Checking sample_weight:")
-        print (sample_weight)
+        print("DEBUG - Checking sample_weight:")
+        print(sample_weight)
 
     # Get input shape
-    input_shape = X_train.shape[1:] #First dimension is batch size
+    input_shape = X_train.shape[1:]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
-    model.build_model(input_shape,output_shape)
-    #Train it with a pruned model
-    num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
+    model.build_model(input_shape, output_shape)
+    # Train it with a pruned model
+    num_samples = X_train.shape[0] * \
+        (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
-    history = model.fit(X_train,y_train,pt_target_train,sample_weight)
+    history = model.fit(X_train, y_train, pt_target_train, sample_weight)
 
     model.save()
 
@@ -154,26 +165,30 @@ def train(model,out_dir,yaml_path,percent):
 
     return
 
+
 if __name__ == "__main__":
 
     parser = ArgumentParser()
     # Training argument
-    parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
-    parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
-    parser.add_argument('-y','--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help = 'YAML config for model')
+    parser.add_argument('-o', '--output', default='output/baseline',
+                        help='Output model directory path, also save evaluation plots')
+    parser.add_argument('-p', '--percent', default=100, type=int,
+                        help='Percentage of how much processed data to train on')
+    parser.add_argument('-y', '--yaml_config',
+                        default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model')
 
     # Basic ploting
-    parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
-    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting')
+    parser.add_argument('--plot-basic', action='store_true',
+                        help='Plot all the basic performance if set')
+    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*',
+                        help='Specify all signal process for individual plotting')
 
     args = parser.parse_args()
 
-    #mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
-
-    
+    # mlflow.set_experiment(os.getenv('CI_COMMIT_REF_NAME'))
 
     if args.plot_basic:
-        #All the basic plots!
+        # All the basic plots!
         model = fromFolder(args.output)
         results = basic(model, args.signal_processes)
         # if os.path.isfile("mlflow_run_id.txt"):
@@ -188,7 +203,7 @@ if __name__ == "__main__":
         #             mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
 
     else:
-        model = fromYaml(args.yaml_config,args.output)
+        model = fromYaml(args.yaml_config, args.output)
         train(model, args.output, args.yaml_config, args.percent)
         # with mlflow.start_run(run_name=args.name) as run:
         #     mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
@@ -198,6 +213,3 @@ if __name__ == "__main__":
         # sourceFile = open('mlflow_run_id.txt', 'w')
         # print(run_id, end="", file = sourceFile)
         # sourceFile.close()
-
-
-

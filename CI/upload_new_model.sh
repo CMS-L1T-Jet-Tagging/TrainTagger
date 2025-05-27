@@ -6,11 +6,9 @@ mv output/$Model/plots/training/ $Name/plots
 mv output/$Model/plots/physics/ $Name/plots
 
 if [[ "$RUN_SYNTHESIS" == "True" ]]; then
-    cd tagger
     tar -cvf L1TSC4NGJetModel.tgz output/$Model/firmware
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    cd ../..
     mv output/$Model/plots/profile $Name/plots
 fi
 
@@ -28,11 +26,11 @@ cd TrainTagger/output/$Model
 pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
 pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,json
 cd ../..
-mv CI/mlflow_logger.py .
-python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR} \
-      -f ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware \
-      -m ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model \
-      -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots \
-      -n ${Name}
+# mv CI/mlflow_logger.py .
+# python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR} \
+#       -f ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware \
+#       -m ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model \
+#       -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots \
+#       -n ${Name}
 eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
 eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}

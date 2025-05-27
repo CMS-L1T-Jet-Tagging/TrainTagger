@@ -6,7 +6,7 @@ if [[ "$1" == "False" ]]; then
     python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
     cd output/baseline
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
-    eos cp model/saved_model.h5 ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/saved_model.h5 .
+    eos cp model/saved_model.keras ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/saved_model.keras .
     export MODEL_LOCATION=${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
 else
     mkdir -p output/baseline/model

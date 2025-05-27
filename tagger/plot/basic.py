@@ -536,19 +536,17 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
     def plot_efficiency(df_wp_loose, df_wp_medium, df_wp_tight, plot_name):
         # Plot the efficiency
-        fig = plt.figure(figsize=style.FIGURE_SIZE)
+        fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.CMSHEADER_SIZE)
 
         ax = df_wp_loose.plot.line(x="midpoints", y="wp_loose", yerr="err(wp_loose)", label = "Loose (mistag = 50%)", color="blue", linestyle='-')
         df_wp_medium.plot.line(x="midpoints", y="wp_medium", yerr="err(wp_medium)", label = "Medium (eff = 20%)", ax = ax, color="orange", linestyle='-')
         df_wp_tight.plot.line(x="midpoints", y="wp_tight", yerr="err(wp_tight)", label = "Tight (eff = 10%)", ax = ax, color="green", linestyle='-')
-        plt.xlabel(r'Jet $p_T$ [GeV]')
-        plt.ylabel('Tagging efficiency')
-        plt.ylim(0., 1.3)
+        ax.set_xlabel(r'Jet $p_T$ [GeV]')
+        ax.set_ylabel('Tagging efficiency')
+        ax.set_ylim(0., 1.3)
         # plt.xlim(0., 1000.)
-        plt.legend()
-
-        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.CMSHEADER_SIZE)
-
+        ax.legend()
         # Save the plot
         save_path = os.path.join(save_dir, plot_name)
         plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
@@ -711,7 +709,7 @@ def basic(model,signal_dirs) :
 
     #Get classification outputs
     y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1]
+    pt_ratio = model_outputs[1][:,0]
 
     #Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir,ROC_dict)

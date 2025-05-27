@@ -108,9 +108,6 @@ evaluate:
     - .template
   stage: evaluate
   tags: [cern-nextgen-h100]
-  needs:
-    - job : train
-      optional: true
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -243,14 +240,15 @@ upload_new_model:
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
-  needs: [train,evaluate]
   needs: 
+    - job: train
+      optional: false
+    - job: evaluate
+      optional: false
     - job: emulation-evaluate
       optional: true
-  needs: 
     - job: hls4ml
       optional: true
-  needs: 
     - job: profile
       optional: true
   rules:

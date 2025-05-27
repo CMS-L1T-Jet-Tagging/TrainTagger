@@ -153,10 +153,11 @@ class DeepSetModel(JetTagModel):
                             shuffle=True)
     
     @JetTagModel.save_decorator
-    def save(self,out_dir):  
+    def save(self,out_dir):
         #Export the model
         model_export = tfmot.sparsity.keras.strip_pruning(self.model)
-        export_path = os.path.join(out_dir, "model/saved_model.h5")
+        os.makedirs(os.path.join(out_dir,'model'), exist_ok=True)
+        export_path = os.path.join(out_dir, "model/saved_model.keras")
         model_export.save(export_path)
         print(f"Model saved to {export_path}")
 
@@ -167,7 +168,7 @@ class DeepSetModel(JetTagModel):
                 "AAtt": AAtt,
                 "AttentionPooling": AttentionPooling,
         }
-        self.model = load_qmodel(f"{out_dir}/model/saved_model.h5", custom_objects=custom_objects_)
+        self.model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
        
     def hls4ml_convert(self,firmware_dir,build=False):
 

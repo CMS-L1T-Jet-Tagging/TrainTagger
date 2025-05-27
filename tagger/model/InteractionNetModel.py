@@ -322,7 +322,7 @@ class InteractionNetModel(JetTagModel):
     def hls4ml_convert(self,firmware_dir,build=False):
 
         #Remove the old directory if they exist
-        hls4ml_outdir = self.output_directory + '/' + firmware_dir + '/' + self.hls4ml_config['project_name']
+        hls4ml_outdir = firmware_dir + '/' + self.hls4ml_config['project_name']
         os.system(f'rm -rf {hls4ml_outdir}')
 
         #Create default config

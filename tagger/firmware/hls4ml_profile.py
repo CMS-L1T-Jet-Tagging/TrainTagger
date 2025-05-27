@@ -106,12 +106,12 @@ def doPlots(model,outputdir,inputdir):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model_path', default='output/baseline_larger' , help = 'Input model path for comparison')
-    parser.add_argument('-o','--outpath', default='output/baseline_larger/plots/profile' , help = 'Jet tagger plotting directory')
-    parser.add_argument('-of','--outpath_firmware', default='output/baseline_larger/model/firmware' , help = 'Jet tagger firmware directory')
+    parser.add_argument('-m','--model_path', default='output/baseline' , help = 'Input model path for comparison')
+    parser.add_argument('-o','--outpath', default='output/baseline/plots/profile' , help = 'Jet tagger plotting directory')
+    parser.add_argument('-of','--outpath_firmware', default='output/baseline/firmware' , help = 'Jet tagger firmware directory')
     parser.add_argument('-i','--input', default='data/jetTuple_extended_5.root' , help = 'Path to profiling data rootfile')
     parser.add_argument('-r','--remake', default=False , help = 'Remake profiling data? ')
-    parser.add_argument('-y','--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help = 'YAML config for model')
+    parser.add_argument('-y','--yaml_config', default='tagger/model/configs/baseline.yaml', help = 'YAML config for model')
 
     args = parser.parse_args()
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     doPlots(model,args.outpath,"profiling_data/")
 
-    report = getReports('tagger/firmware/L1TSC4NGJetModel')
+    report = getReports(args.outpath_firmware)
     
     # if os.path.isfile("mlflow_run_id.txt"):
 

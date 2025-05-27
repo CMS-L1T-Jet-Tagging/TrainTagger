@@ -173,7 +173,7 @@ class DeepSetModel(JetTagModel):
     def hls4ml_convert(self,firmware_dir,build=False):
 
         #Remove the old directory if they exist
-        hls4ml_outdir = self.output_directory + '/' + firmware_dir + '/' + self.hls4ml_config['project_name']
+        hls4ml_outdir = firmware_dir + '/' + self.hls4ml_config['project_name']
         os.system(f'rm -rf {hls4ml_outdir}')
 
         #Create default config
@@ -200,7 +200,6 @@ class DeepSetModel(JetTagModel):
             else:
                 config["LayerName"][layer.name]["Trace"]  = not build
 
-        
         config["LayerName"]["jet_id_output"]["Precision"]["result"] =  self.hls4ml_config['class_precision']
         config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
         config["LayerName"]["pT_output"]["Precision"]["result"] =  self.hls4ml_config['class_precision']

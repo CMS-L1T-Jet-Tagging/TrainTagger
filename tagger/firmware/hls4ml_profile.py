@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     doPlots(model,args.outpath,"profiling_data/")
 
-    report = getReports(args.outpath_firmware)
+    report = getReports(args.outpath_firmware + '/' + model.hls4ml_config['project_name'])
     
     # if os.path.isfile("mlflow_run_id.txt"):
 

@@ -12,6 +12,7 @@
 </span>
 
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/CMS-L1T-Jet-Tagging/TrainTagger/main.svg)](https://results.pre-commit.ci/latest/github/CMS-L1T-Jet-Tagging/TrainTagger/main)
+[![pylint](https://<MAIN_GROUP>.gitlab.io/<SUB_GROUP>/<PROJECT>/badges/pylint.svg)](https://<MAIN_GROUP>.gitlab.io/<SUB_GROUP>/<PROJECT>/lint/)
 
 # Training Jet Taggers for CMS Phase 2 L1 Trigger
 

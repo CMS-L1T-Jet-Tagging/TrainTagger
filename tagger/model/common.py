@@ -10,8 +10,6 @@ from qkeras.qlayers import QDense
 from tagger.model.JetTagModel import JetModelFactory
 
 # Attention layers in case we want to try at some point
-
-
 class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
     def __init__(self, d_model=16, nhead=2, bits=9, bits_int=2, alpha_val=1, **kwargs):
         super(AAtt, self).__init__(**kwargs)

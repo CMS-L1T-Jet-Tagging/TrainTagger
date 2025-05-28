@@ -121,8 +121,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
 
     if weightingMethod == "none":
         return None
-    else:
-        return sample_weights
+    return sample_weights
 
 
 def train(model, out_dir, yaml_path, percent):

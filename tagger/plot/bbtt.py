@@ -438,12 +438,10 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
         event_id, grouped_gen_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, num_elements=0)
         all_event_gen_mHH = ak.firsts(grouped_gen_arrays[0])
     except (KeyError, ValueError, uproot.exceptions.KeyInFileError) as e:
-        event_id, grouped_gen_arrays = group_id_values(raw_event_id, raw_jet_genpt, num_elements=0)
         print(f"Warning: 'genHH_mass' not found in signal file: {e}")
+        event_id, grouped_gen_arrays = group_id_values(raw_event_id, raw_jet_genpt, num_elements=0)
         raw_gen_mHH, all_event_gen_mHH = None, None
-
     all_jet_genht = ak.sum(grouped_gen_arrays[-1], axis=1)
-
 
     raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
 
@@ -457,6 +455,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     else:
         event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
         jet_genpt, jet_pt, jet_eta, tau_pt, jet_nn_inputs = grouped_arrays
+
 
     #Calculate the ht
     jet_genht = ak.sum(jet_genpt, axis=1)

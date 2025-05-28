@@ -109,7 +109,6 @@ evaluate:
   - eos cp $BBBB_EOS_DIR/$BBBB .
   - eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
-  - eos cp $EOS_DATA_DIR/GluGluHHTo2B2Tau_PU200.root .
   - cd ..
   - echo "bbtt performance"
   - python tagger/plot/bbtt_bb_only.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE

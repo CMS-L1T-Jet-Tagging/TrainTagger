@@ -372,8 +372,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     plot_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/HHbbtt_bbtt_seed_eff_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
-    plt.show(block=False)
-    plt.close()
+    plt.clf()
 
     #Now plot all (HT only comparison)
     fig2,ax2 = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -395,7 +394,6 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     plot_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/HHbbtt_HT_only_eff_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
-    plt.show(block=False)
 
 
 if __name__ == "__main__":

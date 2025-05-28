@@ -20,8 +20,8 @@ include:
 # EOS_STORAGE_DATADIR = Sub directory to store branch intermediate training files
 # CMSSW_VERSION = Which CMSSW release to run the emulator in
 # CMSSW_L1CT = Which CMSSW fork:branch to run the emulator in
-# CMSSW_EMULATOR_WRAPPER = Which CMSSW emulator wrapper to use 
-# RERUN_ON_TAG = Switch to only run the evaluation and firmware steps on the tagged model and not rerun a training. 
+# CMSSW_EMULATOR_WRAPPER = Which CMSSW emulator wrapper to use
+# RERUN_ON_TAG = Switch to only run the evaluation and firmware steps on the tagged model and not rerun a training.
 # Default false to run a full retraining of a model
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 

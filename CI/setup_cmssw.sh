@@ -28,7 +28,7 @@ git cms-addpkg L1Trigger/Configuration
 git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
   cd hls4mlEmulatorExtras &&
   git checkout -b v1.1.3 tags/v1.1.3
-make 
+make
 make install
 cd ..
 git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
@@ -41,7 +41,7 @@ cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel_test/firmware .
 mv firmware L1TSC4NGJetModel
 ./setup.sh
 
-make 
+make
 make install
 cd ..
 

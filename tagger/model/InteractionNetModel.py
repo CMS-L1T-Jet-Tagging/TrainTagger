@@ -133,11 +133,11 @@ class InteractionNetModel(JetTagModel):
 
     def build_model(self, inputs_shape : tuple, outputs_shape : tuple):
         """Interaction network model from https://arxiv.org/abs/1612.00222.
-        
+
         Args:
             inputs_shape (tuple): Shape of the input
             outputs_shape (tuple): Shape of the output
-        
+
         Additional hyperparameters in the config
             effects_layers: List of number of nodes for each layer of the effects MLP.
             objects_layers: List of number of nodes for each layer of the objects MLP.
@@ -323,7 +323,7 @@ class InteractionNetModel(JetTagModel):
 
     def fit(self, X_train : npt.NDArray[np.float64],
                   y_train : npt.NDArray[np.float64],
-                  pt_target_train : npt.NDArray[np.float64], 
+                  pt_target_train : npt.NDArray[np.float64],
                   sample_weight : npt.NDArray[np.float64]):
         """Fit the model to the training dataset
 

@@ -18,7 +18,6 @@ import time
 from tqdm import tqdm
 import itertools
 import multiprocessing
-import warnings
 
 style.set_style()
 
@@ -162,10 +161,10 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
     target_rate_idx = find_rate(rate_list, target_rate = rate, RateRange=RateRange)
     if len(target_rate_idx) == 0:
         # If the rate is not found, find the closest lower value
-        rate_list = np.where(rate_list > rate, -1, rate_list)
+        rate_list = np.where(np.array(rate_list) > rate, -1, rate_list)
         target_rate_idx = [np.argmax(rate_list)]
         new_rate = {'rate': rate_list[target_rate_idx[0]]}
-        warnings.warn(f"Target rate {rate} not found for Multiclass WP,using closest lower value {new_rate['rate']} instead.")
+        print(f"Warning: Target rate {rate} not found for Multiclass WP,using closest lower value {new_rate['rate']} instead.")
         with open(os.path.join(plot_dir, f"bbtt_fixed_wp_{score_type}_{apply_sel}_{rate}_rate.json"), "w") as f:
             json.dump(new_rate, f, indent=4)
 
@@ -246,7 +245,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange
         rate_list = np.where(rate_list > target_rate, -1, rate_list)
         target_rate_idx = [np.argmax(rate_list)]
         new_rate = rate_list[target_rate_idx[0]]
-        warnings.warn(f"Target rate {target_rate} not found for HT WP,using closest lower value {new_rate['rate']} instead.")
+        print(f"Warning: Target rate {target_rate} not found for HT WP,using closest lower value {new_rate['rate']} instead.")
         with open(os.path.join(plot_dir, f"ht_working_point_rate.json"), "w") as f:
             json.dump(new_rate, f, indent=4)
 
@@ -302,7 +301,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
 
     #Define the histograms (pT edge and NN Score edge)
     ht_edges = list(np.arange(150,500,1)) + [10000] #Make sure to capture everything
-    NN_edges = list([round(i,4) for i in np.arange(0.01, .4, 0.01)]) + [2.0]
+    NN_edges = list([round(i,4) for i in np.arange(0.01, .4, 0.005)]) + [2.0]
 
     # Signal preds to pick the working point
     global s_n_events

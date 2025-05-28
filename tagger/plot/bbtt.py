@@ -388,6 +388,10 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
 
+    # Load the inputs
+    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
+    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
     ht_egdes = list(np.arange(0,800,20))
@@ -429,15 +433,31 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     raw_tau_pt = extract_array(signal, 'jet_taupt', n_entries)
     n_events = len(np.unique(raw_event_id))
 
-    # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+    # Try to extract genHH_mass, set to None if not found
+    try:
+        raw_gen_mHH = extract_array(signal, 'genHH_mass', n_entries)
+        event_id, grouped_gen_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, num_elements=0)
+        all_event_gen_mHH = ak.firsts(grouped_gen_arrays[0])
+    except (KeyError, ValueError, uproot.exceptions.KeyInFileError) as e:
+        event_id, grouped_gen_arrays = group_id_values(raw_event_id, raw_jet_genpt, num_elements=0)
+        print(f"Warning: 'genHH_mass' not found in signal file: {e}")
+        raw_gen_mHH, all_event_gen_mHH = None, None
+
+    all_jet_genht = ak.sum(grouped_gen_arrays[-1], axis=1)
+
 
     raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
-    jet_genpt, jet_pt, jet_eta, tau_pt, jet_nn_inputs = grouped_arrays
+    if all_event_gen_mHH is not None:
+        event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_gen_mHH, raw_inputs, num_elements=4)
+        jet_genpt, jet_pt, jet_eta, tau_pt, gen_mHH, jet_nn_inputs = grouped_arrays
+
+        #Just pick the first entry of jet mHH arrays
+        gen_mHH = ak.firsts(gen_mHH)
+    else:
+        event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
+        jet_genpt, jet_pt, jet_eta, tau_pt, jet_nn_inputs = grouped_arrays
 
     #Calculate the ht
     jet_genht = ak.sum(jet_genpt, axis=1)
@@ -473,7 +493,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     model_selected_events_14 = Hist(ht_axis)
     ht_only_selected_events = Hist(ht_axis)
 
-    all_events.fill(jet_genht)
+    all_events.fill(all_jet_genht)
     baseline_selected_events.fill(jet_genht[baseline_selection])
     model_selected_events.fill(jet_genht[model_selection])
     model_selected_events_14.fill(jet_genht[model_selection_14])
@@ -527,8 +547,10 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     fig2,ax2 = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax2,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
-    ax2.errorbar(model_x_14, model_y_14, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(model_alt_rate_14, eff_str, model_14_efficiency, ht_wp, tau_topo_str, round(ttag_wp_14,2), round(btag_wp_14,2)))
-    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT + QuadJets @ {} kHz, {}={} (L1 $HT$ > {} GeV)'.format(ht_alt_rate, eff_str, ht_only_efficiency, ht_only_wp))
+    model_label_14 = r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {}, $\sum$ bb > {})'.format(model_alt_rate_14, eff_str, model_14_efficiency, ht_wp, tau_topo_str, round(ttag_wp_14,2), round(btag_wp_14,2))
+    ht_label = r'HT + QuadJets @ {} kHz, {}={} (L1 $HT$ > {} GeV)'.format(ht_alt_rate, eff_str, ht_only_efficiency, ht_only_wp)
+    ax2.errorbar(model_x_14, model_y_14, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=model_label_14)
+    ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=ht_label)
 
     #Plot other labels
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -544,6 +566,92 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.show(block=False)
+
+    #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
+    if all_event_gen_mHH is not None:
+        bbtt_eff_mHH(model_dir,
+                    all_event_gen_mHH,
+                    gen_mHH,
+                    model_selection_14, ht_only_selection,
+                    model_label_14, ht_label,
+                    n_events,
+                    apply_sel,
+                    score_type)
+    else:
+        print("Skipping mHH efficiency plots because 'genHH_mass' is not available")
+
+def bbtt_eff_mHH(model_dir,
+                all_event_gen_mHH,
+                event_gen_mHH,
+                model_selection, ht_only_selection,
+                model_label, ht_label,
+                n_events,
+                apply_sel,
+                apply_light):
+    """
+    Plot HH->4b w.r.t gen m_HH
+    """
+
+    #Define the histogram edges
+    mHH_edges = list(np.arange(0,1000,20))
+    mHH_axis = hist.axis.Variable(mHH_edges, name = r"$HT^{gen}$")
+
+    # Efficiencies
+    model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
+    ht_only_efficiency = np.round(ak.sum(ht_only_selection) / n_events, 2)
+
+    #Create the histograms
+    all_events = Hist(mHH_axis)
+    model_selected_events = Hist(mHH_axis)
+    ht_only_selected_events = Hist(mHH_axis)
+
+    all_events.fill(all_event_gen_mHH)
+    model_selected_events.fill(event_gen_mHH[model_selection])
+    ht_only_selected_events.fill(event_gen_mHH[ht_only_selection])
+
+    #Plot the ratio
+    eff_model = plot_ratio(all_events, model_selected_events)
+    eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
+
+    #Get data from handles
+    model_x, model_y, model_err = get_bar_patch_data(eff_model)
+    ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
+
+    # Plot ht distribution in the background
+    counts, bin_edges = np.histogram(np.clip(event_gen_mHH, 0, 800), bins=np.arange(0,800,40))
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    bin_width = bin_edges[1] - bin_edges[0]
+    normalized_counts = counts / np.sum(counts)
+
+    #Plot a plot comparing the multiclass with ht only selection
+    eff_str = r"$\int \epsilon$"
+    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE-2)
+
+    hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$mHH^{gen}$")
+    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
+                label=model_label)
+    ax.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
+                label=ht_label)
+
+
+    # Common plot settings for second plot
+    ax.hlines(1, 0, 1000, linestyles='dashed', color='black', linewidth=4)
+    ax.grid(True)
+    ax.set_ylim([0., 1.15])
+    ax.set_xlim([0, 1000])
+    ax.set_xlabel(r"$m_{HH}^{gen}$ [GeV]")
+    ax.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$)")
+    ax.legend(loc='upper left')
+
+    # Save second plot
+    ht_compare_path = os.path.join(model_dir, f"plots/physics/bbtt/HH_eff_mHH_{apply_light}_{apply_sel}")
+    plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
+    plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
+
+    plt.show(block=False)
+
+    return
 
 
 if __name__ == "__main__":
@@ -575,12 +683,12 @@ if __name__ == "__main__":
     if args.deriveWPs:
         derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'tau', args.signal, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        # derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
+        derive_bbtt_WPs(args.model_dir, args.minbias, 220, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
         bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'tau', n_entries=args.n_entries,tree=args.tree)
         gc.collect()
         bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'tau', n_entries=args.n_entries,tree=args.tree)
-        # gc.collect()
-        # bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'all', n_entries=args.n_entries,tree=args.tree)
-        # gc.collect()
-        # bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
+        bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'all', n_entries=args.n_entries,tree=args.tree)
+        gc.collect()
+        bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)

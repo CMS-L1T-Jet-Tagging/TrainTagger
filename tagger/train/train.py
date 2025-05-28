@@ -5,7 +5,7 @@ import os, shutil, json, yaml
 from tagger.data.tools import make_data, load_data, to_ML
 from tagger.plot.basic import loss_history, basic
 from tagger.model.common import fromYaml, fromFolder
-
+from tagger.data.tools import make_data, load_data, to_ML
 # Third parties
 import numpy as np
 import mlflow
@@ -158,9 +158,9 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     # Training argument
-    parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
+    parser.add_argument('-o','--output', default='output/baseline_HGQ', help = 'Output model directory path, also save evaluation plots')
     parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
-    parser.add_argument('-y','--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help = 'YAML config for model')
+    parser.add_argument('-y','--yaml_config', default='tagger/model/configs/baseline_HGQ.yaml', help = 'YAML config for model')
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')

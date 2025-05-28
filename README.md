@@ -43,26 +43,30 @@ conda activate tagger
 #Run this to add the scripts in this directory to your python path
 source setup.sh
 
+#Choose which model to run from the configs in `tagger/train/model/configs` e.g. the baseline deepset model:
+
+export Model=baseline
+
 #Prepare the data
-python tagger/train/train.py --make-data
+python tagger/make_data.py
 
 #Train the model
-python tagger/train/train.py
+python tagger/train/train.py -y tagger/model/configs/$Model.yaml -o output/$Model
 
 #Make some basic validation plots
-python tagger/train/train.py --plot-basic
+python tagger/train/train.py --plot-basic -y tagger/model/configs/$Model.yaml -o output/$Model
 
 #Make other plots for bbbb/di-taus final state for example:
-python bbbb.py --deriveWPs
-python bbbb.py --eff
+python bbbb.py --deriveWPs  -m output/$Model
+python bbbb.py --eff -m output/$Model
 
 #Or for di-taus
-python tagger/plot/diTaus.py --deriveWPs
-python tagger/plot/diTaus.py --BkgRate
-python tagger/plot/diTaus.py --eff
+python tagger/plot/diTaus.py -m output/$Model
+python tagger/plot/diTaus.py --BkgRate -m output/$Model
+python tagger/plot/diTaus.py --eff -m output/$Model
 
 #Synthesize the model (with wrapper and CMMSSW)
-python tagger/firmware/hls4ml_convert.py
+python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
 ```
 
 # 1. Produce Raw Training Dataset
@@ -102,43 +106,43 @@ source setup.sh
 Then, to prepare the data for training:
 
 ```
-python tagger/train/train.py --make-data 
+python tagger/make_data.py
 ```
 
 This prepare the data using the default options(look into the script to see what the options are). If you want to customize the input data path, or the data step size for `uproot.iterate`, then you can use the full options
 
 ```
-python tagger/train/train.py --make-data -i <your-rootfile> -s <custom-step-size>
+python tagger/make_data.py --make-data -i <your-rootfile> -s <custom-step-size>
 ```
 
 This automatically create a new directory: `training_data` (it will ask before removing the exisiting one), and writes the data into it. Then, to train the model:
 
 ```
-python tagger/train/train.py
+python tagger/train/train.py -y tagger/model/configs/baseline.yaml -o output/baseline
 ```
 
-The models are defined in `tagger/train/models.py` the `baseline` model is provided as default.
+The model configs are defined in `tagger/model/configs` and passed to the training scripts with the -y option. Hyperparameters are defined in these configs. -o specifies where to save the model output
 
 # 3. Physics Validation
 
-Various physics validation plots can be make using the `tagger/plot` modules, the plots are divided into different final states, such as `bbbb.py`, to use the script, you need to derive the working points before evaluating the background rate/efficiency.
+Various physics validation plots can be make using the `tagger/plot` modules, the plots are divided into different final states, such as `bbbb.py`, to use the script, you need to derive the working points before evaluating the background rate/efficiency. The -m points the plotting script at the model to load and use for evaluating
 
 ```
-python tagger/plot/bbbb.py --deriveWPs -n <number of samples to use, usually ~1M>
+python tagger/plot/bbbb.py --deriveWPs -n <number of samples to use, usually ~1M> -m output/baseline
 ```
 
 then, evaluate the efficiency using:
 
 ```
-python tagger/plot/bbbb.py --eff -n <number of samples to use, usually ~500k>
+python tagger/plot/bbbb.py --eff -n <number of samples to use, usually ~500k> -m output/baseline
 ```
 
 # 4. Synthesize the model to HDL Codes
 
-To synthesize the model into HDL codes, we first need use `hls4ml`:
+To synthesize the model into HDL codes, we first need use `hls4ml` on the -m model and output to -o:
 
 ```
-python tagger/firmware/hls4ml_convert.py
+python tagger/firmware/hls4ml_convert.py -m output/baseline -o output/baseline/firmware
 ```
 
 Then, these codes are synthesize again with an hls wrapper, and CMSSW:
@@ -162,6 +166,77 @@ conda env update --file environment.yml  --prune
 ```
 
 Reference on conda environment here: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
+
+
+# Adding a new model
+To add a new model class to the repo there are a number of steps needed:
+First add a MyModel.py to tagger/model
+This python script must contain a uniquely named model class that inherits from JetTagModel and is registered with the model factory:
+```
+@JetModelFactory.register('MyModel')
+class MyModel(JetTagModel):
+    """MyModel class
+
+    Args:
+        JetTagModel (_type_): Base class of a JetTagModel
+    """
+```
+
+This `JetModelFactory.register('MyModel')` allows you to generate your model class directly from the yaml config.
+
+The rest of the MyModel.py is up to you but you must include the following methods with the following arguments:
+```
+build_model(input_shape,output_shape)
+# Shape of the input and output of the model, derived from the X_train.shape[1:]  and y_train.shape[1:] (avoiding the batch size dimension)
+compile_model(num_samples)
+# Number of samples in the training data (for scheduling purposes)
+fit( X_train, y_train, pt_target_train, sample_weight)
+# Each passed as a numpy array
+@JetTagModel.save_decorator
+save(out_dir)
+# The save decorator is required. 
+@JetTagModel.load_decorator
+load(out_dir)
+# The load decorator is required. 
+hls4ml_convert(firmware_dir, build)
+# where to save the firmware and whether or not to run the full hls4ml synthesis (needs a vitis install)
+
+```
+
+Secondly, add your model to the `tagger/model/__init__.py` as `from tagger.model.MyModel import MyModel`
+
+Finally, add your config yaml to `tagger/model/configs`
+
+The config must follow in style to the others present and contains your model hyperparameters. The hyperparameters are automatically loaded when the model is created either from the original yaml or from a saved model folder.
+They are accessed in your model class with, for example, `self.model_config['name']`. The internal hyperparameters in each dictionary are for you to decide and access when building and compiling your model. Below is the minimum requirements for your yaml config: 
+```
+model: MyModel #! This must be the same as the name you registered you model with in the JetModelFactory.register
+run_config :
+  verbose : 2
+  debug : True
+    
+model_config : 
+  name : baseline
+
+quantization_config:
+
+training_config :
+  weight_method: "onlyclass"
+  validation_split : 0.1
+
+hls4ml_config:
+  input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
+  class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
+  reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
+  
+  project_name: 'MyModel_test'
+```
+
+To train your new model just specify the new yaml when training e.g.
+
+```
+python tagger/train/train.py -y tagger/model/configs/mymodel.yaml -o output/mymodel
+```
 
 # Continous Integration
 

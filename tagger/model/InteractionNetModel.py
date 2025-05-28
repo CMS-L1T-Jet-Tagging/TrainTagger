@@ -7,8 +7,8 @@ import json
 import itertools
 
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, GlobalMaxPooling1D, Concatenate, Layer
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.layers import BatchNormalization, Activation, Concatenate, Layer
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import tensorflow_model_optimization as tfmot
 
 # Qkeras

@@ -11,6 +11,7 @@
   <img src="logos/MIT_Logo.png" alt="MIT-social-media-logo-white" width="99">
 </span>
 
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/CMS-L1T-Jet-Tagging/TrainTagger/main.svg)](https://results.pre-commit.ci/latest/github/CMS-L1T-Jet-Tagging/TrainTagger/main)
 
 # Training Jet Taggers for CMS Phase 2 L1 Trigger
 

@@ -242,7 +242,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange
     target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
     if len(target_rate_idx) == 0:
         # If the rate is not found, find the closest lower value
-        rate_list = np.where(rate_list > target_rate, -1, rate_list)
+        rate_list = np.where(np.array(rate_list) > target_rate, -1, rate_list)
         target_rate_idx = [np.argmax(rate_list)]
         new_rate = rate_list[target_rate_idx[0]]
         print(f"Warning: Target rate {target_rate} not found for HT WP,using closest lower value {new_rate['rate']} instead.")

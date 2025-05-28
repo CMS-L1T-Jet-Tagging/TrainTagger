@@ -131,12 +131,12 @@ class InteractionNetModel(JetTagModel):
         JetTagModel (_type_): Base class of a JetTagModel
     """
 
-    def build_model(self, inputs_shape, outputs_shape):
+    def build_model(self, inputs_shape : tuple, outputs_shape : tuple):
         """Interaction network model from https://arxiv.org/abs/1612.00222.
         
         Args:
-            inputs_shape (npt.NDArray[np.int64]): Shape of the input
-            outputs_shape (npt.NDArray[np.int64]): Shape of the output
+            inputs_shape (tuple): Shape of the input
+            outputs_shape (tuple): Shape of the output
         
         Additional hyperparameters in the config
             effects_layers: List of number of nodes for each layer of the effects MLP.

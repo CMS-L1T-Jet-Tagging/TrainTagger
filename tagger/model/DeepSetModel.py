@@ -48,12 +48,12 @@ class DeepSetModel(JetTagModel):
         JetTagModel (_type_): Base class of a JetTagModel
     """
 
-    def build_model(self, inputs_shape : npt.NDArray[np.int64], outputs_shape : npt.NDArray[np.int64]):
+    def build_model(self, inputs_shape : tuple, outputs_shape : tuple):
         """build model override, makes the model layer by layer
 
         Args:
-            inputs_shape (npt.NDArray[np.int64]): Shape of the input
-            outputs_shape (npt.NDArray[np.int64]): Shape of the output
+            inputs_shape (tuple): Shape of the input
+            outputs_shape (tuple): Shape of the output
             
         Additional hyperparameters in the config
             conv1d_layers: List of number of nodes for each layer of the conv1d layers.

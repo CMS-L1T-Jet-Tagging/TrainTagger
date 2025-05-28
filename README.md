@@ -43,7 +43,7 @@ conda activate tagger
 #Run this to add the scripts in this directory to your python path
 source setup.sh
 
-#Choose which model to run from the configs in tagger/train/model/configs e.g. the baseline deepset model:
+#Choose which model to run from the configs in `tagger/train/model/configs` e.g. the baseline deepset model:
 
 export Model=baseline
 

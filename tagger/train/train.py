@@ -150,6 +150,9 @@ def train(model, out_dir, percent):
     # Get input shape
     input_shape = X_train.shape[1:]  # First dimension is batch size
     output_shape = y_train.shape[1:]
+    
+    print(input_shape.type())
+    print(output_shape.type())
 
     model.build_model(input_shape, output_shape)
     # Train it with a pruned model

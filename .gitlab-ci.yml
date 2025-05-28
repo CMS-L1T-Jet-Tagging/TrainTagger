@@ -40,7 +40,7 @@ DeepSet:baseline_5param_extended_trk:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 
-DeepSet_larger:baseline_larger_5param_extended_trk:
+DeepSet_reduced_precision:baseline_reduced_precision_5param_extended_trk:
   extends: .ml_pipeline
   variables:
     Name: baseline_reduced_precision_5param_extended_trk

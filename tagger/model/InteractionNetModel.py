@@ -18,6 +18,7 @@ from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 
 import numpy as np
+import numpy.typing as npt
 
 from tagger.model.JetTagModel import JetTagModel, JetModelFactory
 from tagger.model.common import choose_aggregator, AAtt, AttentionPooling

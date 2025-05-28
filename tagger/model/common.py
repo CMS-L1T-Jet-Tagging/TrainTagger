@@ -1,3 +1,9 @@
+"""Common utilities for usage across all model child classes
+   Includes attention layers
+   Include from Yaml and Folder loading functionality
+
+   Written 28/05/2025 cebrown@cern.ch
+"""
 import os
 import shutil
 import yaml
@@ -7,10 +13,16 @@ import tensorflow_model_optimization as tfmot
 from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D, Layer
 from qkeras.qlayers import QDense
 
+from tagger.model.JetTagModel import JetTagModel
 from tagger.model.JetTagModel import JetModelFactory
 
-# Attention layers in case we want to try at some point
 class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
+    """Attention Layer class
+
+    Args:
+        tf.keras.layers.Layer (_type_): tensorflow layer wrapper
+        tfmot.sparsity.keras.PrunableLayer (_type_): prunable layer wrapper
+    """
     def __init__(self, d_model=16, nhead=2, bits=9, bits_int=2, alpha_val=1, **kwargs):
         super(AAtt, self).__init__(**kwargs)
 
@@ -37,6 +49,14 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
         return {**base_config, **config}
 
     def call(self, input):
+        """Call the layer
+
+        Args:
+            input (_type_): input to layer
+
+        Returns:
+            _type_: Output of layer
+        """
         input_shape = input.shape
         shape_ = (-1, input_shape[1], self.n_head, self.d_model//self.n_head)
         perm_ = (0, 2, 1, 3)
@@ -68,15 +88,27 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
         return self.qD._trainable_weights + self.kD._trainable_weights + \
             self.vD._trainable_weights + self.outD._trainable_weights
 
+class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
+    """Attention Pooling layer class
 
-class AttentionPooling(Layer, tfmot.sparsity.keras.PrunableLayer):
+    Args:
+        tf.keras.layers.Layer (_type_): tensorflow layer class
+        tfmot.sparsity.keras.PrunableLayer (_type_): prunable layer class
+    """
     def __init__(self, bits, bits_int, alpha_val, **kwargs):
         super().__init__(**kwargs)
 
         self.score_dense = QDense(1, use_bias=False, **kwargs)
 
     def call(self, x):  # (B, N, d) -> (B,d) pooling via simple softmax
+        """Call the layer
 
+        Args:
+            x (_type_): input to layer
+
+        Returns:
+            _type_: output to layer
+        """
         a = tf.squeeze(self.score_dense(x), axis=-1)
         a = tf.nn.softmax(a, axis=1)
 
@@ -103,9 +135,22 @@ def choose_aggregator(choice: str, name: str, bits=9, bits_int=2, alpha_val=1, *
         return AttentionPooling(name=name, bits=bits, bits_int=bits_int, alpha_val=alpha_val, **common_args)
 
 
-def fromYaml(yaml_path, folder, recreate=True):
+def fromYaml(yaml_path : str, folder : str, recreate : bool = True) -> JetTagModel:
+    """Create a model directly from a yaml input file
+
+    Args:
+        yaml_path (str): Path to yaml file
+        folder (str): Output saving folder for model
+        recreate (bool, optional): Rewrite the output directory?. Defaults to True.
+
+    Returns:
+        JetTagModel: The model
+    """
+    
     with open(yaml_path, 'r') as stream:
         yaml_dict = yaml.safe_load(stream)
+    # Create a model based on what is specified in the yaml 'model' field
+    # Model must be registered for this to function
     model = JetModelFactory.create_JetTagModel(yaml_dict['model'], folder)
     model.load_yaml(yaml_path)
     if recreate:
@@ -119,8 +164,17 @@ def fromYaml(yaml_path, folder, recreate=True):
     return model
 
 
-def fromFolder(save_path, newoutput_dir=None):
-    if newoutput_dir != None:
+def fromFolder(save_path : str, newoutput_dir : str = "None") -> JetTagModel:
+    """Load a model from its save folder using the yaml file in the save folder
+
+    Args:
+        save_path (str): Where to load the model from
+        newoutput_dir (str, optional): New folder to save the model to if needed. Defaults to "None".
+
+    Returns:
+        JetTagModel: The model
+    """
+    if newoutput_dir != "None":
         folder = newoutput_dir
         recreate = True
     else:

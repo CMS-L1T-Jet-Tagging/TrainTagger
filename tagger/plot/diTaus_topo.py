@@ -144,7 +144,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = np.asarray(extract_nn_inputs(
         minbias, model.input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.model.predict(raw_inputs)
+    raw_pred_score, raw_pt_correction = model.jet_model.predict(raw_inputs)
 
     raw_tau_score_sum = raw_pred_score[:, model.class_labels['taup']
                                        ] + raw_pred_score[:, model.class_labels['taum']]
@@ -328,7 +328,7 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
 
     raw_inputs = np.asarray(extract_nn_inputs(
         minbias, model.input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.model.predict(raw_inputs)
+    raw_pred_score, raw_pt_correction = model.jet_model.predict(raw_inputs)
 
     raw_tau_score_sum = raw_pred_score[:, model.class_labels['taup']
                                        ] + raw_pred_score[:, model.class_labels['taum']]

@@ -6,6 +6,7 @@ include:
 # defined with their default shared across all other pipeline values in ml_pipeline.yml
 # Name = Name of child pipeline
 # Inputs = Which input configuration to use
+# Model = Name of yaml config to use, found in tagger/model/configs
 # N_PARAMS = Number of tracking parameters for the track fit
 # TRACK_ALGO = Tracking Algorithm, baseline or extended
 # TRAIN = Which dataset to use for training
@@ -42,6 +43,15 @@ DeepSet:baseline_5param_extended_trk:
 DeepSet_larger:baseline_larger_5param_extended_trk:
   extends: .ml_pipeline
   variables:
+    Name: baseline_reduced_precision_5param_extended_trk
+    Model: baseline_reduced_precision
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'True'
+
+DeepSet_larger:baseline_larger_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
     Name: baseline_larger_5param_extended_trk
     Model: baseline_larger
     RERUN_ON_TAG: 'False'
@@ -66,4 +76,3 @@ interactionnet:interactionnet_5param_extended_trk:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'False'
-    TAG: 'v0.0.0'

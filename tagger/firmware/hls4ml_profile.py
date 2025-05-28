@@ -63,8 +63,8 @@ def doPlots(model, outputdir, inputdir):
     labels = list(class_labels.keys())
 
     model.hls4ml_convert("temp", build=False)
-    y_hls, y_ptreg_hls = model.hls_model.predict(np.ascontiguousarray(X_test))
-    y_class, y_ptreg = model.model.predict(np.ascontiguousarray(X_test))
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict(np.ascontiguousarray(X_test))
+    y_class, y_ptreg = model.jet_model.predict(np.ascontiguousarray(X_test))
 
     for i, label in enumerate(labels):
         plt.clf()
@@ -91,14 +91,14 @@ def doPlots(model, outputdir, inputdir):
     plt.close()
 
     wp, wph, ap, aph = hls4ml.model.profiling.numerical(
-        model=model.model, hls_model=model.hls_model, X=X_test)
+        model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)
     ap.savefig(outputdir+"/model_activations_profile.png")
     wp.savefig(outputdir+"/model_weights_profile.png")
     aph.savefig(outputdir+"/model_activations_profile_opt.png")
     wph.savefig(outputdir+"/model_weights_profile_opt.png")
 
-    y_hls, hls4ml_trace = model.hls_model.trace(np.ascontiguousarray(X_test))
-    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model.model, X_test)
+    y_hls, hls4ml_trace = model.hls_jet_model.trace(np.ascontiguousarray(X_test))
+    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model.jet_model, X_test)
 
     for layer in hls4ml_trace.keys():
         print("Doing profiling 2d for layer", layer)

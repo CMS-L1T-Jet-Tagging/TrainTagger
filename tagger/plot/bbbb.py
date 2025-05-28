@@ -45,7 +45,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, 
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
     # Get the nn outputs
-    nn_outputs = [model.model.predict(nn_input)[0] for nn_input in btag_inputs]
+    nn_outputs = [model.jet_model.predict(nn_input)[0] for nn_input in btag_inputs]
 
     # Sum them together
     bscore_sum = sum(
@@ -182,7 +182,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
         jet_pt, jet_eta, apply_sel)]
 
     # Btag input list for first 4 jets
-    nn_outputs = [model.model.predict(np.asarray(jet_nn_inputs[:, i]))[
+    nn_outputs = [model.jet_model.predict(np.asarray(jet_nn_inputs[:, i]))[
         0] for i in range(0, 4)]
 
     # Calculate the output sum

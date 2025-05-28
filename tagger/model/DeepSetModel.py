@@ -1,3 +1,7 @@
+"""DeepSet model child class
+
+   Written 28/05/2025 cebrown@cern.ch
+"""
 import os
 import json
 
@@ -13,38 +17,52 @@ from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 
 import numpy as np
+import numpy.typing as npt
 
 from tagger.model.JetTagModel import JetTagModel, JetModelFactory
-from tagger.model.common import AAtt, AttentionPooling
-from tagger.model.common import choose_aggregator
+from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 
 import hls4ml
 
-
-num_threads = 24
-os.environ["OMP_NUM_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
+# Set some tensorflow constants
+NUM_THREADS = 24
+os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
+os.environ["TF_NUM_INTRAOP_THREADS"] = str(NUM_THREADS)
+os.environ["TF_NUM_INTEROP_THREADS"] = str(NUM_THREADS)
 
 tf.config.threading.set_inter_op_parallelism_threads(
-    num_threads
+    NUM_THREADS
 )
 tf.config.threading.set_intra_op_parallelism_threads(
-    num_threads
+    NUM_THREADS
 )
 
-# GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420)  # not a special number
 
-
+# Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('DeepSetModel')
 class DeepSetModel(JetTagModel):
+    """DeepSetModel class
 
-    def __init__(self, output_dir):
-        super().__init__(output_dir)
+    Args:
+        JetTagModel (_type_): Base class of a JetTagModel
+    """
 
-    def build_model(self, inputs_shape, outputs_shape):
-        # Define a dictionary for common arguments
+    def build_model(self, inputs_shape : npt.NDArray[np.int64], outputs_shape : npt.NDArray[np.int64]):
+        """build model override, makes the model layer by layer
+
+        Args:
+            inputs_shape (npt.NDArray[np.int64]): Shape of the input
+            outputs_shape (npt.NDArray[np.int64]): Shape of the output
+            
+        Additional hyperparameters in the config
+            conv1d_layers: List of number of nodes for each layer of the conv1d layers.
+            classifier_layers: List of number of nodes for each layer of the classifier MLP.
+            regression_layers: List of number of nodes for each layer of the regression MLP
+            aggregator: String that specifies the type of aggregator to use after the conv1D net.
+        """
+        
+        # Define some common arguments, taken from the yaml config
         common_args = {
             'kernel_quantizer': quantized_bits(self.quantization_config['quantizer_bits'],
                                                self.quantization_config['quantizer_bits_int'],
@@ -116,14 +134,16 @@ class DeepSetModel(JetTagModel):
                             kernel_initializer='lecun_uniform')(pt_regress)
 
         # Define the model using both branches
-        self.model = tf.keras.Model(
+        self.jet_model = tf.keras.Model(
             inputs=inputs, outputs=[jet_id, pt_regress])
 
-        print(self.model.summary())
+        print(self.jet_model.summary())
 
-    def _prune_model(self, num_samples):
-        """
-        Pruning settings for the model. Return the pruned model
+    def _prune_model(self, num_samples : int):
+        """Pruning setup for the model, internal model function called by compile
+
+        Args:
+            num_samples (int): number of samples in the training set used for scheduling
         """
 
         print("Begin pruning the model...")
@@ -135,19 +155,22 @@ class DeepSetModel(JetTagModel):
         # Define the pruned model
         pruning_params = {'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
             initial_sparsity=self.training_config['initial_sparsity'], final_sparsity=self.training_config['final_sparsity'], begin_step=0, end_step=end_step)}
-        self.model = tfmot.sparsity.keras.prune_low_magnitude(
-            self.model, **pruning_params)
+        self.jet_model = tfmot.sparsity.keras.prune_low_magnitude(
+            self.jet_model, **pruning_params)
 
+        # Add preface to loss name 
         self.loss_name = 'prune_low_magnitude_'
 
+        # Add pruning callback
         self.callbacks.append(tfmot.sparsity.keras.UpdatePruningStep())
 
-    def compile_model(self, num_samples):
-        """
+    def compile_model(self, num_samples : int):
+        """ compile the model generating callbacks and loss function
         Args:
-            num_samples (_type_): _description_
+            num_samples (int): Number of samples in the training set used for scheduling
         """
 
+        # Define the callbacks using hyperparameters in the config
         self.callbacks = [EarlyStopping(monitor='val_loss',
                                         patience=self.training_config['EarlyStopping_patience']),
                           ReduceLROnPlateau(monitor='val_loss',
@@ -155,9 +178,11 @@ class DeepSetModel(JetTagModel):
                                             patience=self.training_config['ReduceLROnPlateau_patience'],
                                             min_lr=self.training_config['ReduceLROnPlateau_min_lr'],)]
 
+        # Define the pruning
         self._prune_model(num_samples)
 
-        self.model.compile(optimizer='adam',
+        # compile the tensorflow model setting the loss and metrics
+        self.jet_model.compile(optimizer='adam',
                            loss={self.loss_name+self.output_id_name: 'categorical_crossentropy',
                                  self.loss_name+self.output_pt_name: tf.keras.losses.Huber()},
                            loss_weights=self.training_config['loss_weights'],
@@ -165,8 +190,21 @@ class DeepSetModel(JetTagModel):
                                     self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']},
                            weighted_metrics={self.loss_name+self.output_id_name: 'categorical_accuracy', self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']})
 
-    def fit(self, X_train, y_train, pt_target_train, sample_weight):
-        self.history = self.model.fit({'model_input': X_train},
+    def fit(self, X_train : npt.NDArray[np.float64],
+                  y_train : npt.NDArray[np.float64],
+                  pt_target_train : npt.NDArray[np.float64], 
+                  sample_weight : npt.NDArray[np.float64]):
+        """Fit the model to the training dataset
+
+        Args:
+            X_train (npt.NDArray[np.float64]): X train dataset
+            y_train (npt.NDArray[np.float64]): y train classification targets
+            pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
+            sample_weight (npt.NDArray[np.float64]): sample weighting
+        """
+        
+        # Train the model using hyperparameters in yaml config
+        self.history = self.jet_model.fit({'model_input': X_train},
                                       {self.loss_name+self.output_id_name: y_train,
                                           self.loss_name+self.output_pt_name: pt_target_train},
                                       sample_weight=sample_weight,
@@ -177,34 +215,56 @@ class DeepSetModel(JetTagModel):
                                       callbacks=self.callbacks,
                                       shuffle=True)
 
+    # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator
-    def save(self, out_dir):
+    def save(self, out_dir : str = "None"):
+        """Save the model file
+
+        Args:
+            out_dir (str, optional): Where to save it if not in the output_directory. Defaults to "None".
+        """
         # Export the model
-        model_export = tfmot.sparsity.keras.strip_pruning(self.model)
+        model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
+        
         os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
+        # Use keras save format !NOT .h5! due to depreciation
         export_path = os.path.join(out_dir, "model/saved_model.keras")
         model_export.save(export_path)
         print(f"Model saved to {export_path}")
 
     @JetTagModel.load_decorator
-    def load(self, out_dir=None):
-        # Load model
+    def load(self, out_dir : str = "None"):
+        """Load the model file
+
+        Args:
+            out_dir (str, optional): Where to load it if not in the output_directory. Defaults to "None".
+        """
+        
+        # Additional custom objects for attention layers
         custom_objects_ = {
             "AAtt": AAtt,
             "AttentionPooling": AttentionPooling,
         }
-        self.model = load_qmodel(
+        # Load the model
+        self.jet_model = load_qmodel(
             f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
 
-    def hls4ml_convert(self, firmware_dir, build=False):
 
-        # Remove the old directory if they exist
+    def hls4ml_convert(self, firmware_dir : str, build : bool = False):
+        """Run the hls4ml model conversion
+
+        Args:
+            firmware_dir (str): Where to save the firmware
+            build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
+        """
+
+        # Remove the old directory if it exists
         hls4ml_outdir = firmware_dir + '/' + self.hls4ml_config['project_name']
         os.system(f'rm -rf {hls4ml_outdir}')
 
         # Create default config
         config = hls4ml.utils.config_from_keras_model(
-            self.model, granularity='name')
+            self.jet_model, granularity='name')
         config['IOType'] = 'io_parallel'
         config['LayerName']['model_input']['Precision']['result'] = self.hls4ml_config['input_precision']
 
@@ -214,7 +274,7 @@ class DeepSetModel(JetTagModel):
         # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
         # Additional config
-        for layer in self.model.layers:
+        for layer in self.jet_model.layers:
             layer_name = layer.__class__.__name__
 
             if layer_name in ["BatchNormalization", "InputLayer"]:
@@ -233,21 +293,22 @@ class DeepSetModel(JetTagModel):
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
 
         # Write HLS
-        self.hls_model = hls4ml.converters.convert_from_keras_model(self.model,
+        self.hls_jet_model = hls4ml.converters.convert_from_keras_model(self.jet_model,
                                                                     backend='Vitis',
                                                                     project_name=self.hls4ml_config['project_name'],
                                                                     clock_period=2.8,  # 1/360MHz = 2.8ns
                                                                     hls_config=config,
                                                                     output_dir=f'{hls4ml_outdir}',
-                                                                    part='xcvu9p-flga2104-2L-e')
+                                                                    part='xcvu13p-flga2577-2-e')
 
-        # Compile and build the project
-        self.hls_model.compile()
+        # Compile the project
+        self.hls_jet_model.compile()
 
         # Save config  as json file
         print("Saving default config as config.json ...")
         with open(hls4ml_outdir+'/config.json', 'w') as fp:
             json.dump(config, fp)
 
-        if build == True:
-            self.hls_model.build(csim=False, reset=True)
+        if build:
+            # build the project
+            self.hls_jet_model.build(csim=False, reset=True)

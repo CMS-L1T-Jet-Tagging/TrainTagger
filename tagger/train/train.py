@@ -124,7 +124,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     return sample_weights
 
 
-def train(model, out_dir, yaml_path, percent):
+def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data(
@@ -156,7 +156,7 @@ def train(model, out_dir, yaml_path, percent):
     num_samples = X_train.shape[0] * \
         (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
-    history = model.fit(X_train, y_train, pt_target_train, sample_weight)
+    model.fit(X_train, y_train, pt_target_train, sample_weight)
 
     model.save()
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
     else:
         model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.yaml_config, args.percent)
+        train(model, args.output, args.percent)
         # with mlflow.start_run(run_name=args.name) as run:
         #     mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
         #     mlflow.keras.autolog()

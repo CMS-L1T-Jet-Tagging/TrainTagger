@@ -185,7 +185,7 @@ def make_predictions(model, data_path, n_entries, tree='outnano/Jets', njets=4):
 
     # Calculate the output sums
     bscore_sums, tscore_sums, tau_indices = nn_score_sums(
-        model.model, jet_nn_inputs, n_jets=4)
+        model.jet_model, jet_nn_inputs, n_jets=4)
 
     return bscore_sums, tscore_sums, tau_indices, jet_pt, jet_eta, n_events
 
@@ -253,7 +253,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
 
     bscore_sums, tscore_sums, tau_indices = nn_score_sums(
-        model.model, jet_nn_inputs)
+        model.jet_model, jet_nn_inputs)
     def_sels = [default_selection(jet_pt, jet_eta, tau_indices[0], apply_sel),
                 default_selection(jet_pt, jet_eta, tau_indices[1], apply_sel)]
 
@@ -456,7 +456,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     baseline_selection, _ = bbtt_seed(jet_pt, tau_pt)
     baseline_efficiency = np.round(np.sum(baseline_selection) / n_events, 2)
     model_bscore_sums, model_tscore_sums, tau_indices = nn_score_sums(
-        model.model, jet_nn_inputs)
+        model.jet_model, jet_nn_inputs)
 
     # use either raw or vs light scores
     if score_type == 'raw':

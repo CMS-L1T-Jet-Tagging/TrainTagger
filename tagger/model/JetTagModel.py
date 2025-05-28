@@ -1,3 +1,7 @@
+"""Jet Tag Model base class and additional functionality for model registering
+
+    Written 28/05/2025, cebrown@cern.ch
+"""
 import os
 import json
 import functools
@@ -24,6 +28,7 @@ class JetTagModel(ABC):
         self.output_directory = output_dir
 
         self.jet_model = None
+        self.hls_jet_model = None
 
         self.input_vars = []
         self.extra_vars = []

@@ -559,8 +559,8 @@ def shapPlot(shap_values, feature_names, class_names):
 def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
 
     labels = list(class_labels.keys())
-    model2 = tf.keras.Model(model.model.input, model.model.output[0])
-    model3 = tf.keras.Model(model.model.input, model.model.output[1])
+    model2 = tf.keras.Model(model.jet_model.input, model.jet_model.output[0])
+    model3 = tf.keras.Model(model.jet_model.input, model.jet_model.output[1])
 
     for explainer, name in [(shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"), ]:
         print("... {0}: explainer.shap_values(X)".format(name))
@@ -791,7 +791,7 @@ def basic(model, signal_dirs):
     reco_pt_test = np.load(
         f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
-    model_outputs = model.model.predict(X_test)
+    model_outputs = model.jet_model.predict(X_test)
 
     # Get classification outputs
     y_pred = model_outputs[0]
@@ -821,7 +821,7 @@ def basic(model, signal_dirs):
                 (sample_train[0], sample_test[0]), axis=0)
             sample_labels = np.concatenate(
                 (sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.model.predict(sample_data)[0]
+            sample_preds = model.jet_model.predict(sample_data)[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)

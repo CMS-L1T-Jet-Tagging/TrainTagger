@@ -1,0 +1,2 @@
+from tagger.model.DeepSetModel import DeepSetModel
+from tagger.model.InteractionNetModel import InteractionNetModel

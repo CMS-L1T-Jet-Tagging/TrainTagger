@@ -116,7 +116,7 @@ class JetTagModel(ABC):
                 out_dir (str): Where to save the model. Defaults to
                 None but overridden to output_directory.
             """
-            if out_dir is "None":
+            if out_dir == "None":
                 out_dir = self.output_directory
             # Save additional jsons associated with model
             # Dump input variables
@@ -144,7 +144,7 @@ class JetTagModel(ABC):
                 out_dir (str): Where to load the model from. Defaults to
                 None but overridden to output_directory.
             """
-            if out_dir is "None":
+            if out_dir == "None":
                 out_dir = self.output_directory
             # Save additional jsons associated with model
             # Dump input variables

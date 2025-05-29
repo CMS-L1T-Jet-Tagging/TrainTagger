@@ -434,6 +434,6 @@ class InteractionNetModel(JetTagModel):
         with open(hls4ml_outdir+'/config.json', 'w') as fp:
             json.dump(config, fp)
 
-        if build == True:
+        if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)

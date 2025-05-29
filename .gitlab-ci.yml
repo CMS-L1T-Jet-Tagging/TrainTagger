@@ -40,39 +40,39 @@ DeepSet:baseline_5param_extended_trk:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 
-DeepSet_reduced_precision:baseline_reduced_precision_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: baseline_reduced_precision_5param_extended_trk
-    Model: baseline_reduced_precision
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+# DeepSet_reduced_precision:baseline_reduced_precision_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_reduced_precision_5param_extended_trk
+#     Model: baseline_reduced_precision
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
 
-DeepSet_larger:baseline_larger_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: baseline_larger_5param_extended_trk
-    Model: baseline_larger
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+# DeepSet_larger:baseline_larger_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_larger_5param_extended_trk
+#     Model: baseline_larger
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
 
-DeepSet_attention:baseline_attention_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: baseline_attention_5param_extended_trk
-    Inputs: baseline
-    Model: baseline_attention
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
+# DeepSet_attention:baseline_attention_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_attention_5param_extended_trk
+#     Inputs: baseline
+#     Model: baseline_attention
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'False'
 
-interactionnet:interactionnet_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: interactionnet_5param_extended_trk
-    Model: interactionnet
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
+# interactionnet:interactionnet_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: interactionnet_5param_extended_trk
+#     Model: interactionnet
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'False'

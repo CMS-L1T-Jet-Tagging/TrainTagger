@@ -83,7 +83,7 @@ class DeepSetModelHGQ(JetTagModel):
         
 
         #Define the model using both branches
-        self.model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+        self.jet_model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
         print(self.model.summary())
 

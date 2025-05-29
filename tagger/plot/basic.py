@@ -39,9 +39,9 @@ style.set_style()
 
 def loss_history(plot_dir, history):
 
-    for metric in ["loss", "jet_id_output_loss", "pT_output_loss",
-                # "prune_low_magnitude_nll_output_loss",
-                ]:
+    for metric in ["loss", "prune_low_magnitude_jet_id_output_loss", "prune_low_magnitude_pT_output_loss",
+                   # "prune_low_magnitude_nll_output_loss",
+                   ]:
 
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         hep.cms.label(llabel=style.CMSHEADER_LEFT,
@@ -791,7 +791,7 @@ def basic(model, signal_dirs):
     reco_pt_test = np.load(
         f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
-    model_outputs = model.model.predict(X_test)
+    model_outputs = model.jet_model.predict(X_test)
 
     # Get classification outputs
     y_pred = model_outputs[0]

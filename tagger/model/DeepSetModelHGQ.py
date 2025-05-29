@@ -85,7 +85,7 @@ class DeepSetModelHGQ(JetTagModel):
         #Define the model using both branches
         self.jet_model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
-        print(self.model.summary())
+        print(self.jet_model.summary())
 
     
 
@@ -100,14 +100,14 @@ class DeepSetModelHGQ(JetTagModel):
 
         #self._prune_model(num_samples)
 
-        self.model.compile(optimizer='adam',
+        self.jet_model.compile(optimizer='adam',
                             loss={self.loss_name+self.output_id_name: 'categorical_crossentropy', self.loss_name+self.output_pt_name: tf.keras.losses.Huber()},
                             loss_weights=self.training_config['loss_weights'],
                             metrics = {self.loss_name+self.output_id_name: 'categorical_accuracy', self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']},
                             weighted_metrics = {self.loss_name+self.output_id_name: 'categorical_accuracy', self.loss_name+self.output_pt_name: ['mae', 'mean_squared_error']})
 
     def fit(self,X_train,y_train,pt_target_train,sample_weight):
-        self.history = self.model.fit({'model_input': X_train},
+        self.history = self.jet_model.fit({'model_input': X_train},
                             {self.loss_name+self.output_id_name: y_train, self.loss_name+self.output_pt_name: pt_target_train},
                             sample_weight=sample_weight,
                             epochs=self.training_config['epochs'],
@@ -120,7 +120,7 @@ class DeepSetModelHGQ(JetTagModel):
     @JetTagModel.save_decorator
     def save(self,out_dir):
         #Export the model
-        model_export = tfmot.sparsity.keras.strip_pruning(self.model)
+        model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
         os.makedirs(os.path.join(out_dir,'model'), exist_ok=True)
         export_path = os.path.join(out_dir, "model/saved_model.h5")
         model_export.save(export_path)
@@ -133,7 +133,7 @@ class DeepSetModelHGQ(JetTagModel):
          #       "AAtt": AAtt,
           #      "AttentionPooling": AttentionPooling,
         #}
-        self.model = load_qmodel(f"{out_dir}/model/saved_model.h5")
+        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.h5")
        
     def hls4ml_convert(self,firmware_dir,build=False):
 
@@ -145,8 +145,8 @@ class DeepSetModelHGQ(JetTagModel):
         X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
         # Make into ML-like data for training
         
-        trace_minmax(self.model, X_train, cover_factor=1.0)
-        proxy = to_proxy_model(self.model, aggressive=False)
+        trace_minmax(self.jet_model, X_train, cover_factor=1.0)
+        proxy = to_proxy_model(self.jet_model, aggressive=False)
 
         #Create default config
         config = hls4ml.utils.config_from_keras_model(proxy, granularity='name')
@@ -159,7 +159,7 @@ class DeepSetModelHGQ(JetTagModel):
         #config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
         #Additional config
-        for layer in self.model.layers:
+        for layer in self.jet_model.layers:
             layer_name = layer.__class__.__name__
 
             #if layer_name in ["BatchNormalization", "InputLayer"]:

@@ -2,8 +2,8 @@ model: DeepSetModel
 run_config :
   verbose : 2
   debug : True
-    
-model_config : 
+
+model_config :
   name : baseline
   conv1d_layers : [10,10]
   classification_layers : [32,16]
@@ -28,7 +28,7 @@ training_config :
   final_sparsity : 0.1
 
   loss_weights : [1,1]
-    
+
   EarlyStopping_patience : 10
 
   ReduceLROnPlateau_factor : 0.5
@@ -39,5 +39,5 @@ hls4ml_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
-  
+
   project_name: 'L1TSC4NGJetModel_test'

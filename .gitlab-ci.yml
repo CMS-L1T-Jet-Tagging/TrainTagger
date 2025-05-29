@@ -2,7 +2,7 @@ include:
   - local: "CI/template.yml"
 
 # Any of these variables can be defined in the pipeline, for ease of
-# reading only often changed variables are kept here. All variables are 
+# reading only often changed variables are kept here. All variables are
 # defined with their default shared across all other pipeline values in ml_pipeline.yml
 # Name = Name of child pipeline
 # Inputs = Which input configuration to use

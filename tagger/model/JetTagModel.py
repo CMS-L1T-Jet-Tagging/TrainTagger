@@ -17,7 +17,7 @@ from tagger.plot.basic import loss_history
 
 class JetTagModel(ABC):
     """Parent Class for Jet Tag Models
-       
+
        Abstract Base Class not for use directly
     """
     def __init__(self, output_dir : str):
@@ -45,7 +45,7 @@ class JetTagModel(ABC):
         self.loss_name = ''
 
         self.callbacks = []
-        
+
         self.history = None
 
     def load_yaml(self, yaml_path : str):
@@ -68,7 +68,7 @@ class JetTagModel(ABC):
         """
         Build the model layers, must be written for child class
         """
-  
+
     @abstractmethod
     def compile_model(self, **kwargs):
         """
@@ -82,7 +82,7 @@ class JetTagModel(ABC):
         Fit the model to the training data
         Must be written for child class
         """
-        
+
     @abstractmethod
     def hls4ml_convert(self, **kwargs):
         """
@@ -105,7 +105,7 @@ class JetTagModel(ABC):
         return (class_predictions, pt_ratio_predictions)
 
     def save_decorator(save_func):
-        """Decorator used to include additional 
+        """Decorator used to include additional
            saving functionality for child classes
         """
         @functools.wraps(save_func)
@@ -113,7 +113,7 @@ class JetTagModel(ABC):
             """Wrapper adding saving functionality
 
             Args:
-                out_dir (str): Where to save the model. Defaults to 
+                out_dir (str): Where to save the model. Defaults to
                 None but overridden to output_directory.
             """
             if out_dir is "None":
@@ -121,7 +121,7 @@ class JetTagModel(ABC):
             # Save additional jsons associated with model
             # Dump input variables
             with open(os.path.join(out_dir, "input_vars.json"), "w") as f:
-                json.dump(self.input_vars, f, indent=4)  
+                json.dump(self.input_vars, f, indent=4)
             # Dump extra variables
             with open(os.path.join(out_dir, "extra_vars.json"), "w") as f:
                 json.dump(self.extra_vars, f, indent=4)
@@ -133,7 +133,7 @@ class JetTagModel(ABC):
         return wrapper
 
     def load_decorator(load_func):
-        """Decorator used to include additional 
+        """Decorator used to include additional
            loading functionality for child classes
         """
         @functools.wraps(load_func)
@@ -141,7 +141,7 @@ class JetTagModel(ABC):
             """Wrapper adding loading functionality
 
             Args:
-                out_dir (str): Where to load the model from. Defaults to 
+                out_dir (str): Where to load the model from. Defaults to
                 None but overridden to output_directory.
             """
             if out_dir is "None":

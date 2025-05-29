@@ -240,7 +240,7 @@ upload_new_model:
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
-  needs: 
+  needs:
     - job: train
       optional: false
     - job: evaluate
@@ -257,7 +257,7 @@ upload_new_model:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
-    - ./CI/upload_new_model.sh 
+    - ./CI/upload_new_model.sh
   artifacts:
     paths:
       - $Name

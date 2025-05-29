@@ -142,7 +142,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 4

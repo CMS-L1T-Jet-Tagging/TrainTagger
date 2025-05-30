@@ -2,8 +2,8 @@ model: InteractionNetModel
 run_config :
   verbose : 2
   debug : True
-    
-model_config : 
+
+model_config :
   name : interactionnet
   effects_layers : [16, 16, 16]
   objects_layers : [16]
@@ -26,10 +26,10 @@ training_config :
   validation_split : 0.1
 
   loss_weights : [1,1]
-  
+
   initial_sparsity : 0.0
   final_sparsity : 0.1
-    
+
   EarlyStopping_patience : 10
 
   ReduceLROnPlateau_factor : 0.5
@@ -40,9 +40,5 @@ hls4ml_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
-  
+
   project_name: 'L1TSC4NGJetModel_test'
-
-
-
-

@@ -146,7 +146,7 @@ def fromYaml(yaml_path : str, folder : str, recreate : bool = True) -> JetTagMod
     Returns:
         JetTagModel: The model
     """
-    
+
     with open(yaml_path, 'r') as stream:
         yaml_dict = yaml.safe_load(stream)
     # Create a model based on what is specified in the yaml 'model' field

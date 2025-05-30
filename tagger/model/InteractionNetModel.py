@@ -7,8 +7,8 @@ import json
 import itertools
 
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, GlobalMaxPooling1D, Concatenate, Layer
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.layers import BatchNormalization, Activation, Concatenate, Layer
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import tensorflow_model_optimization as tfmot
 
 # Qkeras
@@ -133,11 +133,11 @@ class InteractionNetModel(JetTagModel):
 
     def build_model(self, inputs_shape : tuple, outputs_shape : tuple):
         """Interaction network model from https://arxiv.org/abs/1612.00222.
-        
+
         Args:
             inputs_shape (tuple): Shape of the input
             outputs_shape (tuple): Shape of the output
-        
+
         Additional hyperparameters in the config
             effects_layers: List of number of nodes for each layer of the effects MLP.
             objects_layers: List of number of nodes for each layer of the objects MLP.
@@ -323,7 +323,7 @@ class InteractionNetModel(JetTagModel):
 
     def fit(self, X_train : npt.NDArray[np.float64],
                   y_train : npt.NDArray[np.float64],
-                  pt_target_train : npt.NDArray[np.float64], 
+                  pt_target_train : npt.NDArray[np.float64],
                   sample_weight : npt.NDArray[np.float64]):
         """Fit the model to the training dataset
 
@@ -434,6 +434,6 @@ class InteractionNetModel(JetTagModel):
         with open(hls4ml_outdir+'/config.json', 'w') as fp:
             json.dump(config, fp)
 
-        if build == True:
+        if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)

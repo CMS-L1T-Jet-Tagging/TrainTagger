@@ -6,8 +6,8 @@ import os
 import json
 
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.layers import BatchNormalization, Activation
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import tensorflow_model_optimization as tfmot
 
 # Qkeras
@@ -54,14 +54,14 @@ class DeepSetModel(JetTagModel):
         Args:
             inputs_shape (tuple): Shape of the input
             outputs_shape (tuple): Shape of the output
-            
+
         Additional hyperparameters in the config
             conv1d_layers: List of number of nodes for each layer of the conv1d layers.
             classifier_layers: List of number of nodes for each layer of the classifier MLP.
             regression_layers: List of number of nodes for each layer of the regression MLP
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
-        
+
         # Define some common arguments, taken from the yaml config
         common_args = {
             'kernel_quantizer': quantized_bits(self.quantization_config['quantizer_bits'],
@@ -158,7 +158,7 @@ class DeepSetModel(JetTagModel):
         self.jet_model = tfmot.sparsity.keras.prune_low_magnitude(
             self.jet_model, **pruning_params)
 
-        # Add preface to loss name 
+        # Add preface to loss name
         self.loss_name = 'prune_low_magnitude_'
 
         # Add pruning callback
@@ -192,7 +192,7 @@ class DeepSetModel(JetTagModel):
 
     def fit(self, X_train : npt.NDArray[np.float64],
                   y_train : npt.NDArray[np.float64],
-                  pt_target_train : npt.NDArray[np.float64], 
+                  pt_target_train : npt.NDArray[np.float64],
                   sample_weight : npt.NDArray[np.float64]):
         """Fit the model to the training dataset
 
@@ -202,7 +202,7 @@ class DeepSetModel(JetTagModel):
             pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
-        
+
         # Train the model using hyperparameters in yaml config
         self.history = self.jet_model.fit({'model_input': X_train},
                                       {self.loss_name+self.output_id_name: y_train,
@@ -225,7 +225,7 @@ class DeepSetModel(JetTagModel):
         """
         # Export the model
         model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
-        
+
         os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
         # Use keras save format !NOT .h5! due to depreciation
         export_path = os.path.join(out_dir, "model/saved_model.keras")
@@ -239,7 +239,7 @@ class DeepSetModel(JetTagModel):
         Args:
             out_dir (str, optional): Where to load it if not in the output_directory. Defaults to "None".
         """
-        
+
         # Additional custom objects for attention layers
         custom_objects_ = {
             "AAtt": AAtt,

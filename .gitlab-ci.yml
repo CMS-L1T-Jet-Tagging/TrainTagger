@@ -2,7 +2,7 @@ include:
   - local: "CI/template.yml"
 
 # Any of these variables can be defined in the pipeline, for ease of
-# reading only often changed variables are kept here. All variables are 
+# reading only often changed variables are kept here. All variables are
 # defined with their default shared across all other pipeline values in ml_pipeline.yml
 # Name = Name of child pipeline
 # Inputs = Which input configuration to use
@@ -40,4 +40,49 @@ DeepSetHGQ:baseline_5param_extended_trk:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'True'
+DeepSet:baseline_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: baseline_5param_extended_trk
+    Model: baseline
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+
+# DeepSet_reduced_precision:baseline_reduced_precision_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_reduced_precision_5param_extended_trk
+#     Model: baseline_reduced_precision
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+
+# DeepSet_larger:baseline_larger_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_larger_5param_extended_trk
+#     Model: baseline_larger
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+
+# DeepSet_attention:baseline_attention_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_attention_5param_extended_trk
+#     Inputs: baseline
+#     Model: baseline_attention
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'False'
+
+# interactionnet:interactionnet_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: interactionnet_5param_extended_trk
+#     Model: interactionnet
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'False'
 

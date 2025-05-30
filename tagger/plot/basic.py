@@ -39,7 +39,7 @@ style.set_style()
 
 def loss_history(plot_dir, history):
 
-    for metric in ["loss", "prune_low_magnitude_jet_id_output_loss", "prune_low_magnitude_pT_output_loss",
+    for metric in ["loss", "jet_id_output_loss", "pT_output_loss",
                    # "prune_low_magnitude_nll_output_loss",
                    ]:
 

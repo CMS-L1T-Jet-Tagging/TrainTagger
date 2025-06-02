@@ -634,7 +634,7 @@ def bbtt_eff_mHH(model_dir,
     # Common plot settings for second plot
     ax.hlines(1, 0, 1000, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.15])
+    ax.set_ylim([0., 1.17])
     ax.set_xlim([0, 1000])
     ax.set_xlabel(r"$m_{HH}^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$)")

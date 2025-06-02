@@ -479,7 +479,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     ax.set_ylim([0., 1.15])
     ax.set_xlim([0, 800])
     ax.set_xlabel(r"$HT^{gen}$ [GeV]")
-    ax.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$ trigger rate at {} kHz)".format(rate))
+    ax.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$)")
     plt.legend(loc='upper left')
 
     #Save plot
@@ -501,7 +501,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     ax2.set_ylim([0., 1.15])
     ax2.set_xlim([0, 800])
     ax2.set_xlabel(r"$HT^{gen}$ [GeV]")
-    ax2.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$ trigger rate at 14 kHz")
+    ax2.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$)")
     plt.legend(loc='upper left')
 
     #Save plot

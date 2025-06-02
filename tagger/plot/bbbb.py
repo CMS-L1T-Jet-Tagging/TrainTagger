@@ -470,7 +470,7 @@ def bbbb_eff_mHH(model_dir,
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE-2)
 
-    hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$mHH^{gen}$")
+    hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$m_{HH}^{gen}$")
     ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
                 label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)))
     ax.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,

@@ -113,7 +113,8 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    plt.legend(loc='upper left', fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    leg = plt.legend(loc='upper left', fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    leg._legend_box.align = "left"
 
     save_path = os.path.join(save_dir, "ROC_taus_combined")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
@@ -158,7 +159,8 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair , signal_proc=
     ax.grid(True)
     ax.set_ylabel('Mistag Rate')
     ax.set_xlabel('Signal Efficiency')
-    ax.legend(loc='lower right',fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    leg = ax.legend(loc='lower right',fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    leg._legend_box.align = "left"
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
 
@@ -653,7 +655,8 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    plt.legend(loc='lower right', fontsize=style.SMALL_SIZE+3, title=process_label)
+    leg = plt.legend(loc='lower right', fontsize=style.SMALL_SIZE+3, title=process_label)
+    leg._legend_box.align = "left"
 
     save_path = os.path.join(save_dir, "ROC_light_vs_all_jets")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')

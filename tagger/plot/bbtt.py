@@ -51,33 +51,6 @@ def x_vs_y(x, y, apply_light=True):
     else:
         return x
 
-# Parallelized loop through the edges and integrate
-def pick_rates(rate):
-    if (rate > 16 and rate < derived_rate-2) or rate < 12 or rate > derived_rate+2:
-        return True
-    else:
-        return False
-
-def parallel_in_parallel(params):
-    bb, tt = params
-    #Calculate the rate
-    counts_raw = RateHistRaw[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-    rate_raw = (counts_raw / n_events)*MINBIAS_RATE
-
-    counts_qg = RateHistQG[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-    rate_qg = (counts_qg / n_events)*MINBIAS_RATE
-
-    # check if the rate is in the range, skip if not
-    if pick_rates(rate_raw) and pick_rates(rate_qg): return
-
-    # get signal efficiencies
-    counts_signal_raw = SHistRaw[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-    eff_signal_raw = counts_signal_raw / s_n_events
-
-    counts_signal_qg = SHistQG[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
-    eff_signal_qg = counts_signal_qg / s_n_events
-
-    return np.array([rate_raw, rate_qg, eff_signal_raw, eff_signal_qg, 220, bb, tt])
 
 def default_selection(jet_pt, jet_eta, indices, apply_sel):
     if apply_sel == "tau":
@@ -91,6 +64,19 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
     else:
         event_mask = np.ones(len(jet_pt), dtype=bool)
     return event_mask
+
+def choose_tau(taup, taum):
+    ids = ak.argcombinations(taup, 2, fields=['jet1', 'jet2'])
+
+    tau_topo = [(taup[:,i] + taup[:,j]) * (taum[:,i] + taum[:,j]) for i,j in zip(ids.jet1[0], ids.jet2[0])]
+    ids_indices = np.argmax(tau_topo, axis=0)
+    tau_scores = np.max(tau_topo, axis=0)
+
+    i1 = [ids.jet1[i, ids_indices[i]] for i in range(len(ids.jet1))]
+    i2 = [ids.jet2[i, ids_indices[i]] for i in range(len(ids.jet2))]
+    tau_indices = np.stack((i1, i2), axis=-1)
+
+    return tau_scores, tau_indices
 
 def max_tau_sum(taup_preds, taum_preds):
     """
@@ -136,7 +122,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
 
     bscore_sums, tscore_sums, tscore_idxs = [], [], []
     for b, taup, taum in zip([b_preds, b_vs_qg], [taup_preds, taup_vs_qg], [taum_preds, taum_vs_qg]):
-        tscore_sum, tau_indices = max_tau_sum(taup, taum)
+        tscore_sum, tau_indices = choose_tau(taup, taum)
         tscore_idxs.append(tau_indices)
         tscore_sums.append(tscore_sum)
 
@@ -148,6 +134,34 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
         bscore_sums.append(bscore_sum)
 
     return bscore_sums, tscore_sums, tau_indices
+
+# Parallelized loop through the edges and integrate
+def pick_rates(rate):
+    if (rate > 16 and rate < derived_rate-2) or rate < 12 or rate > derived_rate+2:
+        return True
+    else:
+        return False
+
+def parallel_in_parallel(params):
+    bb, tt = params
+    #Calculate the rate
+    counts_raw = RateHistRaw[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+    rate_raw = (counts_raw / n_events)*MINBIAS_RATE
+
+    counts_qg = RateHistQG[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+    rate_qg = (counts_qg / n_events)*MINBIAS_RATE
+
+    # check if the rate is in the range, skip if not
+    if pick_rates(rate_raw) and pick_rates(rate_qg): return
+
+    # get signal efficiencies
+    counts_signal_raw = SHistRaw[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+    eff_signal_raw = counts_signal_raw / s_n_events
+
+    counts_signal_qg = SHistQG[{"ht": slice(220*1j, None, sum)}][{"nn_bb": slice(bb*1.0j, None, sum)}][{"nn_tt": slice(tt*1.0j, None, sum)}]
+    eff_signal_qg = counts_signal_qg / s_n_events
+
+    return np.array([rate_raw, rate_qg, eff_signal_raw, eff_signal_qg, 220, bb, tt])
 
 def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_type, apply_sel, model_dir, n_entries, rate, tree):
     """

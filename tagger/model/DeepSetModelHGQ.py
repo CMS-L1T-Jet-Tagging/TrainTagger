@@ -95,7 +95,6 @@ class DeepSetModelHGQ(JetTagModel):
                                             patience=self.training_config['ReduceLROnPlateau_patience'],
                                             min_lr=self.training_config['ReduceLROnPlateau_min_lr']),ResetMinMax(), FreeBOPs()]
 
-        #self._prune_model(num_samples)
 
         self.jet_model.compile(optimizer='adam',
                             loss={self.loss_name+self.output_id_name: 'categorical_crossentropy', self.loss_name+self.output_pt_name: tf.keras.losses.Huber()},
@@ -126,10 +125,7 @@ class DeepSetModelHGQ(JetTagModel):
     @JetTagModel.load_decorator
     def load(self,out_dir=None):
         #Load model
-        #custom_objects_ = {
-         #       "AAtt": AAtt,
-          #      "AttentionPooling": AttentionPooling,
-        #}
+    
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.h5")
 
     def hls4ml_convert(self,firmware_dir,build=False):

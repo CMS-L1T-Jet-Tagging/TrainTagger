@@ -49,14 +49,15 @@ class DeepSetModelHGQ(JetTagModel):
                                          alpha=self.quantization_config['quantizer_alpha_val']),
             'kernel_initializer': self.model_config['kernel_initializer']
         }
+        beta =self.model_config["beta"]
 
         #Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
         L, C = inputs_shape
         #Main branch
-        main = HQuantize(name='quant1' ,beta=1.1e-5)(inputs)
-        main = HConv1DBatchNorm(filters=10, activation='relu',kernel_size=1, beta=1.1e-5, parallel_factor=1, name='Conv1D_1')(main)
-        main = HConv1D(filters=10, activation='relu', kernel_size=1, beta=1.1e-5, parallel_factor=1, name='Conv1D_2')(main)
+        main = HQuantize(name='quant1' ,beta=beta)(inputs)
+        main = HConv1DBatchNorm(filters=10, activation='relu',kernel_size=1, beta=beta, parallel_factor=1, name='Conv1D_1')(main)
+        main = HConv1D(filters=10, activation='relu', kernel_size=1, beta=beta, parallel_factor=1, name='Conv1D_2')(main)
 
 
         # Make Conv1D layers
@@ -65,17 +66,17 @@ class DeepSetModelHGQ(JetTagModel):
         main = PFlatten()(main)
 
         #Now split into jet ID and pt regression
-        jet_id = HDense(32, beta=1.1e-5, activation='relu',parallel_factor=1,name='Dense_1_jetID')(main)
-        jet_id = HDense(16, name='Dense_2_jetID',beta=1.1e-5, activation='relu',parallel_factor=1)(jet_id)
+        jet_id = HDense(32, beta=beta, activation='relu',parallel_factor=1,name='Dense_1_jetID')(main)
+        jet_id = HDense(16, name='Dense_2_jetID',beta=beta, activation='relu',parallel_factor=1)(jet_id)
 
-        jet_id = HDense(outputs_shape[0],beta=1.1e-5, name='Dense_3_jetID')(jet_id)
+        jet_id = HDense(outputs_shape[0],beta=beta, name='Dense_3_jetID')(jet_id)
         jet_id = Activation('softmax', name='act_jet')(jet_id)
         jet_id = Signature(bits=18, int_bits=8, keep_negative=0, name='jet_id_output')(jet_id)
         #pT regression branch
-        pt_regress = HDense(10, name='Dense_1_pT', parallel_factor=1,beta=1.1e-5, activation='relu')(main)
+        pt_regress = HDense(10, name='Dense_1_pT', parallel_factor=1,beta=beta, activation='relu')(main)
 
 
-        pt_regress = HDense(1, beta=1.1e-5,parallel_factor=1,name='pT_out')(pt_regress)
+        pt_regress = HDense(1, beta=beta,parallel_factor=1,name='pT_out')(pt_regress)
         pt_regress = Signature(bits=16, int_bits=6, keep_negative=0, name='pT_output')(pt_regress)
 
 

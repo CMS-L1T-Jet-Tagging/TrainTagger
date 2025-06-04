@@ -9,6 +9,7 @@ model_config :
   classification_layers : [32,16]
   regression_layers : [10]
   kernel_initializer : 'lecun_uniform'
+  beta: 1.1e-5
 
 training_config :
   weight_method: "onlyclass"

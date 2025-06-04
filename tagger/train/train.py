@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     # Training argument
-    parser.add_argument('-o', '--output', default='output/baseline_HGQ',
+    parser.add_argument('-o', '--output', default='output/baseline',
                         help='Output model directory path, also save evaluation plots')
     parser.add_argument('-p', '--percent', default=100, type=int,
                         help='Percentage of how much processed data to train on')

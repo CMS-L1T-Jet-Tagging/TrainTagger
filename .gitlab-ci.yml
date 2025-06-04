@@ -32,10 +32,10 @@ include:
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 
 
-DeepSetHGQ:baseline_5param_extended_trk:
+DeepSetHGQ:baseline_hgq_5param_extended_trk:
   extends: .ml_pipeline
   variables:
-    Name: baseline_5param_extended_trk
+    Name: baseline_hgq_5param_extended_trk
     Model: baseline_HGQ
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'

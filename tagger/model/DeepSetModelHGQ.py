@@ -153,7 +153,7 @@ class DeepSetModelHGQ(JetTagModel):
         #config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
         #Additional config
-        
+
 
         config["LayerName"]["act_jet"]["Precision"]["result"] =  self.hls4ml_config['class_precision']
         config["LayerName"]["act_jet"]["Implementation"] = "latency"

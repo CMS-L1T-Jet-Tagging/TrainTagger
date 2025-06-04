@@ -6,9 +6,6 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCh
 import tensorflow_model_optimization as tfmot
 
 # Qkeras
-from qkeras.quantizers import quantized_bits, quantized_relu
-from qkeras.qlayers import QDense, QActivation
-from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 from HGQ import trace_minmax, to_proxy_model
 from tagger.model.JetTagModel import JetTagModel, JetModelFactory

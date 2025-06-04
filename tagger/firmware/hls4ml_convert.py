@@ -8,8 +8,9 @@ if __name__ == "__main__":
                         help='Input model path for conversion')
     parser.add_argument('-o', '--outpath', default='firmware/L1TSC4NGJetModel',
                         help='Jet tagger synthesized output directory')
+
     args = parser.parse_args()
 
-    # Load the model
+    #Load the model
     model = fromFolder(args.model_path)
-    model.hls4ml_convert(args.outpath, build=False)
+    model.hls4ml_convert(args.outpath,build=False)

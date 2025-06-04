@@ -142,7 +142,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 4
@@ -155,6 +155,8 @@ hls4ml:
     - job : train
       optional: true
   script:
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
   artifacts:

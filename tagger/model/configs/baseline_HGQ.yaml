@@ -8,9 +8,11 @@ model_config :
   conv1d_layers : [10,10]
   classification_layers : [32,16]
   regression_layers : [10]
-  kernel_initializer : 'lecun_uniform'
   beta: 1.1e-5
 
+quantization_config:
+  pt_output_quantization : [16,6]
+  
 training_config :
   weight_method: "onlyclass"
   epochs : 3

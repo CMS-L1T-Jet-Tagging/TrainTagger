@@ -40,15 +40,7 @@ class DeepSetModelHGQ(JetTagModel):
 
     def build_model(self,inputs_shape,outputs_shape):
         # Define a dictionary for common arguments
-        common_args = {
-            'kernel_quantizer': quantized_bits(self.quantization_config['quantizer_bits'],
-                                               self.quantization_config['quantizer_bits_int'],
-                                         alpha=self.quantization_config['quantizer_alpha_val']),
-            'bias_quantizer':   quantized_bits(self.quantization_config['quantizer_bits'],
-                                               self.quantization_config['quantizer_bits_int'],
-                                         alpha=self.quantization_config['quantizer_alpha_val']),
-            'kernel_initializer': self.model_config['kernel_initializer']
-        }
+        
         beta =self.model_config["beta"]
 
         #Initialize inputs
@@ -77,7 +69,7 @@ class DeepSetModelHGQ(JetTagModel):
 
 
         pt_regress = HDense(1, beta=beta,parallel_factor=1,name='pT_out')(pt_regress)
-        pt_regress = Signature(bits=16, int_bits=6, keep_negative=0, name='pT_output')(pt_regress)
+        pt_regress = Signature(bits=self.quantization_config['pt_output_quantization'][0], int_bits=self.quantization_config['pt_output_quantization'][1], keep_negative=0, name='pT_output')(pt_regress)
 
 
         #Define the model using both branches

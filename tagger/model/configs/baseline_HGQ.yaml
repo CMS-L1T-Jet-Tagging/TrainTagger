@@ -9,13 +9,6 @@ model_config :
   classification_layers : [32,16]
   regression_layers : [10]
   kernel_initializer : 'lecun_uniform'
-  aggregator : 'mean'
-
-quantization_config:
-  quantizer_bits : 9
-  quantizer_bits_int : 2
-  quantizer_alpha_val : 1
-  pt_output_quantization : [16,6]
 
 training_config :
   weight_method: "onlyclass"
@@ -26,8 +19,6 @@ training_config :
 
   loss_weights : [1,1]
 
-  initial_sparsity : 0.0
-  final_sparsity : 0.1
 
   EarlyStopping_patience : 10
 

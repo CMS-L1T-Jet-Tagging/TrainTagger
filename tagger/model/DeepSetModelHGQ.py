@@ -137,8 +137,9 @@ class DeepSetModelHGQ(JetTagModel):
         data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=10)
         X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
         # Make into ML-like data for training
-
+        # compute necessary bitwidth for each layer against a calibration dataset
         trace_minmax(self.jet_model, X_train, cover_factor=1.0)
+        # convert HGQ model to a hls4ml-compatible proxy model
         proxy = to_proxy_model(self.jet_model, aggressive=False)
 
         #Create default config
@@ -152,18 +153,7 @@ class DeepSetModelHGQ(JetTagModel):
         #config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
         #Additional config
-        for layer in self.jet_model.layers:
-            layer_name = layer.__class__.__name__
-
-            #if layer_name in ["BatchNormalization", "InputLayer"]:
-                #config["LayerName"][layer.name]["Precision"] = self.hls4ml_config['input_precision']
-                #config["LayerName"][layer.name]["result"] = self.hls4ml_config['input_precision']
-                #config["LayerName"][layer.name]["Trace"] = not build
-
-            #elif layer_name in ["Permute","Concatenate","Flatten","Reshape","UpSampling1D","Add"]:
-             #   print("Skipping trace for:", layer.name)
-            #else:
-             #   config["LayerName"][layer.name]["Trace"]  = not build
+        
 
         config["LayerName"]["act_jet"]["Precision"]["result"] =  self.hls4ml_config['class_precision']
         config["LayerName"]["act_jet"]["Implementation"] = "latency"

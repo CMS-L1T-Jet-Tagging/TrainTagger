@@ -12,7 +12,7 @@ model_config :
 
 quantization_config:
   pt_output_quantization : [16,6]
-  
+
 training_config :
   weight_method: "onlyclass"
   epochs : 3

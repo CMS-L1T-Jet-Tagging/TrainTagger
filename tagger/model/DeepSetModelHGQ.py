@@ -40,7 +40,7 @@ class DeepSetModelHGQ(JetTagModel):
 
     def build_model(self,inputs_shape,outputs_shape):
         # Define a dictionary for common arguments
-        
+
         beta =self.model_config["beta"]
 
         #Initialize inputs

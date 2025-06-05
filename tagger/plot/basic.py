@@ -37,11 +37,11 @@ style.set_style()
 # DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 
 
-def loss_history(plot_dir, history):
+def loss_history(plot_dir, loss_names, history):
+    
+    losses = ["loss"] + loss_names
 
-    for metric in ["loss", "jet_id_output_loss", "pT_output_loss",
-                   # "prune_low_magnitude_nll_output_loss",
-                   ]:
+    for metric in losses:
 
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         hep.cms.label(llabel=style.CMSHEADER_LEFT,

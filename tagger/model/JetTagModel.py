@@ -181,7 +181,7 @@ class JetTagModel(ABC):
         os.makedirs(plot_path, exist_ok=True)
 
         # Plot history
-        loss_history(plot_path, self.history)
+        loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name ] , self.history)
 
 
 class JetModelFactory:

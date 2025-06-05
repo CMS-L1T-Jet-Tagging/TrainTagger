@@ -8,6 +8,7 @@ import numpy as np
 
 from tagger.data.tools import load_data, make_data, to_ML
 from tagger.model.common import fromFolder
+
 # Import from other modules
 from tagger.plot import style
 from tagger.plot.common import plot_2d

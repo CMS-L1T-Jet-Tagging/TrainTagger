@@ -14,12 +14,12 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from qkeras import QConv1D
 from qkeras.qlayers import QActivation, QDense
+
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.utils import load_qmodel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from tensorflow.keras.layers import (Activation, BatchNormalization,
-                                     Concatenate, Layer)
+from tensorflow.keras.layers import Activation, BatchNormalization, Concatenate, Layer
 
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel

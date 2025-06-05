@@ -50,12 +50,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, 
     nn_outputs = [model.jet_model.predict(nn_input)[0] for nn_input in btag_inputs]
 
     # Sum them together
-    bscore_sum = sum(
-        [
-            x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light)
-            for pred_score in nn_outputs
-        ]
-    )
+    bscore_sum = sum([x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light) for pred_score in nn_outputs])
 
     return bscore_sum
 
@@ -70,9 +65,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE - 2)
-    im = ax.scatter(
-        nn_list, ht_list, c=rate_list, s=500, marker='s', cmap='Spectral_r', linewidths=0, norm=matplotlib.colors.LogNorm()
-    )
+    im = ax.scatter(nn_list, ht_list, c=rate_list, s=500, marker='s', cmap='Spectral_r', linewidths=0, norm=matplotlib.colors.LogNorm())
 
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label(r'4-b rate [kHZ]')
@@ -184,12 +177,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     b_index = model.class_labels['b']
     l_index = model.class_labels['light']
     g_index = model.class_labels['gluon']
-    bscore_sum = sum(
-        [
-            x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light)
-            for pred_score in nn_outputs
-        ]
-    )
+    bscore_sum = sum([x_vs_y(pred_score[:, b_index], pred_score[:, l_index] + pred_score[:, g_index], apply_light) for pred_score in nn_outputs])
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]
     jet_ht = ak.sum(jet_pt, axis=1)
 
@@ -308,18 +296,14 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
 
     # Group these attributes by event id, and filter out groups that don't have at least 4 elements
     if raw_gen_mHH is not None:
-        event_id, grouped_arrays = group_id_values(
-            raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, num_elements=4
-        )
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, num_elements=4)
         event_gen_mHH, jet_genpt, jet_pt, jet_eta, cmssw_bscore, jet_nn_inputs = grouped_arrays
 
         # Just pick the first entry of jet mHH arrays
         event_gen_mHH = ak.firsts(event_gen_mHH)
     else:
         # Handle case where genHH_mass doesn't exist
-        event_id, grouped_arrays = group_id_values(
-            raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, num_elements=4
-        )
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, num_elements=4)
         jet_genpt, jet_pt, jet_eta, cmssw_bscore, jet_nn_inputs = grouped_arrays
         event_gen_mHH = None
 
@@ -404,9 +388,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
         c=style.color_cycle[0],
         fmt='o',
         linewidth=3,
-        label=r'BTag CMSSW Emulator @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(
-            eff_str, cmssw_efficiency, cmssw_btag_ht, cmssw_btag
-        ),
+        label=r'BTag CMSSW Emulator @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, cmssw_efficiency, cmssw_btag_ht, cmssw_btag),
     )
     ax.errorbar(
         model_x,
@@ -415,9 +397,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
         c=style.color_cycle[1],
         fmt='o',
         linewidth=3,
-        label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(
-            eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)
-        ),
+        label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)),
     )
 
     # Plot other labels
@@ -447,9 +427,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
         c=style.color_cycle[1],
         fmt='o',
         linewidth=3,
-        label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(
-            eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)
-        ),
+        label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)),
     )
     ax2.errorbar(
         ht_only_x,
@@ -543,9 +521,7 @@ def bbbb_eff_mHH(
         c=style.color_cycle[1],
         fmt='o',
         linewidth=3,
-        label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(
-            eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)
-        ),
+        label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)),
     )
     ax.errorbar(
         ht_only_x,

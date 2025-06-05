@@ -16,14 +16,10 @@ if __name__ == "__main__":
     )
     parser.add_argument('-r', '--ratio', default=1, type=float, help='Ratio (0-1) of the input data root file to process')
     parser.add_argument('-s', '--step', default='100MB', help='The maximum memory size to process input root file')
-    parser.add_argument(
-        '-e', '--extras', default='extra_fields', help='Which extra fields to add to output tuples, in pfcand_fields.yml'
-    )
+    parser.add_argument('-e', '--extras', default='extra_fields', help='Which extra fields to add to output tuples, in pfcand_fields.yml')
     parser.add_argument('-t', '--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
 
-    parser.add_argument(
-        '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
-    )
+    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting')
 
     args = parser.parse_args()
 

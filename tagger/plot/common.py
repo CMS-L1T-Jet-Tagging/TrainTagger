@@ -98,9 +98,7 @@ def plot_2d(variable_one, variable_two, range_one, range_two, name_one, name_two
     fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0] + 2, style.FIGURE_SIZE[1]))
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
 
-    hist2d = ax.hist2d(
-        variable_one, variable_two, range=(range_one, range_two), bins=50, norm=matplotlib.colors.LogNorm(), cmap='jet'
-    )
+    hist2d = ax.hist2d(variable_one, variable_two, range=(range_one, range_two), bins=50, norm=matplotlib.colors.LogNorm(), cmap='jet')
     ax.set_xlabel(name_one)
     ax.set_ylabel(name_two)
     cbar = plt.colorbar(hist2d[3], ax=ax)

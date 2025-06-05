@@ -20,15 +20,9 @@ gc.set_threshold(0)
 
 
 def _add_response_vars(data):
-    data['jet_ptUncorr_div_ptGen'] = ak.nan_to_num(
-        data['jet_pt_phys'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
-    )
-    data['jet_ptCorr_div_ptGen'] = ak.nan_to_num(
-        data['jet_pt_corr'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
-    )
-    data['jet_ptRaw_div_ptGen'] = ak.nan_to_num(
-        data['jet_pt_raw'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
-    )
+    data['jet_ptUncorr_div_ptGen'] = ak.nan_to_num(data['jet_pt_phys'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0)
+    data['jet_ptCorr_div_ptGen'] = ak.nan_to_num(data['jet_pt_corr'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0)
+    data['jet_ptRaw_div_ptGen'] = ak.nan_to_num(data['jet_pt_raw'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0)
 
 
 def _split_flavor(data):
@@ -46,61 +40,14 @@ def _split_flavor(data):
 
     # Define conditions for each label
     conditions = {
-        "b": (  # Bottom
-            genmatch_pt_base
-            & (data['jet_muflav'] == 0)
-            & (data['jet_tauflav'] == 0)
-            & (data['jet_elflav'] == 0)
-            & (data['jet_genmatch_hflav'] == 5)
-        ),
-        "charm": (  # Charm
-            genmatch_pt_base
-            & (data['jet_muflav'] == 0)
-            & (data['jet_tauflav'] == 0)
-            & (data['jet_elflav'] == 0)
-            & (data['jet_genmatch_hflav'] == 4)
-        ),
-        "light": (  # uds
-            genmatch_pt_base
-            & (data['jet_muflav'] == 0)
-            & (data['jet_tauflav'] == 0)
-            & (data['jet_elflav'] == 0)
-            & (data['jet_genmatch_hflav'] == 0)
-            & (
-                (abs(data['jet_genmatch_pflav']) == 0)
-                | (abs(data['jet_genmatch_pflav']) == 1)
-                | (abs(data['jet_genmatch_pflav']) == 2)
-                | (abs(data['jet_genmatch_pflav']) == 3)
-            )
-        ),
-        "gluon": (  # Gluon
-            genmatch_pt_base
-            & (data['jet_muflav'] == 0)
-            & (data['jet_tauflav'] == 0)
-            & (data['jet_elflav'] == 0)
-            & (data['jet_genmatch_hflav'] == 0)
-            & (data['jet_genmatch_pflav'] == 21)
-        ),
-        "taup": (  # Tau +
-            genmatch_pt_base
-            & (data['jet_muflav'] == 0)
-            & (data['jet_tauflav'] == 1)
-            & (data['jet_taucharge'] > 0)
-            & (data['jet_elflav'] == 0)
-        ),
-        "taum": (  # Tau -
-            genmatch_pt_base
-            & (data['jet_muflav'] == 0)
-            & (data['jet_tauflav'] == 1)
-            & (data['jet_taucharge'] < 0)
-            & (data['jet_elflav'] == 0)
-        ),
-        "muon": (  # muon
-            genmatch_pt_base & (data['jet_muflav'] == 1) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0)
-        ),
-        "electron": (  # electron
-            genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 1)
-        ),
+        "b": (genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0) & (data['jet_genmatch_hflav'] == 5)),  # Bottom
+        "charm": (genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0) & (data['jet_genmatch_hflav'] == 4)),  # Charm
+        "light": (genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0) & (data['jet_genmatch_hflav'] == 0) & ((abs(data['jet_genmatch_pflav']) == 0) | (abs(data['jet_genmatch_pflav']) == 1) | (abs(data['jet_genmatch_pflav']) == 2) | (abs(data['jet_genmatch_pflav']) == 3))),  # uds
+        "gluon": (genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0) & (data['jet_genmatch_hflav'] == 0) & (data['jet_genmatch_pflav'] == 21)),  # Gluon
+        "taup": (genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 1) & (data['jet_taucharge'] > 0) & (data['jet_elflav'] == 0)),  # Tau +
+        "taum": (genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 1) & (data['jet_taucharge'] < 0) & (data['jet_elflav'] == 0)),  # Tau -
+        "muon": (genmatch_pt_base & (data['jet_muflav'] == 1) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0)),  # muon
+        "electron": (genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 1)),  # electron
     }
 
     # Automatically generate class labels based on the order of keys in conditions
@@ -134,9 +81,7 @@ def _split_flavor(data):
     # Sanity check for data consistency
     split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
     if split_data_sum != len(data[jet_ptmin_gen]):
-        raise ValueError(
-            f"Data splitting error: Total entries ({split_data_sum}) do not match the filtered data length ({len(data[jet_ptmin_gen])})."
-        )
+        raise ValueError(f"Data splitting error: Total entries ({split_data_sum}) do not match the filtered data length ({len(data[jet_ptmin_gen])}).")
 
     return data[jet_ptmin_gen], class_labels
 

@@ -77,9 +77,7 @@ def nn_score_sums(model, jet_nn_inputs, n_jets=4):
     b_preds_sums = np.sum(b_preds[rows, b_preds_arg], axis=1)
 
     # vs light preds
-    b_vs_qg = np.transpose(
-        [x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs]
-    )
+    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
     b_vs_qg_arg = np.argsort(b_vs_qg, axis=1)[:, -2:]
     b_vs_qg_sums = np.sum(b_vs_qg[rows, b_vs_qg_arg], axis=1)
 
@@ -89,9 +87,7 @@ def nn_score_sums(model, jet_nn_inputs, n_jets=4):
     return bscore_sums, bscore_idxs
 
 
-def pick_and_plot(
-    rate_list, ht_list, bb_list, ht, raw_score, apply_sel, model_dir, signal_path, n_entries, target_rate, tree
-):
+def pick_and_plot(rate_list, ht_list, bb_list, ht, raw_score, apply_sel, model_dir, signal_path, n_entries, target_rate, tree):
     """
     Pick the working points and plot
     """
@@ -229,9 +225,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     raw = True
     for bscore_sum, def_sel in zip(bscore_sums, def_sels):
         sel_ht = jet_ht[def_sel]
-        RateHist = Hist(
-            hist.axis.Variable(ht_edges, name="ht", label="ht"), hist.axis.Variable(NN_edges, name="nn", label="nn_bb")
-        )
+        RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"), hist.axis.Variable(NN_edges, name="nn", label="nn_bb"))
         RateHist.fill(ht=sel_ht, nn=bscore_sum)
 
         assert len(bscore_sum) == len(sel_ht)
@@ -253,9 +247,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
             bb_list.append(bb)
 
         # Pick target rate and plot it
-        pick_and_plot(
-            rate_list, ht_list, bb_list, ht_cut, raw, apply_sel, model.output_directory, signal_path, n_entries, rate, tree
-        )
+        pick_and_plot(rate_list, ht_list, bb_list, ht_cut, raw, apply_sel, model.output_directory, signal_path, n_entries, rate, tree)
         gc.collect()
         raw = False
 
@@ -306,9 +298,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
 
     # Group these attributes by event id, and filter out groups that don't have at least 4 elements
-    event_id, grouped_arrays = group_id_values(
-        raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4
-    )
+    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
     jet_genpt, jet_pt, jet_eta, tau_pt, jet_nn_inputs = grouped_arrays
 
     # Calculate the ht
@@ -430,9 +420,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     plt.legend(loc='upper left')
 
     # Save plot
-    plot_path = os.path.join(
-        model.output_directory, f"plots/physics/bbtt_bb_only/HHbbtt_HT_only_eff_{score_type}_{apply_sel}"
-    )
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbtt_bb_only/HHbbtt_HT_only_eff_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 

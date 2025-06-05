@@ -5,7 +5,8 @@ import hls4ml
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from HGQ import FreeBOPs, ResetMinMax, to_proxy_model, trace_minmax
-from HGQ.layers import HConv1D, HConv1DBatchNorm, HDense,
+from HGQ.layers import HConv1D, HConv1DBatchNorm, HDense
+
                         HQuantize, PAveragePooling1D, PFlatten, Signature
 # Qkeras
 from qkeras.utils import load_qmodel

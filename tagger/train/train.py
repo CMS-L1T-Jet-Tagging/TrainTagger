@@ -27,17 +27,13 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     Re-balancing the class weights and then flatten them based on truth pT
     """
     if weightingMethod not in ["none", "ptref", "onlyclass"]:
-        raise ValueError(
-            "Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass."
-        )
+        raise ValueError("Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass.")
     num_samples = y_train.shape[0]
 
     sample_weights = np.ones(num_samples)
 
     # Define pT bins (without the high pT part we don't care about)
-    pt_bins = np.array(
-        [15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, np.inf]  # Use np.inf to cover all higher values
-    )
+    pt_bins = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, np.inf])  # Use np.inf to cover all higher values
 
     if weightingMethod == "onlyclass":
         pt_bins = np.array([0.0, np.inf])  # Use np.inf to cover all higher values
@@ -167,19 +163,13 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     # Training argument
-    parser.add_argument(
-        '-o', '--output', default='output/baseline', help='Output model directory path, also save evaluation plots'
-    )
+    parser.add_argument('-o', '--output', default='output/baseline', help='Output model directory path, also save evaluation plots')
     parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
-    parser.add_argument(
-        '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
-    )
+    parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model')
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
-    parser.add_argument(
-        '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
-    )
+    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting')
 
     args = parser.parse_args()
 

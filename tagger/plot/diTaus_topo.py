@@ -76,9 +76,7 @@ def pick_and_plot_topo(rate_list, pt_list, nn_list, model_dir, target_rate=28, R
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE - 2)
-    im = ax.scatter(
-        nn_list, pt_list, c=rate_list, s=500, marker='s', cmap='Spectral_r', linewidths=0, norm=matplotlib.colors.LogNorm()
-    )
+    im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s', cmap='Spectral_r', linewidths=0, norm=matplotlib.colors.LogNorm())
 
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label(r'Di-tau rate [kHZ]')
@@ -229,9 +227,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
 def cmssw_pt_score(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt):
 
     # Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays = group_id_values(
-        raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt, num_elements=2
-    )
+    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt, num_elements=2)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
@@ -264,9 +260,7 @@ def cmssw_pt_score(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw
     return event_id[cuts], pt_min, cmssw_pt_min, cmssw_tau_min
 
 
-def model_pt_score(
-    raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi
-):
+def model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi):
 
     event_id, grouped_arrays = group_id_values_topo(
         raw_event_id,
@@ -344,12 +338,8 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
     print("Total number of minbias events: ", n_events)
 
     # Extract the minpt and tau score from cmssw
-    cmssw_event_id, pt_min, cmssw_pt_min, cmssw_tau_min = cmssw_pt_score(
-        raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt
-    )
-    model_event_id, model_pt_min, model_tau_topo = model_pt_score(
-        raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi
-    )
+    cmssw_event_id, pt_min, cmssw_pt_min, cmssw_tau_min = cmssw_pt_score(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt)
+    model_event_id, model_pt_min, model_tau_topo = model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi)
 
     event_id_cmssw = cmssw_event_id[cmssw_tau_min > WPs_CMSSW["tau"]]
 
@@ -672,9 +662,7 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
     ax_top.bar(pt_edges[:-1], counts_pt1_normalized, width=np.diff(pt_edges), align='edge', color='gray', alpha=0.7)
     ax_top.set_yticks([0, 0.15, 0.3])
     ax_top.tick_params(axis="x", labelbottom=False)
-    ax_top.yaxis.set_major_formatter(
-        matplotlib.ticker.FuncFormatter(lambda y, _: '{:.0f}'.format(y) if y.is_integer() else '{:.2f}'.format(y))
-    )
+    ax_top.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda y, _: '{:.0f}'.format(y) if y.is_integer() else '{:.2f}'.format(y)))
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax_top, fontsize=style.MEDIUM_SIZE - 2)
 
     # Right histogram
@@ -683,9 +671,7 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
     counts_pt2_normalized = counts_pt2 / np.sum(counts_pt2)
     ax_right.barh(pt_edges[:-1], counts_pt2_normalized, height=np.diff(pt_edges), align='edge', color='gray', alpha=0.7)
     ax_right.set_xticks([0, 0.15, 0.3])
-    ax_right.xaxis.set_major_formatter(
-        matplotlib.ticker.FuncFormatter(lambda x, _: '{:.0f}'.format(x) if x.is_integer() else '{:.2f}'.format(x))
-    )
+    ax_right.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: '{:.0f}'.format(x) if x.is_integer() else '{:.2f}'.format(x)))
     ax_right.tick_params(axis="y", labelleft=False)
 
     # Add colorbar

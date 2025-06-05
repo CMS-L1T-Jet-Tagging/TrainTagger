@@ -87,9 +87,7 @@ def doPlots(model, outputdir, inputdir):
         'a.u.',
         range=(0, 2),
     )
-    bit_accurate = np.count_nonzero(
-        (np.array(data['jet_SC4NGJet_score_regression']) - np.array(modelsAndNames['Y_hls_predict_reg'][:, 0]))
-    )
+    bit_accurate = np.count_nonzero((np.array(data['jet_SC4NGJet_score_regression']) - np.array(modelsAndNames['Y_hls_predict_reg'][:, 0])))
     print(
         "Percent bit accuracy between CMSSW emulator and hls4ml for regression is",
         100 - 100 * bit_accurate / len(np.array(data['jet_SC4NGJet_score_regression'])),
@@ -113,9 +111,7 @@ def doPlots(model, outputdir, inputdir):
             'a.u.',
             range=(0, 1),
         )
-        bit_accurate = np.count_nonzero(
-            (np.array(data['jet_SC4NGJet_score_' + label]) - np.array(modelsAndNames['Y_hls_predict'][:, i]))
-        )
+        bit_accurate = np.count_nonzero((np.array(data['jet_SC4NGJet_score_' + label]) - np.array(modelsAndNames['Y_hls_predict'][:, i])))
         print(
             "Percent bit accuracy between CMSSW emulator and hls4ml for " + label + " classification is",
             100 - 100 * bit_accurate / len(np.array(data['jet_SC4NGJet_score_' + label])),
@@ -203,21 +199,9 @@ def doPlots(model, outputdir, inputdir):
     _ = common.plot_histo(
         [response_reg, response_emu, response_hls],
         [
-            "Emulation"
-            + " median: "
-            + str(np.round(np.median(response_emu), 3))
-            + " rms: "
-            + str(np.round(rms(response_emu), 3)),
-            "Tensorflow"
-            + " median: "
-            + str(np.round(np.median(response_reg), 3))
-            + " rms: "
-            + str(np.round(rms(response_reg), 3)),
-            "hls4ml"
-            + " median: "
-            + str(np.round(np.median(response_hls), 3))
-            + " rms: "
-            + str(np.round(rms(response_hls), 3)),
+            "Emulation" + " median: " + str(np.round(np.median(response_emu), 3)) + " rms: " + str(np.round(rms(response_emu), 3)),
+            "Tensorflow" + " median: " + str(np.round(np.median(response_reg), 3)) + " rms: " + str(np.round(rms(response_reg), 3)),
+            "hls4ml" + " median: " + str(np.round(np.median(response_hls), 3)) + " rms: " + str(np.round(rms(response_hls), 3)),
         ],
         "Jet Regression",
         'Jet Response (L1/Gen)',

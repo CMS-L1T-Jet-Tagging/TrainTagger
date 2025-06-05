@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 Script to plot all di-taus related physics performance plot
 """

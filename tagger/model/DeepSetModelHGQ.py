@@ -2,21 +2,17 @@ import json
 import os
 
 import hls4ml
-import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from HGQ import FreeBOPs, ResetMinMax, to_proxy_model, trace_minmax
-from HGQ.layers import (HActivation, HConv1D, HConv1DBatchNorm, HDense,
-                        HQuantize, PAveragePooling1D, PFlatten, Signature)
+from HGQ.layers import HConv1D, HConv1DBatchNorm, HDense,
+                        HQuantize, PAveragePooling1D, PFlatten, Signature
 # Qkeras
 from qkeras.utils import load_qmodel
-from tensorflow.keras.callbacks import (EarlyStopping, ModelCheckpoint,
-                                        ReduceLROnPlateau)
-from tensorflow.keras.layers import (Activation, BatchNormalization,
-                                     GlobalAveragePooling1D, Input)
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.layers import Activation
 
-from tagger.data.tools import load_data, make_data, to_ML
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
+from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
 num_threads = 24

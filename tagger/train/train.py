@@ -31,7 +31,6 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
             "Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass."
         )
     num_samples = y_train.shape[0]
-    num_classes = y_train.shape[1]
 
     sample_weights = np.ones(num_samples)
 
@@ -47,7 +46,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     class_pt_counts = {}
 
     # Calculate counts per class per pT bin
-    for label, idx in class_labels.items():
+    for _label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
         class_pt_counts[idx], _ = np.histogram(reco_pt_train[class_mask], bins=pt_bins)
 

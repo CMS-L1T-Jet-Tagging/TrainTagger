@@ -45,7 +45,7 @@ def doPlots(model, outputdir, inputdir):
         for i, label in enumerate(labels):
             if abs(np.array(data['jet_SC4NGJet_score_' + label])[iJet] - y_hls[iJet][i]) > 0.001:
                 print_class = True
-        if print_class == True:
+        if print_class:
             print("=== " + str(iJet) + " ===")
             print("Inputs: " + str(X_test[iJet]))
             for i, label in enumerate(labels):
@@ -184,7 +184,7 @@ def doPlots(model, outputdir, inputdir):
 
     # ===========================#
 
-    for i, label in enumerate(labels):
+    for _i, label in enumerate(labels):
         plt.close()
         common.plot_roc(
             modelsAndNames,
@@ -200,7 +200,7 @@ def doPlots(model, outputdir, inputdir):
     response_emu = jet_pt_cor_reg_emu / data['jet_genmatch_pt']
     response_hls = jet_pt_cor_reg_hls / data['jet_genmatch_pt']
 
-    figure = common.plot_histo(
+    _ = common.plot_histo(
         [response_reg, response_emu, response_hls],
         [
             "Emulation"

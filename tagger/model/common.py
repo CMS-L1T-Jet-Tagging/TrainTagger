@@ -13,7 +13,7 @@ import tensorflow_model_optimization as tfmot
 import yaml
 from qkeras.qlayers import QDense
 from tensorflow.keras.layers import (GlobalAveragePooling1D,
-                                     GlobalMaxPooling1D, Layer)
+                                     GlobalMaxPooling1D)
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 

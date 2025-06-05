@@ -51,8 +51,6 @@ def getReports(indir):
 def doPlots(model, outputdir, inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
-    modelsAndNames = {"model": model}
-
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)
 
@@ -79,7 +77,7 @@ def doPlots(model, outputdir, inputdir):
         plt.savefig("%s/%s_score_2D.pdf" % (outputdir, label), bbox_inches='tight')
 
     plt.clf()
-    figure = plot_2d(
+    _ = plot_2d(
         y_ptreg[:, 0],
         y_ptreg_hls[:, 0],
         (min(np.amin(y_ptreg_hls), np.amin(y_ptreg)), max(np.amax(y_ptreg_hls), np.amax(y_ptreg))),

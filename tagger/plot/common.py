@@ -1,3 +1,4 @@
+# flake8: noqa
 # Plotting
 import matplotlib
 import matplotlib.pyplot as plt

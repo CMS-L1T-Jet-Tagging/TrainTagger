@@ -73,11 +73,11 @@ def doPlots(model, outputdir, inputdir):
             "hls4ml",
             style.CLASS_LABEL_STYLE[label] + " score",
         )
-        plt.savefig("%s/%s_score_2D.png" % (outputdir, label), bbox_inches='tight')
-        plt.savefig("%s/%s_score_2D.pdf" % (outputdir, label), bbox_inches='tight')
+        figure.savefig("%s/%s_score_2D.png" % (outputdir, label), bbox_inches='tight')
+        figure.savefig("%s/%s_score_2D.pdf" % (outputdir, label), bbox_inches='tight')
 
     plt.clf()
-    _ = plot_2d(
+    figure = plot_2d(
         y_ptreg[:, 0],
         y_ptreg_hls[:, 0],
         (min(np.amin(y_ptreg_hls), np.amin(y_ptreg)), max(np.amax(y_ptreg_hls), np.amax(y_ptreg))),
@@ -86,8 +86,8 @@ def doPlots(model, outputdir, inputdir):
         "hls4ml",
         "Regression score",
     )
-    plt.savefig("%s/%s_score_2D.png" % (outputdir, "Regression"), bbox_inches='tight')
-    plt.savefig("%s/%s_score_2D.pdf" % (outputdir, "Regression"), bbox_inches='tight')
+    figure.savefig("%s/%s_score_2D.png" % (outputdir, "Regression"), bbox_inches='tight')
+    figure.savefig("%s/%s_score_2D.pdf" % (outputdir, "Regression"), bbox_inches='tight')
     plt.close()
 
     wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)

@@ -184,5 +184,5 @@ class DeepSetModelHGQ(JetTagModel):
         with open(hls4ml_outdir + '/config.json', 'w') as fp:
             json.dump(config, fp)
 
-        if build == True:
+        if build:
             self.hls_model.build(csim=False, reset=True)

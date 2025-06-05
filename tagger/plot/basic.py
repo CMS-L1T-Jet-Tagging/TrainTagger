@@ -124,8 +124,8 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    plt.legend(loc='upper left', fontsize=style.SMALL_SIZE +
-               3, title=signal_proc)
+    leg = plt.legend(loc='upper left', fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    leg._legend_box.align = "left"
 
     save_path = os.path.join(save_dir, "ROC_taus_combined")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
@@ -172,7 +172,8 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     ax.grid(True)
     ax.set_ylabel('Mistag Rate')
     ax.set_xlabel('Signal Efficiency')
-    ax.legend(loc='lower right', fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    leg = ax.legend(loc='lower right',fontsize=style.SMALL_SIZE+3, title=signal_proc)
+    leg._legend_box.align = "left"
     ax.set_yscale('log')
     ax.set_ylim([1e-3, 1.1])
 
@@ -723,8 +724,8 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
     plt.ylabel('Mistag Rate')
     plt.yscale('log')
     plt.ylim(1e-3, 1.1)
-    plt.legend(loc='lower right', fontsize=style.SMALL_SIZE +
-               3, title=process_label)
+    leg = plt.legend(loc='lower right', fontsize=style.SMALL_SIZE+3, title=process_label)
+    leg._legend_box.align = "left"
 
     save_path = os.path.join(save_dir, "ROC_light_vs_all_jets")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
@@ -761,12 +762,12 @@ def filter_process(test_data, process_dir):
 
 def process_labels(process_key):
     processes = {
-        'TT_PU200': r't$\bar{t}$ (PU200)',
-        'ggHHbbbb_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$b$\bar{b}$ (PU200)',
-        'VBFHtt_PU200': r'VBF $\rightarrow$ H $\rightarrow$ t$\bar{t}$ (PU200)',
-        'ggHHbbtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$t$\bar{t}$ (PU200)',
-        'ggHtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ t$\bar{t}$ (PU200)',
-    }
+        'TT_PU200': r't$\bar{t}$',
+        'ggHHbbbb_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$b$\bar{b}$',
+        'VBFHtt_PU200': r'VBF $\rightarrow$ H $\rightarrow$ t$\bar{t}$',
+        'ggHHbbtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$t$\bar{t}$',
+        'ggHtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ t$\bar{t}$',
+        }
 
     return processes[process_key]
 

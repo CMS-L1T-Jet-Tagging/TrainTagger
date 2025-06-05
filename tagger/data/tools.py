@@ -96,10 +96,12 @@ def _split_flavor(data):
             & (data['jet_elflav'] == 0)
         ),  # Tau -
         "muon": (
-            genmatch_pt_base & (data['jet_muflav'] == 1) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0)
+            genmatch_pt_base & (data['jet_muflav'] == 1) & (
+                data['jet_tauflav'] == 0) & (data['jet_elflav'] == 0)
         ),  # muon
         "electron": (
-            genmatch_pt_base & (data['jet_muflav'] == 0) & (data['jet_tauflav'] == 0) & (data['jet_elflav'] == 1)
+            genmatch_pt_base & (data['jet_muflav'] == 0) & (
+                data['jet_tauflav'] == 0) & (data['jet_elflav'] == 1)
         ),  # electron
     }
 
@@ -111,19 +113,25 @@ def _split_flavor(data):
 
     # Assign numeric values based on conditions using awkward's where function
     for label, condition in conditions.items():
-        data['class_label'] = ak.where(condition, class_labels[label], data['class_label'])
+        data['class_label'] = ak.where(
+            condition, class_labels[label], data['class_label'])
 
     # Set pt regression target
     hadrons = conditions["b"] | conditions["charm"] | conditions["light"] | conditions["gluon"]
     leptons = conditions["taup"] | conditions["taum"] | conditions["muon"] | conditions["electron"]
 
-    hadron_pt_ratio = ak.nan_to_num(data["jet_genmatch_pt"] / data["jet_pt_phys"], nan=0, posinf=0, neginf=0)
-    lepton_pt_ratio = ak.nan_to_num((data["jet_genmatch_lep_vis_pt"] / data["jet_pt_phys"]), nan=0, posinf=0, neginf=0)
+    hadron_pt_ratio = ak.nan_to_num(
+        data["jet_genmatch_pt"] / data["jet_pt_phys"], nan=0, posinf=0, neginf=0)
+    lepton_pt_ratio = ak.nan_to_num(
+        (data["jet_genmatch_lep_vis_pt"] / data["jet_pt_phys"]), nan=0, posinf=0, neginf=0)
 
-    hadron_pt = ak.nan_to_num(data["jet_genmatch_pt"], nan=0, posinf=0, neginf=0)
-    lepton_pt = ak.nan_to_num((data["jet_genmatch_lep_vis_pt"]), nan=0, posinf=0, neginf=0)
+    hadron_pt = ak.nan_to_num(
+        data["jet_genmatch_pt"], nan=0, posinf=0, neginf=0)
+    lepton_pt = ak.nan_to_num(
+        (data["jet_genmatch_lep_vis_pt"]), nan=0, posinf=0, neginf=0)
 
-    data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
+    data['target_pt'] = np.clip(
+        hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
 
     # Apply pt_cut
@@ -132,10 +140,12 @@ def _split_flavor(data):
         conditions[key] = conditions[key] & jet_ptmin_gen
 
     # Sanity check for data consistency
-    split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
+    split_data_sum = sum(sum(conditions[label])
+                         for label, condition in conditions.items())
     if split_data_sum != len(data[jet_ptmin_gen]):
         raise ValueError(
-            f"Data splitting error: Total entries ({split_data_sum}) do not match the filtered data length ({len(data[jet_ptmin_gen])})."
+            f"""Data splitting error: Total entries ({split_data_sum}) 
+            do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
 
     return data[jet_ptmin_gen], class_labels
@@ -232,7 +242,8 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
     extra_features = _get_pfcand_fields(extras)
 
     # Save them to a root file
-    save_fields = ['nn_inputs', 'class_label', 'target_pt', 'target_pt_phys'] + extra_features
+    save_fields = ['nn_inputs', 'class_label',
+                   'target_pt', 'target_pt_phys'] + extra_features
 
     # Filter the data_split to only include save_fields
     filtered_data = {field: data_split[field] for field in save_fields}
@@ -245,7 +256,8 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
 
     # Log metadata
     metadata_file = os.path.join(outdir, "metadata.json")
-    _save_chunk_metadata(metadata_file, chunk, len(data_split), outfile)  # Chunk, Entries, Outfile
+    _save_chunk_metadata(metadata_file, chunk, len(
+        data_split), outfile)  # Chunk, Entries, Outfile
 
     del data_split, filtered_data, outfile
     # Delete the variables to save memory
@@ -300,7 +312,8 @@ def group_id_values(event_id, *arrays, num_elements=2):
 
     # Use ak.unflatten to group the arrays by counts
     grouped_id = ak.unflatten(sorted_event_id, counts)
-    grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
+    grouped_arrays = [ak.unflatten(
+        arr[sorted_indices], counts) for arr in arrays]
 
     # Filter out groups that don't have at least num_elements elements
     mask = ak.num(grouped_id) >= num_elements
@@ -315,7 +328,8 @@ def to_ML(data, class_labels):
     """
 
     X = np.asarray(data['nn_inputs'])
-    y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
+    y = tf.keras.utils.to_categorical(np.asarray(
+        data['class_label']), num_classes=len(class_labels))
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
@@ -404,7 +418,8 @@ def make_data(
 
     # Check if output dir already exists, remove if so
     if os.path.exists(outdir):
-        confirm = input(f"The directory '{outdir}' already exists. Do you want to delete it and continue? [y/n]: ")
+        confirm = input(
+            f"The directory '{outdir}' already exists. Do you want to delete it and continue? [y/n]: ")
         if confirm.lower() == 'y':
             shutil.rmtree(outdir)
             print(f"Deleted existing directory: {outdir}")
@@ -427,7 +442,8 @@ def make_data(
         num_entries_done += len(data)  # count before cuts
 
         # Define jet kinematic cuts
-        jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
+        jet_cut = (data['jet_pt_phys'] > 15) & (
+            np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
         data = data[jet_cut]
 
         # Add additional response variables
@@ -440,10 +456,12 @@ def make_data(
             _save_dataset_metadata(outdir, class_labels, tag, extras)
 
         # Process and save training data for a given feature set
-        _process_chunk(data_split, tag=tag, extras=extras, n_parts=n_parts, chunk=chunk, outdir=outdir)
+        _process_chunk(data_split, tag=tag, extras=extras,
+                       n_parts=n_parts, chunk=chunk, outdir=outdir)
 
         # Number of chunk for indexing files
         chunk += 1
-        print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
+        print(
+            f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
         if num_entries_done / num_entries >= ratio:
             break

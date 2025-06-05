@@ -135,8 +135,8 @@ def doPlots(model, outputdir, inputdir):
             "CMSSW Emulation",
             style.CLASS_LABEL_STYLE[label] + " score",
         )
-        plt.savefig("%s/%s_score_2D.png" % (outputdir, label), bbox_inches='tight')
-        plt.savefig("%s/%s_score_2D.pdf" % (outputdir, label), bbox_inches='tight')
+        figure.savefig("%s/%s_score_2D.png" % (outputdir, label), bbox_inches='tight')
+        figure.savefig("%s/%s_score_2D.pdf" % (outputdir, label), bbox_inches='tight')
 
     fpr = {}
     tpr = {}

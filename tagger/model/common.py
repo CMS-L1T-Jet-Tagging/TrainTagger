@@ -87,7 +87,12 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
 
     # define all prunable weights
     def get_prunable_weights(self):
-        return self.qD._trainable_weights + self.kD._trainable_weights + self.vD._trainable_weights + self.outD._trainable_weights
+        return (
+            self.qD._trainable_weights
+            + self.kD._trainable_weights
+            + self.vD._trainable_weights
+            + self.outD._trainable_weights
+        )
 
 
 class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
@@ -126,7 +131,10 @@ class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer
 def choose_aggregator(choice: str, name: str, bits=9, bits_int=2, alpha_val=1, **common_args) -> tf.keras.layers.Layer:
     """Choose the aggregator keras object based on an input string."""
     if choice not in ["mean", "max", "attention"]:
-        raise ValueError("Given aggregation string is not implemented in choose_aggregator(). " "See models.py and add string and corresponding object there.")
+        raise ValueError(
+            "Given aggregation string is not implemented in choose_aggregator(). "
+            "See models.py and add string and corresponding object there."
+        )
     if choice == "mean":
         return GlobalAveragePooling1D(name=name)
     elif choice == "max":

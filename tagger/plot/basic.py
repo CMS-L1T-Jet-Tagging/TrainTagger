@@ -130,7 +130,9 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     os.makedirs(save_dir, exist_ok=True)
 
     # Ensure class_pair exists in class_labels
-    assert class_pair[0] in class_labels and class_pair[1] in class_labels, "Both class_pair labels must exist in class_labels"
+    assert (
+        class_pair[0] in class_labels and class_pair[1] in class_labels
+    ), "Both class_pair labels must exist in class_labels"
 
     # Get indices of the classes to compare
     idx1, idx2 = class_labels[class_pair[0]], class_labels[class_pair[1]]
@@ -394,7 +396,9 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
         plt.close()
 
     # Inclusive response
-    uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test, reco_pt_test, pt_ratio)
+    uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
+        truth_pt_test, reco_pt_test, pt_ratio
+    )
     plot_response(
         uncorrected_response,
         regressed_response,
@@ -409,7 +413,9 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
         idx = class_labels[flavor]
         flavor_selection = y_test[:, idx] == 1
 
-        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
+        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
+            truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection]
+        )
         plot_response(
             uncorrected_response,
             regressed_response,
@@ -429,7 +435,9 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
     for key in rms_selection.keys():
         selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
 
-        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
+        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
+            truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection]
+        )
         plot_response(
             uncorrected_response,
             regressed_response,
@@ -535,15 +543,21 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
     # Inclusive rms
     uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test, reco_pt_test, pt_ratio)
-    plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor='inclusive', plot_name='inclusive')
+    plot_rms(
+        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor='inclusive', plot_name='inclusive'
+    )
 
     # Flavor-wise rms
     for flavor in class_labels.keys():
         idx = class_labels[flavor]
         flavor_selection = y_test[:, idx] == 1
 
-        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection])
-        plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms")
+        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(
+            truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection]
+        )
+        plot_rms(
+            uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=flavor, plot_name=f"{flavor}_rms"
+        )
 
     # Taus, jets, leptons rms
     rms_selection = {
@@ -555,7 +569,9 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
     for key in rms_selection.keys():
         selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
 
-        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection])
+        uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err = get_rms(
+            truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection]
+        )
         plot_rms(uncorrected_rms, regressed_rms, uncorrected_rms_err, regressed_rms_err, flavor=key, plot_name=f"{key}_rms")
 
     return
@@ -598,7 +614,9 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.spines['top'].set_visible(False)
     ax.spines['left'].set_visible(False)
     ax.tick_params(color=axis_color, labelcolor=axis_color)
-    ax.set_yticks(range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order], fontsize=30)
+    ax.set_yticks(
+        range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order], fontsize=30
+    )
     ax.set_xlabel("mean (Shapley value) - (average impact on model output magnitude)", fontsize=30)
     plt.tight_layout()
 
@@ -650,7 +668,9 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
 
-        ax = df_wp_loose.plot.line(x="midpoints", y="wp_loose", yerr="err(wp_loose)", label="Loose (mistag = 50%)", color="blue", linestyle='-')
+        ax = df_wp_loose.plot.line(
+            x="midpoints", y="wp_loose", yerr="err(wp_loose)", label="Loose (mistag = 50%)", color="blue", linestyle='-'
+        )
         df_wp_medium.plot.line(
             x="midpoints",
             y="wp_medium",
@@ -660,7 +680,9 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
             color="orange",
             linestyle='-',
         )
-        df_wp_tight.plot.line(x="midpoints", y="wp_tight", yerr="err(wp_tight)", label="Tight (eff = 10%)", ax=ax, color="green", linestyle='-')
+        df_wp_tight.plot.line(
+            x="midpoints", y="wp_tight", yerr="err(wp_tight)", label="Tight (eff = 10%)", ax=ax, color="green", linestyle='-'
+        )
         ax.set_xlabel(r'Jet $p_T$ [GeV]')
         ax.set_ylabel('Tagging efficiency')
         ax.set_ylim(0.0, 1.3)
@@ -693,7 +715,9 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
         wp_tight = thres[np.argmin(np.abs(np.array(fpr) - 0.1))]
 
         # some tricks to get proper uncertainties in the efficiencies
-        data_eff = ak.to_dataframe(ak.Array({"truth": summed_y_true[selection], "pt": reco_pt_test[selection], "pred": summed_y_score[selection]}))
+        data_eff = ak.to_dataframe(
+            ak.Array({"truth": summed_y_true[selection], "pt": reco_pt_test[selection], "pred": summed_y_score[selection]})
+        )
         data_eff["wp_loose"] = data_eff["pred"] > wp_loose
         data_eff["wp_medium"] = data_eff["pred"] > wp_medium
         data_eff["wp_tight"] = data_eff["pred"] > wp_tight

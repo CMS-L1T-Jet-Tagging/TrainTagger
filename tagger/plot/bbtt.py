@@ -77,7 +77,9 @@ def max_tau_sum(taup_preds, taum_preds):
     tau_alt_idxs[ak.argmax(alt_scores, axis=1) == 1] = tau_alt2_idxs[ak.argmax(alt_scores, axis=1) == 1]
     tau_scores1 = taup_preds[rows, taup_argsort[:, 0].reshape(-1, 1)] + taum_preds[rows, taum_argsort[:, 0].reshape(-1, 1)]
     tau_scores1 = tau_scores1.flatten()
-    tau_scores1[taup_argsort[:, 0] == taum_argsort[:, 0]] = ak.max(alt_scores, axis=1)[taup_argsort[:, 0] == taum_argsort[:, 0]]
+    tau_scores1[taup_argsort[:, 0] == taum_argsort[:, 0]] = ak.max(alt_scores, axis=1)[
+        taup_argsort[:, 0] == taum_argsort[:, 0]
+    ]
     tau_idxs = np.stack((taup_argsort[:, 0], taum_argsort[:, 0]), axis=-1)
     tau_idxs[taup_argsort[:, 0] == taum_argsort[:, 0]] = tau_alt_idxs[taup_argsort[:, 0] == taum_argsort[:, 0]]
     taup_sum = np.sum(taup_preds[rows, tau_idxs], axis=1)
@@ -99,9 +101,15 @@ def nn_score_sums(model, jet_nn_inputs, n_jets=4):
     g_idx = model.class_labels['gluon']
 
     # vs light preds
-    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
+    taup_vs_qg = np.transpose(
+        [x_vs_y(pred_score[:, tp_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs]
+    )
+    taum_vs_qg = np.transpose(
+        [x_vs_y(pred_score[:, tm_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs]
+    )
+    b_vs_qg = np.transpose(
+        [x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs]
+    )
 
     # raw preds
     taup_preds = np.transpose([pred_score[:, tp_idx] for pred_score in nn_outputs])
@@ -124,7 +132,9 @@ def nn_score_sums(model, jet_nn_inputs, n_jets=4):
     return bscore_sums, tscore_sums, tau_indices
 
 
-def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_type, apply_sel, model_dir, n_entries, rate, tree):
+def pick_and_plot(
+    rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_type, apply_sel, model_dir, n_entries, rate, tree
+):
     """
     Pick the working points and plot
     """
@@ -252,7 +262,9 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     NN_edges = list([round(i, 4) for i in np.arange(0.01, 0.4, 0.0025)]) + [2.0]
 
     # Signal preds to pick the working point
-    s_bscore_sums, s_tscore_sums, s_tau_indices, signal_pt, signal_eta, s_n_events = make_predictions(signal_path, model.output_directory, n_entries, tree=tree)
+    s_bscore_sums, s_tscore_sums, s_tau_indices, signal_pt, signal_eta, s_n_events = make_predictions(
+        signal_path, model.output_directory, n_entries, tree=tree
+    )
     signal_ht = ak.sum(signal_pt, axis=1)
     s_def_sels = [
         default_selection(signal_pt, signal_eta, s_tau_indices[0], apply_sel),
@@ -304,10 +316,14 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     # Parallelized loop through the edges and integrate
     def parallel_in_parallel(tt, bb):
         # Calculate the rate
-        counts_raw = RateHistRaw[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][{"nn_tt": slice(tt * 1.0j, None, sum)}]
+        counts_raw = RateHistRaw[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][
+            {"nn_tt": slice(tt * 1.0j, None, sum)}
+        ]
         rate_raw = (counts_raw / n_events) * MINBIAS_RATE
 
-        counts_qg = RateHistQG[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][{"nn_tt": slice(tt * 1.0j, None, sum)}]
+        counts_qg = RateHistQG[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][
+            {"nn_tt": slice(tt * 1.0j, None, sum)}
+        ]
         rate_qg = (counts_qg / n_events) * MINBIAS_RATE
 
         # check if the rate is in the range, skip if not
@@ -315,17 +331,23 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
             return
 
         # get signal efficiencies
-        counts_signal_raw = SHistRaw[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][{"nn_tt": slice(tt * 1.0j, None, sum)}]
+        counts_signal_raw = SHistRaw[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][
+            {"nn_tt": slice(tt * 1.0j, None, sum)}
+        ]
         eff_signal_raw = counts_signal_raw / s_n_events
 
-        counts_signal_qg = SHistQG[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][{"nn_tt": slice(tt * 1.0j, None, sum)}]
+        counts_signal_qg = SHistQG[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn_bb": slice(bb * 1.0j, None, sum)}][
+            {"nn_tt": slice(tt * 1.0j, None, sum)}
+        ]
         eff_signal_qg = counts_signal_qg / s_n_events
 
         return np.array([rate_raw, rate_qg, eff_signal_raw, eff_signal_qg, ht_cut, bb, tt])
 
     def parallel_in_parallel_wrapper(bb, n_threads=2):
         with parallel_backend('loky', inner_max_num_threads=n_threads):
-            intermediate_out = Parallel(n_jobs=n_threads)(delayed(parallel_in_parallel)(tt=tt, bb=bb) for tt in NN_edges[:-1])
+            intermediate_out = Parallel(n_jobs=n_threads)(
+                delayed(parallel_in_parallel)(tt=tt, bb=bb) for tt in NN_edges[:-1]
+            )
         return intermediate_out
 
     # Parallelized the first loop
@@ -461,7 +483,9 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
 
     # Group these attributes by event id, and filter out groups that don't have at least 4 elements
-    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
+    event_id, grouped_arrays = group_id_values(
+        raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4
+    )
     jet_genpt, jet_pt, jet_eta, tau_pt, jet_nn_inputs = grouped_arrays
 
     # Calculate the ht
@@ -485,7 +509,9 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
 
     model_selection = (jet_ht > ht_wp) & (model_bscore_sum > btag_wp) & (model_tscore_sum > ttag_wp) & default_sel
     model_efficiency = np.round(np.sum(model_selection) / n_events, 2)
-    model_selection_14 = (jet_ht > ht_wp_14) & (model_bscore_sum > btag_wp_14) & (model_tscore_sum > ttag_wp_14) & default_sel
+    model_selection_14 = (
+        (jet_ht > ht_wp_14) & (model_bscore_sum > btag_wp_14) & (model_tscore_sum > ttag_wp_14) & default_sel
+    )
     model_14_efficiency = np.round(np.sum(model_selection_14) / n_events, 2)
     ht_only_selection = jet_ht > ht_only_wp
     ht_only_efficiency = np.round(np.sum(ht_only_selection) / n_events, 2)
@@ -535,7 +561,9 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
         c=style.color_cycle[0],
         fmt='o',
         linewidth=3,
-        label=r'bb$\tau \tau$ seed@ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {} GeV)'.format(rate, eff_str, baseline_efficiency, 220, tau_str, 34),
+        label=r'bb$\tau \tau$ seed@ {} kHz, {}={} (L1 $HT$ > {} GeV, {} > {} GeV)'.format(
+            rate, eff_str, baseline_efficiency, 220, tau_str, 34
+        ),
     )
     ax.errorbar(
         model_x,
@@ -544,7 +572,9 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
         c=style.color_cycle[1],
         fmt='o',
         linewidth=3,
-        label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ $\tau\tau$ > {}, $\sum$ bb > {})'.format(rate, eff_str, model_efficiency, ht_wp, round(ttag_wp, 2), round(btag_wp, 2)),
+        label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ $\tau\tau$ > {}, $\sum$ bb > {})'.format(
+            rate, eff_str, model_efficiency, ht_wp, round(ttag_wp, 2), round(btag_wp, 2)
+        ),
     )
 
     # Plot other labels
@@ -573,7 +603,9 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
         c=style.color_cycle[1],
         fmt='o',
         linewidth=3,
-        label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ $\tau\tau$ > {}, $\sum$ bb > {})'.format(14, eff_str, model_14_efficiency, ht_wp, round(ttag_wp, 2), round(btag_wp, 2)),
+        label=r'Multiclass @ {} kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ $\tau\tau$ > {}, $\sum$ bb > {})'.format(
+            14, eff_str, model_14_efficiency, ht_wp, round(ttag_wp, 2), round(btag_wp, 2)
+        ),
     )
     ax2.errorbar(
         ht_only_x,

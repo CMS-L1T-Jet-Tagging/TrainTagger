@@ -3,12 +3,14 @@ from argparse import ArgumentParser
 
 # Plotting
 import matplotlib.pyplot as plt
+
 # Third parties
 import numpy as np
 from sklearn.metrics import auc, roc_curve
 
 from tagger.data.tools import load_data, make_data, to_ML
 from tagger.model.common import fromFolder
+
 # Import from other modules
 from tagger.plot import common, style
 

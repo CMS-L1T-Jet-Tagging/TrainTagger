@@ -17,8 +17,7 @@ from scipy.interpolate import interp1d
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
 from tagger.plot import style
-from tagger.plot.common import (MINBIAS_RATE, WPs_CMSSW, find_rate,
-                                get_bar_patch_data, plot_ratio)
+from tagger.plot.common import MINBIAS_RATE, WPs_CMSSW, find_rate, get_bar_patch_data, plot_ratio
 
 style.set_style()
 

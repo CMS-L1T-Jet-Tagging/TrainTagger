@@ -13,6 +13,7 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from qkeras import QConv1D
 from qkeras.qlayers import QActivation, QDense
+
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.utils import load_qmodel

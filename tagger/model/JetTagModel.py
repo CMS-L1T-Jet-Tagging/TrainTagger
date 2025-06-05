@@ -1,16 +1,16 @@
 """Jet Tag Model base class and additional functionality for model registering
 
-    Written 28/05/2025, cebrown@cern.ch
+Written 28/05/2025, cebrown@cern.ch
 """
-import os
-import json
-import functools
-from abc import ABC, abstractmethod
 
-import yaml
+import functools
+import json
+import os
+from abc import ABC, abstractmethod
 
 import numpy as np
 import numpy.typing as npt
+import yaml
 
 from tagger.plot.basic import loss_history
 
@@ -18,9 +18,10 @@ from tagger.plot.basic import loss_history
 class JetTagModel(ABC):
     """Parent Class for Jet Tag Models
 
-       Abstract Base Class not for use directly
+    Abstract Base Class not for use directly
     """
-    def __init__(self, output_dir : str):
+
+    def __init__(self, output_dir: str):
         """
         Args:
             output_dir (str): Saving directory for model artefacts
@@ -48,7 +49,7 @@ class JetTagModel(ABC):
 
         self.history = None
 
-    def load_yaml(self, yaml_path : str):
+    def load_yaml(self, yaml_path: str):
         """Load config dictionaries
 
         Args:
@@ -106,10 +107,11 @@ class JetTagModel(ABC):
 
     def save_decorator(save_func):
         """Decorator used to include additional
-           saving functionality for child classes
+        saving functionality for child classes
         """
+
         @functools.wraps(save_func)
-        def wrapper(self, out_dir : str = "None"):
+        def wrapper(self, out_dir: str = "None"):
             """Wrapper adding saving functionality
 
             Args:
@@ -130,14 +132,16 @@ class JetTagModel(ABC):
                 json.dump(self.class_labels, f, indent=4)
             # Do the rest of the saving, defined in child class
             save_func(self, out_dir)
+
         return wrapper
 
     def load_decorator(load_func):
         """Decorator used to include additional
-           loading functionality for child classes
+        loading functionality for child classes
         """
+
         @functools.wraps(load_func)
-        def wrapper(self, out_dir  : str = "None"):
+        def wrapper(self, out_dir: str = "None"):
             """Wrapper adding loading functionality
 
             Args:
@@ -158,9 +162,10 @@ class JetTagModel(ABC):
                 self.extra_vars = json.load(f)
             # Do the rest of the loading, defined in child class
             load_func(self, out_dir)
+
         return wrapper
 
-    def set_labels(self, input_vars : str, extra_vars : str, class_labels : str):
+    def set_labels(self, input_vars: str, extra_vars: str, class_labels: str):
         """Set internal labels
 
         Args:
@@ -173,19 +178,18 @@ class JetTagModel(ABC):
         self.class_labels = class_labels
 
     def plot_loss(self):
-        """Plot the loss of the model to the output directory
-        """
+        """Plot the loss of the model to the output directory"""
         out_dir = self.output_directory
         # Produce some basic plots with the training for diagnostics
         plot_path = os.path.join(out_dir, "plots/training")
         os.makedirs(plot_path, exist_ok=True)
 
         # Plot history
-        loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name ] , self.history)
+        loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
 
 
 class JetModelFactory:
-    """ The factory class for creating Jet Tag Models"""
+    """The factory class for creating Jet Tag Models"""
 
     registry = {}
     """ Internal registry for available Jet Tag Models """
@@ -208,9 +212,9 @@ class JetModelFactory:
 
     @classmethod
     def create_JetTagModel(cls, name: str, folder: str, **kwargs) -> 'JetTagModel':
-        """ Factory command to create the Jet Tag Model """
+        """Factory command to create the Jet Tag Model"""
 
         jettag_class = cls.registry[name]
-        model =jettag_class(folder, **kwargs)
+        model = jettag_class(folder, **kwargs)
 
         return model

@@ -1,20 +1,22 @@
 """Common utilities for usage across all model child classes
-   Includes attention layers
-   Include from Yaml and Folder loading functionality
+Includes attention layers
+Include from Yaml and Folder loading functionality
 
-   Written 28/05/2025 cebrown@cern.ch
+Written 28/05/2025 cebrown@cern.ch
 """
+
 import os
 import shutil
-import yaml
 
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
-from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D, Layer
+import yaml
 from qkeras.qlayers import QDense
+from tensorflow.keras.layers import (GlobalAveragePooling1D,
+                                     GlobalMaxPooling1D, Layer)
 
-from tagger.model.JetTagModel import JetTagModel
-from tagger.model.JetTagModel import JetModelFactory
+from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+
 
 class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
     """Attention Layer class
@@ -23,6 +25,7 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
         tf.keras.layers.Layer (_type_): tensorflow layer wrapper
         tfmot.sparsity.keras.PrunableLayer (_type_): prunable layer wrapper
     """
+
     def __init__(self, d_model=16, nhead=2, bits=9, bits_int=2, alpha_val=1, **kwargs):
         super(AAtt, self).__init__(**kwargs)
 
@@ -58,7 +61,7 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
             _type_: Output of layer
         """
         input_shape = input.shape
-        shape_ = (-1, input_shape[1], self.n_head, self.d_model//self.n_head)
+        shape_ = (-1, input_shape[1], self.n_head, self.d_model // self.n_head)
         perm_ = (0, 2, 1, 3)
 
         q = self.qD(input)
@@ -74,7 +77,7 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
         v = tf.transpose(v, perm=perm_)
 
         a = tf.matmul(q, k, transpose_b=True)
-        a = tf.nn.softmax(a / q.shape[3]**0.5, axis=3)
+        a = tf.nn.softmax(a / q.shape[3] ** 0.5, axis=3)
 
         out = tf.matmul(a, v)
         out = tf.transpose(out, perm=perm_)
@@ -85,8 +88,13 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
 
     # define all prunable weights
     def get_prunable_weights(self):
-        return self.qD._trainable_weights + self.kD._trainable_weights + \
-            self.vD._trainable_weights + self.outD._trainable_weights
+        return (
+            self.qD._trainable_weights
+            + self.kD._trainable_weights
+            + self.vD._trainable_weights
+            + self.outD._trainable_weights
+        )
+
 
 class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
     """Attention Pooling layer class
@@ -95,6 +103,7 @@ class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer
         tf.keras.layers.Layer (_type_): tensorflow layer class
         tfmot.sparsity.keras.PrunableLayer (_type_): prunable layer class
     """
+
     def __init__(self, bits, bits_int, alpha_val, **kwargs):
         super().__init__(**kwargs)
 
@@ -135,7 +144,7 @@ def choose_aggregator(choice: str, name: str, bits=9, bits_int=2, alpha_val=1, *
         return AttentionPooling(name=name, bits=bits, bits_int=bits_int, alpha_val=alpha_val, **common_args)
 
 
-def fromYaml(yaml_path : str, folder : str, recreate : bool = True) -> JetTagModel:
+def fromYaml(yaml_path: str, folder: str, recreate: bool = True) -> JetTagModel:
     """Create a model directly from a yaml input file
 
     Args:
@@ -160,11 +169,11 @@ def fromYaml(yaml_path : str, folder : str, recreate : bool = True) -> JetTagMod
             print(f"Re-created existing directory: {folder}.")
             # Create dir to save results
         os.makedirs(folder)
-        os.system('cp '+yaml_path+' '+folder)
+        os.system('cp ' + yaml_path + ' ' + folder)
     return model
 
 
-def fromFolder(save_path : str, newoutput_dir : str = "None") -> JetTagModel:
+def fromFolder(save_path: str, newoutput_dir: str = "None") -> JetTagModel:
     """Load a model from its save folder using the yaml file in the save folder
 
     Args:

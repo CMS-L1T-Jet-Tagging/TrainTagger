@@ -125,7 +125,9 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m', '--model_path', default='output/baseline', help='Input model path for comparison')
     parser.add_argument('-o', '--outpath', default='output/baseline/plots/profile', help='Jet tagger plotting directory')
-    parser.add_argument('-of', '--outpath_firmware', default='output/baseline/firmware', help='Jet tagger firmware directory')
+    parser.add_argument(
+        '-of', '--outpath_firmware', default='output/baseline/firmware', help='Jet tagger firmware directory'
+    )
     parser.add_argument('-i', '--input', default='data/jetTuple_extended_5.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
     parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')

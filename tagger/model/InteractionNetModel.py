@@ -172,7 +172,11 @@ class InteractionNetModel(JetTagModel):
             **common_args,
         )(input_effects)
 
-        x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']))(x)
+        x = QActivation(
+            activation=quantized_relu(
+                self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']
+            )
+        )(x)
 
         for i, layer in enumerate(self.model_config['effects_layers'][1:]):
             x = QConv1D(
@@ -181,7 +185,11 @@ class InteractionNetModel(JetTagModel):
                 **common_args,
                 name=f"effects_{i+2}",
             )(x)
-            x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']))(x)
+            x = QActivation(
+                activation=quantized_relu(
+                    self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']
+                )
+            )(x)
 
         x = NodeEdgeProjection(name="prj_effects", receiving=True, node_to_edge=False)(x)
 
@@ -194,7 +202,11 @@ class InteractionNetModel(JetTagModel):
             **common_args,
             name=f"objects_{1}",
         )(input_objects)
-        x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']))(x)
+        x = QActivation(
+            activation=quantized_relu(
+                self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']
+            )
+        )(x)
         for i, layer in enumerate(self.model_config['objects_layers'][1:]):
             x = QConv1D(
                 layer,
@@ -202,7 +214,11 @@ class InteractionNetModel(JetTagModel):
                 **common_args,
                 name=f"objects_{i+2}",
             )(x)
-            x = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']))(x)
+            x = QActivation(
+                activation=quantized_relu(
+                    self.quantization_config['quantizer_bits'], self.quantization_config['quantizer_bits_int']
+                )
+            )(x)
 
         # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
         x = QActivation(activation='quantized_bits(18,8)', name='act_pool')(x)
@@ -273,7 +289,9 @@ class InteractionNetModel(JetTagModel):
         print("Begin pruning the model...")
 
         # Calculate the ending step for pruning
-        end_step = np.ceil(num_samples / self.training_config['batch_size']).astype(np.int32) * self.training_config['epochs']
+        end_step = (
+            np.ceil(num_samples / self.training_config['batch_size']).astype(np.int32) * self.training_config['epochs']
+        )
 
         # Define the pruned model
         pruning_params = {

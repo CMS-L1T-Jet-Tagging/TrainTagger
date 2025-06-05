@@ -40,7 +40,9 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate=28, 
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE - 2)
-    im = ax.scatter(nn_list, pt_list, c=rate_list, s=500, marker='s', cmap='Spectral_r', linewidths=0, norm=matplotlib.colors.LogNorm())
+    im = ax.scatter(
+        nn_list, pt_list, c=rate_list, s=500, marker='s', cmap='Spectral_r', linewidths=0, norm=matplotlib.colors.LogNorm()
+    )
 
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label(r'Di-tau rate [kHZ]')
@@ -116,7 +118,9 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     print("Total number of minbias events: ", n_events)
 
     # Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, num_elements=2)
+    event_id, grouped_arrays = group_id_values(
+        raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, num_elements=2
+    )
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
@@ -368,7 +372,12 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     tau_deno = (tau_flav == 1) & (gen_pt_raw > 1.0) & gen_eta_selection
     tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > model_pt_WP)
     tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP) & (nn_tauscore_raw > model_NN_WP)
-    tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt']) & (jet_tauscore_raw > WPs_CMSSW['tau'])
+    tau_nume_cmssw = (
+        tau_deno
+        & (np.abs(gen_dr_raw) < 0.4)
+        & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt'])
+        & (jet_tauscore_raw > WPs_CMSSW['tau'])
+    )
 
     # Get the needed attributes
     # Basically we want to bin the selected truth pt and divide it by the overall count

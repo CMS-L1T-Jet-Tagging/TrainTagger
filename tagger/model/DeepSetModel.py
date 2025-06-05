@@ -81,7 +81,9 @@ class DeepSetModel(JetTagModel):
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
             main = QConv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_' + str(iconv1d + 1), **common_args)(main)
-            main = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_' + str(iconv1d + 1))(main)
+            main = QActivation(
+                activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_' + str(iconv1d + 1)
+            )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
         # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
@@ -149,7 +151,9 @@ class DeepSetModel(JetTagModel):
         print("Begin pruning the model...")
 
         # Calculate the ending step for pruning
-        end_step = np.ceil(num_samples / self.training_config['batch_size']).astype(np.int32) * self.training_config['epochs']
+        end_step = (
+            np.ceil(num_samples / self.training_config['batch_size']).astype(np.int32) * self.training_config['epochs']
+        )
 
         # Define the pruned model
         pruning_params = {

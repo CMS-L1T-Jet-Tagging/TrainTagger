@@ -25,6 +25,18 @@ from scipy.interpolate import interp1d
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 
+def get_interp_func(WP_path):
+    #Get derived working points
+    if os.path.exists(WP_path):
+        with open(WP_path, "r") as f:  WPs = json.load(f)
+        model_NN_WP = WPs['NNs']
+        model_pt_WP = WPs['PTs']
+    else:
+        raise Exception("Model working point does not exist. Run with --deriveWPs first.")
+
+    interp_func = interp1d(model_pt_WP, model_NN_WP, kind='linear', fill_value='extrapolate')
+
+    return interp_func
 
 def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']] 
@@ -37,12 +49,12 @@ def tau_score(preds, class_labels):
     
 
 
-def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28, RateRange = 1.0):
+def pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate = 31, RateRange = 1.0, label=""):
     """
     Pick the working points and plot
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
+    plot_dir = os.path.join(model_dir, 'plots/physics/tau')
     os.makedirs(plot_dir, exist_ok=True)
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -53,31 +65,28 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
                     norm=matplotlib.colors.LogNorm())
 
     cbar = plt.colorbar(im, ax=ax)
-    cbar.set_label(r'Di-tau rate [kHZ]')
+    cbar.set_label(r'Single-tau rate [kHZ]')
 
     ax.set_ylabel(r"Min L1 $p_T$ [GeV]")
-    ax.set_xlabel(r"Min Tau NN ($\tau^{+} + \tau^{-}$) Score")
+    ax.set_xlabel(r"$\tau$ Score Threshold")
 
-    ax.set_xlim([0,0.4])
-    ax.set_ylim([10,100])
+    ax.set_xlim([0,1.0])
+    ax.set_ylim([50,200])
 
     #Find the target rate points, plot them and print out some info as well
     target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
 
     #Get the coordinates
-    target_rate_NN = [nn_list[i] for i in target_rate_idx] # NN cut dimension
-    target_rate_PT = [pt_list[i] for i in target_rate_idx] # HT cut dimension
+    target_rate_NN = [float(nn_list[i]) for i in target_rate_idx] # NN cut dimension
+    target_rate_PT = [float(pt_list[i]) for i in target_rate_idx] # HT cut dimension
 
     # Create an interpolation function
     interp_func = interp1d(target_rate_PT, target_rate_NN, kind='linear', fill_value='extrapolate')
 
-    # Interpolate the NN value for the desired HT
-    working_point_NN = interp_func(WPs_CMSSW['tau_l1_pt']) #+ 0.02 #WP looks a bit too loose for taus using interpolation so just a quick hack
-
     # Export the working point
-    working_point = {"PT": WPs_CMSSW['tau_l1_pt'], "NN": float(working_point_NN)}
+    working_point = {"PTs": target_rate_PT, "NNs": target_rate_NN}
 
-    with open(os.path.join(plot_dir, "working_point.json"), "w") as f:
+    with open(os.path.join(plot_dir, label+ "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
 
     # Generate 100 points spanning the entire pT range visible on the plot.
@@ -91,20 +100,19 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
     #ax.plot(target_rate_NN, target_rate_PT, linewidth=style.LINEWIDTH, color ='firebrick', label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
 
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
-    plt.savefig(f"{plot_dir}/tautau_WPs.pdf", bbox_inches='tight')
-    plt.savefig(f"{plot_dir}/tautau_WPs.png", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/{label}tau_WPs.pdf", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/{label}tau_WPs.png", bbox_inches='tight')
 
-def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tree='jetntuple/Jets'):
+def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n_entries=100, tree='jetntuple/Jets'):
     """
-    Derive the di-tau rate.
+    Derive the single tau rate.
     Seed definition can be found here (2024 Annual Review):
 
     https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
 
-    Double Puppi Tau Seed, same NN cut and pT (52 GeV) on both taus to give 28 kHZ based on the definition above.
+    Single Puppi Tau Seed, 31 kHZ based on the definition above.
     """
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -118,59 +126,73 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
+
     
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
-    #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, num_elements=2)
+    #Group these attributes by event id, and filter out groups that don't have at least 1 element
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, num_elements=1)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_eta, jet_phi, jet_nn_inputs = grouped_arrays
 
-    #calculate delta_r
-    eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
-    phi1, phi2 = jet_phi[:, 0], jet_phi[:, 1]
-    delta_r_values = delta_r(eta1, phi1, eta2, phi2)
-
     # Additional cuts recommended here:
     # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
     # Slide 7
-    cuts = (np.abs(eta1) < 2.172) & (np.abs(eta2) < 2.172) & (delta_r_values > 0.5)
+    eta_cut = 2.172
+    pt_cut = 5.
 
-    #Get inputs and pts for processing
-    pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
-    input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
+    #flatten for NN eval
+    jet_pts = np.asarray(ak.flatten(jet_pt))
+    jet_etas = np.asarray(ak.flatten(jet_eta))
+    jet_inputs = np.asarray(ak.flatten(jet_nn_inputs))
 
-    #Get the NN predictions
-    pred_score1, ratio1 = model.predict(input1)
-    pred_score2, ratio2 = model.predict(input2)
+    cuts = (jet_pts > pt_cut) & (np.abs(jet_etas) < eta_cut)
 
-    #Correct the pT and add the score
-    pt1 = pt1_uncorrected*(ratio1.flatten())
-    pt2 = pt2_uncorrected*(ratio2.flatten())
 
-    tau_score1 = tau_score(pred_score1, class_labels)
-    tau_score2 = tau_score(pred_score2, class_labels)
+    all_scores = np.zeros_like(jet_pts)
+    all_corr_pts = np.zeros_like(jet_pts)
 
-    #Put them together
-    NN_score = np.vstack([tau_score1, tau_score2]).transpose()
-    NN_score_min = np.min(NN_score, axis=1)
+    if(cmssw_model): #scores from CMSSW model
+        all_corr_pts = extract_array(minbias, 'jet_taupt', n_entries)
+        all_scores = extract_array(minbias, 'jet_tauscore', n_entries)
 
-    pt = np.vstack([pt1, pt2]).transpose()
-    pt_min = np.min(pt, axis=1)
+        all_scores = ak.where(~cuts, all_scores, 0.)
+
+    else: #scores from new model
+        model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
+
+        pred_scores, pt_ratios = model.predict(jet_inputs[cuts])
+        all_scores[cuts] = tau_score(pred_scores, class_labels)
+        all_corr_pts[cuts] = pt_ratios.flatten() * jet_pts[cuts]
+
+    #Reshape to orig shape
+    all_scores = ak.unflatten(all_scores, ak.num(jet_pt))
+    all_corr_pts = ak.unflatten(all_corr_pts, ak.num(jet_pt))
+    
+    #find highest tau score per event
+    highest_score = ak.argmax(all_scores, axis=1, keepdims=True)
+
+    NN_scores = all_scores[highest_score]
+    NN_pt = all_corr_pts[highest_score]
+
+    NN_scores = np.asarray(NN_scores).flatten()
+    NN_pt = np.asarray(NN_pt).flatten()
+
+
 
     #Define the histograms (pT edge and NN Score edge)
-    pT_edges = list(np.arange(0,100,2)) + [1500] #Make sure to capture everything
+    pT_edges = list(np.arange(30,180,2)) + [1500] #Make sure to capture everything
     NN_edges = list([round(i,2) for i in np.arange(0, 1.01, 0.01)])
 
     RateHist = Hist(hist.axis.Variable(pT_edges, name="pt", label="pt"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
 
-    RateHist.fill(pt = pt_min, nn = NN_score_min)
+    RateHist.fill(pt = NN_pt, nn = NN_scores)
 
     #Derive the rate
     rate_list = []
@@ -190,11 +212,12 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
             nn_list.append(NN)
 
     #Pick target rate and plot it
-    pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate=target_rate)
+    label = "cmssw_" if cmssw_model else ""
+    pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate=target_rate, label=label)
 
     return
 
-def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
+def plot_bkg_rate_tau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
@@ -229,24 +252,24 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     #Load the working point from json file
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tautau/working_point.json")
+    WP_path = os.path.join(model_dir, "plots/physics/tau/working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path):
         with open(WP_path, "r") as f:  WPs = json.load(f)
-        tautau_wp = WPs['NN']
-        tautau_pt_wp = WPs['PT']
+        tau_wp = WPs['NN']
+        tau_pt_wp = WPs['PT']
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
-    event_id_model = event_id[model_tau > tautau_wp]
+    event_id_model = event_id[model_tau > tau_wp]
 
     #Cut on jet pT to extract the rate
     jet_pt = extract_array(minbias, 'jet_pt', n_entries)[eta_selection]
 
 
     jet_pt_cmssw = extract_array(minbias, 'jet_taupt', n_entries)[eta_selection][cmssw_tau > WPs_CMSSW["tau"]]
-    jet_pt_model = (jet_pt*ratio.flatten())[model_tau > tautau_wp]
+    jet_pt_model = (jet_pt*ratio.flatten())[model_tau > tau_wp]
 
     #Total number of unique event
     n_event = len(np.unique(event_id))
@@ -309,20 +332,20 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
 
     # Save the plot
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
-    fig.savefig(os.path.join(plot_dir, "tautau_BkgRate.pdf"), bbox_inches='tight')
-    fig.savefig(os.path.join(plot_dir, "tautau_BkgRate.png"), bbox_inches='tight')
+    plot_dir = os.path.join(model_dir, 'plots/physics/tau')
+    fig.savefig(os.path.join(plot_dir, "tau_BkgRate.pdf"), bbox_inches='tight')
+    fig.savefig(os.path.join(plot_dir, "tau_BkgRate.png"), bbox_inches='tight')
 
     return
 
-def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000 ):
+def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     """
     Plot the single tau efficiency for signal in signal_path w.r.t pt
     eta range for barrel: |eta| < 1.5
-    eta range for endcap: 1.5 < |eta| < 2.5
+    eta range for endcap: 1.5 < |eta| < 2.172
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
+    plot_dir = os.path.join(model_dir, 'plots/physics/tau')
 
     #Load metadata from the model directory
     model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
@@ -330,17 +353,13 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tautau/working_point.json")
+    WP_path = os.path.join(model_dir, "plots/physics/tau/working_point.json")
+    cmssw_WP_path = os.path.join(model_dir, "plots/physics/tau/cmssw_working_point.json")
 
-    #Get derived working points
-    if os.path.exists(WP_path):
-        with open(WP_path, "r") as f:  WPs = json.load(f)
-        model_NN_WP = WPs['NN']
-        model_pt_WP = WPs['PT']
-    else:
-        raise Exception("Working point does not exist. Run with --deriveWPs first.")
+    model_WP_interp = get_interp_func(WP_path)
+    cmssw_WP_interp = get_interp_func(cmssw_WP_path)
 
-    pT_egdes = [0,10,15,20,25,30,35,40,45,50,55,60,70,80,100,125,150,175,200]
+
 
     signal = uproot.open(signal_path)[tree]
 
@@ -361,94 +380,170 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     nn_tauscore_raw = tau_score(pred_score, class_labels ) 
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
-    #selecting the eta region
-    gen_eta_selection = eta_region_selection(gen_eta_raw, eta_region)
+    #nn_tauscore_raw = ak.unflatten(nn_tauscore_raw, ak.num(tau_flav))
+    #nn_taupt_raw = ak.unflatten(nn_taupt_raw, ak.num(tau_flav))
+
+    #highest_score = ak.argmax(nn_tauscore_raw, axis=1, keepdims=True)
+    #nn_tauscore = nn_tauscore_raw[highest_score]
+    #nn_pt = nn_taupt_raw[highest_score]
+
+
+    #highest_score = ak.argmax(jet_tauscore_raw, axis=1, keepdims=True)
+    #cmssw_tauscore = jet_tauscore_raw[highest_score]
+    #cmssw_pt = jet_taupt_raw[highest_score]
+
+
+    pT_edges = [0] + np.arange(30, 200, 5) 
 
     #Denominator & numerator selection for efficiency
-    tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & gen_eta_selection
-    tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > model_pt_WP)
-    tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP) & (nn_tauscore_raw > model_NN_WP)
-    tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt']) & (jet_tauscore_raw > WPs_CMSSW['tau'])
+    eta_selection = np.abs(gen_eta_raw) < 2.172
 
 
-    #write out total eff to text file
-    total_eff_nn = np.mean(tau_nume_nn) / np.mean(tau_deno)
-    total_eff_seedcone = np.mean(tau_nume_seedcone) / np.mean(tau_deno)
-    total_eff_cmssw = np.mean(tau_nume_cmssw) / np.mean(tau_deno)
+    seeded_cone_effs = [0.]
+    model_effs =[0.]
+    cmssw_effs =[0.]
 
-    outname = plot_dir + "/TotalEff_%s.txt" % eta_region
-    with open(outname, "w") as outfile:
-        outfile.write("Total diTau Eff \n")
-        outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
-        outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
-        outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
+    #min number of events to compute a reliable eff
+    min_mc = 100
 
-    
+    for pt_cut in pT_edges[1:]:
+        model_cut = model_WP_interp(pt_cut)
+        cmssw_cut = cmssw_WP_interp(pt_cut)
 
+        tau_deno = (tau_flav==1) & (gen_pt_raw > pt_cut) & eta_selection
+        deno_eff = np.mean(tau_deno)
 
+        if(np.sum(tau_deno) < min_mc):
+            #too few events, just put 0
+            seeded_cone_effs.append(0.)
+            model_effs.append(0.)
+            cmssw_effs.append(0.)
+        else:
+            tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > pt_cut)
+            tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > pt_cut) & (nn_tauscore_raw > model_cut)
+            tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > pt_cut) & (jet_tauscore_raw > cmssw_cut)
 
-    #Get the needed attributes
-    #Basically we want to bin the selected truth pt and divide it by the overall count
-    gen_pt = gen_pt_raw[tau_deno]
-    seedcone_pt = gen_pt_raw[tau_nume_seedcone]
-    cmssw_pt = gen_pt_raw[tau_nume_cmssw]
-    nn_pt = gen_pt_raw[tau_nume_nn]
+            seeded_cone_effs.append(np.mean(tau_nume_seedcone)/ deno_eff)
+            model_effs.append(np.mean(tau_nume_nn) / deno_eff)
+            cmssw_effs.append(np.mean(tau_nume_cmssw) / deno_eff)
 
-    #Constructing the histograms
-    pT_axis = hist.axis.Variable(pT_egdes, name = r"$ \tau_h$ $p_T^{gen}$")
-
-    all_tau = Hist(pT_axis)
-    seedcone_tau = Hist(pT_axis)
-    cmssw_tau = Hist(pT_axis)
-    nn_tau = Hist(pT_axis)
-
-    #Fill the histogram using the values above
-    all_tau.fill(gen_pt)
-    seedcone_tau.fill(seedcone_pt)
-    cmssw_tau.fill(cmssw_pt)
-    nn_tau.fill(nn_pt)
-
-    #Plot and get the artist objects
-    eff_seedcone = plot_ratio(all_tau, seedcone_tau)
-    eff_cmssw = plot_ratio(all_tau, cmssw_tau)
-    eff_nn = plot_ratio(all_tau, nn_tau)
-
-    #Extract data from the artists
-    sc_x, sc_y, sc_err = get_bar_patch_data(eff_seedcone)
-    cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
-    nn_x, nn_y, nn_err = get_bar_patch_data(eff_nn)
-
-    # Create figure and axis
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
 
-    # Set the eta label if needed
-    eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
-    if eta_region != 'none':
-        # Add an invisible plot to include the eta label in the legend
-        ax.plot([], [], 'none', label=eta_label)
+    ax.plot([],[], linestyle='none', label=r'$|\eta| < 2.172$')
+    ax.plot(pT_edges, seeded_cone_effs, c=style.color_cycle[2], label=r'Raw Seeded Cone Eff.', linewidth=style.LINEWIDTH)
+    ax.plot(pT_edges, model_effs, c=style.color_cycle[0], label=r'CMSSW PuppiTau Emulator Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
+    ax.plot(pT_edges, cmssw_effs, c=style.color_cycle[1],label=r'SeedCone Tau Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
 
-    # Plot errorbars for both sets of efficiencies
-    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
-    ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 28kHz')
-    ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 28kHz')
+    figname = f'tau_eff_pt_comparison'
+    plt.legend()
 
-    # Plot a horizontal dashed line at y=1
-    ax.axhline(1, xmin=0, xmax=150, linestyle='dashed', color='black', linewidth=3)
+    ax.set_xlabel(r"Single $\tau_h$ $p_T$ Threshold [GeV]")
+    ax.set_ylabel(r"Trigger Efficiency")
 
-    # Set plot limits and labels
-    ax.set_ylim([0., 1.1])
-    ax.set_xlim([0, 150])
-    ax.set_xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
-    ax.set_ylabel(r"$\epsilon$ (VBF H $\rightarrow$ $\tau\tau$)")
-
-    # Add legend
-    ax.legend(loc='lower right', fontsize=style.LEGEND_WIDTH)
-
-    # Save and show the plot
-    figname = f'sc_and_tau_eff_{eta_region}'
-    fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
+    ax.legend(loc='upper left', fontsize=style.LEGEND_WIDTH)
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
+    fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
+
+
+
+
+
+    for eta_region in ['barrel', 'tau_encap']:
+        #selecting the eta region
+        gen_eta_selection = eta_region_selection(gen_eta_raw, eta_region)
+
+        #Pick a single pt WP for comparison
+        pt_WP = 75. 
+
+        tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & eta_selection
+
+        model_cut = model_WP_interp(pt_WP)
+        cmssw_cut = cmssw_WP_interp(pt_WP)
+
+        tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > pt_WP)
+        tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > pt_WP) & (nn_tauscore_raw > model_cut)
+        tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > pt_WP) & (jet_tauscore_raw > cmssw_cut)
+
+        ##write out total eff to text file
+        total_eff_nn = np.mean(tau_nume_nn) / np.mean(tau_deno)
+        total_eff_seedcone = np.mean(tau_nume_seedcone) / np.mean(tau_deno)
+        total_eff_cmssw = np.mean(tau_nume_cmssw) / np.mean(tau_deno)
+
+        outname = plot_dir + "/TotalEff_%s.txt" % eta_region
+        with open(outname, "w") as outfile:
+            outfile.write("Total Tau Eff \n")
+            outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
+            outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
+            outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
+
+
+
+        #Get the needed attributes
+        #Basically we want to bin the selected truth pt and divide it by the overall count
+        gen_pt = gen_pt_raw[tau_deno]
+        seedcone_pt = gen_pt_raw[tau_nume_seedcone]
+        cmssw_pt = gen_pt_raw[tau_nume_cmssw]
+        nn_pt = gen_pt_raw[tau_nume_nn]
+
+        #Constructing the histograms
+        pT_axis = hist.axis.Variable(pT_edges, name = r"$ \tau_h$ $p_T^{gen}$")
+
+        all_tau = Hist(pT_axis)
+        seedcone_tau = Hist(pT_axis)
+        cmssw_tau = Hist(pT_axis)
+        nn_tau = Hist(pT_axis)
+
+        #Fill the histogram using the values above
+        all_tau.fill(gen_pt)
+        seedcone_tau.fill(seedcone_pt)
+        cmssw_tau.fill(cmssw_pt)
+        nn_tau.fill(nn_pt)
+
+        #Plot and get the artist objects
+        eff_seedcone = plot_ratio(all_tau, seedcone_tau)
+        eff_cmssw = plot_ratio(all_tau, cmssw_tau)
+        eff_nn = plot_ratio(all_tau, nn_tau)
+
+        #Extract data from the artists
+        sc_x, sc_y, sc_err = get_bar_patch_data(eff_seedcone)
+        cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
+        nn_x, nn_y, nn_err = get_bar_patch_data(eff_nn)
+
+        # Create figure and axis
+        fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
+
+        # Set the eta label if needed
+        vbf_label = r"VBF H $\rightarrow$ $\tau\tau$, "
+        eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.172)'
+        if eta_region != 'none':
+            # Add an invisible plot to include the eta label in the legend
+            ax.plot([], [], 'none', label=eta_label)
+
+        
+        # Plot errorbars for both sets of efficiencies
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
+        ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 31kHz')
+        ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 31kHz')
+
+        # Plot a horizontal dashed line at y=1
+        ax.axhline(1, xmin=0, xmax=150, linestyle='dashed', color='black', linewidth=3)
+
+        # Set plot limits and labels
+        ax.set_ylim([0., 1.1])
+        ax.set_xlim([0, 150])
+        ax.set_xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
+        ax.set_ylabel(r"Efficiency")
+
+        # Add legend
+        ax.legend(loc='lower right', fontsize=style.LEGEND_WIDTH)
+
+        # Save and show the plot
+        figname = f'sc_and_tau_eff_{eta_region}'
+        fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
+        fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
+        plt.show(block=False)
 
     return
 
@@ -456,8 +551,8 @@ if __name__ == "__main__":
     """
     2 steps:
 
-    1. Derive working points: python diTaus.py --deriveWPs
-    2. Run efficiency based on the derived working points: python diTaus.py --eff
+    1. Derive working points: python singleTau.py --deriveWPs
+    2. Run efficiency based on the derived working points: python singleTau.py --eff
     """
 
     parser = ArgumentParser()
@@ -477,9 +572,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.deriveWPs:
-        derive_diTaus_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        derive_tau_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree, cmssw_model=True)
+        derive_tau_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.BkgRate:
-        plot_bkg_rate_ditau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        plot_bkg_rate_tau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree)
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)
+        eff_tau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)

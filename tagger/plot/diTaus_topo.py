@@ -541,18 +541,18 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     im0 = axes[0].pcolormesh(pt_edges, pt_edges, cmssw_ratio.T, vmin=0, vmax=0.5)
     axes[0].set_xlabel(r"Gen. $\tau_h$ $p_T^1$ [GeV]")
     axes[0].set_ylabel(r"Gen. $\tau_h$ $p_T^2$ [GeV]")
-    axes[0].set_title(f"NN PUPPI Tau Efficiency @ {target_rate}kHz", pad=45)
+    axes[0].set_title(f"NN PUPPI Tau", pad=45)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=axes[0], fontsize=style.MEDIUM_SIZE-2)
 
     # Plot second efficiency ratio (e.g., Model efficiency)
     im1 = axes[1].pcolormesh(pt_edges, pt_edges, model_ratio.T, vmin=0, vmax=0.5)
     axes[1].set_xlabel(r"Gen. $\tau_h$ $p_T^1$ [GeV]")
     axes[1].set_ylabel(r"Gen. $\tau_h$ $p_T^2$ [GeV]")
-    axes[1].set_title(f"Multiclass Tagger Efficiency @ {target_rate}kHz", pad=45)
+    axes[1].set_title(f"Multiclass Tagger", pad=45)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=axes[1], fontsize=style.MEDIUM_SIZE-2)
 
     # Add a common colorbar
-    cbar = fig.colorbar(im1, ax=axes.ravel().tolist())
+    cbar = fig.colorbar(im1, ax=axes.ravel().tolist(), label=f'Efficiency @ {target_rate}kHz', orientation='vertical')
 
     # Save and show the plot
     fig.savefig(f'{plot_dir}/topo_vbf_eff.pdf', bbox_inches='tight')

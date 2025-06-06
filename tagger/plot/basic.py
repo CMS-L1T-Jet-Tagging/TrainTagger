@@ -486,6 +486,8 @@ def shapPlot(shap_values, feature_names, class_names):
         ax.barh(y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',label=label,color=colormap(class_inds[i]))
         left_pos += global_shap_values[feature_inds]
 
+    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.CMSHEADER_SIZE)
+
     #ax.set_yticklabels([style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_inds])
     ax.legend(loc='lower right',fontsize=30)
 

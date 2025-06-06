@@ -470,7 +470,6 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 
-
     #Write out efficiency numbers
     eff_cmssw = np.mean(cmssw_selection)
     eff_model = np.mean(model_selection)

@@ -39,7 +39,7 @@ style.set_style()
 
 def loss_history(plot_dir, loss_names, history):
     for metric in loss_names:
-        metric = metric +  '_loss'
+        metric = metric + '_loss'
 
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)

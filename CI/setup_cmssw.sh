@@ -48,6 +48,7 @@ cd ..
 git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_0/L1TSC4NGJetTagger
 cd FastPUPPI
 git reset --hard 10a1e3210c96a84e2ad00f76d16023033361fde3
+cd ..
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi

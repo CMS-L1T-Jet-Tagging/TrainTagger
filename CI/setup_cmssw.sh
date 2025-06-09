@@ -46,6 +46,8 @@ make install
 cd ..
 
 git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_0/L1TSC4NGJetTagger
+cd FastPUPPI
+git checkout 53db108933e508126ca0474fac927973cabec07d
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi

@@ -226,6 +226,8 @@ class DeepSetModel(JetTagModel):
             pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
+        rng = np.random.default_rng()
+        X_train = rng.permuted(X_train, axis=1)
 
         # Train the model using hyperparameters in yaml config
         self.history = self.jet_model.fit(

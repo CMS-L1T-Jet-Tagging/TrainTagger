@@ -362,7 +362,7 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
 
     # Plot the trigger rates
     ax.plot(pt_cuts, minbias_rate_no_nn, c=style.color_cycle[2], label=r'Dijet trigger without $\tau_{h}$ idenficitation', linewidth=style.LINEWIDTH)
-    ax.plot(pt_cuts, minbias_rate_cmssw, c=style.color_cycle[0], label=r'NN PUPPI Tau $\tau^\pm$ trigger', linewidth=style.LINEWIDTH)
+    ax.plot(pt_cuts, minbias_rate_cmssw, c=style.color_cycle[0], label=r'NN PUPPI $\tau^\pm$ trigger', linewidth=style.LINEWIDTH)
     ax.plot(pt_cuts, minbias_rate_model, c=style.color_cycle[1],label=r'Multiclass $\tau$ topology trigger', linewidth=style.LINEWIDTH)
 
     # Add uncertainty bands
@@ -552,7 +552,7 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=axes[1], fontsize=style.MEDIUM_SIZE-2)
 
     # Add a common colorbar
-    cbar = fig.colorbar(im1, ax=axes.ravel().tolist(), label=f'Efficiency @ {target_rate}kHz', orientation='vertical')
+    cbar = fig.colorbar(im1, ax=axes.ravel().tolist(), label=f'Efficiency @ {target_rate} kHz', orientation='vertical')
 
     # Save and show the plot
     fig.savefig(f'{plot_dir}/topo_vbf_eff.pdf', bbox_inches='tight')

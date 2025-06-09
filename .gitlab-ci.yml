@@ -44,8 +44,8 @@ DeepSet:new_samples_baseline_5param_extended_trk:
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
-    CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:5d7589dde441c2b02e04114a12c3b5f02d06a81c'
+    CMSSW_VERSION: 'CMSSW_15_1_0_pre3'
+    CMSSW_L1CT: 'cms-sw:CMSSW_15_1_0_pre3'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     RERUN_ON_TAG: 'True'
     TAG: 'v0.0.0'

@@ -29,6 +29,8 @@ variables:
     SIGNAL: TT_PU200
     MODEL_LOCATION: ${EOS_STORAGE_DIR}/tags/${TAG}
     RERUN_ON_TAG: 'True'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
 
 .template:
@@ -155,6 +157,8 @@ synth:
   image: registry.cern.ch/ci4fpga/vivado:2023.2
   stage: synth
   needs : [hls4ml]
+  rules:
+    - if: $RUN_SYNTHESIS == "True"
   script:
     - cd tagger/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
@@ -173,6 +177,8 @@ emulation-evaluate:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
   dependencies: [emulate,train,hls4ml]
   script:
@@ -195,6 +201,8 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
+  rules:
+    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   script:
@@ -225,41 +233,22 @@ upload_new_model:
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
   rules:
     - if: $RERUN_ON_TAG == "False"
+  needs:
+    - job: train
+      optional: false
+    - job: evaluate
+      optional: false
+    - job: emulation-evaluate
+      optional: true
+    - job: hls4ml
+      optional: true
+    - job: profile
+      optional: true
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
-    - source activate tagger
-    - mkdir $Name
-    - cd tagger/firmware
-    - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
-    - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    - cd ../..
-    - mkdir $Name/plots
-    - cp -r output/baseline/model $Name/model
-    - mv output/baseline/plots/emulation $Name/plots
-    - mv output/baseline/plots/profile $Name/plots
-    - mv output/baseline/plots/training/ $Name/plots
-    - mv output/baseline/plots/physics/ $Name/plots
-    - cd ..
-    - rm -rf php-plots
-    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
-    - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
-    - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_copy_index.py ${EOS_STORAGE_DIR} --recursive
-    - cd TrainTagger/${Name}
-    - pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
-    - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf
-    - cd ..
-    - mv CI/mlflow_logger.py .
-    - python mlflow_logger.py -w https://cms-l1t-jet-tagger.web.cern.ch/${CI_PROJECT_NAME}/${EOS_STORAGE_SUBDIR}
-      -f ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware
-      -m ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
-      -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
-      -n ${Name}
-    - eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
-    - eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+    - ./CI/upload_new_model.sh
   artifacts:
     paths:
       - $Name

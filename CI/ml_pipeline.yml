@@ -229,8 +229,6 @@ upload_new_model:
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
-  needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
-  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
   rules:
     - if: $RERUN_ON_TAG == "False"
   needs:

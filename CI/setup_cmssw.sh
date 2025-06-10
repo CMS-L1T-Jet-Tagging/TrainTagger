@@ -35,21 +35,23 @@ git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hl
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout emulator_test
-
-cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware .
-mv firmware L1TSC4NGJetModel
-./setup.sh
-
+git checkout ${TAG}
+if [[ "${RERUN_ON_TAG}" == "False" ]]; then
+    git checkout emulator_test
+    cp -r ../../../tagger/firmware/L1TSC4NGJetModel/firmware .
+    mv firmware L1TSC4NGJetModel
+    ./setup.sh
+fi
 make 
 make install
 cd ..
 
 git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_0/L1TSC4NGJetTagger
-cd FastPUPPI
-git reset --hard 10a1e3210c96a84e2ad00f76d16023033361fde3
-cd ..
-
+if [[ "${RERUN_ON_TAG}" == "True" ]]; then
+    cd FastPUPPI
+    git reset --hard 10a1e3210c96a84e2ad00f76d16023033361fde3
+    cd ..
+fi
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
 scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'

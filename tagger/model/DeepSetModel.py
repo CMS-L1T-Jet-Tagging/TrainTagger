@@ -226,8 +226,6 @@ class DeepSetModel(JetTagModel):
             pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
-        rng = np.random.default_rng()
-        X_train = rng.permuted(X_train, axis=1)
 
         # Train the model using hyperparameters in yaml config
         self.history = self.jet_model.fit(
@@ -321,7 +319,7 @@ class DeepSetModel(JetTagModel):
             self.jet_model,
             backend='Vitis',
             project_name=self.hls4ml_config['project_name'],
-            clock_period=2.8,  # 1/360MHz = 2.8ns
+            clock_period=2.5,  # 1/360MHz = 2.8ns
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
             part='xcvu13p-flga2577-2-e',

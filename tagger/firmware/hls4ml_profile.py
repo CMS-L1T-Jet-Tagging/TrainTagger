@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     precisions = convert(model,args.outpath_firmware)
     report = getReports('tagger/firmware/L1TSC4NGJetModel')
-    
+
     if os.path.isfile("mlflow_run_id.txt"):
 
         f = open("mlflow_run_id.txt", "r")
@@ -150,7 +150,7 @@ if __name__ == "__main__":
             mlflow.log_metric('Latency cc',report['latency_clks'])
             mlflow.log_metric('Latency us',report['latency_mus'])
             mlflow.log_metric('Initiation Interval ',report['latency_ii'])
-    
+
             mlflow.log_param('Input Precision ',precisions[0])
             mlflow.log_param('Class Precision ',precisions[1])
             mlflow.log_param('Regression Precision ',precisions[2])
@@ -168,5 +168,4 @@ if __name__ == "__main__":
     print('Latency : ', report['latency_mus'],' mus')
     print('Initiation Interval : ', report['latency_mus'],' clock cycles')
     print("===================")
-        
 

@@ -18,7 +18,7 @@ def convert(model, outpath,build=True):
     #Auxilary variables
     input_precision = 'ap_fixed<24,12,AP_RND,AP_SAT>'
     class_precision = 'ap_ufixed<24,12,AP_RND,AP_SAT>'
-    reg_precision = 'ap_fixed<16,6,AP_RND,AP_SAT>' 
+    reg_precision = 'ap_fixed<16,6,AP_RND,AP_SAT>'
     trace=True
 
     #Create default config
@@ -45,7 +45,7 @@ def convert(model, outpath,build=True):
         else:
             config["LayerName"][layer.name]["Trace"] = trace
 
-    
+
     config["LayerName"]["jet_id_output"]["Precision"]["result"] = class_precision
     config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
     config["LayerName"]["pT_output"]["Precision"]["result"] = reg_precision
@@ -76,8 +76,8 @@ def convert(model, outpath,build=True):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')    
-    parser.add_argument('-o','--outpath', default='tagger/firmware/L1TSC4NGJetModel' , help = 'Jet tagger synthesized output directory')    
+    parser.add_argument('-m','--model', default='output/baseline/model/saved_model.h5' , help = 'Input model path for conversion')
+    parser.add_argument('-o','--outpath', default='tagger/firmware/L1TSC4NGJetModel' , help = 'Jet tagger synthesized output directory')
     args = parser.parse_args()
 
     #Load the model
@@ -85,4 +85,4 @@ if __name__ == "__main__":
     precisions = convert(model,args.outpath)
 
 
-    
+

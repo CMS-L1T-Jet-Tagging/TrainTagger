@@ -168,4 +168,3 @@ if __name__ == "__main__":
     print('Latency : ', report['latency_mus'],' mus')
     print('Initiation Interval : ', report['latency_mus'],' clock cycles')
     print("===================")
-

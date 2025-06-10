@@ -83,6 +83,3 @@ if __name__ == "__main__":
     #Load the model
     model = load_qmodel(args.model)
     precisions = convert(model,args.outpath)
-
-
-

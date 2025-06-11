@@ -49,7 +49,7 @@ cd ..
 git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_0/L1TSC4NGJetTagger
 if [[ "${RERUN_ON_TAG}" == "True" ]]; then
     cd FastPUPPI
-    git reset --hard 10a1e3210c96a84e2ad00f76d16023033361fde3
+    git reset --hard 8739780aeb4d7d761fbdb07eed1a77798cd62cfd
     cd ..
 fi
 
@@ -71,8 +71,7 @@ echo  ${N_PARAMS}
 sed -i -e 's/trktype = "extended"/trktype = "'${TRACK_ALGO}'"/g' runJetNTuple.py
 sed -i -e 's/nparam = 5/nparam = '${N_PARAMS}'/g' runJetNTuple.py
 echo "Temporary workaround to get the input files"
-cp /eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_140X/v0/TT_PU200/inputs140X_1-1.root inputs140X_1.root
-echo '\nprocess.source.fileNames = ["file:inputs140X_1.root"]' >> runJetNTuple.py
+
 if [[ "${RERUN_ON_TAG}" == "False" ]]; then
     echo '\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test")' >> runJetNTuple.py
 fi

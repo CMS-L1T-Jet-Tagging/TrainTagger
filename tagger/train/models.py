@@ -44,7 +44,7 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
         input_shape = input.shape
         shape_ = (-1, input_shape[1], self.n_head, self.d_model//self.n_head)
         perm_ = (0, 2, 1, 3)
-        
+
         q = self.qD(input)
         q = tf.reshape(q, shape = shape_)
         q = tf.transpose(q, perm = perm_)
@@ -66,7 +66,7 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
         out = self.outD(out)
 
         return out
-    
+
     # define all prunable weights
     def get_prunable_weights(self):
         return self.qD._trainable_weights + self.kD._trainable_weights + \
@@ -75,7 +75,7 @@ class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
 class AttentionPooling(Layer, tfmot.sparsity.keras.PrunableLayer):
     def __init__(self, bits, bits_int, alpha_val, **kwargs):
         super().__init__(**kwargs)
-        
+
         self.score_dense = QDense(1, use_bias=False, **kwargs)
 
     def call(self, x):  # (B, N, d) -> (B,d) pooling via simple softmax
@@ -83,8 +83,8 @@ class AttentionPooling(Layer, tfmot.sparsity.keras.PrunableLayer):
         a = tf.squeeze(self.score_dense(x), axis=-1)
         a = tf.nn.softmax(a, axis=1)
 
-        out = tf.matmul(a[:, tf.newaxis, :], x) 
-        return tf.squeeze(out, axis=1) 
+        out = tf.matmul(a[:, tf.newaxis, :], x)
+        return tf.squeeze(out, axis=1)
 
     # define all prunable weights
     def get_prunable_weights(self):
@@ -120,7 +120,7 @@ def format_qactivation(activation, nbits: int, bits_int : int, alpha : float) ->
     return f"quantized_{activation}({nbits}, {bits_int}, alpha={alpha})"
 
 # baseline DeepSet model
-def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1, 
+def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
             aggregator = "mean", conv1d_layers = [10, 10], class_layers = [32, 16], reg_layers = [10]):
 
     # Define a dictionary for common arguments
@@ -135,7 +135,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
-    
+
     # Make Conv1D layers
     for iconv1d, depthconv1d in enumerate(conv1d_layers):
         main = QConv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_'+str(iconv1d+1), **common_args)(main)
@@ -183,11 +183,11 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     return model
 
 def baseline_larger(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1, aggregator = "mean"):
-    return baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1, 
+    return baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
             aggregator = "mean",conv1d_layers = [30, 15, 10], class_layers = [32, 16, 8], reg_layers = [16, 8, 4])
 
 # DeepSet model w/ attention pooling
-def DeepSetAttPool(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1, 
+def DeepSetAttPool(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
             aggregator = "mean",
             conv1d_layers = [10, 10],
             class_layers = [32, 16],
@@ -206,7 +206,7 @@ def DeepSetAttPool(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
-    
+
     # Make Conv1D layers
     for iconv1d, depthconv1d in enumerate(conv1d_layers):
         main = QConv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_'+str(iconv1d+1), **common_args)(main)
@@ -363,7 +363,7 @@ def interaction_net_base(
 
     #Initialize inputs
     inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
-        
+
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
 
@@ -386,7 +386,7 @@ def interaction_net_base(
     )(input_effects)
 
     x = QActivation(activation=quantized_relu(bits, bits_int))(x)
-    
+
     for i, layer in enumerate(effects_layers[1:]):
         x = QConv1D(
             layer,
@@ -399,7 +399,7 @@ def interaction_net_base(
     x = NodeEdgeProjection(
             name="prj_effects", receiving=True, node_to_edge=False
         )(x)
-    
+
     input_objects = Concatenate(axis=-1, name="concat_obj")([inputs, x])
 
     # Objects network.
@@ -425,7 +425,7 @@ def interaction_net_base(
     # Aggregator
     agg = choose_aggregator(choice = aggreg, name = "pool")
     main = agg(x)
-    
+
     #Now split into jet ID and pt regression
 
     #jetID branch, 3 layer MLP

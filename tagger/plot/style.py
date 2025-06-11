@@ -63,4 +63,3 @@ def set_style():
     matplotlib.rcParams['ytick.major.width'] = 5
     matplotlib.rcParams['ytick.minor.size'] = 10
     matplotlib.rcParams['ytick.minor.width'] = 4
-

@@ -1,6 +1,6 @@
 #!/bin/bash
 if [[ "$1" == "False" ]]; then
-    python tagger/train/train.py -n $Name -p 50 
+    python tagger/train/train.py -n $Name -p 50
     eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
     tar -xf signal_process_data.tgz
     python tagger/train/train.py --plot-basic -n $Name -sig $SIGNAL

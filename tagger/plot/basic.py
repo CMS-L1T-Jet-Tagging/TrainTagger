@@ -19,7 +19,6 @@ import os
 from .common import PT_BINS
 from .common import plot_histo
 from scipy.stats import norm
-import pdb
 plt.rcParams.update({'figure.max_open_warning': 0})
 
 # some custom imports for efficiency plots

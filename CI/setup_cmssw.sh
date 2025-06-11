@@ -71,8 +71,8 @@ echo  ${N_PARAMS}
 sed -i -e 's/trktype = "extended"/trktype = "'${TRACK_ALGO}'"/g' runJetNTuple.py
 sed -i -e 's/nparam = 5/nparam = '${N_PARAMS}'/g' runJetNTuple.py
 echo "Temporary workaround to get the input files"
-#curl -s https://cerminar.web.cern.ch/cerminar/data/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root -o inputs131X_1.root
-#echo '\nprocess.source.fileNames = ["file:/eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_140X/v0/TT_PU200/inputs140X_1-1.root"]' >> runJetNTuple.py
+cp /eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_140X/v0/TT_PU200/inputs140X_1-1.root inputs140X_1.root
+echo '\nprocess.source.fileNames = ["file:inputs140X_1.root"]' >> runJetNTuple.py
 if [[ "${RERUN_ON_TAG}" == "False" ]]; then
     echo '\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test")' >> runJetNTuple.py
 fi

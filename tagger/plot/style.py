@@ -19,7 +19,7 @@ MARKERSIZE = 20
 FIGURE_SIZE = (17,17)
 
 CMSHEADER_LEFT = "Phase 2 Simulation Preliminary"
-CMSHEADER_RIGHT = "200 PU (14 TeV)"
+CMSHEADER_RIGHT = "PU 200 (14 TeV)"
 CMSHEADER_SIZE = BIGGER_SIZE
 
 CLASS_LABEL_STYLE = {'b':'b','charm':'c','light':'light','gluon':'gluon',

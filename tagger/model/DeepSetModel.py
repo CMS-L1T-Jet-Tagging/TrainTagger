@@ -311,7 +311,7 @@ class DeepSetModel(JetTagModel):
 
         config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.hls4ml_config['class_precision']
         config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
-        config["LayerName"]["pT_output"]["Precision"]["result"] = self.hls4ml_config['class_precision']
+        config["LayerName"]["pT_output"]["Precision"]["result"] = self.hls4ml_config['reg_precision']
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
 
         # Write HLS

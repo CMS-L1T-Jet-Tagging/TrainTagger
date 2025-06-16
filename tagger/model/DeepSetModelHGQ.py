@@ -163,14 +163,14 @@ class DeepSetModelHGQ(JetTagModel):
 
         config["LayerName"]["act_jet"]["Precision"]["result"] = self.hls4ml_config['class_precision']
         config["LayerName"]["act_jet"]["Implementation"] = "latency"
-        config["LayerName"]["pT_out"]["Precision"]["result"] = self.hls4ml_config['class_precision']
+        config["LayerName"]["pT_out"]["Precision"]["result"] = self.hls4ml_config['reg_precision']
         config["LayerName"]["pT_out"]["Implementation"] = "latency"
 
         self.hls_model = hls4ml.converters.convert_from_keras_model(
             proxy,
             backend='Vitis',
             project_name=self.hls4ml_config['project_name'],
-            clock_period=2.8,  # 1/360MHz = 2.8ns
+            clock_period=2.5,  # 1/360MHz = 2.8ns
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
             part='xcvu9p-flga2104-2L-e',

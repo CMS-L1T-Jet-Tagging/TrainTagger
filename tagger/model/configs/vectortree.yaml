@@ -1,0 +1,20 @@
+model: VectorTreeModel
+run_config :
+  verbose : 2
+  debug : True
+
+model_config :
+
+quantization_config:
+
+
+training_config :
+  weight_method: "onlyclass"
+  epochs : 10
+  batch_size : 1024
+  learning_rate : 0.001
+  validation_split : 0.1
+
+
+hls4ml_config:
+

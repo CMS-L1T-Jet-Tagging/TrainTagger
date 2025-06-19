@@ -18,3 +18,4 @@ export VBFHTAUTAU=VBFHToTauTau_PU200.root
 export NTUPLE_TREE=outnano/Jets
 export SIGNAL=TT_PU200
 export EOS_DATA_DIR='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/'
+export EOS_MGM_URL='root://eosproject.cern.ch'

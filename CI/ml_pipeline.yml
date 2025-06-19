@@ -5,6 +5,7 @@ include:
 stages:
   - data
   - train
+  - tune
   - evaluate
   - hls4ml
   - synth
@@ -40,9 +41,10 @@ variables:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 .template:
-  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  image: $IMAGE
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -95,6 +97,27 @@ train:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - ./CI/run_training.sh $RERUN_ON_TAG
+  artifacts:
+    paths:
+      - output
+      - mlflow_run_id.txt
+    exclude:
+      - .npy
+    expire_in: 1 day
+
+tune:
+  extends:
+    - .template
+  stage: train
+  tags: [cern-nextgen-h100]
+  needs:
+    - job : data
+      optional: true
+  script:
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  - tar -xf training_data_$Inputs.tgz
+  - source activate tagger
+  - python tagger/train/test.py -p 100 -y tagger/model/configs/$Model.yaml -o output/$Model
   artifacts:
     paths:
       - output

@@ -91,7 +91,7 @@ class JetTagModel(ABC):
         Must be written for child class
         """
 
-    def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
+    def predict(self, X_test: npt.NDArray[np.float64], y_test: npt.NDArray[np.float64], pt_target_test: npt.NDArray[np.float64] ) -> tuple:
         """Predict method for model
 
         Args:

@@ -854,7 +854,7 @@ def basic(model, signal_dirs):
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
-    model_outputs = model.jet_model.predict(X_test)
+    model_outputs = model.predict(X_test, y_test, truth_pt_test/reco_pt_test )
 
     # Get classification outputs
     y_pred = model_outputs[0]

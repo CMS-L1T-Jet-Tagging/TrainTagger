@@ -105,7 +105,7 @@ def tune_bdt():
     )
 
     tuner = tune.Tuner(
-        tune.with_resources(train_model_wrapper, resources={"cpu":3 , "gpu": 0.0}),
+        tune.with_resources(train_model_wrapper, resources={"cpu":4 , "gpu": 0.0}),
         tune_config=tune.TuneConfig(
             metric="loss",
             mode="min",
@@ -119,7 +119,7 @@ def tune_bdt():
         param_space={
             "threads": 4,
             "max_depth": tune.randint(3, 6),
-            "num_trees": tune.randint(100, 1000),
+            "num_trees": tune.randint(100, 300),
             "use_hessian_gain":tune.choice([True,False]),
             "num_candidate_attributes_ratio":tune.uniform(0.1, 1.0),
             "min_examples":tune.randint(10,20),

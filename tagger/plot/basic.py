@@ -880,7 +880,7 @@ def basic(model, signal_dirs):
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.jet_model.predict(sample_data)[0]
+            sample_preds = model.predict(sample_data )
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)

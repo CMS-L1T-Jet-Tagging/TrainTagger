@@ -128,7 +128,7 @@ class VectorTreeModel(JetTagModel):
         # Plot history
         #loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
 
-    def predict(self, X_test: npt.NDArray[np.float64], y_test: npt.NDArray[np.float64], pt_target_test: npt.NDArray[np.float64] ) -> tuple:
+    def predict(self, X_test: npt.NDArray[np.float64], y_test: npt.NDArray[np.float64] , pt_target_test: npt.NDArray[np.float64] ) -> tuple:
         """Predict method for model
 
         Args:
@@ -159,6 +159,39 @@ class VectorTreeModel(JetTagModel):
         test_dataset  = {"label": np.array(y_test_array,dtype=int), "feature": X_test_array}
         
         print(self.jet_model.evaluate(test_dataset))
+        
+        model_outputs = self.jet_model.predict(test_dataset)
+        class_predictions = model_outputs
+        pt_ratio_predictions = np.ones_like(model_outputs)
+        return (class_predictions, pt_ratio_predictions)
+    
+    def predict(self, X_test: npt.NDArray[np.float64] ) -> tuple:
+        """Predict method for model
+
+        Args:
+            X_test (npt.NDArray[np.float64]): Input X test
+
+        Returns:
+            tuple: (class_predictions , pt_ratio_predictions)
+        """
+        
+        X_test_array = []
+        y_test_array = []
+        
+        for ibatch,batch in enumerate(X_test):
+            vectors_list = []
+            y_list = []
+            if ibatch % 250000 == 0:
+                print(ibatch , " out of ", len(X_test) )
+            for icandidate,candidate in enumerate(X_test[ibatch]):
+                if np.abs(np.sum(candidate)) > 0:
+                    vectors_list.append([candidate])
+            vectors = np.array(np.concatenate(vectors_list, axis=0)) 
+            X_test_array.append(vectors)
+            y_test_array.append(0)
+            
+
+        test_dataset  = {"label": np.array(y_test_array,dtype=int), "feature": X_test_array}
         
         model_outputs = self.jet_model.predict(test_dataset)
         class_predictions = model_outputs

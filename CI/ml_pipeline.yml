@@ -117,7 +117,7 @@ tune:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/train/tune.py -p 100 -y tagger/model/configs/$Model.yaml -o output/$Model
+  - python tagger/train/tune.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model
   artifacts:
     paths:
       - output

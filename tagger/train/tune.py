@@ -138,7 +138,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-o', '--output', default='output/baseline', help='Output model directory path, also save evaluation plots'
     )
-    parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
+    parser.add_argument('-p', '--percent', default=50, type=int, help='Percentage of how much processed data to train on')
     parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
     )

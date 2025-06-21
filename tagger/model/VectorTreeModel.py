@@ -128,7 +128,7 @@ class VectorTreeModel(JetTagModel):
         # Plot history
         #loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
 
-    def predict(self, X_test: npt.NDArray[np.float64], y_test: npt.NDArray[np.float64] , pt_target_test: npt.NDArray[np.float64] ) -> tuple:
+    def predict_with_answers(self, X_test: npt.NDArray[np.float64], y_test: npt.NDArray[np.float64] , pt_target_test: npt.NDArray[np.float64] ) -> tuple:
         """Predict method for model
 
         Args:

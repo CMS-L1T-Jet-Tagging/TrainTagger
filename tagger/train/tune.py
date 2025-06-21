@@ -39,9 +39,9 @@ def train_model_wrapper(config):
     with open("testdata/test_labels", "rb") as fp:   # Unpickling
         test_labels = pickle.load(fp)
     with open("traindata/train_weights", "rb") as fp:   # Unpickling
-        train_weight = pickle.load(fp)
+        train_weights = pickle.load(fp)
  
-  
+    train_weight = train_weights[config['sample_weight']]
     random_indices = np.random.choice(int(len(train_labels)), int(0.1*len(train_labels)))
     
     sub_X = []
@@ -83,7 +83,7 @@ def train_model_wrapper(config):
                                                     num_threads = 4,
                                                     discretize_numerical_columns=True,
         )
-    model =learner.train(train_dataset, verbose=2)
+    model = learner.train(train_dataset, verbose=2)
     
     random_test_indices = np.random.choice(int(len(test_labels)), int(0.1*len(test_labels)))
     
@@ -105,7 +105,7 @@ def tune_bdt():
     )
 
     tuner = tune.Tuner(
-        tune.with_resources(train_model_wrapper, resources={"cpu":4 , "gpu": 0.0}),
+        tune.with_resources(train_model_wrapper, resources={"cpu":24 , "gpu": 0.0}),
         tune_config=tune.TuneConfig(
             metric="loss",
             mode="min",
@@ -125,7 +125,8 @@ def tune_bdt():
             "min_examples":tune.randint(10,20),
             "shrinkage":tune.loguniform(0.0001, 0.1, base=10),
             "split_axis":tune.choice(['SPARSE_OBLIQUE','AXIS_ALIGNED']),
-            "sparse_oblique_num_projections_exponent":tune.uniform(1.0, 2.0)
+            "sparse_oblique_num_projections_exponent":tune.uniform(1.0, 2.0),
+            "sample_weight" : tune.choice(["none", "ptref", "onlyclass"])
         },
     )
     results = tuner.fit()
@@ -141,6 +142,9 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--percent', default=50, type=int, help='Percentage of how much processed data to train on')
     parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
+    )
+    parser.add_argument(
+        '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
     )
 
     args = parser.parse_args()
@@ -161,14 +165,20 @@ if __name__ == "__main__":
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
     save_test_data(args.output, X_test, y_test, truth_pt_test, reco_pt_test)
 
+    sample_weight_choices = ["none", "ptref", "onlyclass"]
+    sample_weights = {}
     # Calculate the sample weights for training
-    sample_weight = train_weights(
-        y_train,
-        reco_pt_train,
-        class_labels,
-        weightingMethod=model.training_config['weight_method'],
-        debug=model.run_config['debug'],
-    )
+    for weight_choice in sample_weight_choices:
+        sample_weight = train_weights(
+            y_train,
+            reco_pt_train,
+            class_labels,
+            weightingMethod=weight_choice,
+            debug=model.run_config['debug'],
+        )
+        
+        sample_weights[weight_choice] = sample_weight
+        
     if model.run_config['debug']:
         print("DEBUG - Checking sample_weight:")
         print(sample_weight)
@@ -227,7 +237,7 @@ if __name__ == "__main__":
     with open("testdata/test_labels", "wb") as fp:   #Pickling
         pickle.dump(y_test_array, fp)
     with open("traindata/train_weights", "wb") as fp:   #Pickling
-        pickle.dump(sample_weight, fp)
+        pickle.dump(sample_weights, fp)
 
 
     results = tune_bdt()
@@ -248,7 +258,7 @@ if __name__ == "__main__":
     
     elif results.get_best_result().config['split_axis'] == 'SPARSE_OBLIQUE':
         learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],
-                                                  weights = 'weights',
+                                                    weights = 'weights',
                                                     use_hessian_gain=results.get_best_result().config['use_hessian_gain'],
                                                     num_candidate_attributes_ratio=results.get_best_result().config['num_candidate_attributes_ratio'],
                                                     min_examples=results.get_best_result().config['min_examples'],
@@ -268,4 +278,5 @@ if __name__ == "__main__":
     print(model.evaluate(test_dataset))
     print(model.analyze(test_dataset, sampling=0.1))
     model.save("model_tuned")
+    results = basic(model, args.signal_processes)
 

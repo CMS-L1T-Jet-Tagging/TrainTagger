@@ -162,7 +162,9 @@ class VectorTreeModel(JetTagModel):
         
         model_outputs = self.jet_model.predict(test_dataset)
         class_predictions = model_outputs
-        pt_ratio_predictions = np.ones_like(model_outputs)
+        pt_ratio_predictions = np.array([[1] for i in range(model_outputs.shape[0])])
+        print(class_predictions)
+        print(pt_ratio_predictions)
         return (class_predictions, pt_ratio_predictions)
     
     def predict(self, X_test: npt.NDArray[np.float64] ) -> tuple:

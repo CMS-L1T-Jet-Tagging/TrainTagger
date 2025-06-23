@@ -75,6 +75,7 @@ class VectorTreeModel(JetTagModel):
                 print(ibatch , " out of ", len(X_train) )
             for icandidate,candidate in enumerate(X_train[ibatch]):
                 if np.abs(np.sum(candidate)) > 0:
+                    self.transform(candidate)
                     vectors_list.append([candidate])
                 #print(np.sum(candidate),candidate,y_train[icandidate])
             vectors = np.array(np.concatenate(vectors_list, axis=0)) 
@@ -147,6 +148,7 @@ class VectorTreeModel(JetTagModel):
                 print(ibatch , " out of ", len(X_test) )
             for icandidate,candidate in enumerate(X_test[ibatch]):
                 if np.abs(np.sum(candidate)) > 0:
+                    self.transform(candidate)
                     vectors_list.append([candidate])
                 #print(np.sum(candidate),candidate,y_test[icandidate])
             vectors = np.array(np.concatenate(vectors_list, axis=0)) 
@@ -184,6 +186,7 @@ class VectorTreeModel(JetTagModel):
                 print(ibatch , " out of ", len(X_test) )
             for icandidate,candidate in enumerate(X_test[ibatch]):
                 if np.abs(np.sum(candidate)) > 0:
+                    self.transform(candidate)
                     vectors_list.append([candidate])
             vectors = np.array(np.concatenate(vectors_list, axis=0)) 
             X_test_array.append(vectors)
@@ -196,3 +199,15 @@ class VectorTreeModel(JetTagModel):
         class_predictions = model_outputs
         pt_ratio_predictions = np.array([[1] for i in range(model_outputs.shape[0])])
         return (class_predictions, pt_ratio_predictions)
+    
+    def transform(candidate : npt.NDArray[np.float64] ):
+        new_candidate = np.zeros_like(candidate)
+        new_candidate[0] = candidate[0] / 15000  #pt
+        new_candidate[1] = candidate[1] / 4   #pt_rel
+        new_candidate[2] = candidate[2] / 8   #pt_log
+        new_candidate[3] = (candidate[3] + 100 ) / 200 #deta
+        new_candidate[4] = (candidate[4] + 100 ) / 200   #dphi
+        new_candidate[14] = candidate[14] + 200 / 400  #z0
+        new_candidate[15] = candidate[15] / 40    #dxy
+        new_candidate[18] = candidate[18] / 7   #emid
+        new_candidate[19] = candidate[19]  / 7  #quality

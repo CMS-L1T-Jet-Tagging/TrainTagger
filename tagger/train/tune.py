@@ -129,7 +129,7 @@ def tune_bdt():
             "sample_weight" : tune.choice(["none", "ptref", "onlyclass"])
         },
     )
-    results = tuner.fit(verbose=1)
+    results = tuner.fit()
     return results
 
 if __name__ == "__main__":

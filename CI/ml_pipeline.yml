@@ -119,13 +119,15 @@ tune:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
   - tar -xf signal_process_data.tgz
   - source activate tagger
-  - python tagger/train/tune.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model -sig $SIGNAL
+  - python tagger/train/tune.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model -sig $SIGNAL >> job.log
 
 
   artifacts:
     paths:
       - output
       - mlflow_run_id.txt
+      - job.log
+    when: always
     exclude:
       - .npy
     expire_in: 1 day

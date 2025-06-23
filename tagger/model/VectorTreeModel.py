@@ -34,15 +34,15 @@ class VectorTreeModel(JetTagModel):
         """
         self.learner = ydf.GradientBoostedTreesLearner(label="label",
                                                        weights="weights",
-                                                       max_depth=4,
-                                                       num_trees = 204,
+                                                       max_depth=5,
+                                                       num_trees = 174,
                                                        num_threads= 24,
                                                        use_hessian_gain = False,
-                                                       num_candidate_attributes_ratio = 0.23393143570120803,
+                                                       num_candidate_attributes_ratio = 0.9870220342382816,
                                                        min_examples = 16,
-                                                       shrinkage = 0.08330125725394923,
-                                                       split_axis= 'AXIS_ALIGNED',
-                                                       #sparse_oblique_num_projections_exponent=1.4840848018157962,
+                                                       shrinkage = 0.045285579220737934,
+                                                       split_axis= 'SPARSE_OBLIQUE',
+                                                       sparse_oblique_num_projections_exponent=1.9461056970812536,
                                                        discretize_numerical_columns=True,
                                                        loss='MULTINOMIAL_LOG_LIKELIHOOD')
 

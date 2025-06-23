@@ -83,7 +83,7 @@ def train_model_wrapper(config):
                                                     num_threads = 4,
                                                     discretize_numerical_columns=True,
         )
-    model = learner.train(train_dataset, verbose=2)
+    model = learner.train(train_dataset, verbose=0)
     
     random_test_indices = np.random.choice(int(len(test_labels)), int(0.1*len(test_labels)))
     
@@ -95,7 +95,7 @@ def train_model_wrapper(config):
         sub_y_test.append(test_labels[test_i])
         
     test_dataset  = {"label": np.array(sub_y_test,dtype=int), "feature": sub_X_test}
-    print(model.evaluate(test_dataset))
+    #print(model.evaluate(test_dataset))
     return {'loss': model.evaluate(test_dataset).loss}
 
 

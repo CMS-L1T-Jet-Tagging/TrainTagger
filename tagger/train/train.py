@@ -113,7 +113,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     sample_weights = sample_weights / np.mean(sample_weights)
 
     if weightingMethod == "none":
-        return None
+        return np.ones(num_samples)
     return sample_weights
 
 

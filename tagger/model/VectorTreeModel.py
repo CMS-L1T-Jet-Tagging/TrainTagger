@@ -32,17 +32,16 @@ class VectorTreeModel(JetTagModel):
         Additional hyperparameters in the config
 
         """
-
         self.learner = ydf.GradientBoostedTreesLearner(label="label",
                                                        weights="weights",
-                                                       #max_depth=5,
-                                                       #num_trees = 100,
+                                                       max_depth=4,
+                                                       num_trees = 204,
                                                        num_threads= 24,
-                                                       #use_hessian_gain = False,
-                                                       #num_candidate_attributes_ratio = 0.40078699053960587,
-                                                       #min_examples = 18,
-                                                       #shrinkage = 0.09028563682674234,
-                                                       #split_axis= 'SPARSE_OBLIQUE',
+                                                       use_hessian_gain = False,
+                                                       num_candidate_attributes_ratio = 0.23393143570120803,
+                                                       min_examples = 16,
+                                                       shrinkage = 0.08330125725394923,
+                                                       split_axis= 'AXIS_ALIGNED',
                                                        #sparse_oblique_num_projections_exponent=1.4840848018157962,
                                                        discretize_numerical_columns=True,
                                                        loss='MULTINOMIAL_LOG_LIKELIHOOD')
@@ -163,8 +162,6 @@ class VectorTreeModel(JetTagModel):
         model_outputs = self.jet_model.predict(test_dataset)
         class_predictions = model_outputs
         pt_ratio_predictions = np.array([[1] for i in range(model_outputs.shape[0])])
-        print(class_predictions)
-        print(pt_ratio_predictions)
         return (class_predictions, pt_ratio_predictions)
     
     def predict(self, X_test: npt.NDArray[np.float64] ) -> tuple:

@@ -110,7 +110,7 @@ def tune_bdt():
             metric="loss",
             mode="min",
             scheduler=sched,
-            num_samples=100,
+            num_samples=10,
         ),
         run_config=tune.RunConfig(
             name="exp",
@@ -272,7 +272,7 @@ if __name__ == "__main__":
         )
     
     train_dataset = {"label": np.array(y_train_array), "feature": X_train_array, "weights" : sample_weight}
-    test_dataset  = {"label": np.array(y_test_array), "feature": X_test_array}
+    test_dataset  = {"label": np.array(y_test_array), "feature": X_test_array,"weights" : np.ones_like(y_test_array)}
     model = learner.train(train_dataset, verbose=2)
     print(model.describe())
     print(model.evaluate(test_dataset))

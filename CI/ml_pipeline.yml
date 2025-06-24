@@ -40,6 +40,7 @@ variables:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
+    RUN_TUNE: 'False'
     TAG: 'v0.0.0'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
@@ -113,6 +114,8 @@ tune:
   needs:
     - job : data
       optional: true
+  rules:
+    - if: $RUN_TUNE == "True"
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz

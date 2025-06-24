@@ -34,15 +34,15 @@ class VectorTreeModel(JetTagModel):
         """
         self.learner = ydf.GradientBoostedTreesLearner(label="label",
                                                        weights="weights",
-                                                       max_depth=5,
-                                                       num_trees = 174,
+                                                       max_depth=4,
+                                                       num_trees = 163,
                                                        num_threads= 24,
                                                        use_hessian_gain = False,
-                                                       num_candidate_attributes_ratio = 0.9870220342382816,
-                                                       min_examples = 16,
-                                                       shrinkage = 0.045285579220737934,
+                                                       num_candidate_attributes_ratio = 0.5035154767076918,
+                                                       min_examples = 12,
+                                                       shrinkage = 0.04129112908601492,
                                                        split_axis= 'SPARSE_OBLIQUE',
-                                                       sparse_oblique_num_projections_exponent=1.9461056970812536,
+                                                       sparse_oblique_num_projections_exponent=1.1893541744500546,
                                                        discretize_numerical_columns=True,
                                                        loss='MULTINOMIAL_LOG_LIKELIHOOD')
 
@@ -200,7 +200,7 @@ class VectorTreeModel(JetTagModel):
         pt_ratio_predictions = np.array([[1] for i in range(model_outputs.shape[0])])
         return (class_predictions, pt_ratio_predictions)
     
-    def transform(candidate : npt.NDArray[np.float64] ):
+    def transform(self,candidate : npt.NDArray[np.float64] ):
         new_candidate = np.zeros_like(candidate)
         new_candidate[0] = candidate[0] / 15000  #pt
         new_candidate[1] = candidate[1] / 4   #pt_rel

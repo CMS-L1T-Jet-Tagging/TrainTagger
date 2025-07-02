@@ -122,7 +122,7 @@ tune:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
   - tar -xf signal_process_data.tgz
   - source activate tagger
-  - python tagger/train/tune.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model -sig $SIGNAL >> job.log
+  - python tagger/train/tune.py -p 10 -y tagger/model/configs/$Model.yaml -o output/$Model -sig $SIGNAL >> job.log
 
 
   artifacts:

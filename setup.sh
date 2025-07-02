@@ -1,4 +1,5 @@
 # To run before using the codes
+source activate tagger
 export PYTHONPATH=$PYTHONPATH:$PWD
 export CI_COMMIT_REF_NAME=local
 

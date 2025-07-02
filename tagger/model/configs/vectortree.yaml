@@ -4,17 +4,19 @@ run_config :
   debug : True
 
 model_config :
+  max_depth: 4
+  num_trees: 100
+  use_hessian_gain: False
+  num_candidate_attributes_ratio: 0.5035154767076918
+  min_examples: 12
+  shrinkage:  0.1
+  loss : 'MULTINOMIAL_LOG_LIKELIHOOD'
 
 quantization_config:
 
-
 training_config :
   weight_method: "none"
-  epochs : 10
-  batch_size : 1024
-  learning_rate : 0.001
-  validation_split : 0.1
-
+  validation_split: 0.1
 
 hls4ml_config:
 

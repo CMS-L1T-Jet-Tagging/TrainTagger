@@ -21,8 +21,8 @@ class VectorTreeModel(JetTagModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
-
-    def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
+    
+    def build_model(self, inputs_shape: tuple, outputs_shape: tuple, num_workers: int = 4, tuner=None):
         """build model override, makes the model layer by layer
 
         Args:
@@ -32,23 +32,29 @@ class VectorTreeModel(JetTagModel):
         Additional hyperparameters in the config
 
         """
-        self.learner = ydf.GradientBoostedTreesLearner(label="label",
+        if tuner != None:
+            config = {'num_trees':100}
+        else:
+            config = self.model_config
+        self.learner = ydf.GradientBoostedTreesLearner(**config,
+                                                       label="label",
                                                        weights="weights",
-                                                       max_depth=4,
-                                                       num_trees = 163,
                                                        num_threads= 24,
-                                                       use_hessian_gain = False,
-                                                       num_candidate_attributes_ratio = 0.5035154767076918,
-                                                       min_examples = 12,
-                                                       shrinkage = 0.04129112908601492,
-                                                       split_axis= 'SPARSE_OBLIQUE',
-                                                       sparse_oblique_num_projections_exponent=1.1893541744500546,
                                                        discretize_numerical_columns=True,
-                                                       loss='MULTINOMIAL_LOG_LIKELIHOOD')
+                                                       tuner=tuner,
+                                                       working_dir=self.output_directory
+                                                       )
 
     def compile_model(self, num_samples: int):
         pass
-
+    
+    def tune(self,
+        X_train: npt.NDArray[np.float64],
+        y_train: npt.NDArray[np.float64],
+        pt_target_train: npt.NDArray[np.float64],
+        sample_weight: npt.NDArray[np.float64]):
+        self.fit(X_train,y_train,pt_target_train,sample_weight)
+    
     def fit(
         self,
         X_train: npt.NDArray[np.float64],
@@ -75,7 +81,6 @@ class VectorTreeModel(JetTagModel):
                 print(ibatch , " out of ", len(X_train) )
             for icandidate,candidate in enumerate(X_train[ibatch]):
                 if np.abs(np.sum(candidate)) > 0:
-                    self.transform(candidate)
                     vectors_list.append([candidate])
                 #print(np.sum(candidate),candidate,y_train[icandidate])
             vectors = np.array(np.concatenate(vectors_list, axis=0)) 
@@ -128,44 +133,6 @@ class VectorTreeModel(JetTagModel):
         # Plot history
         #loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
 
-    def predict_with_answers(self, X_test: npt.NDArray[np.float64], y_test: npt.NDArray[np.float64] , pt_target_test: npt.NDArray[np.float64] ) -> tuple:
-        """Predict method for model
-
-        Args:
-            X_test (npt.NDArray[np.float64]): Input X test
-
-        Returns:
-            tuple: (class_predictions , pt_ratio_predictions)
-        """
-        
-        X_test_array = []
-        y_test_array = []
-        
-        for ibatch,batch in enumerate(X_test):
-            vectors_list = []
-            y_list = []
-            if ibatch % 250000 == 0:
-                print(ibatch , " out of ", len(X_test) )
-            for icandidate,candidate in enumerate(X_test[ibatch]):
-                if np.abs(np.sum(candidate)) > 0:
-                    self.transform(candidate)
-                    vectors_list.append([candidate])
-                #print(np.sum(candidate),candidate,y_test[icandidate])
-            vectors = np.array(np.concatenate(vectors_list, axis=0)) 
-            X_test_array.append(vectors)
-            index = np.where(y_test[ibatch] == 1)
-            y_test_array.append(index[0][0])
-            
-
-        test_dataset  = {"label": np.array(y_test_array,dtype=int), "feature": X_test_array}
-        
-        print(self.jet_model.evaluate(test_dataset))
-        
-        model_outputs = self.jet_model.predict(test_dataset)
-        class_predictions = model_outputs
-        pt_ratio_predictions = np.array([[1] for i in range(model_outputs.shape[0])])
-        return (class_predictions, pt_ratio_predictions)
-    
     def predict(self, X_test: npt.NDArray[np.float64] ) -> tuple:
         """Predict method for model
 
@@ -186,7 +153,6 @@ class VectorTreeModel(JetTagModel):
                 print(ibatch , " out of ", len(X_test) )
             for icandidate,candidate in enumerate(X_test[ibatch]):
                 if np.abs(np.sum(candidate)) > 0:
-                    self.transform(candidate)
                     vectors_list.append([candidate])
             vectors = np.array(np.concatenate(vectors_list, axis=0)) 
             X_test_array.append(vectors)
@@ -200,14 +166,8 @@ class VectorTreeModel(JetTagModel):
         pt_ratio_predictions = np.array([[1] for i in range(model_outputs.shape[0])])
         return (class_predictions, pt_ratio_predictions)
     
-    def transform(self,candidate : npt.NDArray[np.float64] ):
-        new_candidate = np.zeros_like(candidate)
-        new_candidate[0] = candidate[0] / 15000  #pt
-        new_candidate[1] = candidate[1] / 4   #pt_rel
-        new_candidate[2] = candidate[2] / 8   #pt_log
-        new_candidate[3] = (candidate[3] + 100 ) / 200 #deta
-        new_candidate[4] = (candidate[4] + 100 ) / 200   #dphi
-        new_candidate[14] = candidate[14] + 200 / 400  #z0
-        new_candidate[15] = candidate[15] / 40    #dxy
-        new_candidate[18] = candidate[18] / 7   #emid
-        new_candidate[19] = candidate[19]  / 7  #quality
+    def init_tuner(
+        self
+        ):
+        
+        self.tuner = ydf.RandomSearchTuner(num_trials=5, automatic_search_space=True)

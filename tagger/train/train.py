@@ -5,10 +5,11 @@ from argparse import ArgumentParser
 import numpy as np
 
 # Import from other modules
-from tagger.data.tools import load_data, to_ML
+from tagger.data.tools import load_data, to_ML, calculate_scale, fit_scale
 from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
+from sklearn import preprocessing
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
@@ -129,9 +130,14 @@ def train(model, out_dir, percent):
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-
+    print(X_train)
+    scalings = calculate_scale(X_train)
+    print(scalings)
+    X_train = fit_scale(X_train,scalings)
+    print(X_train)
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
+    X_test = fit_scale(X_test,scalings)
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
@@ -154,6 +160,7 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
+
     model.fit(X_train, y_train, pt_target_train, sample_weight)
 
     model.save()

@@ -16,7 +16,7 @@ from ray import tune
 from ray.tune.schedulers import AsyncHyperBandScheduler
 
 # Import from other modules
-from tagger.data.tools import load_data, to_ML
+from tagger.data.tools import load_data, to_ML, calculate_scale, fit_scale
 from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
@@ -55,35 +55,19 @@ def train_model_wrapper(config):
     
     train_dataset = {"label": np.array(sub_y,dtype=int), "feature": sub_X, "weights":sub_weight}
     
-    if config['split_axis'] == 'AXIS_ALIGNED':
 
-        learner = ydf.GradientBoostedTreesLearner(  weights= "weights",
-                                                    max_depth = config['max_depth'],
-                                                    use_hessian_gain=config['use_hessian_gain'],
-                                                    num_candidate_attributes_ratio=config['num_candidate_attributes_ratio'],
-                                                    min_examples=config['min_examples'],
-                                                    shrinkage=config['shrinkage'],
-                                                    label="label",
-                                                    num_trees = config['num_trees'],
-                                                    num_threads = 4,
-                                                    discretize_numerical_columns=True,
+    learner = ydf.GradientBoostedTreesLearner(  weights= "weights",
+                                                max_depth = config['max_depth'],
+                                                use_hessian_gain=config['use_hessian_gain'],
+                                                num_candidate_attributes_ratio=config['num_candidate_attributes_ratio'],
+                                                min_examples=config['min_examples'],
+                                                shrinkage=config['shrinkage'],
+                                                label="label",
+                                                num_trees = 100,
+                                                num_threads = 4,
+                                                discretize_numerical_columns=True,
         )
-    
-    elif config['split_axis'] == 'SPARSE_OBLIQUE':
-        learner = ydf.GradientBoostedTreesLearner(  weights= "weights",
-                                                    max_depth = config['max_depth'],
-                                                    num_trees = config['num_trees'],
-                                                    use_hessian_gain=config['use_hessian_gain'],
-                                                    num_candidate_attributes_ratio=config['num_candidate_attributes_ratio'],
-                                                    min_examples=config['min_examples'],
-                                                    shrinkage=config['shrinkage'],
-                                                    split_axis=config['split_axis'],
-                                                    sparse_oblique_num_projections_exponent=config['sparse_oblique_num_projections_exponent'],
-                                                    label="label",
-                                                    num_threads = 4,
-                                                    discretize_numerical_columns=True,
-        )
-    model = learner.train(train_dataset, verbose=0)
+    learner.train(train_dataset, verbose=0)
     
     random_test_indices = np.random.choice(int(len(test_labels)), int(0.1*len(test_labels)))
     
@@ -123,9 +107,7 @@ def tune_bdt():
             "use_hessian_gain":tune.choice([True,False]),
             "num_candidate_attributes_ratio":tune.uniform(0.1, 1.0),
             "min_examples":tune.randint(10,20),
-            "shrinkage":tune.loguniform(0.0001, 0.1, base=10),
-            "split_axis":tune.choice(['SPARSE_OBLIQUE','AXIS_ALIGNED']),
-            "sparse_oblique_num_projections_exponent":tune.uniform(1.0, 2.0),
+            "shrinkage":tune.loguniform(0.01, 0.5, base=10),
             "sample_weight" : tune.choice(["none", "ptref", "onlyclass"])
         },
     )
@@ -160,9 +142,12 @@ if __name__ == "__main__":
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+    scalings = calculate_scale(X_train)
+    X_train = fit_scale(X_train,scalings)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
+    X_test = fit_scale(X_test,scalings)
     save_test_data(args.output, X_test, y_test, truth_pt_test, reco_pt_test)
 
     sample_weight_choices = ["none", "ptref", "onlyclass"]
@@ -243,33 +228,18 @@ if __name__ == "__main__":
     results = tune_bdt()
     print(f"Best hyperparameters found were: {results.get_best_result().config} | loss: {results.get_best_result().metrics['loss']}")
         
-    if results.get_best_result().config['split_axis'] == 'AXIS_ALIGNED':
-            learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],
-                                                      weights = 'weights',
-                                                    use_hessian_gain=results.get_best_result().config['use_hessian_gain'],
-                                                    num_candidate_attributes_ratio=results.get_best_result().config['num_candidate_attributes_ratio'],
-                                                    min_examples=results.get_best_result().config['min_examples'],
-                                                    shrinkage=results.get_best_result().config['shrinkage'],
-                                                    label="label",
-                                                    num_trees=results.get_best_result().config['num_trees'],
-                                                    num_threads = os.cpu_count(),
-                                                    discretize_numerical_columns=True,
+    learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],
+                                                weights = 'weights',
+                                                use_hessian_gain=results.get_best_result().config['use_hessian_gain'],
+                                                num_candidate_attributes_ratio=results.get_best_result().config['num_candidate_attributes_ratio'],
+                                                min_examples=results.get_best_result().config['min_examples'],
+                                                shrinkage=results.get_best_result().config['shrinkage'],
+                                                label="label",
+                                                num_trees=500,
+                                                num_threads = os.cpu_count(),
+                                                discretize_numerical_columns=True,
         )
-    
-    elif results.get_best_result().config['split_axis'] == 'SPARSE_OBLIQUE':
-        learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],
-                                                    weights = 'weights',
-                                                    use_hessian_gain=results.get_best_result().config['use_hessian_gain'],
-                                                    num_candidate_attributes_ratio=results.get_best_result().config['num_candidate_attributes_ratio'],
-                                                    min_examples=results.get_best_result().config['min_examples'],
-                                                    shrinkage=results.get_best_result().config['shrinkage'],
-                                                    split_axis=results.get_best_result().config['split_axis'],
-                                                    sparse_oblique_num_projections_exponent=results.get_best_result().config['sparse_oblique_num_projections_exponent'],
-                                                    label="label",
-                                                    num_trees=results.get_best_result().config['num_trees'],
-                                                    num_threads = os.cpu_count(),
-                                                    discretize_numerical_columns=True,
-        )
+
     
     train_dataset = {"label": np.array(y_train_array), "feature": X_train_array, "weights" : sample_weight}
     test_dataset  = {"label": np.array(y_test_array), "feature": X_test_array,"weights" : np.ones_like(y_test_array)}

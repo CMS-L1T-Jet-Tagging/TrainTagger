@@ -12,8 +12,7 @@ import numpy as np
 import numpy.typing as npt
 import yaml
 
-from tagger.plot.basic import loss_history
-
+from tagger.plot.basic import loss_history, ROC
 
 class JetTagModel(ABC):
     """Parent Class for Jet Tag Models
@@ -48,6 +47,8 @@ class JetTagModel(ABC):
         self.callbacks = []
 
         self.history = None
+        
+        self.param_space = {}
 
     def load_yaml(self, yaml_path: str):
         """Load config dictionaries
@@ -64,6 +65,17 @@ class JetTagModel(ABC):
         self.training_config = yaml_dict['training_config']
         self.hls4ml_config = yaml_dict['hls4ml_config']
 
+    def toYaml(self, yaml_path: str):
+        full_config = {'model': self.__class__,
+                       'run_config': run_config, 
+                       'model_config': run_config, 
+                       'quantization_config': run_config, 
+                       'training_config': run_config, 
+                       'hls4ml_config': run_config}
+                       
+        with open(yaml_path, 'w') as stream:
+            yaml.dump(full_config, yaml_file, default_flow_style=False)
+            
     @abstractmethod
     def build_model(self, **kwargs):
         """
@@ -91,7 +103,7 @@ class JetTagModel(ABC):
         Must be written for child class
         """
 
-    def predict(self, X_test: npt.NDArray[np.float64], y_test: npt.NDArray[np.float64], pt_target_test: npt.NDArray[np.float64] ) -> tuple:
+    def predict(self, X_test: npt.NDArray[np.float64] ) -> tuple:
         """Predict method for model
 
         Args:
@@ -186,7 +198,6 @@ class JetTagModel(ABC):
 
         # Plot history
         loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
-
 
 class JetModelFactory:
     """The factory class for creating Jet Tag Models"""

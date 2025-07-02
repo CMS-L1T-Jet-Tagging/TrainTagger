@@ -41,7 +41,6 @@ VectorTreee:vector_tree_5param_extended_trk:
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'False'
     RUN_TUNE: 'True'
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline

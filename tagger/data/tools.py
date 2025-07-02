@@ -321,9 +321,25 @@ def to_ML(data, class_labels):
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
-
+    
     return X, y, pt_target, truth_pt, reco_pt
 
+def calculate_scale(X):
+    scalings = {}
+    scaled_features = [0,1,2,3,4,5,14,15,18,19]
+    for feature in scaled_features:
+        flattened_X = X[:, :, feature].flatten()
+        std = np.std(flattened_X[flattened_X != 0])
+        mean = np.mean(flattened_X[flattened_X != 0])
+        
+        scalings[feature] = {'mean':mean,'std':std}
+    return scalings
+
+def fit_scale(X,scalings):
+    scaled_features = [0,1,2,3,4,5,14,15,18,19]
+    for feature in scaled_features:
+        X[:, :, feature] = (X[:, :, feature] - scalings[feature]['mean']) / scalings[feature]['std']   
+    return X
 
 def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """

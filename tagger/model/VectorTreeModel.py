@@ -39,6 +39,7 @@ class VectorTreeModel(JetTagModel):
         self.learner = ydf.GradientBoostedTreesLearner(**config,
                                                        label="label",
                                                        weights="weights",
+                                                       features=[('feature', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE)],
                                                        num_threads= 24,
                                                        discretize_numerical_columns=True,
                                                        tuner=tuner,
@@ -81,7 +82,7 @@ class VectorTreeModel(JetTagModel):
                 print(ibatch , " out of ", len(X_train) )
             for icandidate,candidate in enumerate(X_train[ibatch]):
                 if np.abs(np.sum(candidate)) > 0:
-                    vectors_list.append(candidate)
+                    vectors_list.append([candidate])
                 #print(np.sum(candidate),candidate,y_train[icandidate])
             vectors = np.array(np.concatenate(vectors_list, axis=0)) 
             X_train_array.append(vectors)

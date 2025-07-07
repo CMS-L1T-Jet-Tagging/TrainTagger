@@ -42,7 +42,7 @@ variables:
     RUN_SYNTHESIS: 'True'
     RUN_TUNE: 'False'
     TAG: 'v0.0.0'
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 .template:
   image: $IMAGE

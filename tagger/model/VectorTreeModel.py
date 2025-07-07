@@ -36,6 +36,8 @@ class VectorTreeModel(JetTagModel):
             config = {'num_trees':100}
         else:
             config = self.model_config
+            
+        print(ydf.__version__)
         self.learner = ydf.GradientBoostedTreesLearner(**config,
                                                        label="label",
                                                        weights="weights",

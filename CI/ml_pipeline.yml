@@ -97,8 +97,8 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - pip uninstall ydf
-  - pip install ydf
+  - pip uninstall --yes ydf
+  - pip install --yes ydf
   - ./CI/run_training.sh $RERUN_ON_TAG
   artifacts:
     paths:
@@ -124,8 +124,8 @@ tune:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
   - tar -xf signal_process_data.tgz
   - source activate tagger
-  - pip uninstall ydf
-  - pip install ydf
+  - pip uninstall --yes ydf 
+  - pip install --yes ydf
   - python tagger/train/tune.py -p 10 -y tagger/model/configs/$Model.yaml -o output/$Model -sig $SIGNAL >> job.log
 
 

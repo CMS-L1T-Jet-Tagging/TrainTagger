@@ -67,7 +67,7 @@ def train_model_wrapper(config):
                                                 num_threads = 4,
                                                 discretize_numerical_columns=True,
         )
-    learner.train(train_dataset, verbose=0)
+    tuning_model = learner.train(train_dataset, verbose=0)
     
     random_test_indices = np.random.choice(int(len(test_labels)), int(0.1*len(test_labels)))
     
@@ -80,7 +80,7 @@ def train_model_wrapper(config):
         
     test_dataset  = {"label": np.array(sub_y_test,dtype=int), "feature": sub_X_test}
     #print(model.evaluate(test_dataset))
-    return {'loss': learner.evaluate(test_dataset).loss}
+    return {'loss': tuning_model.evaluate(test_dataset).loss}
 
 
 def tune_bdt():

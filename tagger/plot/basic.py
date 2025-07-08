@@ -132,14 +132,20 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     assert (
         class_pair[0] in class_labels and class_pair[1] in class_labels
     ), "Both class_pair labels must exist in class_labels"
-
+    # print("y pred")
+    # print(y_pred)
+    # print(y_test)
     # Get indices of the classes to compare
     idx1, idx2 = class_labels[class_pair[0]], class_labels[class_pair[1]]
 
     # Select true labels and predicted probabilities for the selected classes
     y_true1, y_true2 = y_test[:, idx1], y_test[:, idx2]
     y_score1, y_score2 = y_pred[:, idx1], y_pred[:, idx2]
-
+    
+    # print(y_true1)
+    # print(y_true2)
+    # print(y_score1)
+    # print(y_score2)
     # Combine the labels and scores for binary classification
     selection = (y_true1 == 1) | (y_true2 == 1)
     y_true_binary = y_true1[selection]
@@ -147,6 +153,8 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
 
     # Compute FPR, TPR, and AUC
+    # print(y_true_binary)
+    # print(y_score_binary)
     fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
     roc_auc = auc(fpr, tpr)
 
@@ -860,12 +868,13 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-
+    print(X_test.shape)
     model_outputs = model.predict(X_test )
 
     # Get classification outputs
     y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1][:, 0]
+    print(model_outputs)
+    pt_ratio = model_outputs[1]
 
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
@@ -887,8 +896,14 @@ def basic(model, signal_dirs):
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.predict(sample_data )[0]
+            print(sample_data.shape)
+            sample_preds = model.jet_model.predict(sample_data )[0]
+            print(sample_preds)
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
+            print(y_pred)
+            print(y_test)
+            print(signal_indices)
+            print(y_p)
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)
 

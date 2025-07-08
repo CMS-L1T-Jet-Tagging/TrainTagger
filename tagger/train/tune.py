@@ -252,7 +252,7 @@ if __name__ == "__main__":
     results = tune_bdt()
     print(f"Best hyperparameters found were: {results.get_best_result().config} | loss: {results.get_best_result().metrics['loss']}")
         
-    learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],,
+    learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],
                                                 weights = 'weights',
                                                 use_hessian_gain=results.get_best_result().config['use_hessian_gain'],
                                                 num_candidate_attributes_ratio=results.get_best_result().config['num_candidate_attributes_ratio'],

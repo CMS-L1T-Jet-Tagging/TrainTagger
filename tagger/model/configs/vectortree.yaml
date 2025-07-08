@@ -5,7 +5,7 @@ run_config :
 
 model_config :
   max_depth: 4
-  num_trees: 100
+  num_trees: 1000
   use_hessian_gain: False
   num_candidate_attributes_ratio: 0.5035154767076918
   min_examples: 12

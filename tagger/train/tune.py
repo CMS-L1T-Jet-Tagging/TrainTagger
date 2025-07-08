@@ -40,6 +40,8 @@ def train_model_wrapper(config):
         test_labels = pickle.load(fp)
     with open("traindata/train_weights", "rb") as fp:   # Unpickling
         train_weights = pickle.load(fp)
+    with open("traindata/test_weights", "rb") as fp:   # Unpickling
+        test_weights = pickle.load(fp)
  
     train_weight = train_weights[config['sample_weight']]
     random_indices = np.random.choice(int(len(train_labels)), int(0.1*len(train_labels)))
@@ -69,16 +71,19 @@ def train_model_wrapper(config):
         )
     tuning_model = learner.train(train_dataset, verbose=0)
     
+    test_weight = test_weights[config['sample_weight']]
     random_test_indices = np.random.choice(int(len(test_labels)), int(0.1*len(test_labels)))
     
     sub_X_test = []
     sub_y_test = []
+    sub_weight_test = []
     
     for test_i in random_test_indices:
         sub_X_test.append(test_features[test_i])
         sub_y_test.append(test_labels[test_i])
+        sub_weight_test.append(test_weight[test_i])
         
-    test_dataset  = {"label": np.array(sub_y_test,dtype=int), "feature": sub_X_test}
+    test_dataset  = {"label": np.array(sub_y_test,dtype=int), "feature": sub_X_test, "weights":sub_weight_test}
     #print(model.evaluate(test_dataset))
     return {'loss': tuning_model.evaluate(test_dataset).loss}
 
@@ -151,10 +156,10 @@ if __name__ == "__main__":
     save_test_data(args.output, X_test, y_test, truth_pt_test, reco_pt_test)
 
     sample_weight_choices = ["none", "ptref", "onlyclass"]
-    sample_weights = {}
+    sample_weights_train = {}
     # Calculate the sample weights for training
     for weight_choice in sample_weight_choices:
-        sample_weight = train_weights(
+        sample_weight_train = train_weights(
             y_train,
             reco_pt_train,
             class_labels,
@@ -162,11 +167,28 @@ if __name__ == "__main__":
             debug=model.run_config['debug'],
         )
         
-        sample_weights[weight_choice] = sample_weight
+        sample_weights_train[weight_choice] = sample_weight_train
         
     if model.run_config['debug']:
         print("DEBUG - Checking sample_weight:")
-        print(sample_weight)
+        print(sample_weight_train)
+        
+    sample_weights_test = {}
+    # Calculate the sample weights for training
+    for weight_choice in sample_weight_choices:
+        sample_weight_test = train_weights(
+            y_test,
+            reco_pt_test,
+            class_labels,
+            weightingMethod=weight_choice,
+            debug=model.run_config['debug'],
+        )
+        
+        sample_weights_test[weight_choice] = sample_weight_test
+        
+    if model.run_config['debug']:
+        print("DEBUG - Checking sample_weight:")
+        print(sample_weight_test)
 
     # Get input shape
     input_shape = X_train.shape[1:]  # First dimension is batch size
@@ -222,13 +244,15 @@ if __name__ == "__main__":
     with open("testdata/test_labels", "wb") as fp:   #Pickling
         pickle.dump(y_test_array, fp)
     with open("traindata/train_weights", "wb") as fp:   #Pickling
-        pickle.dump(sample_weights, fp)
+        pickle.dump(sample_weights_train, fp)
+    with open("testdata/test_weights", "wb") as fp:   #Pickling
+        pickle.dump(sample_weights_test, fp)
 
 
     results = tune_bdt()
     print(f"Best hyperparameters found were: {results.get_best_result().config} | loss: {results.get_best_result().metrics['loss']}")
         
-    learner = ydf.GradientBoostedTreesLearner(  max_depth = 3,
+    learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],,
                                                 weights = 'weights',
                                                 use_hessian_gain=results.get_best_result().config['use_hessian_gain'],
                                                 num_candidate_attributes_ratio=results.get_best_result().config['num_candidate_attributes_ratio'],
@@ -241,12 +265,12 @@ if __name__ == "__main__":
         )
 
     
-    train_dataset = {"label": np.array(y_train_array), "feature": X_train_array, "weights" : sample_weight}
-    test_dataset  = {"label": np.array(y_test_array), "feature": X_test_array,"weights" : np.ones_like(y_test_array)}
-    model = learner.train(train_dataset, verbose=2)
-    print(model.describe())
-    print(model.evaluate(test_dataset))
-    print(model.analyze(test_dataset, sampling=0.1))
+    train_dataset = {"label": np.array(y_train_array), "feature": X_train_array, "weights" : sample_weight_train}
+    test_dataset  = {"label": np.array(y_test_array), "feature": X_test_array,"weights" :sample_weight_test}
+    model.jet_model = learner.train(train_dataset, verbose=2)
+    print(model.jet_model.describe())
+    print(model.jet_model.evaluate(test_dataset))
+    print(model.jet_model.analyze(test_dataset, sampling=0.1))
     model.save("model_tuned")
     results = basic(model, args.signal_processes)
 

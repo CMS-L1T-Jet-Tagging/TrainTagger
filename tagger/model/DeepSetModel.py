@@ -18,9 +18,9 @@ from qkeras.qlayers import QActivation, QDense
 from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.utils import load_qmodel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from tensorflow.keras.layers import Activation, BatchNormalization
+from tensorflow.keras.layers import Activation, BatchNormalization, Dense
 
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
+from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, L2NormalizeLayer
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
 # Set some tensorflow constants
@@ -336,3 +336,35 @@ class DeepSetModel(JetTagModel):
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
+
+    def create_encoder(self,inputs_shape, projection_dim):
+        embedding_model = tf.keras.models.Model(inputs=self.jet_model.input, outputs=self.jet_model.get_layer('pool').output)
+
+        inputs = tf.keras.Input(inputs_shape)
+        #inputs = tf.keras.Input(shape=(28, 28, 1))
+        features = embedding_model(inputs)
+
+        # Projection head, the z's remember?
+        outputs = tf.keras.Sequential([
+            Dense(64, activation='relu'),
+            Dense(projection_dim)
+        ])(features)
+        # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
+        outputs = L2NormalizeLayer()(outputs)
+        self.embedding_model = tf.keras.Model(inputs, outputs)
+        
+    def save_encoder(self,out_dir):
+        model_export = tfmot.sparsity.keras.strip_pruning(self.embedding_model)
+
+        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
+        # Use keras save format !NOT .h5! due to depreciation
+        export_path = os.path.join(out_dir, "model/saved_model.keras")
+        model_export.save(export_path)
+        print(f"Model saved to {export_path}")
+        
+        
+    def load_encoder(self,out_dir):
+        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras")
+        
+        
+    

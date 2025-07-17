@@ -30,6 +30,7 @@ class JetTagModel(ABC):
 
         self.jet_model = None
         self.hls_jet_model = None
+        self.embedding_model = None
 
         self.input_vars = []
         self.extra_vars = []
@@ -186,8 +187,7 @@ class JetTagModel(ABC):
 
         # Plot history
         loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
-
-
+        
 class JetModelFactory:
     """The factory class for creating Jet Tag Models"""
 

@@ -120,7 +120,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
 def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data", percentage=percent)
     model.set_labels(
         input_vars,
         extra_vars,

@@ -32,23 +32,25 @@ include:
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 
 
-DeepSetHGQ:baseline_hgq_5param_extended_trk:
+
+DeepSetEmbedding:baseline_embedding_5param_extended_trk:
   extends: .ml_pipeline
   variables:
-    Name: baseline_hgq_5param_extended_trk
-    Model: baseline_HGQ
+    Name: baseline_embedding_5param_extended_trk
+    Model: baseline_embedding
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 
-DeepSet:baseline_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: baseline_5param_extended_trk
-    Model: baseline
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+
+# DeepSetHGQ:baseline_hgq_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_hgq_5param_extended_trk
+#     Model: baseline_HGQ
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
 
 # DeepSet_reduced_precision:baseline_reduced_precision_5param_extended_trk:
 #   extends: .ml_pipeline

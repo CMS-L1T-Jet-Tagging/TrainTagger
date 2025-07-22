@@ -177,9 +177,12 @@ def contrastive_loss(z1, z2, temperature=0.5):
     return tf.reduce_mean(loss)
 
 # ----- Encoder and Projection Head -----
-class L2NormalizeLayer(tf.keras.layers.Layer):
+class L2NormalizeLayer(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
     def call(self, inputs):
         return tf.math.l2_normalize(inputs, axis=1)
+    def get_prunable_weights(self):
+        return []
+
 
 
 def choose_aggregator(choice: str, name: str, bits=9, bits_int=2, alpha_val=1, **common_args) -> tf.keras.layers.Layer:

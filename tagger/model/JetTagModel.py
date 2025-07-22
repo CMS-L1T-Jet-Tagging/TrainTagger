@@ -30,7 +30,6 @@ class JetTagModel(ABC):
 
         self.jet_model = None
         self.hls_jet_model = None
-        self.embedding_model = None
 
         self.input_vars = []
         self.extra_vars = []

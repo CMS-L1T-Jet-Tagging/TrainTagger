@@ -18,6 +18,8 @@ import histbook
 import numpy as np
 import shap
 from sklearn.metrics import auc, roc_curve
+from sklearn.manifold import TSNE
+
 
 from tagger.data.tools import load_data, to_ML
 from tagger.plot import style
@@ -653,6 +655,64 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
         plt.savefig(plot_dir + "/shap_summary_reg.pdf", bbox_inches='tight')
         plt.savefig(plot_dir + "/shap_summary_reg.png", bbox_inches='tight')
 
+def plot_embeddings(model, X_test, y_test,y_pt, class_labels, plot_dir):
+    labels = list(class_labels.keys())
+    embedding_model = tf.keras.Model(model.jet_model.input, model.jet_model.get_layer('pool').output)
+    
+    # ----- Embedding Visualization -----
+    # Extract features and apply t-SNE
+    features = embedding_model(X_test).numpy()
+    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, init='random', random_state=42,verbose=1)
+    embeddings_2d = tsne.fit_transform(features)
+    
+    colormap = cm.get_cmap('Set1', len(labels))
+    colours = [np.where(y_test[i]==1) for i in range(len(y_test))]
+    
+    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
+    scatter = ax.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=colours, cmap= colormap, alpha=0.6)
+    cbar = plt.colorbar(scatter, ticks=range(len(labels)))
+    cbar.ax.set_yticklabels(labels)
+    
+    ax.set_title("t-SNE of Pooling Layer embeddings",y=1.0, pad=84)
+    
+    plt.tight_layout()
+    plt.savefig(plot_dir+'/Embedding_2D.png')
+    plt.savefig(plot_dir+'/Embedding_2D.pdf')
+    
+    
+    # And for the classifier
+    features_class,features_regress = model.jet_model(X_test)
+    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, init='random', random_state=42,verbose=1)
+    embeddings_2d = tsne.fit_transform(features_class.numpy())
+
+    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
+    scatter = plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=colours, cmap= colormap, alpha=0.6)
+    cbar = plt.colorbar(scatter, ticks=range(len(labels)))
+    cbar.ax.set_yticklabels(labels)
+    ax.set_title("t-SNE of classification output",y=1.0, pad=84)
+    
+    plt.tight_layout()
+    plt.savefig(plot_dir+'/2D_class_finetune.png')
+    plt.savefig(plot_dir+'/2D_class_finetune.pdf')
+    
+    # And for the regression
+    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, init='random', random_state=42,verbose=1)
+    embeddings_2d = tsne.fit_transform(features_regress.numpy())
+
+    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
+    scatter = plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=y_pt, cmap='jet', norm=matplotlib.colors.LogNorm(),alpha=0.6)
+    cbar = plt.colorbar(scatter)
+    #cbar.ax.set_yticklabels(labels)
+    ax.set_title("t-SNE of regression output",y=1.0, pad=84)
+    
+    plt.tight_layout()
+    plt.savefig(plot_dir+'/2D_regress_finetune.png')
+    plt.savefig(plot_dir+'/2D_regress_finetune.pdf')
+    
+
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
@@ -923,5 +983,7 @@ def basic(model, signal_dirs):
 
     # Plot the shaply feature importance
     plot_shaply(model, X_test, model.class_labels, model.input_vars, plot_dir)
+    
+    plot_embeddings(model, X_test, y_test, truth_pt_test, model.class_labels, plot_dir )
 
     return ROC_dict

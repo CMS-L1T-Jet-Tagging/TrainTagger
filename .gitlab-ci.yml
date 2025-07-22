@@ -37,7 +37,7 @@ DeepSetEmbedding:baseline_embedding_5param_extended_trk:
   extends: .ml_pipeline
   variables:
     Name: baseline_embedding_5param_extended_trk
-    Model: baseline_embedding
+    Model: baseline_contrastive
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'

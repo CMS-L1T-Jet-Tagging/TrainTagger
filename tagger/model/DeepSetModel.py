@@ -463,7 +463,7 @@ class DeepSetEmbeddingModel(DeepSetModel):
 
         # Projection head, the z's remember?
         outputs = tf.keras.Sequential([
-            Dense(10, activation='relu'),
+            Dense(64, activation='relu'),
             Dense(projection_dim)
         ])(features)
         # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
@@ -507,7 +507,7 @@ class DeepSetEmbeddingModel(DeepSetModel):
             )
         }
         
-        self.embedding_model = tfmot.sparsity.keras.prune_low_magnitude(self.embedding_model, **embedding_prune_params)
+        #elf.embedding_model = tfmot.sparsity.keras.prune_low_magnitude(self.embedding_model, **embedding_prune_params)
         self.jet_model = tfmot.sparsity.keras.prune_low_magnitude(self.jet_model, **fine_tune_prune_params)
 
         # Add preface to loss name
@@ -587,18 +587,6 @@ class DeepSetEmbeddingModel(DeepSetModel):
             self.callbacks, add_history=True, model=self.embedding_model)
         callbacks.on_train_begin(logs=logs)
         
-        print("============= untrained embedding model ============")
-        for layer in self.embedding_model.layers:
-            print(layer)
-            print(layer.get_weights())
-        print("============= ############# ============")
-        
-        print("============= untrained jet model ============") 
-        for layer in self.jet_model.layers:
-            print(layer)
-            print(layer.get_weights())
-        print("============= ############# ============")
-        
         for epoch in range(self.training_config['embedding_epochs']):
             callbacks.on_epoch_begin(epoch, logs=logs)
             losses = []
@@ -623,28 +611,6 @@ class DeepSetEmbeddingModel(DeepSetModel):
             if isinstance(cb, tf.keras.callbacks.History):
                 self.history = cb
         assert self.history is not None
-        
-        jet_model_layers = [layer.name for layer in self.jet_model.layers]
-        
-        print("============= trained embedding model ============") 
-        for layer in self.embedding_model.layers:
-            if layer.name == 'model':
-                print(layer.get_weights())
-                embedding_model_weights = layer.get_weights()
-        print("============= ############# ============")
-        
-        print("============= untrained jet model again? ============") 
-        for layer in self.jet_model.layers:
-            print(layer)
-            print(layer.get_weights())
-        print("============= ############# ============")
-        
-        # print("============= trained jet model ============")   
-        # for i,array in enumerate(embedding_model_weights):
-        #     print(array)
-        #     print(self.jet_model.get_layer(jet_model_layers[i+1]).get_weights())
-        #     self.jet_model.get_layer(jet_model_layers[i+1]).set_weights(array)
-            
             
         for layer in self.jet_model.layers[:7]:
             layer.trainable = False

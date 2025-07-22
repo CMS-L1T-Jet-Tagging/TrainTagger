@@ -6,9 +6,9 @@ run_config :
 model_config :
   name : baseline
   conv1d_layers : [10,10]
-  classification_layers : [32,16]
-  regression_layers : [10]
-  projection_dims : 10
+  classification_layers : [64]
+  regression_layers : [64]
+  projection_dims : 8
   kernel_initializer : 'lecun_uniform'
   aggregator : 'mean'
 
@@ -20,8 +20,8 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  embedding_epochs : 10
-  finetuning_epochs : 30
+  embedding_epochs : 20
+  finetuning_epochs : 100
   batch_size : 1024
   learning_rate : 0.001
   embeddding_lr : 0.001

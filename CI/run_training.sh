@@ -1,6 +1,6 @@
 #!/bin/bash
 if [[ "$1" == "False" ]]; then
-    python tagger/train/constrastive_train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model -fine True
+    python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model
     cd output/$Model/model
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
     eos cp saved_model.keras ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/

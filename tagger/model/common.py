@@ -134,11 +134,11 @@ class SimCLRPreprocessing(tf.keras.layers.Layer):
         super().__init__()
         self.augment = tf.keras.Sequential([
             tf.keras.layers.Rescaling(1./255),
-            tf.keras.layers.RandomCrop(16, 20),
+            #tf.keras.layers.RandomCrop(16, 20),
             #layers.RandomCrop(28, 28),
             tf.keras.layers.RandomFlip("horizontal"),
             tf.keras.layers.RandomRotation(0.1),
-            tf.keras.layers.RandomZoom(0.2),
+            #tf.keras.layers.RandomZoom(0.2),
         ])
 
     def call(self, x):

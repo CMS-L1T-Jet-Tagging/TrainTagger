@@ -535,7 +535,7 @@ class DeepSetEmbeddingModel(DeepSetModel):
         # Define the pruning
         self._prune_model(num_samples)
         
-        self.constrastive_optimizer = tf.keras.optimizers.Adam(learning_rate=0.12) 
+        self.constrastive_optimizer = tf.keras.optimizers.Adam(learning_rate=self.training_config['embeddding_lr']) 
         self.embedding_model.optimizer = self.constrastive_optimizer  
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(

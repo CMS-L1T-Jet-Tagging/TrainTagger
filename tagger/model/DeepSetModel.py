@@ -507,7 +507,7 @@ class DeepSetEmbeddingModel(DeepSetModel):
             )
         }
         
-        #elf.embedding_model = tfmot.sparsity.keras.prune_low_magnitude(self.embedding_model, **embedding_prune_params)
+        self.embedding_model = tfmot.sparsity.keras.prune_low_magnitude(self.embedding_model, **embedding_prune_params)
         self.jet_model = tfmot.sparsity.keras.prune_low_magnitude(self.jet_model, **fine_tune_prune_params)
 
         # Add preface to loss name
@@ -535,7 +535,7 @@ class DeepSetEmbeddingModel(DeepSetModel):
         # Define the pruning
         self._prune_model(num_samples)
         
-        self.constrastive_optimizer = tf.keras.optimizers.Adam(learning_rate=self.training_config['embeddding_lr']) 
+        self.constrastive_optimizer = tf.keras.optimizers.Adam()
         self.embedding_model.optimizer = self.constrastive_optimizer  
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(

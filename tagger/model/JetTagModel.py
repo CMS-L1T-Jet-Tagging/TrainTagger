@@ -104,7 +104,8 @@ class JetTagModel(ABC):
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)
-
+    
+    @staticmethod
     def save_decorator(save_func):
         """Decorator used to include additional
         saving functionality for child classes
@@ -135,6 +136,7 @@ class JetTagModel(ABC):
 
         return wrapper
 
+    @staticmethod
     def load_decorator(load_func):
         """Decorator used to include additional
         loading functionality for child classes

@@ -463,7 +463,7 @@ class DeepSetEmbeddingModel(DeepSetModel):
 
         # Projection head, the z's remember?
         outputs = tf.keras.Sequential([
-            Dense(64, activation='relu'),
+            Dense(10, activation='relu'),
             Dense(projection_dim)
         ])(features)
         # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
@@ -614,6 +614,10 @@ class DeepSetEmbeddingModel(DeepSetModel):
             
         for layer in self.jet_model.layers[:7]:
             layer.trainable = False
+            
+        for i,layer in self.jet_model.layers:
+            if i in [12,13,14,15,16]:
+                layer.trainable = False
 
         # Train the model using hyperparameters in yaml config
         self.history = self.jet_model.fit(

@@ -38,10 +38,11 @@ class VectorTreeModel(JetTagModel):
             config = self.model_config
             
         print(ydf.__version__)
+        features = [('pt', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_rel', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_log', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('delta', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pid', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('z0', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('dxy', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('puppiweight', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('emid', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('quality', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE)]
         self.learner = ydf.GradientBoostedTreesLearner(**config,
                                                        label="label",
                                                        weights="weights",
-                                                       features=[('feature', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE)],
+                                                       features=features,
                                                        num_threads= 24,
                                                        discretize_numerical_columns=True,
                                                        tuner=tuner,
@@ -74,26 +75,51 @@ class VectorTreeModel(JetTagModel):
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
         
-        X_train_array = []
+        X_train_dict = {'pt':[],'pt_rel':[],'pt_log':[],'delta':[],'pid':[],'z0':[],'dxy':[],'puppiweight':[],'emid':[],'quality':[]}
         y_train_array = []
         
         for ibatch,batch in enumerate(X_train):
-            vectors_list = []
-            y_list = []
             if ibatch % 250000 == 0:
                 print(ibatch , " out of ", len(X_train) )
-            for icandidate,candidate in enumerate(X_train[ibatch]):
-                if np.abs(np.sum(candidate)) > 0:
-                    vectors_list.append([candidate])
-                #print(np.sum(candidate),candidate,y_train[icandidate])
-            vectors = np.array(np.concatenate(vectors_list, axis=0)) 
-            X_train_array.append(vectors)
+            '''
+              0 pt
+              1 pt_rel
+              2 pt_log
+              3 deta
+              4 dphi
+              5 mass
+              6 isPhoton
+              7 isElectronPlus
+              8 isElectronMinus
+              9 isMuonPlus
+              10 isMuonMinus
+              11 isNeutralHadron
+              12 isChargedHadronPlus
+              13 isChargedHadronMinus
+              14 z0
+              15 dxy
+              16 isfilled
+              17 puppiweight
+              18 emid
+              19 quality
+            '''            
+            X_train_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
+            X_train_dict['pt_rel'].append(np.array([[batch[j,1]] for j in range(len(batch))]))
+            X_train_dict['pt_log'].append(np.array([[batch[j,2]] for j in range(len(batch))]))
+            X_train_dict['delta'].append(np.array([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13]] for j in range(len(batch))]))
+            X_train_dict['z0'].append(np.array([[batch[j,14]] for j in range(len(batch))]))
+            X_train_dict['dxy'].append(np.array([[batch[j,15]] for j in range(len(batch))]))
+            X_train_dict['puppiweight'].append(np.array([[batch[j,17]] for j in range(len(batch))]))
+            X_train_dict['emid'].append(np.array([[batch[j,18]] for j in range(len(batch))]))
+            X_train_dict['quality'].append(np.array([[batch[j,19]] for j in range(len(batch))]))
+
             index = np.where(y_train[ibatch] == 1)
             y_train_array.append(index[0][0])
             
-
-        train_dataset  = {"label": np.array(y_train_array,dtype=int), "feature": X_train_array, "weights": sample_weight}
-        self.jet_model = self.learner.train(train_dataset,verbose=2)
+        X_train_dict["label"] = np.array(y_train_array,dtype=int)
+        X_train_dict["weights"] = sample_weight
+        self.jet_model = self.learner.train(X_train_dict,verbose=2)
         
         #print(self.jet_model.describe())
         
@@ -146,25 +172,27 @@ class VectorTreeModel(JetTagModel):
             tuple: (class_predictions , pt_ratio_predictions)
         """
         
-        X_test_array = []
+        X_test_dict = {'pt':[],'pt_rel':[],'pt_log':[],'delta':[],'pid':[],'z0':[],'dxy':[],'puppiweight':[],'emid':[],'quality':[]}
         y_test_array = []
         
         for ibatch,batch in enumerate(X_test):
-            vectors_list = []
-            y_list = []
             if ibatch % 250000 == 0:
                 print(ibatch , " out of ", len(X_test) )
-            for icandidate,candidate in enumerate(X_test[ibatch]):
-                if np.abs(np.sum(candidate)) > 0:
-                    vectors_list.append([candidate])
-            vectors = np.array(np.concatenate(vectors_list, axis=0)) 
-            X_test_array.append(vectors)
+            X_test_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
+            X_test_dict['pt_rel'].append(np.array([[batch[j,1]] for j in range(len(batch))]))
+            X_test_dict['pt_log'].append(np.array([[batch[j,2]] for j in range(len(batch))]))
+            X_test_dict['delta'].append(np.array([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13]] for j in range(len(batch))]))
+            X_test_dict['z0'].append(np.array([[batch[j,14]] for j in range(len(batch))]))
+            X_test_dict['dxy'].append(np.array([[batch[j,15]] for j in range(len(batch))]))
+            X_test_dict['puppiweight'].append(np.array([[batch[j,17]] for j in range(len(batch))]))
+            X_test_dict['emid'].append(np.array([[batch[j,18]] for j in range(len(batch))]))
+            X_test_dict['quality'].append(np.array([[batch[j,19]] for j in range(len(batch))]))
             y_test_array.append(0)
             
-
-        test_dataset  = {"label": np.array(y_test_array,dtype=int), "feature": X_test_array}
         
-        model_outputs = self.jet_model.predict(test_dataset)
+        X_test_dict["label"] =  np.array(y_test_array,dtype=int)        
+        model_outputs = self.jet_model.predict(X_test_dict)
         class_predictions = model_outputs
         pt_ratio_predictions = np.array([[1] for i in range(model_outputs.shape[0])])
         return (class_predictions, pt_ratio_predictions)

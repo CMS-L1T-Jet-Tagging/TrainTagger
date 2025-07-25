@@ -130,11 +130,11 @@ def train(model, out_dir, percent):
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-    scalings = calculate_scale(X_train)
-    X_train = fit_scale(X_train,scalings)
+    #scalings = calculate_scale(X_train)
+    #X_train = fit_scale(X_train,scalings)
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    X_test = fit_scale(X_test,scalings)
+    #X_test = fit_scale(X_test,scalings)
     #print(X_test.factor())
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 

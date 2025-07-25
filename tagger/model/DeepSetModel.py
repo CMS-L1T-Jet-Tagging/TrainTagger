@@ -22,7 +22,6 @@ from tensorflow.keras.layers import Activation, BatchNormalization, Dense
 
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, L2NormalizeLayer, contrastive_loss, SimCLRPreprocessing
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tqdm import tqdm
 
 # Set some tensorflow constants
 NUM_THREADS = 24
@@ -228,72 +227,33 @@ class DeepSetModel(JetTagModel):
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
 
-        # --- OPTIMIZED FAST TRAINING using tf.data pipeline ---
-        # Convert to float32 for TensorFlow (in-place, saves memory)
-        X_train = np.asarray(X_train, dtype=np.float32)
-        y_train = np.asarray(y_train, dtype=np.float32)
-        pt_target_train = np.asarray(pt_target_train, dtype=np.float32)
-        sample_weight = np.asarray(sample_weight, dtype=np.float32)
+    def fit(
+        self,
+        X_train: npt.NDArray[np.float64],
+        y_train: npt.NDArray[np.float64],
+        pt_target_train: npt.NDArray[np.float64],
+        sample_weight: npt.NDArray[np.float64],
+    ):
+        """Fit the model to the training dataset
 
-        # Manual validation split for efficiency (use slicing, avoid copies)
-        val_split = self.training_config.get('validation_split', 0.1)
-        n_val = int(len(X_train) * val_split)
-        X_val = None  # Ensure X_val is always defined
-        if n_val > 0:
-            X_val = X_train[:n_val]
-            y_val = y_train[:n_val]
-            pt_val = pt_target_train[:n_val]
-            sw_val = sample_weight[:n_val]
-            X_train = X_train[n_val:]
-            y_train = y_train[n_val:]
-            pt_target_train = pt_target_train[n_val:]
-            sample_weight = sample_weight[n_val:]
-            val_data = (
-                {'model_input': X_val},
-                {self.loss_name + self.output_id_name: y_val, self.loss_name + self.output_pt_name: pt_val},
-                sw_val,
-            )
-            # Store validation length before deleting arrays
-            val_len = len(X_val)
-            del X_val, y_val, pt_val, sw_val
-        # Remove redundant else: val_data = None (already handled above)
-            val_len = 0
+        Args:
+            X_train (npt.NDArray[np.float64]): X train dataset
+            y_train (npt.NDArray[np.float64]): y train classification targets
+            pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
+            sample_weight (npt.NDArray[np.float64]): sample weighting
+        """
 
-        # Use tf.data.Dataset.from_tensor_slices for efficient pipeline
-        train_ds = tf.data.Dataset.from_tensor_slices((
+        # Train the model using hyperparameters in yaml config
+        self.history = self.jet_model.fit(
             {'model_input': X_train},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight
-        ))
-        # Use large shuffle buffer for better randomness, autotune for best performance
-        train_ds = train_ds.shuffle(buffer_size=min(10000, len(X_train)), reshuffle_each_iteration=True)
-        train_ds = train_ds.batch(self.training_config['batch_size'], drop_remainder=True)
-        train_ds = train_ds.prefetch(tf.data.AUTOTUNE)
-
-        # Validation dataset
-        if val_data:
-            val_ds = tf.data.Dataset.from_tensor_slices(val_data)
-            val_ds = val_ds.batch(self.training_config['batch_size'], drop_remainder=False)
-            val_ds = val_ds.prefetch(tf.data.AUTOTUNE)
-        else:
-            val_ds = None
-
-        # Use steps_per_epoch for large datasets to avoid partial batches
-        steps_per_epoch = len(X_train) // self.training_config['batch_size']
-        if n_val > 0 and val_len > 0:
-            validation_steps = val_len // self.training_config['batch_size']
-        else:
-            validation_steps = None
-
-        # Train the model using tf.data pipeline
-        self.history = self.jet_model.fit(
-            train_ds,
+            sample_weight=sample_weight,
             epochs=self.training_config['epochs'],
+            batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],
-            validation_data=val_ds,
-            steps_per_epoch=steps_per_epoch,
-            validation_steps=validation_steps,
+            validation_split=self.training_config['validation_split'],
             callbacks=self.callbacks,
+            shuffle=True,
         )
 
     # Decorated with save decorator for added functionality
@@ -631,19 +591,6 @@ class DeepSetEmbeddingModel(DeepSetModel):
         output_shape = (y_train.shape[-1],) if len(y_train.shape) > 1 else (1,)
         if self.backbone_model is None or self.jet_model is None:
             self.build_model(input_shape, output_shape)
-        # Always ensure encoder is created after build_model, as build_model may not set embedding_model
-        projection_dim = self.model_config['projection_dims']
-        if self.embedding_model is None:
-            self.create_encoder(input_shape, projection_dim)
-        # Force assignment in case create_encoder does not set self.embedding_model
-        if self.embedding_model is None:
-            # Try to get the encoder as return value (if create_encoder returns it)
-            encoder = self.create_encoder(input_shape, projection_dim)
-            if encoder is not None:
-                self.embedding_model = encoder
-            else:
-                raise RuntimeError("self.embedding_model is still None after create_encoder. Please check create_encoder implementation.")
-
         # --- Embedding (SimCLR) training (FAST) ---
         x_train = X_train[..., tf.newaxis].astype("float32")
         augment = SimCLRPreprocessing()
@@ -666,14 +613,14 @@ class DeepSetEmbeddingModel(DeepSetModel):
             # Record operations for automatic differentiation
             with tf.GradientTape() as tape:
                 # Forward pass: compute embeddings for both augmented views
-                z1 = embedding_model(x1, training=True)
-                z2 = embedding_model(x2, training=True)
+                z1 = self.embedding_model(x1, training=True)
+                z2 = self.embedding_model(x2, training=True)
                 # Compute SimCLR contrastive loss between the two views
                 loss = contrastive_loss(z1, z2)
             # Compute gradients of loss w.r.t. model trainable weights
-            grads = tape.gradient(loss, embedding_model.trainable_weights)
+            grads = tape.gradient(loss, self.embedding_model.trainable_weights)
             # Apply gradients to update model weights using optimizer
-            optimizer.apply_gradients(zip(grads, embedding_model.trainable_weights))
+            optimizer.apply_gradients(zip(grads, self.embedding_model.trainable_weights))
             # Return the computed loss for logging
             return loss
 
@@ -681,16 +628,12 @@ class DeepSetEmbeddingModel(DeepSetModel):
             callbacks.on_epoch_begin(epoch, logs=logs)
             losses = []
             ibatch = 0
-            n_batches = tf.data.experimental.cardinality(train_ds).numpy()
-            with tqdm(total=n_batches, desc=f"Embedding Epoch {epoch+1}", unit="batch") as pbar:
-                for x1, x2 in train_ds:
-                    ibatch += 1
-                    callbacks.on_train_batch_begin(ibatch, logs=logs)
-                    loss = train_step(x1, x2)
-                    losses.append(loss.numpy())
-                    callbacks.on_train_batch_end(ibatch, logs=logs)
-                    pbar.set_postfix({"loss": f"{np.mean(losses):.4f}"})
-                    pbar.update(1)
+            for x1, x2 in train_ds:
+                ibatch += 1
+                callbacks.on_train_batch_begin(ibatch, logs=logs)
+                loss = train_step(x1, x2)
+                losses.append(loss.numpy())
+                callbacks.on_train_batch_end(ibatch, logs=logs)
             logs['loss'] = np.mean(losses)
             print(f"Epoch {epoch+1}: Loss = {logs['loss']:.4f}")
             callbacks.on_epoch_end(epoch, logs=logs)
@@ -703,52 +646,19 @@ class DeepSetEmbeddingModel(DeepSetModel):
         pt_target_train = pt_target_train.astype("float32")
         sample_weight = sample_weight.astype("float32")
 
-        # Manual validation split for efficiency
-        val_split = self.training_config.get('validation_split', 0.1)
-        n_val = int(len(X_train) * val_split)
-        if n_val > 0:
-            X_val, y_val, pt_val, sw_val = X_train[:n_val], y_train[:n_val], pt_target_train[:n_val], sample_weight[:n_val]
-            X_train, y_train, pt_target_train, sample_weight = (
-                X_train[n_val:], y_train[n_val:], pt_target_train[n_val:], sample_weight[n_val:]
-            )
-            val_data = (
-                {'model_input': X_val},
-                {self.loss_name + self.output_id_name: y_val, self.loss_name + self.output_pt_name: pt_val},
-                sw_val,
-            )
-        else:
-            val_data = None
-
-        # Build tf.data.Dataset for training
-        train_ds = tf.data.Dataset.from_tensor_slices((
+        # Freeze layers 
+        for i, layer in enumerate(self.jet_model.layers):
+            if i in [0,1,2,3,4,5,6,7]:
+                self.jet_model.get_layer(layer.name).trainable = False
+        
+        self.history = self.jet_model.fit(
             {'model_input': X_train},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight
-        ))
-        train_ds = train_ds.shuffle(buffer_size=4096)
-        train_ds = train_ds.batch(self.training_config['batch_size'])
-        train_ds = train_ds.prefetch(tf.data.AUTOTUNE)
-
-        # Validation dataset
-        if val_data:
-            val_ds = tf.data.Dataset.from_tensor_slices(val_data)
-            val_ds = val_ds.batch(self.training_config['batch_size'])
-            val_ds = val_ds.prefetch(tf.data.AUTOTUNE)
-        else:
-            val_ds = None
-
-        # Freeze layers 
-        for layer in self.jet_model.layers[:7]:
-            layer.trainable = False
-        for i, layer in enumerate(self.jet_model.layers):
-            if i in [12, 13, 14, 15, 16]:
-                layer.trainable = False
-
-        # Train the model using tf.data pipeline
-        self.history = self.jet_model.fit(
-            train_ds,
+            sample_weight=sample_weight,
             epochs=self.training_config['finetuning_epochs'],
+            batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],
-            validation_data=val_ds,
+            validation_split=self.training_config['validation_split'],
             callbacks=self.callbacks + self.fine_tune_callbacks,
+            shuffle=True,
         )

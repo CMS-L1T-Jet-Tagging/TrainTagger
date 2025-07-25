@@ -38,7 +38,9 @@ class VectorTreeModel(JetTagModel):
             config = self.model_config
             
         print(ydf.__version__)
-        features = [('pt', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_rel', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_log', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('delta', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pid', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('z0', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('dxy', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('puppiweight', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('emid', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('quality', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE)]
+        features = [('pt', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_rel', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_log', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('delta', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pid', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('z0', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('dxy', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('puppiweight', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('quality', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE)]
+        features = features + [('avg_pt', ydf.Semantic.NUMERICAL),('avg_pt_rel', ydf.Semantic.NUMERICAL),('avg_pt_log', ydf.Semantic.NUMERICAL),('avg_deta', ydf.Semantic.NUMERICAL),('avg_dphi', ydf.Semantic.NUMERICAL),('avg_z0', ydf.Semantic.NUMERICAL),('avg_dxy', ydf.Semantic.NUMERICAL),('avg_puppiweight', ydf.Semantic.NUMERICAL),('avg_quality', ydf.Semantic.NUMERICAL)]
+        features = features + [('std_pt', ydf.Semantic.NUMERICAL),('std_pt_rel', ydf.Semantic.NUMERICAL),('std_pt_log', ydf.Semantic.NUMERICAL),('std_deta', ydf.Semantic.NUMERICAL),('std_dphi', ydf.Semantic.NUMERICAL),('std_z0', ydf.Semantic.NUMERICAL),('std_dxy', ydf.Semantic.NUMERICAL),('std_puppiweight', ydf.Semantic.NUMERICAL),('std_quality', ydf.Semantic.NUMERICAL)]
         self.learner = ydf.GradientBoostedTreesLearner(**config,
                                                        label="label",
                                                        weights="weights",
@@ -75,7 +77,15 @@ class VectorTreeModel(JetTagModel):
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
         
-        X_train_dict = {'pt':[],'pt_rel':[],'pt_log':[],'delta':[],'pid':[],'z0':[],'dxy':[],'puppiweight':[],'emid':[],'quality':[]}
+        X_train_dict = {'pt':[],'pt_rel':[],'pt_log':[],
+                        'delta':[],'pid':[],'z0':[],'dxy':[],
+                        'puppiweight':[],'quality':[],
+                        'avg_pt':[],'avg_pt_rel':[],'avg_pt_log':[],
+                        'avg_deta':[],'avg_dphi':[],'avg_z0':[],'avg_dxy':[],
+                        'avg_puppiweight':[],'avg_quality':[],
+                        'std_pt':[],'std_pt_rel':[],'std_pt_log':[],
+                        'std_deta':[],'std_dphi':[],'std_z0':[],'std_dxy':[],
+                        'std_puppiweight':[],'std_quality':[]}
         y_train_array = []
         
         for ibatch,batch in enumerate(X_train):
@@ -104,15 +114,32 @@ class VectorTreeModel(JetTagModel):
               19 quality
             '''            
             X_train_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
+            X_train_dict['avg_pt'].append(np.mean([[batch[j,0]] for j in range(len(batch))]))
+            X_train_dict['std_pt'].append(np.std([[batch[j,0]] for j in range(len(batch))]))
             X_train_dict['pt_rel'].append(np.array([[batch[j,1]] for j in range(len(batch))]))
+            X_train_dict['avg_pt_rel'].append(np.mean([[batch[j,1]] for j in range(len(batch))]))
+            X_train_dict['std_pt_rel'].append(np.std([[batch[j,1]] for j in range(len(batch))]))
             X_train_dict['pt_log'].append(np.array([[batch[j,2]] for j in range(len(batch))]))
+            X_train_dict['avg_pt_log'].append(np.mean([[batch[j,2]] for j in range(len(batch))]))
+            X_train_dict['std_pt_log'].append(np.std([[batch[j,2]] for j in range(len(batch))]))
             X_train_dict['delta'].append(np.array([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
-            X_train_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13]] for j in range(len(batch))]))
+            X_train_dict['avg_deta'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['std_deta'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['avg_dphi'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['std_dphi'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13],batch[j,18]] for j in range(len(batch))]))
             X_train_dict['z0'].append(np.array([[batch[j,14]] for j in range(len(batch))]))
+            X_train_dict['avg_z0'].append(np.mean([[batch[j,14]] for j in range(len(batch))]))
+            X_train_dict['std_z0'].append(np.std([[batch[j,14]] for j in range(len(batch))]))
             X_train_dict['dxy'].append(np.array([[batch[j,15]] for j in range(len(batch))]))
+            X_train_dict['avg_dxy'].append(np.mean([[batch[j,15]] for j in range(len(batch))]))
+            X_train_dict['std_dxy'].append(np.std([[batch[j,15]] for j in range(len(batch))]))
             X_train_dict['puppiweight'].append(np.array([[batch[j,17]] for j in range(len(batch))]))
-            X_train_dict['emid'].append(np.array([[batch[j,18]] for j in range(len(batch))]))
+            X_train_dict['avg_puppiweight'].append(np.mean([[batch[j,17]] for j in range(len(batch))]))
+            X_train_dict['std_puppiweight'].append(np.std([[batch[j,17]] for j in range(len(batch))]))
             X_train_dict['quality'].append(np.array([[batch[j,19]] for j in range(len(batch))]))
+            X_train_dict['avg_quality'].append(np.mean([[batch[j,19]] for j in range(len(batch))]))
+            X_train_dict['std_quality'].append(np.std([[batch[j,19]] for j in range(len(batch))]))
 
             index = np.where(y_train[ibatch] == 1)
             y_train_array.append(index[0][0])
@@ -120,6 +147,7 @@ class VectorTreeModel(JetTagModel):
         X_train_dict["label"] = np.array(y_train_array,dtype=int)
         X_train_dict["weights"] = sample_weight
         self.jet_model = self.learner.train(X_train_dict,verbose=2)
+        print(self.jet_model.describe())
         
         #print(self.jet_model.describe())
         
@@ -172,22 +200,47 @@ class VectorTreeModel(JetTagModel):
             tuple: (class_predictions , pt_ratio_predictions)
         """
         
-        X_test_dict = {'pt':[],'pt_rel':[],'pt_log':[],'delta':[],'pid':[],'z0':[],'dxy':[],'puppiweight':[],'emid':[],'quality':[]}
+        X_test_dict = {'pt':[],'pt_rel':[],'pt_log':[],
+                        'delta':[],'pid':[],'z0':[],'dxy':[],
+                        'puppiweight':[],'quality':[],
+                        'avg_pt':[],'avg_pt_rel':[],'avg_pt_log':[],
+                        'avg_deta':[],'avg_dphi':[],'avg_z0':[],'avg_dxy':[],
+                        'avg_puppiweight':[],'avg_quality':[],
+                        'std_pt':[],'std_pt_rel':[],'std_pt_log':[],
+                        'std_deta':[],'std_dphi':[],'std_z0':[],'std_dxy':[],
+                        'std_puppiweight':[],'std_quality':[]}
         y_test_array = []
         
         for ibatch,batch in enumerate(X_test):
             if ibatch % 250000 == 0:
                 print(ibatch , " out of ", len(X_test) )
             X_test_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
+            X_test_dict['avg_pt'].append(np.mean([[batch[j,0]] for j in range(len(batch))]))
+            X_test_dict['std_pt'].append(np.std([[batch[j,0]] for j in range(len(batch))]))
             X_test_dict['pt_rel'].append(np.array([[batch[j,1]] for j in range(len(batch))]))
+            X_test_dict['avg_pt_rel'].append(np.mean([[batch[j,1]] for j in range(len(batch))]))
+            X_test_dict['std_pt_rel'].append(np.std([[batch[j,1]] for j in range(len(batch))]))
             X_test_dict['pt_log'].append(np.array([[batch[j,2]] for j in range(len(batch))]))
+            X_test_dict['avg_pt_log'].append(np.mean([[batch[j,2]] for j in range(len(batch))]))
+            X_test_dict['std_pt_log'].append(np.std([[batch[j,2]] for j in range(len(batch))]))
             X_test_dict['delta'].append(np.array([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
-            X_test_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13]] for j in range(len(batch))]))
+            X_test_dict['avg_deta'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['std_deta'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['avg_dphi'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['std_dphi'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13],batch[j,18]] for j in range(len(batch))]))
             X_test_dict['z0'].append(np.array([[batch[j,14]] for j in range(len(batch))]))
+            X_test_dict['avg_z0'].append(np.mean([[batch[j,14]] for j in range(len(batch))]))
+            X_test_dict['std_z0'].append(np.std([[batch[j,14]] for j in range(len(batch))]))
             X_test_dict['dxy'].append(np.array([[batch[j,15]] for j in range(len(batch))]))
+            X_test_dict['avg_dxy'].append(np.mean([[batch[j,15]] for j in range(len(batch))]))
+            X_test_dict['std_dxy'].append(np.std([[batch[j,15]] for j in range(len(batch))]))
             X_test_dict['puppiweight'].append(np.array([[batch[j,17]] for j in range(len(batch))]))
-            X_test_dict['emid'].append(np.array([[batch[j,18]] for j in range(len(batch))]))
+            X_test_dict['avg_puppiweight'].append(np.mean([[batch[j,17]] for j in range(len(batch))]))
+            X_test_dict['std_puppiweight'].append(np.std([[batch[j,17]] for j in range(len(batch))]))
             X_test_dict['quality'].append(np.array([[batch[j,19]] for j in range(len(batch))]))
+            X_test_dict['avg_quality'].append(np.mean([[batch[j,19]] for j in range(len(batch))]))
+            X_test_dict['std_quality'].append(np.std([[batch[j,19]] for j in range(len(batch))]))
             y_test_array.append(0)
             
         

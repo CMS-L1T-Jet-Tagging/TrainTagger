@@ -27,36 +27,38 @@ def train_model_wrapper(config):
     os.system('cp -r /builds/ml_l1/TrainTagger/traindata .')
     os.system('cp -r /builds/ml_l1/TrainTagger/testdata .')
     
-    #os.system('cp -r /root/TrainTagger/traindata .')
-    #os.system('cp -r /root/TrainTagger/testdata .')
+    # os.system('cp -r /root/TrainTagger/traindata .')
+    # os.system('cp -r /root/TrainTagger/testdata .')
      
     with open("traindata/train_features", "rb") as fp:   # Unpickling
-        train_features = pickle.load(fp)
+        train_dict = pickle.load(fp)
     with open("testdata/test_features", "rb") as fp:   # Unpickling
-        test_features = pickle.load(fp)
+        test_dict = pickle.load(fp)
     with open("traindata/train_labels", "rb") as fp:   # Unpickling
         train_labels = pickle.load(fp)
     with open("testdata/test_labels", "rb") as fp:   # Unpickling
         test_labels = pickle.load(fp)
     with open("traindata/train_weights", "rb") as fp:   # Unpickling
         train_weights = pickle.load(fp)
-    with open("traindata/test_weights", "rb") as fp:   # Unpickling
+    with open("testdata/test_weights", "rb") as fp:   # Unpickling
         test_weights = pickle.load(fp)
  
     train_weight = train_weights[config['sample_weight']]
     random_indices = np.random.choice(int(len(train_labels)), int(0.1*len(train_labels)))
     
-    sub_X = []
+    sub_X = {key : [] for key in train_dict}
     sub_y = []
     sub_weight = []
     
     for X_i in random_indices:
-        sub_X.append(train_features[X_i])
+        for key in sub_X:
+            sub_X[key].append(train_features[key][X_i])
+        sub_X.append(train_dict[X_i])
         sub_y.append(train_labels[X_i])
         sub_weight.append(train_weight[X_i])
-    
-    train_dataset = {"label": np.array(sub_y,dtype=int), "feature": sub_X, "weights":sub_weight}
-    
+        
+    sub_X["label"] = np.array(sub_y,dtype=int)
+    sub_X["weights"] = sub_weight
 
     learner = ydf.GradientBoostedTreesLearner(  weights= "weights",
                                                 max_depth = config['max_depth'],
@@ -69,12 +71,12 @@ def train_model_wrapper(config):
                                                 num_threads = 4,
                                                 discretize_numerical_columns=True,
         )
-    tuning_model = learner.train(train_dataset, verbose=0)
+    tuning_model = learner.train(sub_X, verbose=0)
     
     test_weight = test_weights[config['sample_weight']]
     random_test_indices = np.random.choice(int(len(test_labels)), int(0.1*len(test_labels)))
     
-    sub_X_test = []
+    sub_X_test =  {key : [] for key in test_dict}
     sub_y_test = []
     sub_weight_test = []
     
@@ -83,9 +85,10 @@ def train_model_wrapper(config):
         sub_y_test.append(test_labels[test_i])
         sub_weight_test.append(test_weight[test_i])
         
-    test_dataset  = {"label": np.array(sub_y_test,dtype=int), "feature": sub_X_test, "weights":sub_weight_test}
+    sub_X_test["label"] = np.array(sub_y_test,dtype=int)
+    sub_X_test["weights"] = sub_weight_test
     #print(model.evaluate(test_dataset))
-    return {'loss': tuning_model.evaluate(test_dataset).loss}
+    return {'loss': tuning_model.evaluate(sub_X_test).loss}
 
 
 def tune_bdt():
@@ -147,12 +150,9 @@ if __name__ == "__main__":
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-    scalings = calculate_scale(X_train)
-    X_train = fit_scale(X_train,scalings)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    X_test = fit_scale(X_test,scalings)
     save_test_data(args.output, X_test, y_test, truth_pt_test, reco_pt_test)
 
     sample_weight_choices = ["none", "ptref", "onlyclass"]
@@ -199,46 +199,125 @@ if __name__ == "__main__":
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
     
-    X_train_array = []
+    X_train_dict = {'pt':[],'pt_rel':[],'pt_log':[],
+                        'delta':[],'pid':[],'z0':[],'dxy':[],
+                        'puppiweight':[],'quality':[],
+                        'avg_pt':[],'avg_pt_rel':[],'avg_pt_log':[],
+                        'avg_deta':[],'avg_dphi':[],'avg_z0':[],'avg_dxy':[],
+                        'avg_puppiweight':[],'avg_quality':[],
+                        'std_pt':[],'std_pt_rel':[],'std_pt_log':[],
+                        'std_deta':[],'std_dphi':[],'std_z0':[],'std_dxy':[],
+                        'std_puppiweight':[],'std_quality':[]}
     y_train_array = []
         
     for ibatch,batch in enumerate(X_train):
-        vectors_list = []
-        y_list = []
-        if ibatch % 250000 == 0:
-            print(ibatch , " out of ", len(X_train) )
-        for icandidate,candidate in enumerate(X_train[ibatch]):
-            if np.abs(np.sum(candidate)) > 0:
-                vectors_list.append([candidate])
-                #print(np.sum(candidate),candidate,y_train[icandidate])
-        vectors = np.array(np.concatenate(vectors_list, axis=0)) 
-        X_train_array.append(vectors)
-        index = np.where(y_train[ibatch] == 1)
-        y_train_array.append(index[0][0])
-        
-    X_test_array = []
+            if ibatch % 250000 == 0:
+                print(ibatch , " out of ", len(X_train) )
+            '''
+              0 pt
+              1 pt_rel
+              2 pt_log
+              3 deta
+              4 dphi
+              5 mass
+              6 isPhoton
+              7 isElectronPlus
+              8 isElectronMinus
+              9 isMuonPlus
+              10 isMuonMinus
+              11 isNeutralHadron
+              12 isChargedHadronPlus
+              13 isChargedHadronMinus
+              14 z0
+              15 dxy
+              16 isfilled
+              17 puppiweight
+              18 emid
+              19 quality
+            '''            
+            X_train_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
+            X_train_dict['avg_pt'].append(np.mean([[batch[j,0]] for j in range(len(batch))]))
+            X_train_dict['std_pt'].append(np.std([[batch[j,0]] for j in range(len(batch))]))
+            X_train_dict['pt_rel'].append(np.array([[batch[j,1]] for j in range(len(batch))]))
+            X_train_dict['avg_pt_rel'].append(np.mean([[batch[j,1]] for j in range(len(batch))]))
+            X_train_dict['std_pt_rel'].append(np.std([[batch[j,1]] for j in range(len(batch))]))
+            X_train_dict['pt_log'].append(np.array([[batch[j,2]] for j in range(len(batch))]))
+            X_train_dict['avg_pt_log'].append(np.mean([[batch[j,2]] for j in range(len(batch))]))
+            X_train_dict['std_pt_log'].append(np.std([[batch[j,2]] for j in range(len(batch))]))
+            X_train_dict['delta'].append(np.array([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['avg_deta'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['std_deta'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['avg_dphi'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['std_dphi'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_train_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13],batch[j,18]] for j in range(len(batch))]))
+            X_train_dict['z0'].append(np.array([[batch[j,14]] for j in range(len(batch))]))
+            X_train_dict['avg_z0'].append(np.mean([[batch[j,14]] for j in range(len(batch))]))
+            X_train_dict['std_z0'].append(np.std([[batch[j,14]] for j in range(len(batch))]))
+            X_train_dict['dxy'].append(np.array([[batch[j,15]] for j in range(len(batch))]))
+            X_train_dict['avg_dxy'].append(np.mean([[batch[j,15]] for j in range(len(batch))]))
+            X_train_dict['std_dxy'].append(np.std([[batch[j,15]] for j in range(len(batch))]))
+            X_train_dict['puppiweight'].append(np.array([[batch[j,17]] for j in range(len(batch))]))
+            X_train_dict['avg_puppiweight'].append(np.mean([[batch[j,17]] for j in range(len(batch))]))
+            X_train_dict['std_puppiweight'].append(np.std([[batch[j,17]] for j in range(len(batch))]))
+            X_train_dict['quality'].append(np.array([[batch[j,19]] for j in range(len(batch))]))
+            X_train_dict['avg_quality'].append(np.mean([[batch[j,19]] for j in range(len(batch))]))
+            X_train_dict['std_quality'].append(np.std([[batch[j,19]] for j in range(len(batch))]))
+
+            index = np.where(y_train[ibatch] == 1)
+            y_train_array.append(index[0][0])
+            
+    X_test_dict = {'pt':[],'pt_rel':[],'pt_log':[],
+                        'delta':[],'pid':[],'z0':[],'dxy':[],
+                        'puppiweight':[],'quality':[],
+                        'avg_pt':[],'avg_pt_rel':[],'avg_pt_log':[],
+                        'avg_deta':[],'avg_dphi':[],'avg_z0':[],'avg_dxy':[],
+                        'avg_puppiweight':[],'avg_quality':[],
+                        'std_pt':[],'std_pt_rel':[],'std_pt_log':[],
+                        'std_deta':[],'std_dphi':[],'std_z0':[],'std_dxy':[],
+                        'std_puppiweight':[],'std_quality':[]}
     y_test_array = []
         
     for ibatch,batch in enumerate(X_test):
-        vectors_list = []
-        y_list = []
-        if ibatch % 250000 == 0:
-            print(ibatch , " out of ", len(X_test) )
-        for icandidate,candidate in enumerate(X_test[ibatch]):
-            if np.abs(np.sum(candidate)) > 0:
-                vectors_list.append([candidate])
-                #print(np.sum(candidate),candidate,y_test[icandidate])
-        vectors = np.array(np.concatenate(vectors_list, axis=0)) 
-        X_test_array.append(vectors)
-        index = np.where(y_test[ibatch] == 1)
-        y_test_array.append(index[0][0])
+            if ibatch % 250000 == 0:
+                print(ibatch , " out of ", len(X_test) )
+                        X_test_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
+            X_test_dict['avg_pt'].append(np.mean([[batch[j,0]] for j in range(len(batch))]))
+            X_test_dict['std_pt'].append(np.std([[batch[j,0]] for j in range(len(batch))]))
+            X_test_dict['pt_rel'].append(np.array([[batch[j,1]] for j in range(len(batch))]))
+            X_test_dict['avg_pt_rel'].append(np.mean([[batch[j,1]] for j in range(len(batch))]))
+            X_test_dict['std_pt_rel'].append(np.std([[batch[j,1]] for j in range(len(batch))]))
+            X_test_dict['pt_log'].append(np.array([[batch[j,2]] for j in range(len(batch))]))
+            X_test_dict['avg_pt_log'].append(np.mean([[batch[j,2]] for j in range(len(batch))]))
+            X_test_dict['std_pt_log'].append(np.std([[batch[j,2]] for j in range(len(batch))]))
+            X_test_dict['delta'].append(np.array([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['avg_deta'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['std_deta'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['avg_dphi'].append(np.mean([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['std_dphi'].append(np.std([[batch[j,3],batch[j,4]] for j in range(len(batch))]))
+            X_test_dict['pid'].append(np.array([[batch[j,6],batch[j,7],batch[j,8],batch[j,9],batch[j,10],batch[j,11],batch[j,12],batch[j,13],batch[j,18]] for j in range(len(batch))]))
+            X_test_dict['z0'].append(np.array([[batch[j,14]] for j in range(len(batch))]))
+            X_test_dict['avg_z0'].append(np.mean([[batch[j,14]] for j in range(len(batch))]))
+            X_test_dict['std_z0'].append(np.std([[batch[j,14]] for j in range(len(batch))]))
+            X_test_dict['dxy'].append(np.array([[batch[j,15]] for j in range(len(batch))]))
+            X_test_dict['avg_dxy'].append(np.mean([[batch[j,15]] for j in range(len(batch))]))
+            X_test_dict['std_dxy'].append(np.std([[batch[j,15]] for j in range(len(batch))]))
+            X_test_dict['puppiweight'].append(np.array([[batch[j,17]] for j in range(len(batch))]))
+            X_test_dict['avg_puppiweight'].append(np.mean([[batch[j,17]] for j in range(len(batch))]))
+            X_test_dict['std_puppiweight'].append(np.std([[batch[j,17]] for j in range(len(batch))]))
+            X_test_dict['quality'].append(np.array([[batch[j,19]] for j in range(len(batch))]))
+            X_test_dict['avg_quality'].append(np.mean([[batch[j,19]] for j in range(len(batch))]))
+            X_test_dict['std_quality'].append(np.std([[batch[j,19]] for j in range(len(batch))]))
+            y_test_array.append(0)
+            
+        
+    X_test_dict["label"] =  np.array(y_test_array,dtype=int) 
     
     os.makedirs('traindata', exist_ok=True)
     os.makedirs('testdata', exist_ok=True)
     with open("traindata/train_features", "wb") as fp:   #Pickling
-        pickle.dump(X_train_array, fp)
+        pickle.dump(X_train_dict, fp)
     with open("testdata/test_features", "wb") as fp:   #Pickling
-        pickle.dump(X_test_array, fp)
+        pickle.dump(X_test_dict, fp)
     with open("traindata/train_labels", "wb") as fp:   #Pickling
         pickle.dump(y_train_array, fp)
     with open("testdata/test_labels", "wb") as fp:   #Pickling
@@ -265,12 +344,16 @@ if __name__ == "__main__":
         )
 
     
-    train_dataset = {"label": np.array(y_train_array), "feature": X_train_array, "weights" : sample_weight_train}
-    test_dataset  = {"label": np.array(y_test_array), "feature": X_test_array,"weights" :sample_weight_test}
-    model.jet_model = learner.train(train_dataset, verbose=2)
+    X_train_dict["label"] = np.array(y_train_array,dtype=int)
+    X_train_dict["weights"] = sample_weight_train
+    
+    X_test_dict["label"] = np.array(y_test_array,dtype=int)
+    X_test_dict["weights"] = sample_weight_test
+    
+    model.jet_model = learner.train(X_test_dict, verbose=2)
     print(model.jet_model.describe())
-    print(model.jet_model.evaluate(test_dataset))
-    print(model.jet_model.analyze(test_dataset, sampling=0.1))
+    print(model.jet_model.evaluate(X_test_dict))
+    print(model.jet_model.analyze(X_test_dict, sampling=0.1))
     model.save("model_tuned")
     results = basic(model, args.signal_processes)
 

@@ -1,0 +1,35 @@
+
+model: TransformerEmbeddingModel
+run_config :
+  verbose : 2
+  debug : True
+
+model_config :
+  name : transformer
+  emb_layers : [32,32]
+  transformer_layers : [[2,16,2,32],[2,16,2,32]] #num_heads, mha_hidden_dim, num_dense_layers, dim_dense_layers
+  classification_layers : [32,16]
+  regression_layers : [10]
+  projection_dims : 8
+  kernel_initializer : 'lecun_uniform'
+
+quantization_config:
+
+training_config :
+  weight_method: "onlyclass"
+  embedding_epochs : 40
+  finetuning_epochs : 100
+  batch_size : 1024
+  learning_rate : 0.01
+  embeddding_lr : 0.01
+
+  validation_split : 0.1
+  loss_weights : [1,1]
+  initial_sparsity : 0.0
+  final_sparsity : 0.1
+  EarlyStopping_patience : 10
+  ReduceLROnPlateau_factor : 0.5
+  ReduceLROnPlateau_patience : 5
+  ReduceLROnPlateau_min_lr : 0.00001
+
+hls4ml_config:

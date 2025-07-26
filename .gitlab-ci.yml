@@ -39,8 +39,17 @@ DeepSetEmbedding:baseline_embedding_5param_extended_trk:
     Name: baseline_embedding_5param_extended_trk
     Model: baseline_contrastive
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
+    RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'True'
+
+TransformerEmbedding:transformer_embedding_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: transformer_embedding_5param_extended_trk
+    Model: transformer_contrastive
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
 
 
 DeepSet:baseline_5param_extended_trk:
@@ -49,8 +58,8 @@ DeepSet:baseline_5param_extended_trk:
     Name: baseline_5param_extended_trk
     Model: baseline
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
 
 
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:

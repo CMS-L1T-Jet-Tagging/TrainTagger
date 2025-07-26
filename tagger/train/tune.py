@@ -56,7 +56,8 @@ def train_model_wrapper(config):
     
     for X_i in random_indices:
         for key in sub_X:
-            sub_X[key].append(train_dict[key][X_i])
+            if key not in ['label','weights']:
+                sub_X[key].append(train_dict[key][X_i])
         sub_y.append(train_labels[X_i])
         sub_weight.append(train_weight[X_i])
         
@@ -86,7 +87,8 @@ def train_model_wrapper(config):
     
     for test_i in random_test_indices:
         for key in sub_X:
-            sub_X_test[key].append(test_dict[key][X_i])
+            if key not in ['label','weights']:
+                sub_X_test[key].append(test_dict[key][test_i])
         sub_y_test.append(test_labels[test_i])
         sub_weight_test.append(test_weight[test_i])
         
@@ -361,7 +363,7 @@ if __name__ == "__main__":
     X_test_dict["label"] = np.array(y_test_array,dtype=int)
     X_test_dict["weights"] = sample_weight_test
     
-    model.jet_model = learner.train(X_test_dict, verbose=2)
+    model.jet_model = learner.train(X_train_dict, verbose=2)
     print(model.jet_model.describe())
     print(model.jet_model.evaluate(X_test_dict))
     print(model.jet_model.analyze(X_test_dict, sampling=0.1))

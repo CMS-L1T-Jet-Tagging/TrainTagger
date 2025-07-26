@@ -184,22 +184,6 @@ class TransformerModel(JetTagModel):
 
     def hls4ml_convert(self, firmware_dir: str, build: bool = False):
         print('AMEC: hls4ml_convert was called but will do nothing!')
-
-    def create_encoder(self,inputs_shape, projection_dim):
-        embedding_model = tf.keras.models.Model(inputs=self.jet_model.input, outputs=self.jet_model.get_layer('global_average_pooling1d').output)
-
-        inputs = tf.keras.Input(inputs_shape)
-        #inputs = tf.keras.Input(shape=(28, 28, 1))
-        features = embedding_model(inputs)
-
-        # Projection head, the z's remember?
-        outputs = tf.keras.Sequential([
-            Dense(64, activation='relu'),
-            Dense(projection_dim)
-        ])(features)
-        # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
-        outputs = L2NormalizeLayer()(outputs)
-        self.embedding_model = tf.keras.Model(inputs, outputs)
      
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('TransformerEmbeddingModel')
@@ -253,7 +237,7 @@ class TransformerEmbeddingModel(TransformerModel):
             main = LayerNormalization()(main+feedforward)
 
         # Global average pooling
-        main = GlobalAveragePooling1D(data_format='channels_last')(main)
+        main = GlobalAveragePooling1D(data_format='channels_last',name="pool")(main)
         self.backbone_model = tf.keras.Model(inputs=inputs, outputs=main)
 
         # Now split into jet ID and pt regression

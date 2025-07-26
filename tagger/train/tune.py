@@ -27,8 +27,8 @@ def train_model_wrapper(config):
     os.system('cp -r /builds/ml_l1/TrainTagger/traindata .')
     os.system('cp -r /builds/ml_l1/TrainTagger/testdata .')
     
-    # os.system('cp -r /root/TrainTagger/traindata .')
-    # os.system('cp -r /root/TrainTagger/testdata .')
+    #os.system('cp -r /root/TrainTagger/traindata .')
+    #os.system('cp -r /root/TrainTagger/testdata .')
      
     with open("traindata/train_features", "rb") as fp:   # Unpickling
         train_dict = pickle.load(fp)
@@ -42,6 +42,10 @@ def train_model_wrapper(config):
         train_weights = pickle.load(fp)
     with open("testdata/test_weights", "rb") as fp:   # Unpickling
         test_weights = pickle.load(fp)
+        
+    features = [('pt', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_rel', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_log', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('delta', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pid', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('z0', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('dxy', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('puppiweight', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('quality', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE)]
+    features = features + [('avg_pt', ydf.Semantic.NUMERICAL),('avg_pt_rel', ydf.Semantic.NUMERICAL),('avg_pt_log', ydf.Semantic.NUMERICAL),('avg_deta', ydf.Semantic.NUMERICAL),('avg_dphi', ydf.Semantic.NUMERICAL),('avg_z0', ydf.Semantic.NUMERICAL),('avg_dxy', ydf.Semantic.NUMERICAL),('avg_puppiweight', ydf.Semantic.NUMERICAL),('avg_quality', ydf.Semantic.NUMERICAL)]
+    features = features + [('std_pt', ydf.Semantic.NUMERICAL),('std_pt_rel', ydf.Semantic.NUMERICAL),('std_pt_log', ydf.Semantic.NUMERICAL),('std_deta', ydf.Semantic.NUMERICAL),('std_dphi', ydf.Semantic.NUMERICAL),('std_z0', ydf.Semantic.NUMERICAL),('std_dxy', ydf.Semantic.NUMERICAL),('std_puppiweight', ydf.Semantic.NUMERICAL),('std_quality', ydf.Semantic.NUMERICAL)]
  
     train_weight = train_weights[config['sample_weight']]
     random_indices = np.random.choice(int(len(train_labels)), int(0.1*len(train_labels)))
@@ -52,8 +56,7 @@ def train_model_wrapper(config):
     
     for X_i in random_indices:
         for key in sub_X:
-            sub_X[key].append(train_features[key][X_i])
-        sub_X.append(train_dict[X_i])
+            sub_X[key].append(train_dict[key][X_i])
         sub_y.append(train_labels[X_i])
         sub_weight.append(train_weight[X_i])
         
@@ -61,6 +64,7 @@ def train_model_wrapper(config):
     sub_X["weights"] = sub_weight
 
     learner = ydf.GradientBoostedTreesLearner(  weights= "weights",
+                                                features=features,
                                                 max_depth = config['max_depth'],
                                                 use_hessian_gain=config['use_hessian_gain'],
                                                 num_candidate_attributes_ratio=config['num_candidate_attributes_ratio'],
@@ -81,7 +85,8 @@ def train_model_wrapper(config):
     sub_weight_test = []
     
     for test_i in random_test_indices:
-        sub_X_test.append(test_features[test_i])
+        for key in sub_X:
+            sub_X_test[key].append(test_dict[key][X_i])
         sub_y_test.append(test_labels[test_i])
         sub_weight_test.append(test_weight[test_i])
         
@@ -208,6 +213,11 @@ if __name__ == "__main__":
                         'std_pt':[],'std_pt_rel':[],'std_pt_log':[],
                         'std_deta':[],'std_dphi':[],'std_z0':[],'std_dxy':[],
                         'std_puppiweight':[],'std_quality':[]}
+    
+    features = [('pt', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_rel', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pt_log', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('delta', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('pid', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('z0', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('dxy', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('puppiweight', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE),('quality', ydf.Semantic.NUMERICAL_VECTOR_SEQUENCE)]
+    features = features + [('avg_pt', ydf.Semantic.NUMERICAL),('avg_pt_rel', ydf.Semantic.NUMERICAL),('avg_pt_log', ydf.Semantic.NUMERICAL),('avg_deta', ydf.Semantic.NUMERICAL),('avg_dphi', ydf.Semantic.NUMERICAL),('avg_z0', ydf.Semantic.NUMERICAL),('avg_dxy', ydf.Semantic.NUMERICAL),('avg_puppiweight', ydf.Semantic.NUMERICAL),('avg_quality', ydf.Semantic.NUMERICAL)]
+    features = features + [('std_pt', ydf.Semantic.NUMERICAL),('std_pt_rel', ydf.Semantic.NUMERICAL),('std_pt_log', ydf.Semantic.NUMERICAL),('std_deta', ydf.Semantic.NUMERICAL),('std_dphi', ydf.Semantic.NUMERICAL),('std_z0', ydf.Semantic.NUMERICAL),('std_dxy', ydf.Semantic.NUMERICAL),('std_puppiweight', ydf.Semantic.NUMERICAL),('std_quality', ydf.Semantic.NUMERICAL)]
+ 
     y_train_array = []
         
     for ibatch,batch in enumerate(X_train):
@@ -280,7 +290,7 @@ if __name__ == "__main__":
     for ibatch,batch in enumerate(X_test):
             if ibatch % 250000 == 0:
                 print(ibatch , " out of ", len(X_test) )
-                        X_test_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
+            X_test_dict['pt'].append(np.array([[batch[j,0]] for j in range(len(batch))]))
             X_test_dict['avg_pt'].append(np.mean([[batch[j,0]] for j in range(len(batch))]))
             X_test_dict['std_pt'].append(np.std([[batch[j,0]] for j in range(len(batch))]))
             X_test_dict['pt_rel'].append(np.array([[batch[j,1]] for j in range(len(batch))]))
@@ -333,6 +343,7 @@ if __name__ == "__main__":
         
     learner = ydf.GradientBoostedTreesLearner(  max_depth = results.get_best_result().config['max_depth'],
                                                 weights = 'weights',
+                                                features = features,
                                                 use_hessian_gain=results.get_best_result().config['use_hessian_gain'],
                                                 num_candidate_attributes_ratio=results.get_best_result().config['num_candidate_attributes_ratio'],
                                                 min_examples=results.get_best_result().config['min_examples'],

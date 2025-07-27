@@ -391,11 +391,6 @@ class TransformerEmbeddingModel(TransformerModel):
         callbacks.on_train_end(logs=logs)
 
         # --- Finetuning (jet model) training ---
-        # Convert to float32 for TensorFlow
-        X_train = X_train.astype("float32")
-        y_train = y_train.astype("float32")
-        pt_target_train = pt_target_train.astype("float32")
-        sample_weight = sample_weight.astype("float32")
 
         # Freeze layers 
         for i, layer in enumerate(self.jet_model.layers):

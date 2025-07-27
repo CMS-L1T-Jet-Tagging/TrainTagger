@@ -51,6 +51,15 @@ TransformerEmbedding:transformer_embedding_5param_extended_trk:
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'False'
 
+Transformer:transformer_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: transformer_5param_extended_trk
+    Model: transformer
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
+
 
 DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline

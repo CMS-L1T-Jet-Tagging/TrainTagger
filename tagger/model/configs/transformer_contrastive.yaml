@@ -6,8 +6,8 @@ run_config :
 
 model_config :
   name : transformer
-  emb_layers : [32,32]
-  transformer_layers : [[2,16,2,32],[2,16,2,32]] #num_heads, mha_hidden_dim, num_dense_layers, dim_dense_layers
+  emb_layers : [16,16]
+  transformer_layers : [[2,8,2,16],[2,8,2,16]] #num_heads, mha_hidden_dim, num_dense_layers, dim_dense_layers
   classification_layers : [32,16]
   regression_layers : [10]
   projection_dims : 8

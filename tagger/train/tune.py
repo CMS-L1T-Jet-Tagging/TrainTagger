@@ -109,7 +109,7 @@ def tune_bdt():
             metric="loss",
             mode="min",
             scheduler=sched,
-            num_samples=10,
+            num_samples=100,
         ),
         run_config=tune.RunConfig(
             name="exp",

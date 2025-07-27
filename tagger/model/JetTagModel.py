@@ -132,6 +132,7 @@ class JetTagModel(ABC):
             """
             if out_dir == "None":
                 out_dir = self.output_directory
+            save_func(self, out_dir)
             # Save additional jsons associated with model
             # Dump input variables
             with open(os.path.join(out_dir, "input_vars.json"), "w") as f:
@@ -143,7 +144,7 @@ class JetTagModel(ABC):
             with open(os.path.join(out_dir, "class_labels.json"), "w") as f:
                 json.dump(self.class_labels, f, indent=4)
             # Do the rest of the saving, defined in child class
-            save_func(self, out_dir)
+            
 
         return wrapper
 

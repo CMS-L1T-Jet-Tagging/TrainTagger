@@ -21,6 +21,7 @@ NUM_THREADS = 24
 os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
 os.environ["TF_NUM_INTRAOP_THREADS"] = str(NUM_THREADS)
 os.environ["TF_NUM_INTEROP_THREADS"] = str(NUM_THREADS)
+os.environ["OPENBLAS_NUM_THREADS"] = str(64)
 
 tf.config.threading.set_inter_op_parallelism_threads(NUM_THREADS)
 tf.config.threading.set_intra_op_parallelism_threads(NUM_THREADS)
@@ -74,7 +75,7 @@ class TransformerModel(JetTagModel):
             main = LayerNormalization()(main+feedforward)
 
         # Global average pooling
-        main = GlobalAveragePooling1D(data_format='channels_last')(main)
+        main = GlobalAveragePooling1D(data_format='channels_last',name='pool')(main)
 
         # Now split into jet ID and pt regression
 

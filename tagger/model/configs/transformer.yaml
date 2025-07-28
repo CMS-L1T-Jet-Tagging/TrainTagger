@@ -5,8 +5,8 @@ run_config :
   debug : True
 model_config :
   name : transformer
-  emb_layers : [16,16]
-  transformer_layers : [[2,8,2,16],[2,8,2,16]] #num_heads, mha_hidden_dim, num_dense_layers, dim_dense_layers
+  emb_layers : [8,8]
+  transformer_layers : [[2,4,2,8],[2,4,2,8]] #num_heads, mha_hidden_dim, num_dense_layers, dim_dense_layers
   classification_layers : [32,16]
   regression_layers : [10]
   kernel_initializer : 'lecun_uniform'

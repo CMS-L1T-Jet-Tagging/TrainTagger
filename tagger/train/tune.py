@@ -367,6 +367,6 @@ if __name__ == "__main__":
     print(model.jet_model.describe())
     print(model.jet_model.evaluate(X_test_dict))
     print(model.jet_model.analyze(X_test_dict, sampling=0.1))
-    model.save("model_tuned")
+    model.save()
     results = basic(model, args.signal_processes)
 

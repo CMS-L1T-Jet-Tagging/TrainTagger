@@ -897,7 +897,7 @@ def basic(model, signal_dirs):
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
             print(sample_data.shape)
-            sample_preds = model.jet_model.predict(sample_data )[0]
+            sample_preds = model.predict(sample_data )[0]
             print(sample_preds)
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             print(y_pred)

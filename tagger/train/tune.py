@@ -109,7 +109,7 @@ def tune_bdt():
             metric="loss",
             mode="min",
             scheduler=sched,
-            num_samples=100,
+            num_samples=10,
         ),
         run_config=tune.RunConfig(
             name="exp",
@@ -368,5 +368,6 @@ if __name__ == "__main__":
     print(model.jet_model.evaluate(X_test_dict))
     print(model.jet_model.analyze(X_test_dict, sampling=0.1))
     model.save()
+    model.plot_loss()
     results = basic(model, args.signal_processes)
 

@@ -35,7 +35,7 @@ variables:
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:for-DPS'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
@@ -134,6 +134,7 @@ tune:
       - output
       - mlflow_run_id.txt
       - job.log
+      - /root/ray_results/exp
     when: always
     exclude:
       - .npy

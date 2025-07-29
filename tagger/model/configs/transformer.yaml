@@ -7,13 +7,13 @@ model_config :
   name : transformer
   emb_layers : [8,8]
   transformer_layers : [[2,4,2,8],[2,4,2,8]] #num_heads, mha_hidden_dim, num_dense_layers, dim_dense_layers
-  classification_layers : [32,16]
-  regression_layers : [10]
+  classification_layers : [16,10]
+  regression_layers : [8]
   kernel_initializer : 'lecun_uniform'
 quantization_config:
 training_config :
   weight_method: "onlyclass"
-  epochs : 10
+  epochs : 100
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1

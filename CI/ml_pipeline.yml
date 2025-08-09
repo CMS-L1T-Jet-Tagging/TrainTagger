@@ -1,6 +1,5 @@
 include:
     - CI/cmssw.yml
-    - template: Code-Quality.gitlab-ci.yml
 
 stages:
   - data
@@ -307,8 +306,3 @@ upload_tagged_model:
       - $Name
     expire_in: 1 day
 
-code_quality:
-   tags:
-    - docker-privileged-xl
-   artifacts:
-    paths: [gl-code-quality-report.json]

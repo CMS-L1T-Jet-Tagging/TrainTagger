@@ -29,7 +29,7 @@ tf.config.threading.set_intra_op_parallelism_threads(
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) # not a special number 
 BATCH_SIZE = 1024
-EPOCHS = 200
+EPOCHS = 2
 VALIDATION_SPLIT = 0.2 # 20% of training set will be used for validation set. 
 LOSS_WEIGHTS = [1., 1.]
 WEIGHT_METHOD = "onlyclass"

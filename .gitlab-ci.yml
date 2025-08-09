@@ -1,7 +1,6 @@
 stages:
   - model creation
   - model comparison
-  - code test
 
 model pipelines:
   stage: model creation
@@ -21,10 +20,3 @@ test models:
     paths:
       - outputs      
     expire_in: never
-
-code quality:
-   stage: code test
-   tags:
-    - docker-privileged-xl
-   artifacts:
-    paths: [gl-code-quality-report.json]

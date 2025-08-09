@@ -96,6 +96,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
+  tags: [cern-nextgen-h100]
   needs: [train]
   script:
   - nproc

@@ -5,7 +5,7 @@ stages:
 child pipelines:
   stage: child
   trigger:
-    local: CI/child_pipelines.yml
+    include: CI/child_pipelines.yml
     strategy: depend
 
 

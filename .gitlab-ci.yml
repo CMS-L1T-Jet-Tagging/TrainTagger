@@ -16,4 +16,8 @@ test models:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
-    - echo "triggered job"
+    - ./CI/get_artefacts.sh /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/branches/${CI_COMMIT_REF_SLUG}/
+  artifacts:
+    paths:
+      - outputs      
+    expire_in: never

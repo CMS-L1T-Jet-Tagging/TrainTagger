@@ -1,16 +1,16 @@
 stages:
-  - child
-  - testing
+  - model creation
+  - model comparison
 
-child pipelines:
-  stage: child
+model pipelines:
+  stage: model creation
   trigger:
     include: CI/child_pipelines.yml
     strategy: depend
 
 
 test models:
-  stage: testing
+  stage: model comparison
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH

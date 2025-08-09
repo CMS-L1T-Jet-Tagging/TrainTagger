@@ -1,5 +1,5 @@
 include:
-  - local: "template.yml"
+  - local: "CI/template.yml"
 
 # Name = Name of child pipeline
 # Inputs = Which input configuration to use

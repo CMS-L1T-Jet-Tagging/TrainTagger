@@ -73,5 +73,5 @@ DeepSet:baseline_5param_extended_trk:
     CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:for-DPS'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
-    RERUN_ON_TAG: 'True'
+    RERUN_ON_TAG: 'False'
     TAG: 'v0.0.0'

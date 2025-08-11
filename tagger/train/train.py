@@ -13,6 +13,8 @@ import tensorflow_model_optimization as tfmot
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 import mlflow
 from datetime import datetime
+import pickle
+
 
 num_threads = 24
 os.environ["OMP_NUM_THREADS"] = str(num_threads)
@@ -302,7 +304,10 @@ if __name__ == "__main__":
     elif args.plot_basic:
         model_dir = args.output
         #All the basic plots!
-        results = basic(model_dir, args.signal_processes)
+        plotting_dict = basic(model_dir, args.signal_processes)
+        with open(os.path.join(model_dir, "plotting_dict.pkl"), "w") as f: pickle.dump(plotting_dict, f)
+        
+        
         if os.path.isfile("mlflow_run_id.txt"):
             f = open("mlflow_run_id.txt", "r")
             run_id = (f.read())
@@ -311,8 +316,8 @@ if __name__ == "__main__":
                                 run_name=args.name,
                                 run_id=run_id # pass None to start a new run
                                 ):
-                for class_label in results.keys():
-                    mlflow.log_metric(class_label + ' ROC AUC',results[class_label])
+                for class_label in plotting_dict['basic_ROC'].keys():
+                    mlflow.log_metric(class_label + ' ROC AUC',plotting_dict['basic_ROC'][class_label]['roc_auc'])
 
     else:
         with mlflow.start_run(run_name=args.name) as run:

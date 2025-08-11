@@ -1,6 +1,10 @@
 #!/bin/bash
 mkdir outputs
 for d in $1 ; do
-    cp $1/$d/latest/plots/training/basic_ROC.png outputs/basic_ROC_$d.png
+    echo $d 
+    echo $1/$d
+    cp $1/$d/latest/plots/plotting_dict.pkl outputs/${d}_plotting_dict.pkl
 done
+
+python tagger/plot/merge_ROCs.py outputs
 

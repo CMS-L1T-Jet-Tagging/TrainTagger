@@ -123,7 +123,7 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
 
 
 
-def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair , signal_proc=None):
+def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair , signal_proc=None, plotting_dict={}):
     """
     Generate ROC curves comparing between two specific class labels.
     """
@@ -168,15 +168,18 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair , signal_proc=
     save_path = os.path.join(save_dir, f"ROC_{class_pair[0]}_vs_{class_pair[1]}")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plotting_dict[save_path] = {'tpr':tpr,'fpr':fpr,'auc':roc_auc}
     plt.close()
+    return plotting_dict
 
-def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
+def ROC(y_pred, y_test, class_labels, plot_dir, plotting_dict):
     # Create a colormap for unique colors
     colormap = cm.get_cmap('Set1', len(class_labels))  # Use 'tab10' with enough colors
 
     # Create a plot for ROC curves
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
+    plotting_dict['basic_ROC'] = {class_label : {} for class_label in class_labels}
     for i, class_label in enumerate(class_labels):
 
         # Get true labels and predicted probabilities for the current class
@@ -187,7 +190,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
         fpr, tpr, _ = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
 
-        ROC_dict[class_label] = roc_auc
+        plotting_dict['basic_ROC'][class_label] = {'tpr':tpr,'fpr':fpr,'roc_auc':roc_auc}
         # Plot the ROC curve for the current class
         ax.plot(tpr, fpr, label=f'{style.CLASS_LABEL_STYLE[class_label]} (AUC = {roc_auc:.2f})',
                  color=colormap(i), linewidth=style.LINEWIDTH)
@@ -211,7 +214,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.close()
 
-    return ROC_dict
+    return plotting_dict
 
 def confusion(y_pred, y_test, class_labels, plot_dir):
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -707,8 +710,6 @@ def basic(model_dir,signal_dirs) :
     with open(f"{model_dir}/class_label.json", 'r') as file: class_labels = json.load(file)
     with open(f"{model_dir}/input_vars.json", 'r') as file: input_vars = json.load(file)
 
-    ROC_dict = {class_label : 0 for class_label in class_labels}
-
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
@@ -731,7 +732,8 @@ def basic(model_dir,signal_dirs) :
     pt_ratio = model_outputs[1].flatten()
 
     #Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, class_labels, plot_dir,ROC_dict)
+    plotting_dict = {}
+    plotting_dict = ROC(y_pred, y_test, class_labels, plot_dir,plotting_dict)
     class_pairs = []
     #Generate all possible pairs of classes
     for i in class_labels.keys():
@@ -797,4 +799,4 @@ def basic(model_dir,signal_dirs) :
     #Plot the shaply feature importance
     plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 
-    return ROC_dict
+    return plotting_dict

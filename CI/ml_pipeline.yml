@@ -284,7 +284,7 @@ upload_tagged_model:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
+    # - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
     - cd TrainTagger/${Name}
     - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots --recursive --extensions png,pdf
   artifacts:

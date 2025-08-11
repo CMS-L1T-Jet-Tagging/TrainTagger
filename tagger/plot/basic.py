@@ -200,7 +200,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir, plotting_dict):
     ax.set_ylabel('Mistag Rate')
     ax.set_xlabel('Signal Efficiency')
 
-    auc_list = [value for key,value in ROC_dict.items()]
+    auc_list = [value['roc_auc'] for key,value in plotting_dict['basic_ROC'].items()]
     handles, labels = plt.gca().get_legend_handles_labels()
     order = np.argsort(auc_list)
     ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc='upper left',ncol=2,fontsize=style.SMALL_SIZE-3)

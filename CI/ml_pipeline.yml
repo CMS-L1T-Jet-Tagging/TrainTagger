@@ -40,8 +40,7 @@ variables:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - python $FOLDER/$SCRIPT $ARGS
-  tags:
-    - docker
+  tags: [cern-nextgen-h100]
   # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
   #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
   #      when: on_success
@@ -78,7 +77,6 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true

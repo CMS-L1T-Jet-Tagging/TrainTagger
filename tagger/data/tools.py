@@ -151,9 +151,9 @@ def _make_nn_inputs(data_split, tag, n_parts):
     #Concatenate all the inputs
     inputs_list = []
 
-    #Vertically stacked them to create input sets
-    #https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
-    #Also pad and fill them with 0 to the number of constituents we are using (nconstit)
+    # Vertically stacked them to create input sets
+    # https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
+    # Also pad and fill them with 0 to the number of constituents we are using (nconstit)
     for field in features:
         field_array = data_split["jet_pfcand"][field]
 

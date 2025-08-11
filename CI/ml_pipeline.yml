@@ -247,7 +247,9 @@ upload_new_model:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_copy_index.py ${EOS_STORAGE_DIR} --recursive
+    - echo ${EOS_STORAGE_DIR}
+    - echo ${EOS_STORAGE_SUBDIR}
+    # - pb_copy_index.py ${EOS_STORAGE_DIR} --recursive
     - cd TrainTagger/${Name}
     - pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
     - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf

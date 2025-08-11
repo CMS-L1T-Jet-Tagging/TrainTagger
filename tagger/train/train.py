@@ -305,7 +305,7 @@ if __name__ == "__main__":
         model_dir = args.output
         #All the basic plots!
         plotting_dict = basic(model_dir, args.signal_processes)
-        with open(os.path.join(model_dir, "plotting_dict.pkl"), "w") as f: pickle.dump(plotting_dict, f)
+        with open(os.path.join(model_dir, "plotting_dict.pkl"), "wb") as f: pickle.dump(plotting_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
         
         
         if os.path.isfile("mlflow_run_id.txt"):

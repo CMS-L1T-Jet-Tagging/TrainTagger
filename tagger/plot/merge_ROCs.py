@@ -26,15 +26,14 @@ if __name__ == "__main__":
     
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
-    colormap = cm.get_cmap('Set1', len(8))
+    colormap = cm.get_cmap('Set1', 8)
     linestyles = ["-","--","."]
     for j,i_folder in enumerate(list_of_dirs):
-        print(i_file)
         
         with open(os.path.join(sys.argv[1], i_folder+plot_dir), "r") as f: plotting_dict = pickle.load(f)
         
         for i,class_label in enumerate(plotting_dict['basic_ROC'].keys()):
-            ax.plot(plotting_dict['basic_ROC'][class_label]['tpr'], plotting_dict['basic_ROC'][class_label]['fpr'], label=f'{i_file_+' '+style.CLASS_LABEL_STYLE[class_label]} (AUC = {plotting_dict['basic_ROC'][class_label]['roc_auc']:.2f})',
+            ax.plot(plotting_dict['basic_ROC'][class_label]['tpr'], plotting_dict['basic_ROC'][class_label]['fpr'], label=f'{i_folder} {style.CLASS_LABEL_STYLE[class_label]} (AUC = {plotting_dict['basic_ROC'][class_label]['roc_auc']:.2f})',
                     color=colormap(i), linewidth=style.LINEWIDTH,linestyle=linestyles[j])
             
         # Plot formatting

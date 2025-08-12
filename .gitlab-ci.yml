@@ -14,6 +14,7 @@ test models:
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - source activate tagger
   script:
     - ./CI/get_artefacts.sh /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/branches/${CI_COMMIT_REF_SLUG}/
   artifacts:

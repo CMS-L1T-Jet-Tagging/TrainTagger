@@ -21,6 +21,7 @@ from os.path import isfile, join
 
 
 if __name__ == "__main__":
+    print(sys.argv[1])
     list_of_dirs = next(os.walk(sys.argv[1]))[1]
     print(list_of_dirs)
     plot_dir = "/latest/plots/plotting_dict.pkl"

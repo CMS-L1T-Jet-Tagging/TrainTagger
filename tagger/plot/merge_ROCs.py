@@ -86,7 +86,7 @@ if __name__ == "__main__":
         ax.set_ylabel('Mistag Rate')
         ax.set_xlabel('Signal Efficiency')
 
-        ax.legend(loc='upper left',ncol=2,fontsize=style.SMALL_SIZE-3)
+        ax.legend(loc='upper left',fontsize=style.SMALL_SIZE-3)
 
         ax.set_yscale('log')
         ax.set_ylim([1e-3, 1.1])

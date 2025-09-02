@@ -18,7 +18,7 @@ fi
 
 cd ..
 rm -rf php-plots
-git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
+git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping
 export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
 pb_copy_index.py TrainTagger/${Name} --recursive
 pb_copy_index.py ${EOS_STORAGE_DIR} --recursive

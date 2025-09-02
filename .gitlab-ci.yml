@@ -31,6 +31,7 @@ DeepSet:new_samples_baseline_5param_extended_trk:
   extends: .ml_pipeline
   variables:
     Name: new_samples_baseline_5param_extended_trk
+    Model: baseline
     Inputs: baseline
     N_PARAMS: 5
     TRACK_ALGO: extended

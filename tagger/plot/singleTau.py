@@ -34,16 +34,31 @@ def get_interp_func(WP_path):
     else:
         raise Exception("Model working point does not exist. Run with --deriveWPs first.")
 
-    interp_func = interp1d(model_pt_WP, model_NN_WP, kind='linear', fill_value='extrapolate')
+    #There are repeated WP entries per pt because of rate range
+    #Take conservative threshold -> max highest per pt
+    pruned_pts = []
+    pruned_WPs = []
+
+    for i in range(len(model_NN_WP)):
+
+        if(model_pt_WP[i] not in pruned_pts):
+            pruned_pts.append(model_pt_WP[i])
+            pruned_WPs.append(model_NN_WP[i])
+        else:
+            pruned_WPs[-1] = max(pruned_WPs[-1], model_NN_WP[i])
+
+
+    minWP, maxWP = np.min(model_NN_WP), np.max(model_NN_WP)
+    interp_func = interp1d(model_pt_WP, model_NN_WP, kind='linear', fill_value=(maxWP, minWP), bounds_error=False)
 
     return interp_func
 
 def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']] 
 
-    #foo
     tau = sum([preds[:,idx] for idx in tau_index] )
-    bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    #bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
 
     return tau / (tau + bkg)
     
@@ -80,11 +95,14 @@ def pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate = 31, 
     target_rate_NN = [float(nn_list[i]) for i in target_rate_idx] # NN cut dimension
     target_rate_PT = [float(pt_list[i]) for i in target_rate_idx] # HT cut dimension
 
+
     # Create an interpolation function
     interp_func = interp1d(target_rate_PT, target_rate_NN, kind='linear', fill_value='extrapolate')
 
     # Export the working point
     working_point = {"PTs": target_rate_PT, "NNs": target_rate_NN}
+
+    print(working_point)
 
     with open(os.path.join(plot_dir, label+ "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
@@ -144,7 +162,7 @@ def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n
     # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
     # Slide 7
     eta_cut = 2.172
-    pt_cut = 5.
+    pt_cut = 30.
 
     #flatten for NN eval
     jet_pts = np.asarray(ak.flatten(jet_pt))
@@ -186,8 +204,8 @@ def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n
 
 
     #Define the histograms (pT edge and NN Score edge)
-    pT_edges = list(np.arange(30,180,2)) + [1500] #Make sure to capture everything
-    NN_edges = list([round(i,2) for i in np.arange(0, 1.01, 0.01)])
+    pT_edges = list(np.arange(30,150,2)) + [1500] #Make sure to capture everything
+    NN_edges = list([round(i,4) for i in np.arange(0, 0.5, 0.002)]) + list([round(i,4) for i in np.arange(0.5, 1.01, 0.005)])
 
     RateHist = Hist(hist.axis.Variable(pT_edges, name="pt", label="pt"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
@@ -380,6 +398,27 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     nn_tauscore_raw = tau_score(pred_score, class_labels ) 
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
+    cut = nn_taupt_raw > 30.
+
+
+    plt.figure()
+    plt.hist(nn_taupt_raw, bins=30)
+    plt.xlabel("Tau pT")
+    plt.xlim([0., 200.])
+    plt.savefig(f"{plot_dir}/tau_pt.png")
+
+    plt.figure()
+    plt.hist(nn_tauscore_raw[cut], bins=30)
+    plt.xlabel("Model Tau Score")
+    plt.savefig(f"{plot_dir}/model_tau_score.png")
+
+
+    plt.figure()
+    plt.hist(jet_tauscore_raw[cut], bins=30)
+    plt.xlabel("CMSSW Tau Score")
+    plt.savefig(f"{plot_dir}/cmssw_tau_score.png")
+
+
     #nn_tauscore_raw = ak.unflatten(nn_tauscore_raw, ak.num(tau_flav))
     #nn_taupt_raw = ak.unflatten(nn_taupt_raw, ak.num(tau_flav))
 
@@ -393,7 +432,7 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     #cmssw_pt = jet_taupt_raw[highest_score]
 
 
-    pT_edges = [0] + np.arange(30, 200, 5) 
+    pT_edges = [0] + np.arange(30, 150, 2) 
 
     #Denominator & numerator selection for efficiency
     eta_selection = np.abs(gen_eta_raw) < 2.172
@@ -404,14 +443,18 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     cmssw_effs =[0.]
 
     #min number of events to compute a reliable eff
-    min_mc = 100
+    min_mc = 50
+
+    min_NN_cut = 0.00
 
     for pt_cut in pT_edges[1:]:
-        model_cut = model_WP_interp(pt_cut)
-        cmssw_cut = cmssw_WP_interp(pt_cut)
+        model_cut = max(model_WP_interp(pt_cut), min_NN_cut)
+        cmssw_cut = max(cmssw_WP_interp(pt_cut), min_NN_cut)
+
 
         tau_deno = (tau_flav==1) & (gen_pt_raw > pt_cut) & eta_selection
         deno_eff = np.mean(tau_deno)
+
 
         if(np.sum(tau_deno) < min_mc):
             #too few events, just put 0
@@ -426,6 +469,9 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
             seeded_cone_effs.append(np.mean(tau_nume_seedcone)/ deno_eff)
             model_effs.append(np.mean(tau_nume_nn) / deno_eff)
             cmssw_effs.append(np.mean(tau_nume_cmssw) / deno_eff)
+
+
+            print(pt_cut, np.sum(tau_deno), np.sum(cmssw_cut), np.sum(model_cut))
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
@@ -449,7 +495,7 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
 
 
-    for eta_region in ['barrel', 'tau_encap']:
+    for eta_region in ['barrel', 'tau_endcap']:
         #selecting the eta region
         gen_eta_selection = eta_region_selection(gen_eta_raw, eta_region)
 
@@ -516,10 +562,15 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
         # Set the eta label if needed
         vbf_label = r"VBF H $\rightarrow$ $\tau\tau$, "
+        pt_wp_label = "$p_T$ > %i GeV Trigger WP " % pt_WP
         eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.172)'
         if eta_region != 'none':
             # Add an invisible plot to include the eta label in the legend
-            ax.plot([], [], 'none', label=eta_label)
+            ax.plot([], [], 'none', label= pt_wp_label + eta_label)
+
+        sc_err = np.nan_to_num(sc_err, nan=0.)
+        cmssw_err = np.nan_to_num(cmssw_err, nan=0.)
+        nn_err = np.nan_to_num(nn_err, nan=0.)
 
         
         # Plot errorbars for both sets of efficiencies

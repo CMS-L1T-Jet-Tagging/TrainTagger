@@ -32,7 +32,7 @@ BATCH_SIZE = 1024
 EPOCHS = 200
 VALIDATION_SPLIT = 0.2 # 20% of training set will be used for validation set. 
 LOSS_WEIGHTS = [1., 1.]
-WEIGHT_METHOD = "onlyclass"
+WEIGHT_METHOD = "none"
 DEBUG = True
 
 # Sparsity parameters
@@ -143,7 +143,8 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
         4: 1., # taup
         5: 1., # taum
         6: 1., # muon
-        7: 1. # electron
+        7: 1., # electron
+        8: 1. # pileup
     }
     for idx in class_labels.values():
         weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * weights_per_class[idx]

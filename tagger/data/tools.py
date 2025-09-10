@@ -135,7 +135,7 @@ def _split_flavor(data):
     return data[jet_ptmin_gen], class_labels
 
 def _get_pfcand_fields(tag):
-    
+
     # Get the directory of the current file (tools.py)
     current_dir = os.path.dirname(__file__)
 
@@ -154,7 +154,7 @@ def _pad_fill(array, target):
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
 def _make_nn_inputs(data_split, tag, n_parts):
-    
+
     features = _get_pfcand_fields(tag)
 
     #Concatenate all the inputs
@@ -172,7 +172,7 @@ def _make_nn_inputs(data_split, tag, n_parts):
     #batch_size, n_particles, n_features
     inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
-    
+
     return
 
 def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
@@ -280,7 +280,7 @@ def group_id_values(event_id, *arrays, num_elements = 2):
 
     # Find unique event_ids and counts manually
     unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
-    
+
     # Use ak.unflatten to group the arrays by counts
     grouped_id = ak.unflatten(sorted_event_id, counts)
     grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
@@ -297,7 +297,9 @@ def to_ML(data, class_labels):
     """
 
     X = np.asarray(data['nn_inputs'])
-    y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
+    labels = np.asarray(data['class_label'])
+
+    y = tf.keras.utils.to_categorical(np.asarray(labels), num_classes=len(class_labels))
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
@@ -356,10 +358,10 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         class_labels = variables['outputs']
         input_vars = variables['inputs']
         extra_vars = variables['extras']
-    
+
     return train_data, test_data, class_labels, input_vars, extra_vars
 
-def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200.root', 
+def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200.root',
               outdir='training_data/',
               tag=INPUT_TAG,
               extras=EXTRA_FIELDS,
@@ -401,7 +403,7 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
     chunk = 0
 
     for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=8):
-        
+
         num_entries_done += len(data) # count before cuts
 
         #Define jet kinematic cuts

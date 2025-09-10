@@ -66,16 +66,16 @@ python tagger/firmware/hls4ml_convert.py
 ```
 
 # 1. Produce Raw Training Dataset
-  
-  Creating the training datasets involve several steps: 
-  
+
+  Creating the training datasets involve several steps:
+
   1. Taking the RAW samples and pruning/sliming them. This can be done running the `runInputs_X_X.py` scripts in [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons), which also uses [submission](https://github.com/CMS-L1T-Jet-Tagging/submission) repo. This is currently done for all, and stored in here:
-  
+
   ```
   /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_0_X/fpinputs_131X/v9a/
   ```
-  
-  2. These samples will then be processed by the nTuplizer, which is part of the [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons) repo. In particular the `runPerformanceNTuple.py`, which calls `jetNTuplizer.cc`. Note that to submit jobs as part of this setup, you also need the [submission](https://github.com/CMS-L1T-Jet-Tagging/submission/tree/dev/14_0_X-leptons) repo as well. 
+
+  2. These samples will then be processed by the nTuplizer, which is part of the [FastPUPPI](https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI/tree/dev/14_0_X-leptons) repo. In particular the `runPerformanceNTuple.py`, which calls `jetNTuplizer.cc`. Note that to submit jobs as part of this setup, you also need the [submission](https://github.com/CMS-L1T-Jet-Tagging/submission/tree/dev/14_0_X-leptons) repo as well.
 
 # 2. Prepare the data and train the model
 
@@ -102,7 +102,7 @@ source setup.sh
 Then, to prepare the data for training:
 
 ```
-python tagger/train/train.py --make-data 
+python tagger/train/train.py --make-data
 ```
 
 This prepare the data using the default options(look into the script to see what the options are). If you want to customize the input data path, or the data step size for `uproot.iterate`, then you can use the full options
@@ -172,15 +172,15 @@ Relevant variables for pipelines are found in ```.gitlab-ci.yml``` and are set a
 All artefacts are uploaded to [this](https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/) website for viewing. With the structure ```branches/my-branch/name/pipeline/plots|model|firmware```
 
 The CI will carry out dataset creation, training, evaluation, model synthesis, emulation, and uploading of all artefacts to a website for viewing. The stages are as follows, with some additional notes about each stage.
- 
+
 - **data**: creates the training data. This step is repeated for all new branches and needs to be manually triggered. It will use data ```${EOS_DATA_DIR}/${TRAIN}``` and save its output to ```${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}```
 
   Once it has been completed once it will not run again unless changes are made to the ```tagger/data``` directory
 - **train**: runs the training of a new model and some basic plotting scripts. The training runs on the data steps output and the plotting will run on a test set of this. There is also the option of doing signal specific ROC curves. The signal for this is specified by the ```${SINAL}``` CI variable. These output plots are found in the ```plots/training``` website area.
-  
+
   If you are not wanting to train the model and just look at plotting and firmware developments there is an option to run this training step to just produce the basic plots and to run the entire rest of the pipeline on the current in production CMSSW model. This is controlled by the ```${RERUN_ON_TAG}``` variable, set it to ```'True'``` if you want to run on the ```${TAG}``` model. The output of the pipeline will no longer be in a seperate branch area of the website and will instead be uploaded [here](https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v0.0.0/test/).
 
-- **evaluate**: runs physics plotting including bb $\tau \tau$, VBF $\tau \tau$, Toplogy $\tau \tau$ and bbbb performance. 
+- **evaluate**: runs physics plotting including bb $\tau \tau$, VBF $\tau \tau$, Toplogy $\tau \tau$ and bbbb performance.
 
 - **hls4ml**: runs the hls4ml conversion, this is a python only (no vivado) building of the project
 
@@ -192,13 +192,12 @@ The CI will carry out dataset creation, training, evaluation, model synthesis, e
 
 - **profile**: runs a layer by layer evaluation of the hls4ml model to find potential places where precision is lost. Also prints out the resource usage of the model.
 
-- **upload_tagged_model** and **upload_new_model**: upload artefacts of the CI to the website. If you add additional artefact folders this step will need to be adapted to include your new folders. 
+- **upload_tagged_model** and **upload_new_model**: upload artefacts of the CI to the website. If you add additional artefact folders this step will need to be adapted to include your new folders.
 
 
 ## Related Materials
 
-Related talks and materials to the project can be found here, they are ordered chronologically. 
+Related talks and materials to the project can be found here, they are ordered chronologically.
 
 * [Level-1 Phase-2 Jet Tagging, 9 Jul 2024, Experience in jet tagger firmware integration](https://indico.cern.ch/event/1435130/)
 * [Tau-Jets-MET, 7 May 2024, Jet tagging @ Phase-2 correlator layer](https://indico.cern.ch/event/1413293/#28-phase-2-jet-tagging)
-

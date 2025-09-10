@@ -27,12 +27,12 @@ tf.config.threading.set_intra_op_parallelism_threads(
 )
 
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
-tf.keras.utils.set_random_seed(420) # not a special number 
+tf.keras.utils.set_random_seed(420) # not a special number
 BATCH_SIZE = 1024
 EPOCHS = 200
-VALIDATION_SPLIT = 0.2 # 20% of training set will be used for validation set. 
+VALIDATION_SPLIT = 0.2 # 20% of training set will be used for validation set.
 LOSS_WEIGHTS = [1., 1.]
-WEIGHT_METHOD = "none"
+WEIGHT_METHOD = "onlyclass"
 DEBUG = True
 
 # Sparsity parameters
@@ -96,7 +96,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
         pt_bins = np.array([
             0., np.inf  # Use np.inf to cover all higher values
         ])
-    
+
     # Initialize counts per class per pT bin
     class_pt_counts = {}
 
@@ -104,7 +104,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
     for label, idx in class_labels.items():
         class_mask = y_train[:, idx] == 1
         class_pt_counts[idx], _ = np.histogram(reco_pt_train[class_mask], bins=pt_bins)
-    
+
     # Compute the maximum counts per pT bin over all classes
     max_counts_per_bin = np.zeros(len(pt_bins)-1)
     min_counts_per_bin = np.zeros(len(pt_bins)-1)
@@ -115,13 +115,13 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
 
     # Weight all to one base class (b = 0)
     counts_per_bin = class_pt_counts[0]
-    
+
     if weightingMethod == "ptref":
         # Try minimum and flat
         counts_per_bin = [min(min_counts_per_bin) for __ in min_counts_per_bin]
         # Try maximum and flat
         # counts_per_bin = [max(max_counts_per_bin) for __ in max_counts_per_bin]
-    
+
     # Compute weights per class per pT bin
     weights_per_class_pt_bin = {}
     for idx in class_labels.values():
@@ -157,7 +157,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
         bin_indices = np.digitize(class_truth_pt, pt_bins) - 1  # Subtract 1 to get 0-based index
         bin_indices[bin_indices == len(pt_bins)-1] = len(pt_bins)-2  # Handle right edge
         sample_weights[sample_indices] = weights_per_class_pt_bin[idx][bin_indices]
-    
+
         # Print weighted jets as closure test in debug mode
         if DEBUG and weightingMethod != "none":
             print ("DEBUG - Checking jets weighted by sample_weights as a function of pT:")
@@ -172,7 +172,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
     else:
         return sample_weights
 
-def train(out_dir, percent, model_name, new_epochs = None):
+def train(out_dir, percent, model_name, new_epochs = None, merge_pu_class = False):
 
     # Remove output dir if exists
     if os.path.exists(out_dir):
@@ -184,7 +184,10 @@ def train(out_dir, percent, model_name, new_epochs = None):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
-    
+
+    if(merge_pu_class and 'pileup' in class_labels):
+        class_labels["pileup"] = class_labels['gluon']
+
     # Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump input variables
     with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
@@ -243,7 +246,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
                             validation_split=VALIDATION_SPLIT,
                             callbacks = [callbacks],
                             shuffle=True)
-    
+
     # Export the model
     model_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
 
@@ -277,6 +280,7 @@ if __name__ == "__main__":
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
     parser.add_argument('-t','--tree', default='outnano/Jets', help = 'Tree within the ntuple containing the jets')
+    parser.add_argument('--merge-pu-class', action='store_true', help='Merge pileup class into gluons')
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
@@ -319,11 +323,8 @@ if __name__ == "__main__":
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
             mlflow.keras.autolog()
-            train(args.output, args.percent, model_name=args.model)
+            train(args.output, args.percent, model_name=args.model, merge_pu_class=args.merge_pu_class)
             run_id = run.info.run_id
         sourceFile = open('mlflow_run_id.txt', 'w')
         print(run_id, end="", file = sourceFile)
         sourceFile.close()
-
-
-

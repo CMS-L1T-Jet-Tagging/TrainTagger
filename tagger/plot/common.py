@@ -64,14 +64,14 @@ def delta_r(eta1, phi1, eta2, phi2):
     return np.sqrt(delta_eta**2 + delta_phi**2)
 
 def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
-    
+
     idx_list = []
-    
+
     for i in range(len(rate_list)):
         if target_rate-RateRange <= rate_list[i] <= target_rate + RateRange:
             idx_list.append(i)
-            
-    return idx_list    
+
+    return idx_list
 
 def plot_ratio(all_events, selected_events, plot=False):
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -91,7 +91,7 @@ def get_bar_patch_data(artists):
 def plot_2d(variable_one,variable_two,range_one,range_two,name_one,name_two,title):
     fig,ax = plt.subplots(1,1,figsize=(style.FIGURE_SIZE[0]+2,style.FIGURE_SIZE[1]))
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax, fontsize=style.CMSHEADER_SIZE)
-    
+
     hist2d = ax.hist2d(variable_one, variable_two, range=(range_one,range_two), bins=50, norm=matplotlib.colors.LogNorm(),cmap='jet')
     ax.set_xlabel(name_one)
     ax.set_ylabel(name_two)
@@ -111,7 +111,7 @@ def plot_histo(variable,name,title,xlabel,ylabel,range=(0,1)):
                     label=name[i],
                     linewidth = style.LINEWIDTH-1.5,
                     linestyle = style.LINESTYLES[i],
-                    density=True)    
+                    density=True)
     ax.grid(True)
     ax.set_xlabel(xlabel,ha="right",x=1)
     ax.set_ylabel(ylabel,ha="right",y=1)
@@ -136,3 +136,11 @@ def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"
     ax.grid(True)
     ax.legend(loc='best')
     return fig
+
+
+def x_vs_y(x, y, apply_light=True):
+    if apply_light:
+        s = x / (x + y)
+        return s
+    else:
+        return x

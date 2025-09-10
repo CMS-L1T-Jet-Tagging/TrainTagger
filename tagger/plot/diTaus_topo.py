@@ -24,17 +24,23 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def calculate_topo_score(tau_plus, tau_minus):
+
+
+def calculate_topo_score(tau_plus, tau_minus, bkg, apply_light=False):
     #2=tau positive, 3=tau_negative
 
-    p_pos = tau_plus[:,0] + tau_plus[:,1]
-    p_neg = tau_minus[:,0] + tau_minus[:,1]
+    p1 = np.array(tau_plus[:,0]*tau_minus[:,1])
+    p2 = np.array(tau_minus[:,0]*tau_plus[:,1])
 
-    return np.multiply(p_pos, p_neg)
+    b =  np.array(bkg[:,0]*bkg[:,1])
+
+    out = x_vs_y(p1+p2, b, apply_light)
+
+    return out
 
 def apply_mask(arrays, mask):
     masked_arrays = [array[mask] for array in arrays]
@@ -144,19 +150,21 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
     raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
 
+    apply_light = True
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
     raw_tau_minus = raw_pred_score[:, class_labels['taum']]
+    raw_bkg =  raw_pred_score[:, class_labels['gluon']] + raw_pred_score[:, class_labels['light']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values_topo(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction.flatten(), raw_jet_eta, raw_jet_phi, num_elements=2)
+    event_id, grouped_arrays  = group_id_values_topo(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_bkg, raw_jet_pt, raw_pt_correction.flatten(), raw_jet_eta, raw_jet_phi, num_elements=2)
 
     # Extract the grouped arrays
-    tau_plus, tau_minus, jet_pt, jet_pt_correction, jet_eta, jet_phi = grouped_arrays
+    tau_plus, tau_minus, bkg, jet_pt, jet_pt_correction, jet_eta, jet_phi = grouped_arrays
 
     #calculate delta_r
     eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
@@ -168,7 +176,7 @@ def derive_diTaus_topo_WPs(model_dir, minbias_path, n_entries=100, tree='jetntup
     # Slide 7
     cuts = (np.abs(eta1) < 2.172) & (np.abs(eta2) < 2.172) & (delta_r_values > 0.5)
 
-    tau_topo_score = calculate_topo_score(tau_plus, tau_minus)
+    tau_topo_score = calculate_topo_score(tau_plus, tau_minus, bkg, apply_light)
 
     #correct for pt
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:,0][cuts]), np.asarray(jet_pt[:,1][cuts])
@@ -247,12 +255,12 @@ def cmssw_pt_score(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw
 
     return event_id[cuts], pt_min, cmssw_pt_min, cmssw_tau_min
 
-def model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi):
+def model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_bkg, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi, apply_light):
 
-    event_id, grouped_arrays  = group_id_values_topo(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction.flatten(), raw_jet_eta, raw_jet_phi, num_elements=2)
+    event_id, grouped_arrays  = group_id_values_topo(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_bkg, raw_jet_pt, raw_pt_correction.flatten(), raw_jet_eta, raw_jet_phi, num_elements=2)
 
     # Extract the grouped arrays
-    tau_plus, tau_minus, jet_pt, jet_pt_correction, jet_eta, jet_phi = grouped_arrays
+    tau_plus, tau_minus, bkg, jet_pt, jet_pt_correction, jet_eta, jet_phi = grouped_arrays
 
     #calculate delta_r
     eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
@@ -264,7 +272,7 @@ def model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus,
     # Slide 7
     cuts = (np.abs(eta1) < 2.172) & (np.abs(eta2) < 2.172) & (delta_r_values > 0.5)
 
-    tau_topo_score = calculate_topo_score(tau_plus, tau_minus)
+    tau_topo_score = calculate_topo_score(tau_plus, tau_minus, bkg, apply_light)
 
     #correct for pt
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:,0][cuts]), np.asarray(jet_pt[:,1][cuts])
@@ -310,9 +318,11 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
     raw_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
     raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
 
+    apply_light = True
     raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
     raw_tau_minus = raw_pred_score[:, class_labels['taum']]
+    raw_bkg =  raw_pred_score[:, class_labels['gluon']] + raw_pred_score[:, class_labels['light']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -320,7 +330,7 @@ def plot_bkg_rate_ditau_topo(model_dir, minbias_path, n_entries=100, tree='jetnt
 
     #Extract the minpt and tau score from cmssw
     cmssw_event_id, pt_min, cmssw_pt_min, cmssw_tau_min = cmssw_pt_score(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt)
-    model_event_id, model_pt_min, model_tau_topo = model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi)
+    model_event_id, model_pt_min, model_tau_topo = model_pt_score(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_bkg, raw_jet_pt, raw_pt_correction, raw_jet_eta, raw_jet_phi, apply_light)
 
     event_id_cmssw = cmssw_event_id[cmssw_tau_min > WPs_CMSSW["tau"]]
 
@@ -458,19 +468,21 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     else:
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
-    raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:,class_labels['taum']]
+    apply_light = True
+    raw_tau_score_sum = raw_pred_score[:,class_labels['taup']] + raw_pred_score[:, class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,class_labels['taup']]
-    raw_tau_minus = raw_pred_score[:,class_labels['taum']]
+    raw_tau_minus = raw_pred_score[:, class_labels['taum']]
+    raw_bkg =  raw_pred_score[:, class_labels['gluon']] + raw_pred_score[:, class_labels['light']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of signal events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values_topo(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_jet_pt, raw_jet_genmass, raw_jet_genpt, raw_jet_geneta, raw_jet_genphi, raw_pt_correction.flatten(), raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt, num_elements=2)
+    event_id, grouped_arrays  = group_id_values_topo(raw_event_id, raw_tau_score_sum, raw_tau_plus, raw_tau_minus, raw_bkg, raw_jet_pt, raw_jet_genmass, raw_jet_genpt, raw_jet_geneta, raw_jet_genphi, raw_pt_correction.flatten(), raw_jet_eta, raw_jet_phi, raw_cmssw_tau, raw_cmssw_taupt, num_elements=2)
 
     # Extract the grouped arrays
-    tau_plus, tau_minus, jet_pt, jet_genmass, jet_genpt, jet_geneta, jet_genphi, jet_pt_correction, jet_eta, jet_phi, cmssw_tau, cmssw_taupt = grouped_arrays
+    tau_plus, tau_minus, bkg, jet_pt, jet_genmass, jet_genpt, jet_geneta, jet_genphi, jet_pt_correction, jet_eta, jet_phi, cmssw_tau, cmssw_taupt = grouped_arrays
     genpt1, genpt2 = np.asarray(jet_genpt[:,0]), np.asarray(jet_genpt[:,1])
 
     #calculate delta_r
@@ -483,7 +495,7 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     # Slide 7
     cuts = (np.abs(eta1) < 2.172) & (np.abs(eta2) < 2.172) & (delta_r_values > 0.5)
 
-    tau_topo_score = calculate_topo_score(tau_plus, tau_minus)
+    tau_topo_score = calculate_topo_score(tau_plus, tau_minus, bkg, apply_light)
 
     #correct for pt
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:,0][cuts]), np.asarray(jet_pt[:,1][cuts])
@@ -524,11 +536,27 @@ def topo_eff(model_dir, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets',
     model_selection = (pt_min_model > model_PT_WP) & (tau_topo_score[cuts] > model_NN_WP)
     model_pt.fill(genpt1=genpt1[cuts][model_selection], genpt2=genpt2[cuts][model_selection])
 
+
     cmssw_ratio = ratio_2D(cmssw_pt, all_genpt)
     model_ratio = ratio_2D(model_pt, all_genpt)
     model_vs_cmssw_ratio = ratio_2D(model_pt, cmssw_pt)
 
     plot_dir = os.path.join(model_dir, 'plots/physics/tautau_topo')
+
+    #write out total eff to text file
+    total_eff_model = np.mean(model_selection)
+    total_eff_cmssw = np.mean(cmssw_selection)
+
+    outname = plot_dir + "/TotalEff.txt"
+    with open(outname, "w") as outfile:
+        outfile.write("Total diTau Eff \n")
+        outfile.write("Multiclass NN %.4f \n" % total_eff_model)
+        outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
+
+    print("Total diTau Eff")
+    print("Multiclass NN %.4f" % total_eff_model)
+    print("CMSSW  %.4f" % total_eff_cmssw)
+
 
     #Plot them side by side
     fig_width = 2.5 * style.FIGURE_SIZE[0]
@@ -613,8 +641,8 @@ if __name__ == "__main__":
     """
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus') 
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')

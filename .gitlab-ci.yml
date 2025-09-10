@@ -23,12 +23,15 @@ include:
 # CMSSW_EMULATOR_WRAPPER = Which CMSSW emulator wrapper to use
 # RERUN_ON_TAG = Switch to only run the evaluation and firmware steps on the tagged model and not rerun a training.
 # Default false to run a full retraining of a model
+# RUN_EMULATION = Switch on CMSSW emulation verification
+# RUN_SYNTHESIS = Switch on hls4ml and vivado synth. This must be True for the emulation above to run
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 
 DeepSet:new_samples_baseline_5param_extended_trk:
   extends: .ml_pipeline
   variables:
     Name: new_samples_baseline_5param_extended_trk
+    Model: baseline
     Inputs: baseline
     N_PARAMS: 5
     TRACK_ALGO: extended
@@ -45,7 +48,9 @@ DeepSet:new_samples_baseline_5param_extended_trk:
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:for-DPS'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
-    RERUN_ON_TAG: 'True'
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'

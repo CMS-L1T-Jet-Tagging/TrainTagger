@@ -57,8 +57,8 @@ def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']] 
 
     tau = sum([preds[:,idx] for idx in tau_index] )
-    #bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
-    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    #bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
 
     return tau / (tau + bkg)
     

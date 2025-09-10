@@ -21,15 +21,9 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
 
 # Helpers
-def x_vs_y(x, y, apply_light):
-    if apply_light:
-        s = x / (x + y)
-        return s
-    else:
-        return x
 
 def default_selection(jet_pt, jet_eta, apply_sel):
     if apply_sel:
@@ -56,7 +50,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
 
     #Sum them together
     bscore_sum = sum(
-            [x_vs_y(pred_score[:, b_index], pred_score[:,p_index] +  pred_score[:,l_index] + pred_score[:,g_index] , apply_light) for pred_score in nn_outputs]
+            [x_vs_y(pred_score[:, b_index],  pred_score[:,l_index] + pred_score[:,g_index] , apply_light) for pred_score in nn_outputs]
         )
 
     return bscore_sum
@@ -345,20 +339,18 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
-    model_selection = (jet_ht > btag_ht_wp) & (model_bscore_sum > btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
-    model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
     ht_only_selection = jet_ht > ht_only_wp
     ht_only_efficiency = np.round(ak.sum(ht_only_selection) / n_events, 2)
 
     ht_only_selection = jet_ht > ht_only_wp
     pure_cmssw_selection = cmssw_selection & ~ht_only_selection
 
-    max_pure_eff = -1.0
+    max_eff = -1.0
     model_ht_wp = -1.0
     model_btag_wp = -1.0
 
 
-    #Find model WP that maximizes pure efficiency
+    #Find model WP that maximizes efficiency
     HT_range = np.arange(150, 250, 5)
 
     interp_func = interp1d(btag_ht_wps, btag_wps, kind='linear', fill_value='extrapolate')
@@ -368,13 +360,14 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
         cand_model_selection = (jet_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_selection(jet_pt, jet_eta, apply_sel)
         cand_pure_model_selection = cand_model_selection & ~ht_only_selection
 
+        eff = np.mean(cand_model_selection)
         pure_eff = np.mean(cand_pure_model_selection)
-        if( pure_eff > max_pure_eff):
-            max_pure_eff = pure_eff
+        if( eff > max_eff):
+            max_eff = eff
             model_ht_wp = HT_cut
             model_btag_wp = float(working_point_NN)
 
-    print("Setting HT cut at %.2f, model HH pure eff is %.3f" % (model_ht_wp, max_pure_eff))
+    print("Setting HT cut at %.2f, model HH eff is %.3f" % (model_ht_wp, max_eff))
 
     #Save this best WP
     working_point = {"HT": float(model_ht_wp), "NN": float(model_btag_wp)}
@@ -382,7 +375,8 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     with open(wp_path, "w") as f:
         json.dump(working_point, f, indent=4)
 
-    model_selection = (jet_ht > model_HT_wp) & (model_bscore_sum > model_btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
+    model_selection = (jet_ht > model_ht_wp) & (model_bscore_sum > model_btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
+    model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
     pure_model_selection = model_selection & ~ht_only_selection
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists

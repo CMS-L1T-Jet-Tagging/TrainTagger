@@ -54,14 +54,14 @@ def get_interp_func(WP_path):
     return interp_func
 
 def tau_score(preds, class_labels):
-    tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']] 
+    tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']]
 
     tau = sum([preds[:,idx] for idx in tau_index] )
     bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
     #bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
 
     return tau / (tau + bkg)
-    
+
 
 
 def pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate = 31, RateRange = 1.0, label=""):
@@ -145,7 +145,7 @@ def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
 
-    
+
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -191,7 +191,7 @@ def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n
     #Reshape to orig shape
     all_scores = ak.unflatten(all_scores, ak.num(jet_pt))
     all_corr_pts = ak.unflatten(all_corr_pts, ak.num(jet_pt))
-    
+
     #find highest tau score per event
     highest_score = ak.argmax(all_scores, axis=1, keepdims=True)
 
@@ -395,7 +395,7 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
     pred_score, ratio = model.predict(nn_inputs)
 
-    nn_tauscore_raw = tau_score(pred_score, class_labels ) 
+    nn_tauscore_raw = tau_score(pred_score, class_labels )
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     cut = nn_taupt_raw > 30.
@@ -432,7 +432,7 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     #cmssw_pt = jet_taupt_raw[highest_score]
 
 
-    pT_edges = [0] + np.arange(30, 150, 2) 
+    pT_edges = [0] + np.arange(30, 150, 2)
 
     #Denominator & numerator selection for efficiency
     eta_selection = np.abs(gen_eta_raw) < 2.172
@@ -500,7 +500,7 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         gen_eta_selection = eta_region_selection(gen_eta_raw, eta_region)
 
         #Pick a single pt WP for comparison
-        pt_WP = 75. 
+        pt_WP = 75.
 
         tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & eta_selection
 
@@ -572,7 +572,7 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         cmssw_err = np.nan_to_num(cmssw_err, nan=0.)
         nn_err = np.nan_to_num(nn_err, nan=0.)
 
-        
+
         # Plot errorbars for both sets of efficiencies
         ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
         ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 31kHz')
@@ -608,8 +608,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus') 
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')    
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')

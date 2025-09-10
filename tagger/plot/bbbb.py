@@ -36,7 +36,7 @@ def default_selection(jet_pt, jet_eta, apply_sel):
 
 def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labels, n_jets=4):
 
-    b_index=class_labels['b'] 
+    b_index=class_labels['b']
     l_index=class_labels['light']
     g_index=class_labels['gluon']
     p_index=class_labels['pileup']

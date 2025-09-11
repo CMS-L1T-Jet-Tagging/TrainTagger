@@ -378,7 +378,6 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     cmssw_WP_interp = get_interp_func(cmssw_WP_path)
 
 
-
     signal = uproot.open(signal_path)[tree]
 
     #Select out the taus
@@ -417,19 +416,6 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     plt.hist(jet_tauscore_raw[cut], bins=30)
     plt.xlabel("CMSSW Tau Score")
     plt.savefig(f"{plot_dir}/cmssw_tau_score.png")
-
-
-    #nn_tauscore_raw = ak.unflatten(nn_tauscore_raw, ak.num(tau_flav))
-    #nn_taupt_raw = ak.unflatten(nn_taupt_raw, ak.num(tau_flav))
-
-    #highest_score = ak.argmax(nn_tauscore_raw, axis=1, keepdims=True)
-    #nn_tauscore = nn_tauscore_raw[highest_score]
-    #nn_pt = nn_taupt_raw[highest_score]
-
-
-    #highest_score = ak.argmax(jet_tauscore_raw, axis=1, keepdims=True)
-    #cmssw_tauscore = jet_tauscore_raw[highest_score]
-    #cmssw_pt = jet_taupt_raw[highest_score]
 
 
     pT_edges = [0] + np.arange(30, 150, 2)

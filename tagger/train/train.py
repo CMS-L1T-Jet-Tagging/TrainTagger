@@ -143,7 +143,8 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
         4: 1., # taup
         5: 1., # taum
         6: 1., # muon
-        7: 1. # electron
+        7: 1., # electron
+        8: 1. # pileup
     }
     for idx in class_labels.values():
         weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * weights_per_class[idx]
@@ -171,7 +172,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod = WEIGHT
     else:
         return sample_weights
 
-def train(out_dir, percent, model_name, new_epochs = None):
+def train(out_dir, percent, model_name, new_epochs = None, merge_pu_class = False):
 
     # Remove output dir if exists
     if os.path.exists(out_dir):
@@ -183,6 +184,9 @@ def train(out_dir, percent, model_name, new_epochs = None):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+
+    if(merge_pu_class and 'pileup' in class_labels):
+        class_labels["pileup"] = class_labels['gluon']
 
     # Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump input variables
@@ -276,6 +280,7 @@ if __name__ == "__main__":
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
     parser.add_argument('-t','--tree', default='outnano/Jets', help = 'Tree within the ntuple containing the jets')
+    parser.add_argument('--merge-pu-class', action='store_true', help='Merge pileup class into gluons')
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
@@ -318,7 +323,7 @@ if __name__ == "__main__":
         with mlflow.start_run(run_name=args.name) as run:
             mlflow.set_tag('gitlab.CI_JOB_ID', os.getenv('CI_JOB_ID'))
             mlflow.keras.autolog()
-            train(args.output, args.percent, model_name=args.model)
+            train(args.output, args.percent, model_name=args.model, merge_pu_class=args.merge_pu_class)
             run_id = run.info.run_id
         sourceFile = open('mlflow_run_id.txt', 'w')
         print(run_id, end="", file = sourceFile)

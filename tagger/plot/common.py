@@ -144,4 +144,3 @@ def x_vs_y(x, y, apply_light=True):
         return s
     else:
         return x
-

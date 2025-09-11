@@ -602,4 +602,3 @@ if __name__ == "__main__":
         bbbb_eff(args.model_dir, args.sample, False, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
         bbbb_eff(args.model_dir, args.sample, False, False, n_entries=args.n_entries,tree=args.tree)
-

@@ -661,4 +661,3 @@ if __name__ == "__main__":
         plot_bkg_rate_ditau_topo(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
         topo_eff(args.model_dir, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)
-

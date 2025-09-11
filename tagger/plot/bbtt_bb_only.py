@@ -320,9 +320,9 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
 
     ht_only_selection = jet_ht > ht_only_wp
 
-    #Find model WP that maximizes pure efficiency
+    #Find model WP that maximizes efficiency
     HT_range = np.arange(150, 250, 5)
-    max_pure_eff = -1.0
+    max_eff = -1.0
     model_HT_wp = -1.0
     model_btag_wp = -1.0
 
@@ -331,13 +331,13 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
         cand_model_selection = (jet_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_sel
         cand_pure_model_selection = cand_model_selection & ~ht_only_selection
 
-        pure_eff = np.mean(cand_pure_model_selection)
-        if( pure_eff > max_pure_eff):
-            max_pure_eff = pure_eff
+        eff = np.mean(cand_model_selection)
+        if( eff > max_eff):
+            max_eff = eff
             model_HT_wp = HT_cut
             model_btag_wp = float(working_point_NN)
 
-    print("Setting HT cut at %.2f, model HH pure eff is %.3f" % (model_HT_wp, max_pure_eff))
+    print("Setting HT cut at %.2f, model HH eff is %.3f" % (model_HT_wp, max_eff))
 
 
     #write out best working point

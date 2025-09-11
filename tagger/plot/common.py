@@ -47,6 +47,9 @@ def eta_region_selection(eta_array, eta_region):
 
     if eta_region == 'barrel': return np.abs(eta_array) < 1.5
     elif eta_region == 'endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.5)
+    #additional eta restriction on taus
+    #slide 7 here https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdfa
+    elif eta_region == 'tau-endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.172)
     else: return np.abs(eta_array) > 0.0 #Select everything
 
 def delta_r(eta1, phi1, eta2, phi2):
@@ -133,3 +136,12 @@ def plot_roc(modelsAndNames,truthclass,keys = ["Emulation","Tensorflow","hls4ml"
     ax.grid(True)
     ax.legend(loc='best')
     return fig
+
+
+def x_vs_y(x, y, apply_light=True):
+    if apply_light:
+        s = x / (x + y)
+        return s
+    else:
+        return x
+

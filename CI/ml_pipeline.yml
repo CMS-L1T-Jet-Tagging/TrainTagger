@@ -122,6 +122,9 @@ evaluate:
   - echo "bbbb performance"
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE
+  - echo "Single tau performance"
+  - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE
+  - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE
   artifacts:
     paths:
       - output

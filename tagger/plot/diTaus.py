@@ -23,7 +23,7 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
 
 
 def tau_score(preds, class_labels):

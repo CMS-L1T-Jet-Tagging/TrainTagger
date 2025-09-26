@@ -191,4 +191,3 @@ if __name__ == "__main__":
     else:
         model = fromYaml(args.yaml_config, args.output)
         train(model, args.output, args.percent)
-

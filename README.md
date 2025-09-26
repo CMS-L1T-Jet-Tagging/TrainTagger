@@ -109,13 +109,13 @@ source setup.sh
 Then, to prepare the data for training:
 
 ```
-python tagger/make_data.py
+python tagger/data/make_data.py
 ```
 
 This prepare the data using the default options(look into the script to see what the options are). If you want to customize the input data path, or the data step size for `uproot.iterate`, then you can use the full options
 
 ```
-python tagger/make_data.py --make-data -i <your-rootfile> -s <custom-step-size>
+python tagger/data/make_data.py --make-data -i <your-rootfile> -s <custom-step-size>
 ```
 
 This automatically create a new directory: `training_data` (it will ask before removing the exisiting one), and writes the data into it. Then, to train the model:

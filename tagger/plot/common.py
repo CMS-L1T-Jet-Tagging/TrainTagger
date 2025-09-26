@@ -61,8 +61,7 @@ def delta_r(eta1, phi1, eta2, phi2):
     delta_phi = (delta_phi + np.pi) % (2 * np.pi) - np.pi
     return np.sqrt(delta_eta**2 + delta_phi**2)
 
-
-def find_rate(rate_list, target_rate=14, RateRange=0.05):
+def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
 
     idx_list = []
 
@@ -71,7 +70,6 @@ def find_rate(rate_list, target_rate=14, RateRange=0.05):
             idx_list.append(i)
 
     return idx_list
-
 
 def plot_ratio(all_events, selected_events, plot=False):
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)

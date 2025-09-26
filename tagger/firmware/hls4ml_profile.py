@@ -144,27 +144,6 @@ if __name__ == "__main__":
 
     report = getReports(args.outpath_firmware + '/' + model.hls4ml_config['project_name'])
 
-    # if os.path.isfile("mlflow_run_id.txt"):
-
-    #     f = open("mlflow_run_id.txt", "r")
-    #     run_id = (f.read())
-    #     mlflow.get_experiment_by_name(os.getenv('CI_COMMIT_REF_NAME'))
-    #     with mlflow.start_run(experiment_id=1,
-    #                         run_name=args.name,
-    #                         run_id=run_id # pass None to start a new run
-    #                         ):
-    #         mlflow.log_metric('FF',report['ff_rel'])
-    #         mlflow.log_metric('LUT',report['lut_rel'])
-    #         mlflow.log_metric('BRAM',report['bram_rel'])
-    #         mlflow.log_metric('DSP',report['dsp_rel'])
-    #         mlflow.log_metric('Latency cc',report['latency_clks'])
-    #         mlflow.log_metric('Latency us',report['latency_mus'])
-    #         mlflow.log_metric('Initiation Interval ',report['latency_ii'])
-
-    #         mlflow.log_param('Input Precision ',precisions[0])
-    #         mlflow.log_param('Class Precision ',precisions[1])
-    #         mlflow.log_param('Regression Precision ',precisions[2])
-
     print("===================")
     print('Input Precision : ', model.hls4ml_config['input_precision'])
     print('Class Precision : ', model.hls4ml_config['class_precision'])

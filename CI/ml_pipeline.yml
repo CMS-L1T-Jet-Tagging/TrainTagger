@@ -48,8 +48,7 @@ variables:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - python $FOLDER/$SCRIPT $ARGS
-  tags:
-    - docker
+  tags: [cern-nextgen-h100]
   # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
   #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
   #      when: on_success
@@ -86,7 +85,6 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true
@@ -214,6 +212,8 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
+  rules:
+    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:
@@ -242,6 +242,8 @@ upload_new_model:
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
+  rules:
+    - if: $RERUN_ON_TAG == "False"
   needs:
     - job: train
       optional: false
@@ -253,8 +255,6 @@ upload_new_model:
       optional: true
     - job: profile
       optional: true
-  rules:
-    - if: $RERUN_ON_TAG == "False"
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -299,7 +299,7 @@ upload_tagged_model:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
+    # - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
     - cd TrainTagger/${Name}
     - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots --recursive --extensions png,pdf
   artifacts:

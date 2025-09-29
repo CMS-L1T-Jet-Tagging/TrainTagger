@@ -237,7 +237,7 @@ class InteractionNetModel(QKerasModel):
             ),
             kernel_initializer='lecun_uniform',
         )(pt_regress)
-        
+
         pt_regress = QActivation(quantized_bits( self.quantization_config['pt_output_quantization'][0],
                                                  self.quantization_config['pt_output_quantization'][1],
                                                  alpha=self.quantization_config['quantizer_alpha_val'],
@@ -295,7 +295,7 @@ class InteractionNetModel(QKerasModel):
             self.jet_model,
             backend='Vitis',
             project_name=self.hls4ml_config['project_name'],
-            clock_period=self.hls4ml_config['clock_period'], 
+            clock_period=self.hls4ml_config['clock_period'],
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
             part=self.hls4ml_config['fpga_part'],

@@ -90,7 +90,7 @@ for path in pathlist:
                 "hls4ml_config" : {"input_precision" : str,
                                 "class_precision" : str,
                                 "reg_precision": str,
-                                "clock_period" : And(float, lambda s: 0.0 < s <= 10)},
+                                "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                 "fpga_part" : str,
                                 "project_name" : str}
             }

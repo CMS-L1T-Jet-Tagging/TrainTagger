@@ -11,6 +11,7 @@ import numpy as np
 import tensorflow as tf
 import uproot
 import yaml
+from tqdm import tqdm
 
 # Dataset configuration
 from .config import EXTRA_FIELDS, FILTER_PATTERN, INPUT_TAG, N_PARTICLES

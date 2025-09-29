@@ -58,7 +58,6 @@ class DeepSetModelHGQ(QKerasModel):
             keep_negative=0,
             name='pT_output',
         )(pt_regress)
-        
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])

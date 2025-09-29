@@ -58,7 +58,7 @@ class DeepSetModelHGQ(QKerasModel):
             keep_negative=0,
             name='pT_output',
         )(pt_regress)
-        
+
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
@@ -101,7 +101,7 @@ class DeepSetModelHGQ(QKerasModel):
             proxy,
             backend='Vitis',
             project_name=self.hls4ml_config['project_name'],
-            clock_period=self.hls4ml_config['clock_period'], 
+            clock_period=self.hls4ml_config['clock_period'],
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
             part=self.hls4ml_config['fpga_part'],

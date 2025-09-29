@@ -26,13 +26,13 @@ for path in pathlist:
                         "regression_layers" : list,
                         "kernel_initializer" : str,
                         "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])}
-        
+
         quantization_config = {'quantizer_bits' : And(int, lambda s: 32 >= s >= 0),
                                'quantizer_bits_int' : And(int, lambda s: 32 >= s >= 0),
                                'quantizer_alpha_val' : And(float, lambda s: 1.0 >= s >= 0.0),
                                'pt_output_quantization' : list
                               }
-        
+
         additional_training_config = { "initial_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
                                        "final_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
                                        "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
@@ -45,13 +45,13 @@ for path in pathlist:
                         "classification_layers" : list,
                         "regression_layers" : list,
                         "beta": And(float, lambda s: 1.0 >= s >= 0.0) }
-        
+
         quantization_config = {'pt_output_quantization' : list}
-        
+
         additional_training_config = { "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
                                        "ReduceLROnPlateau_patience" : int,
                                        "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
-        
+
     elif model == 'InteractionNetModel':
         model_config = {"name" : str,
                         "effects_layers" : list,
@@ -60,19 +60,19 @@ for path in pathlist:
                         "regression_layers" : list,
                         "kernel_initializer" : str,
                         "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])}
-        
+
         quantization_config = {"quantizer_bits" : And(int, lambda s: 32 >= s >= 0),
                                "quantizer_bits_int" : And(int, lambda s: 32 >= s >= 0),
                                "quantizer_alpha_val" : And(float, lambda s: 1.0 >= s >= 0.0),
                                "pt_output_quantization" : list
                             }
-        
+
         additional_training_config = { "initial_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
                                        "final_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
                                        "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
                                        "ReduceLROnPlateau_patience" : int,
                                        "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
-        
+
     else:
         model_config = {"name" : str}
         quantization_config = {}
@@ -95,7 +95,7 @@ for path in pathlist:
                                 "project_name" : str}
             }
     )
-    
+
     schema.validate(yaml_dict)
 
     if not schema.is_valid(yaml_dict):

@@ -28,7 +28,6 @@ def getReports(indir):
             lines = np.array(report.readlines())
             lat_line = lines[np.argwhere(np.array(['Latency (cycles)' in line for line in lines])).flatten()[0] + 3]
             data_['latency_clks'] = int(lat_line.split('|')[2])
-            data_['latency_mus'] = float(lat_line.split('|')[2]) * 5.0 / 1000.0
             data_['latency_ii'] = int(lat_line.split('|')[6])
 
             resource_line = lines[np.argwhere(np.array(['|Utilization (%)' in line for line in lines])).flatten()[0]]
@@ -154,6 +153,6 @@ if __name__ == "__main__":
     print('Block RAM : ', report['bram_rel'], ' %')
     print('Digital Signal Processors : ', report['dsp_rel'], ' %')
     print('Latency : ', report['latency_clks'], ' clock cycles')
-    print('Latency : ', report['latency_mus'], ' mus')
+    print('Latency : ', report['latency_clks'] * model.hls4ml_config['clock_period'] * 1e-3, ' mus')
     print('Initiation Interval : ', report['latency_mus'], ' clock cycles')
     print("===================")

@@ -1,4 +1,9 @@
 source activate tagger
+
+# Verify that all the variables exist so paths aren't overwritten
+if [ -z "${Name}" ] || [ -z "${Model}" ] || [ -z "${EOS_STORAGE_DIR}" ] || [ -z "${EOS_STORAGE_SUBDIR}" ] then
+    exit 1
+
 mkdir $Name
 mkdir $Name/plots
 mv output/$Model/model $Name/model

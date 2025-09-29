@@ -390,6 +390,7 @@ def make_data(
     ratio=1.0,
     step_size="100MB",
     tree="outnano/jets",
+    num_workers=8
 ):
     """
     Process the data set in chunks from the input ntuples file.
@@ -424,7 +425,7 @@ def make_data(
     num_entries_done = 0
     chunk = 0
 
-    for data in uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=8):
+    for data in tqdm(uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=num_workers)):
 
         num_entries_done += len(data)  # count before cuts
 
@@ -446,6 +447,5 @@ def make_data(
 
         # Number of chunk for indexing files
         chunk += 1
-        print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
         if num_entries_done / num_entries >= ratio:
             break

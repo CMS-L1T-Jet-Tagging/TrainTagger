@@ -51,7 +51,7 @@ source setup.sh
 export Model=baseline
 
 #Prepare the data
-python tagger/make_data.py
+python tagger/data/make_data.py
 
 #Train the model
 python tagger/train/train.py -y tagger/model/configs/$Model.yaml -o output/$Model
@@ -173,7 +173,7 @@ Reference on conda environment here: https://docs.conda.io/projects/conda/en/lat
 
 # Adding a new model
 To add a new model class to the repo there are a number of steps needed:
-First add a MyModel.py to tagger/model
+First create a file MyModel.py in the tagger/model directory
 This python script must contain a uniquely named model class that inherits from JetTagModel and is registered with the model factory:
 ```
 @JetModelFactory.register('MyModel')
@@ -232,6 +232,9 @@ hls4ml_config:
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
 
+  clock_period : 2.5
+  fpga_part : 'xcvu13p-flga2577-2-e'
+
   project_name: 'MyModel_test'
 ```
 
@@ -240,6 +243,8 @@ To train your new model just specify the new yaml when training e.g.
 ```
 python tagger/train/train.py -y tagger/model/configs/mymodel.yaml -o output/mymodel
 ```
+
+Your yaml file will be validated in the pre-commit-hooks. If your config adds extra parameters that are necessary for your model variant to run add these variables in the tagger/model/configs/scheme.py file with a new elif path for your specific model type.
 
 # Continous Integration
 

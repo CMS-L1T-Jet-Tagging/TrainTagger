@@ -16,6 +16,7 @@ import tensorflow_model_optimization as tfmot
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
+from tensorflow.keras.layers import Activation, BatchNormalization, Concatenate, Layer
 
 # Custom NodeEdgeProjection needed for the InteractionNet
 class NodeEdgeProjection(Layer, tfmot.sparsity.keras.PrunableLayer):
@@ -236,6 +237,11 @@ class InteractionNetModel(QKerasModel):
             ),
             kernel_initializer='lecun_uniform',
         )(pt_regress)
+        
+        pt_regress = QActivation(quantized_bits( self.quantization_config['pt_output_quantization'][0],
+                                                 self.quantization_config['pt_output_quantization'][1],
+                                                 alpha=self.quantization_config['quantizer_alpha_val'],
+                                                ))(pt_regress)
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
@@ -289,10 +295,10 @@ class InteractionNetModel(QKerasModel):
             self.jet_model,
             backend='Vitis',
             project_name=self.hls4ml_config['project_name'],
-            clock_period=2.8,  # 1/360MHz = 2.8ns
+            clock_period=self.hls4ml_config['clock_period'], 
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
-            part='xcvu13p-flga2577-2-e',
+            part=self.hls4ml_config['fpga_part'],
         )
 
         # Compile and build the project

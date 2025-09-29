@@ -16,20 +16,8 @@ import hls4ml
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
-num_threads = 24
-os.environ["OMP_NUM_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
-os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
-
-tf.config.threading.set_inter_op_parallelism_threads(num_threads)
-tf.config.threading.set_intra_op_parallelism_threads(num_threads)
-
-# GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
-tf.keras.utils.set_random_seed(420)  # not a special number
-
-
 @JetModelFactory.register('DeepSetModelHGQ')
-class DeepSetModelHGQ(JetTagModel):
+class DeepSetModelHGQ(QKerasModel):
     def __init__(self, output_dir):
         super().__init__(output_dir)
 
@@ -70,70 +58,13 @@ class DeepSetModelHGQ(JetTagModel):
             keep_negative=0,
             name='pT_output',
         )(pt_regress)
+        
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
 
         print(self.jet_model.summary())
 
-    def compile_model(self, num_samples):
-
-        self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
-            ResetMinMax(),
-            FreeBOPs(),
-        ]
-
-        self.jet_model.compile(
-            optimizer='adam',
-            loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
-                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
-            },
-            loss_weights=self.training_config['loss_weights'],
-            metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-            weighted_metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-        )
-
-    def fit(self, X_train, y_train, pt_target_train, sample_weight):
-        self.history = self.jet_model.fit(
-            {'model_input': X_train},
-            {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight=sample_weight,
-            epochs=self.training_config['epochs'],
-            batch_size=self.training_config['batch_size'],
-            verbose=self.run_config['verbose'],
-            validation_split=self.training_config['validation_split'],
-            callbacks=self.callbacks,
-            shuffle=True,
-        )
-
-    @JetTagModel.save_decorator
-    def save(self, out_dir):
-        # Export the model
-        model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
-        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
-        export_path = os.path.join(out_dir, "model/saved_model.h5")
-        model_export.save(export_path)
-        print(f"Model saved to {export_path}")
-
-    @JetTagModel.load_decorator
-    def load(self, out_dir=None):
-        # Load model
-
-        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.h5")
 
     def hls4ml_convert(self, firmware_dir, build=False):
 
@@ -170,10 +101,10 @@ class DeepSetModelHGQ(JetTagModel):
             proxy,
             backend='Vitis',
             project_name=self.hls4ml_config['project_name'],
-            clock_period=2.5,  # 1/360MHz = 2.8ns
+            clock_period=self.hls4ml_config['clock_period'], 
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
-            part='xcvu9p-flga2104-2L-e',
+            part=self.hls4ml_config['fpga_part'],
         )
 
         # Compile and build the project

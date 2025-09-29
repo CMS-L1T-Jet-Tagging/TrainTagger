@@ -2,6 +2,7 @@ model: DeepSetModelHGQ
 run_config :
   verbose : 2
   debug : True
+  num_threads : 24
 
 model_config :
   name : baseline_HGQ
@@ -33,5 +34,8 @@ hls4ml_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
+
+  clock_period : 2.5
+  fpga_part : 'xcvu13p-flga2577-2-e'
 
   project_name: 'L1TSC4NGJetModel_test'

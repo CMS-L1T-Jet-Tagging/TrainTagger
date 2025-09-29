@@ -25,6 +25,10 @@ if __name__ == "__main__":
         '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
     )
 
+    parser.add_argument(
+        '-nw', '--num_workers', default=8, type=int, help='How many threads to run the data splitting with'
+    )
+
     args = parser.parse_args()
 
     make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
@@ -41,4 +45,5 @@ if __name__ == "__main__":
                 extras=args.extras,
                 ratio=args.ratio,
                 tree=args.tree,
+                num_workers = args.num_workers,
             )

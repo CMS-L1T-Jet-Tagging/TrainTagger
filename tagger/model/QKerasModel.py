@@ -42,10 +42,10 @@ class QKerasModel(JetTagModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
-    
+
     def __init__(self, output_dir):
         super().__init__(output_dir)
-        
+
         # Define some common arguments, taken from the yaml config
         self.common_args = {
             'kernel_quantizer': quantized_bits(

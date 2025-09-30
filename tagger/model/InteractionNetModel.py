@@ -125,7 +125,7 @@ class InteractionNetModel(QKerasModel):
         """
 
         initialise_tensorflow(self.run_config['num_threads'])
-        
+
         self.common_args = {
             'kernel_quantizer': quantized_bits(
                 self.quantization_config['quantizer_bits'],

@@ -23,7 +23,6 @@ from tensorflow.keras.layers import Activation, BatchNormalization
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
-# Register the model in the factory with the string name corresponding to what is in the yaml config
 class QKerasModel(JetTagModel):
     """QKerasModel class
 
@@ -33,6 +32,33 @@ class QKerasModel(JetTagModel):
 
     def __init__(self, output_dir):
         super().__init__(output_dir)
+        
+                # Define some common arguments, taken from the yaml config
+        self.common_args = {
+            'kernel_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'bias_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'kernel_initializer': self.model_config['kernel_initializer'],
+        }
+        
+        # Set some tensorflow constants
+        NUM_THREADS = self.run_config['num_threads']
+        os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
+        os.environ["TF_NUM_INTRAOP_THREADS"] = str(NUM_THREADS)
+        os.environ["TF_NUM_INTEROP_THREADS"] = str(NUM_THREADS)
+
+        tf.config.threading.set_inter_op_parallelism_threads(NUM_THREADS)
+        tf.config.threading.set_intra_op_parallelism_threads(NUM_THREADS)
+
+        tf.keras.utils.set_random_seed(420)  # not a special number
+
 
     def _prune_model(self, num_samples: int):
         """Pruning setup for the model, internal model function called by compile

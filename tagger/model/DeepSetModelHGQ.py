@@ -22,22 +22,6 @@ class DeepSetModelHGQ(QKerasModel):
         super().__init__(output_dir)
 
     def build_model(self, inputs_shape, outputs_shape):
-        # Define a dictionary for common arguments
-        
-                # Define some common arguments, taken from the yaml config
-        self.common_args = {
-            'kernel_quantizer': quantized_bits(
-                self.quantization_config['quantizer_bits'],
-                self.quantization_config['quantizer_bits_int'],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'bias_quantizer': quantized_bits(
-                self.quantization_config['quantizer_bits'],
-                self.quantization_config['quantizer_bits_int'],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'kernel_initializer': self.model_config['kernel_initializer'],
-        }
 
         beta = self.model_config["beta"]
 

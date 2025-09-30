@@ -63,17 +63,6 @@ class JetTagModel(ABC):
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
         self.hls4ml_config = yaml_dict['hls4ml_config']
-        
-        # Set some tensorflow constants
-        NUM_THREADS = self.run_config['num_threads']
-        os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
-        os.environ["TF_NUM_INTRAOP_THREADS"] = str(NUM_THREADS)
-        os.environ["TF_NUM_INTEROP_THREADS"] = str(NUM_THREADS)
-
-        tf.config.threading.set_inter_op_parallelism_threads(NUM_THREADS)
-        tf.config.threading.set_intra_op_parallelism_threads(NUM_THREADS)
-
-        tf.keras.utils.set_random_seed(420)  # not a special number
 
     @abstractmethod
     def build_model(self, **kwargs):

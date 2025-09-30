@@ -16,7 +16,5 @@ repos:
   hooks:
     - id: yaml_config_check
       name: yaml_config_check
-      entry: bash -c 'cd tagger/model/configs && pip install schema && python scheme.py'
-      language: system
-      types: [python]
-      pass_filenames: false
+      language: docker_image
+      entry: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest bash -c 'cd tagger/model/configs && python scheme.py'

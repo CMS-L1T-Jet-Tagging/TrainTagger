@@ -38,7 +38,7 @@ class DeepSetModel(QKerasModel):
             regression_layers: List of number of nodes for each layer of the regression MLP
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
-        
+
         self.set_dictionary()
 
         # Initialize inputs

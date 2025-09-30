@@ -31,7 +31,7 @@ class QKerasModel(JetTagModel):
     """
 
     def set_dictionary(self):
-        
+
                 # Define some common arguments, taken from the yaml config
         self.common_args = {
             'kernel_quantizer': quantized_bits(

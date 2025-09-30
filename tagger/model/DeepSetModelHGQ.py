@@ -20,9 +20,9 @@ from tagger.model.QKerasModel import QKerasModel
 class DeepSetModelHGQ(QKerasModel):
 
     def build_model(self, inputs_shape, outputs_shape):
-        
+
         self.set_dictionary()
-        
+
         beta = self.model_config["beta"]
 
         # Initialize inputs

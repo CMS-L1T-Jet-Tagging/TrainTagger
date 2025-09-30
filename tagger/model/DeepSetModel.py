@@ -11,7 +11,7 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
+from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
@@ -44,6 +44,8 @@ class DeepSetModel(QKerasModel):
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
 
+        initialise_tensorflow(self.run_config['num_threads'])
+        
         self.common_args = {
             'kernel_quantizer': quantized_bits(
                 self.quantization_config['quantizer_bits'],

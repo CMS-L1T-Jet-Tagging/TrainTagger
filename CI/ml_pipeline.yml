@@ -46,6 +46,7 @@ variables:
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags: [cern-nextgen-h100]

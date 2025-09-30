@@ -14,9 +14,12 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 
 from qkeras.quantizers import quantized_bits
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
+from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
+from qkeras import QConv1D
+from qkeras.qlayers import QActivation, QDense
+from qkeras.quantizers import quantized_bits, quantized_relu
 from tensorflow.keras.layers import Activation, BatchNormalization, Concatenate, Layer
 
 # Custom NodeEdgeProjection needed for the InteractionNet
@@ -121,6 +124,8 @@ class InteractionNetModel(QKerasModel):
             aggregator: String that specifies the type of aggregator to use after the obj net.
         """
 
+        initialise_tensorflow(self.run_config['num_threads'])
+        
         self.common_args = {
             'kernel_quantizer': quantized_bits(
                 self.quantization_config['quantizer_bits'],

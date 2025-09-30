@@ -1,14 +1,16 @@
 source activate tagger
-echo ${Name}
-echo ${Model}
-echo ${EOS_STORAGE_DIR}
-echo ${EOS_STORAGE_SUBDIR}
-echo ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest
-echo ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
-# Verify that all the variables exist so paths aren't overwritten
-if [ -z "${Name}" ] || [ -z "${Model}" ] || [ -z "${EOS_STORAGE_DIR}" ] || [ -z "${EOS_STORAGE_SUBDIR}" ] then
-    exit 1
+echo "Name: " ${Name}
+echo "Model type: " ${Model}
+echo "EOS STORAGE DIR: " ${EOS_STORAGE_DIR}
+echo "EOS STORAGE SUBDIR: " ${EOS_STORAGE_SUBDIR}
+echo "EOS STORAGE save directory: " ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+echo "EOS STORAGE save directory latest tag: " ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest
 
+# Verify that all the variables exist so paths aren't overwritten
+if [ -z "${Name}" ] || [ -z "${Model}" ] || [ -z "${EOS_STORAGE_DIR}" ] || [ -z "${EOS_STORAGE_SUBDIR}" ]; then
+    echo "Missing a saving directory parameter, check print statments above"
+    exit 1
+fi
 mkdir $Name
 mkdir $Name/plots
 mv output/$Model/model $Name/model

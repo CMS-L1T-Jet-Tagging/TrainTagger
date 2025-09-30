@@ -127,13 +127,13 @@ class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer
     def get_prunable_weights(self):
         return self.score_dense._trainable_weights
 
-# def initialise_tensorflow(num_threads):
-#     # Set some tensorflow constants
-#     os.environ["OMP_NUM_THREADS"] = str(num_threads)
-#     os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
-#     os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
+def initialise_tensorflow(num_threads):
+    # Set some tensorflow constants
+    os.environ["OMP_NUM_THREADS"] = str(num_threads)
+    os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
+    os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
 
-#     tf.keras.utils.set_random_seed(46)  # not a special number
+    tf.keras.utils.set_random_seed(46)  # not a special number
 
 
 def choose_aggregator(choice: str, name: str, bits=9, bits_int=2, alpha_val=1, **common_args) -> tf.keras.layers.Layer:

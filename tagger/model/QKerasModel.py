@@ -27,7 +27,7 @@ class QKerasModel(JetTagModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
-
+    
     def _prune_model(self, num_samples: int):
         """Pruning setup for the model, internal model function called by compile
 

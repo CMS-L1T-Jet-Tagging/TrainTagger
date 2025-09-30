@@ -15,11 +15,16 @@ import hls4ml
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
+from tagger.model.common import initialise_tensorflow
+
 
 @JetModelFactory.register('DeepSetModelHGQ')
 class DeepSetModelHGQ(QKerasModel):
 
     def build_model(self, inputs_shape, outputs_shape):
+        
+        initialise_tensorflow(self.run_config['num_threads'])
+        
         beta = self.model_config["beta"]
 
         # Initialize inputs
@@ -59,7 +64,22 @@ class DeepSetModelHGQ(QKerasModel):
         self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
 
         print(self.jet_model.summary())
+    
+    # Redefine save and load for HGQ due to needing h5 format    
+    @JetTagModel.save_decorator
+    def save(self, out_dir):
+        # Export the model
+        model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
+        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
+        export_path = os.path.join(out_dir, "model/saved_model.h5")
+        model_export.save(export_path)
+        print(f"Model saved to {export_path}")
 
+    @JetTagModel.load_decorator
+    def load(self, out_dir=None):
+        # Load model
+
+        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.h5")
 
     def hls4ml_convert(self, firmware_dir, build=False):
 

@@ -8,13 +8,13 @@ from HGQ.layers import HConv1D, HConv1DBatchNorm, HDense, HQuantize, PAveragePoo
 
 # Qkeras
 from qkeras.utils import load_qmodel
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.layers import Activation
 
 import hls4ml
 
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+from tagger.model.QKerasModel import QKerasModel
 
 @JetModelFactory.register('DeepSetModelHGQ')
 class DeepSetModelHGQ(QKerasModel):

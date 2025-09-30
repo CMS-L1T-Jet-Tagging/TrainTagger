@@ -12,11 +12,11 @@ for path in pathlist:
 
     training_config = {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                        "validation_split" : And(float, lambda s: s > 0.0),
-                       Optional("epochs" : And(int, lambda s: s >= 1)),
-                       Optional("batch_size" : And(int, lambda s: s >= 1)),
-                       Optional("learning_rate": And(float, lambda s: s > 0.0)),
-                       Optional("loss_weights" : And(list, lambda s: len(s) == 2)),
-                       Optional('EarlyStopping_patience' : And(int, lambda s: s > 0)),}
+                       Optional("epochs") : And(int, lambda s: s >= 1),
+                       Optional("batch_size") : And(int, lambda s: s >= 1),
+                       Optional("learning_rate"): And(float, lambda s: s > 0.0),
+                       Optional("loss_weights") : And(list, lambda s: len(s) == 2),
+                       Optional('EarlyStopping_patience' ): And(int, lambda s: s > 0),}
 
 
     if model == 'DeepSetModel':

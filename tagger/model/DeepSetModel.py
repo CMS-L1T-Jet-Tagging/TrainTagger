@@ -37,6 +37,21 @@ class DeepSetModel(QKerasModel):
             regression_layers: List of number of nodes for each layer of the regression MLP
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
+        
+        # Define some common arguments, taken from the yaml config
+        self.common_args = {
+            'kernel_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'bias_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'kernel_initializer': self.model_config['kernel_initializer'],
+        }
 
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')

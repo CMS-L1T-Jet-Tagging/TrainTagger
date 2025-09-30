@@ -18,5 +18,5 @@ repos:
         name: yaml_config_check
         language: python
         types: [python]
-        entry: bash -c 'python tagger/model/configs/scheme.py'
+        entry: bash -c 'cd tagger/model/configs && python scheme.py'
         additional_dependencies: [schema, pyyaml]

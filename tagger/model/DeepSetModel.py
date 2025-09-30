@@ -110,7 +110,7 @@ class DeepSetModel(QKerasModel):
             kernel_initializer='lecun_uniform',
         )(pt_regress)
         pt_regress = QActivation(name = 'pT_output',
-                                 quantized_bits( self.quantization_config['pt_output_quantization'][0],
+                                 activation = quantized_bits( self.quantization_config['pt_output_quantization'][0],
                                                  self.quantization_config['pt_output_quantization'][1],
                                                  alpha=self.quantization_config['quantizer_alpha_val'],
                                                 ))(pt_regress)

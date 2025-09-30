@@ -154,5 +154,5 @@ if __name__ == "__main__":
     print('Digital Signal Processors : ', report['dsp_rel'], ' %')
     print('Latency : ', report['latency_clks'], ' clock cycles')
     print('Latency : ', report['latency_clks'] * model.hls4ml_config['clock_period'] * 1e-3, ' mus')
-    print('Initiation Interval : ', report['latency_mus'], ' clock cycles')
+    print('Initiation Interval : ', report['latency_ii'], ' clock cycles')
     print("===================")

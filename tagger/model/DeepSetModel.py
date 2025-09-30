@@ -15,6 +15,11 @@ from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
+from qkeras import QConv1D
+from qkeras.qlayers import QActivation, QDense
+from qkeras.quantizers import quantized_bits, quantized_relu
+from tensorflow.keras.layers import Activation, BatchNormalization
+
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('DeepSetModel')
 class DeepSetModel(QKerasModel):

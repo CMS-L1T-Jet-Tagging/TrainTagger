@@ -11,14 +11,12 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
-from qkeras import QConv1D
-from qkeras.qlayers import QActivation, QDense
+
 
 # Qkeras
-from qkeras.quantizers import quantized_bits, quantized_relu
+from qkeras.quantizers import quantized_bits
 from qkeras.utils import load_qmodel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from tensorflow.keras.layers import Activation, BatchNormalization
 
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel

@@ -19,4 +19,4 @@ repos:
         language: python
         types: [python]
         entry: bash -c 'python tagger/model/configs/scheme.py'
-        additional_dependencies: [schema]
+        additional_dependencies: [schema, yaml]

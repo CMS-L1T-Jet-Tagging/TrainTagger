@@ -46,7 +46,7 @@ class QKerasModel(JetTagModel):
             ),
             'kernel_initializer': self.model_config['kernel_initializer'],
         }
-        
+
         # Set some tensorflow constants
         NUM_THREADS = self.run_config['num_threads']
         os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)

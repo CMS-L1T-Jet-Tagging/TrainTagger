@@ -44,7 +44,19 @@ class DeepSetModel(QKerasModel):
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
 
-        self.set_dictionary()
+        self.common_args = {
+            'kernel_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'bias_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'kernel_initializer': self.model_config['kernel_initializer'],
+        }
 
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')

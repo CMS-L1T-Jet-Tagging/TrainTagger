@@ -28,32 +28,6 @@ class QKerasModel(JetTagModel):
         JetTagModel (_type_): Base class of a JetTagModel
     """
 
-    def set_dictionary(self):
-
-                # Define some common arguments, taken from the yaml config
-        self.common_args = {
-            'kernel_quantizer': quantized_bits(
-                self.quantization_config['quantizer_bits'],
-                self.quantization_config['quantizer_bits_int'],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'bias_quantizer': quantized_bits(
-                self.quantization_config['quantizer_bits'],
-                self.quantization_config['quantizer_bits_int'],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'kernel_initializer': self.model_config['kernel_initializer'],
-        }
-
-        # Set some tensorflow constants
-        NUM_THREADS = self.run_config['num_threads']
-        os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
-        os.environ["TF_NUM_INTRAOP_THREADS"] = str(NUM_THREADS)
-        os.environ["TF_NUM_INTEROP_THREADS"] = str(NUM_THREADS)
-
-        tf.keras.utils.set_random_seed(420)  # not a special number
-
-
     def _prune_model(self, num_samples: int):
         """Pruning setup for the model, internal model function called by compile
 

@@ -104,9 +104,6 @@ class InteractionNetModel(QKerasModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
-    
-    def __init__(self, output_dir):
-        super().__init__(output_dir)
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """Interaction network model from https://arxiv.org/abs/1612.00222.
@@ -122,6 +119,8 @@ class InteractionNetModel(QKerasModel):
             regression_layers: List of number of nodes for each layer of the regression MLP
             aggregator: String that specifies the type of aggregator to use after the obj net.
         """
+        
+        self.set_dictionary()
 
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')

@@ -58,6 +58,7 @@ class JetTagModel(ABC):
 
         with open(yaml_path, 'r') as stream:
             yaml_dict = yaml.safe_load(stream)
+
         self.run_config = yaml_dict['run_config']
         self.model_config = yaml_dict['model_config']
         self.quantization_config = yaml_dict['quantization_config']

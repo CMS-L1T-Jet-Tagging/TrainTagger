@@ -18,11 +18,11 @@ from tagger.model.QKerasModel import QKerasModel
 
 @JetModelFactory.register('DeepSetModelHGQ')
 class DeepSetModelHGQ(QKerasModel):
-    def __init__(self, output_dir):
-        super().__init__(output_dir)
 
     def build_model(self, inputs_shape, outputs_shape):
-
+        
+        self.set_dictionary()
+        
         beta = self.model_config["beta"]
 
         # Initialize inputs

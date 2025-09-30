@@ -30,8 +30,7 @@ class QKerasModel(JetTagModel):
         JetTagModel (_type_): Base class of a JetTagModel
     """
 
-    def __init__(self, output_dir):
-        super().__init__(output_dir)
+    def set_dictionary(self):
         
                 # Define some common arguments, taken from the yaml config
         self.common_args = {

@@ -108,7 +108,7 @@ class DeepSetModel(QKerasModel):
 
         pt_regress = QDense(
             1,
-            name='pT_output_dense',
+            name='pT_output',
             kernel_quantizer=quantized_bits(
                 self.quantization_config['pt_output_quantization'][0],
                 self.quantization_config['pt_output_quantization'][1],

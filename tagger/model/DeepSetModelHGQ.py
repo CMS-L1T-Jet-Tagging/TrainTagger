@@ -20,21 +20,6 @@ from tagger.model.QKerasModel import QKerasModel
 class DeepSetModelHGQ(QKerasModel):
 
     def build_model(self, inputs_shape, outputs_shape):
-
-        self.common_args = {
-            'kernel_quantizer': quantized_bits(
-                self.quantization_config['quantizer_bits'],
-                self.quantization_config['quantizer_bits_int'],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'bias_quantizer': quantized_bits(
-                self.quantization_config['quantizer_bits'],
-                self.quantization_config['quantizer_bits_int'],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'kernel_initializer': self.model_config['kernel_initializer'],
-        }
-
         beta = self.model_config["beta"]
 
         # Initialize inputs

@@ -120,10 +120,10 @@ class DeepSetModel(QKerasModel):
                 alpha=self.quantization_config['quantizer_alpha_val'],
             ),
             kernel_initializer='lecun_uniform',
-            activation=QActivation(quantized_bits( self.quantization_config['pt_output_quantization'][0],
-                                                 self.quantization_config['pt_output_quantization'][1],
-                                                 alpha=self.quantization_config['quantizer_alpha_val'],
-                                                ))
+            # activation=QActivation(quantized_bits( self.quantization_config['pt_output_quantization'][0],
+            #                                      self.quantization_config['pt_output_quantization'][1],
+            #                                      alpha=self.quantization_config['quantizer_alpha_val'],
+            #                                     ))
             )(pt_regress)
 
         # Define the model using both branches

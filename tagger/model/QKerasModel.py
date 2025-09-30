@@ -77,7 +77,8 @@ class QKerasModel(JetTagModel):
         ]
 
         # Define the pruning
-        self._prune_model(num_samples)
+        if 'initial_sparsity' in self.training_config:
+            self._prune_model(num_samples)
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(

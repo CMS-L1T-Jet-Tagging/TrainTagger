@@ -53,9 +53,6 @@ class QKerasModel(JetTagModel):
         os.environ["TF_NUM_INTRAOP_THREADS"] = str(NUM_THREADS)
         os.environ["TF_NUM_INTEROP_THREADS"] = str(NUM_THREADS)
 
-        tf.config.threading.set_inter_op_parallelism_threads(NUM_THREADS)
-        tf.config.threading.set_intra_op_parallelism_threads(NUM_THREADS)
-
         tf.keras.utils.set_random_seed(420)  # not a special number
 
 

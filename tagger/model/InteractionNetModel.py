@@ -119,7 +119,7 @@ class InteractionNetModel(QKerasModel):
             regression_layers: List of number of nodes for each layer of the regression MLP
             aggregator: String that specifies the type of aggregator to use after the obj net.
         """
-        
+
         # Define some common arguments, taken from the yaml config
         self.common_args = {
             'kernel_quantizer': quantized_bits(

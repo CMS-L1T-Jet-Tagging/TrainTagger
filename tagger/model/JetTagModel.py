@@ -63,7 +63,7 @@ class JetTagModel(ABC):
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
         self.hls4ml_config = yaml_dict['hls4ml_config']
-        
+
         # Set some tensorflow constants
         NUM_THREADS = self.run_config['num_threads']
         os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)

@@ -23,7 +23,7 @@ class DeepSetModelHGQ(QKerasModel):
 
     def build_model(self, inputs_shape, outputs_shape):
         # Define a dictionary for common arguments
-        
+
                 # Define some common arguments, taken from the yaml config
         self.common_args = {
             'kernel_quantizer': quantized_bits(

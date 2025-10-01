@@ -154,8 +154,10 @@ class QKerasModel(JetTagModel):
 
         # Additional custom objects for attention layers
         custom_objects_ = {
+            "NodeEdgeProjection": NodeEdgeProjection,
             "AAtt": AAtt,
             "AttentionPooling": AttentionPooling,
         }
+
         # Load the model
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)

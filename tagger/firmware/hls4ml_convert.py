@@ -14,4 +14,4 @@ if __name__ == "__main__":
 
     # Load the model
     model = fromFolder(args.model_path)
-    model.hls4ml_convert(args.outpath, build=False)
+    model.firmware_convert(args.outpath, build=False)

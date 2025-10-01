@@ -244,7 +244,6 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
     outfile = os.path.join(outdir, f'data_chunk_{chunk}.root')
     with uproot.recreate(outfile) as f:
         f["data"] = filtered_data
-        print(f"Saved chunk {chunk} to {outfile}")
 
     # Log metadata
     metadata_file = os.path.join(outdir, "metadata.json")
@@ -426,7 +425,8 @@ def make_data(
     num_entries_done = 0
     chunk = 0
 
-    for data in tqdm(uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=num_workers)):
+    for data in (pbar := tqdm(uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=num_workers))):
+        pbar.set_description(f'Processing chunk {chunk}')
 
         num_entries_done += len(data)  # count before cuts
 

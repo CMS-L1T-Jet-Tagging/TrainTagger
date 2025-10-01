@@ -1,5 +1,7 @@
 import json
 import os
+from schema import Schema, And, Use, Optional
+
 
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
@@ -20,6 +22,33 @@ from tagger.model.common import initialise_tensorflow
 
 @JetModelFactory.register('DeepSetModelHGQ')
 class DeepSetModelHGQ(QKerasModel):
+    
+    schema = Schema(
+            {
+                "model": str,
+                ## generic run config coniguration
+                "run_config" : JetTagModel.run_schema,
+                "model_config" : {"name" : str,
+                                  "conv1d_layers" : list,
+                                  "classification_layers" : list,
+                                  "regression_layers" : list,
+                                  "beta": And(float, lambda s: 1.0 >= s >= 0.0),
+                                  },
+                
+                "quantization_config" : {'pt_output_quantization' : list},
+                
+                "training_config" :     {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
+                                         "validation_split" : And(float, lambda s: s > 0.0),
+                                         "epochs" : And(int, lambda s: s >= 1),
+                                         "batch_size" : And(int, lambda s: s >= 1),
+                                         "learning_rate": And(float, lambda s: s > 0.0),
+                                         "loss_weights" : And(list, lambda s: len(s) == 2),
+                                         "EarlyStopping_patience" : And(int, lambda s: s > 0),
+                                         "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                         "ReduceLROnPlateau_patience" : int,
+                                         "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
+            }
+    )
 
     def build_model(self, inputs_shape, outputs_shape):
 
@@ -80,55 +109,3 @@ class DeepSetModelHGQ(QKerasModel):
         # Load model
 
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.h5")
-
-    def hls4ml_convert(self, firmware_dir, build=False):
-
-        # Remove the old directory if they exist
-        hls4ml_outdir = firmware_dir + '/' + self.hls4ml_config['project_name']
-        os.system(f'rm -rf {hls4ml_outdir}')
-        # Write HLS
-        data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=10)
-        X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-        # Make into ML-like data for training
-        # compute necessary bitwidth for each layer against a calibration dataset
-        trace_minmax(self.jet_model, X_train, cover_factor=1.0)
-        # convert HGQ model to a hls4ml-compatible proxy model
-        proxy = to_proxy_model(self.jet_model, aggressive=False)
-
-        # Create default config
-        config = hls4ml.utils.config_from_keras_model(proxy, granularity='name')
-        config['IOType'] = 'io_parallel'
-        config['LayerName']['input_1']['Precision']['result'] = self.hls4ml_config['input_precision']
-
-        # Configuration for conv1d layers
-        # hls4ml automatically figures out the paralellization factor
-        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
-
-        # Additional config
-
-        config["LayerName"]["act_jet"]["Precision"]["result"] = self.hls4ml_config['class_precision']
-        config["LayerName"]["act_jet"]["Implementation"] = "latency"
-        config["LayerName"]["pT_out"]["Precision"]["result"] = self.hls4ml_config['reg_precision']
-        config["LayerName"]["pT_out"]["Implementation"] = "latency"
-
-        self.hls_model = hls4ml.converters.convert_from_keras_model(
-            proxy,
-            backend='Vitis',
-            project_name=self.hls4ml_config['project_name'],
-            clock_period=self.hls4ml_config['clock_period'],
-            hls_config=config,
-            output_dir=f'{hls4ml_outdir}',
-            part=self.hls4ml_config['fpga_part'],
-        )
-
-        # Compile and build the project
-        self.hls_model.compile()
-
-        # Save config  as json file
-        print("Saving default config as config.json ...")
-        with open(hls4ml_outdir + '/config.json', 'w') as fp:
-            json.dump(config, fp)
-
-        if build:
-            self.hls_model.build(csim=False, reset=True)

@@ -11,9 +11,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 import numpy.typing as npt
 import yaml
+from schema import Schema, And, Use, Optional
 
 from tagger.plot.basic import loss_history
-
 
 class JetTagModel(ABC):
     """Parent Class for Jet Tag Models
@@ -39,7 +39,7 @@ class JetTagModel(ABC):
         self.model_config = {}
         self.quantization_config = {}
         self.training_config = {}
-        self.hls4ml_config = {}
+        self.firmware_config = {}
 
         self.output_id_name = 'jet_id_output'
         self.output_pt_name = 'pT_output'
@@ -48,6 +48,11 @@ class JetTagModel(ABC):
         self.callbacks = []
 
         self.history = None
+        
+    run_schema = {"verbose" : And(int, lambda s: s in [1,2,3]),
+                  "debug": bool,
+                  "num_threads" : And(int, lambda s: 1 <= s <= 128),
+                 }
 
     def load_yaml(self, yaml_path: str):
         """Load config dictionaries
@@ -63,7 +68,8 @@ class JetTagModel(ABC):
         self.model_config = yaml_dict['model_config']
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
-        self.hls4ml_config = yaml_dict['hls4ml_config']
+        if "firmware_config" in yaml_dict:
+            self.firmware_config = yaml_dict['firmware_config']
 
     @abstractmethod
     def build_model(self, **kwargs):
@@ -85,11 +91,10 @@ class JetTagModel(ABC):
         Must be written for child class
         """
 
-    @abstractmethod
-    def hls4ml_convert(self, **kwargs):
+    def firmware_convert(self, **kwargs):
         """
-        Convert the model in hls4ml
-        Must be written for child class
+        Convert the model for firmware
+        Must be written for child class if you want to run the synthesis steps
         """
 
     def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:

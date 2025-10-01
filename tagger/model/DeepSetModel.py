@@ -10,6 +10,7 @@ import hls4ml
 import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
+from schema import Schema, And, Use, Optional
 
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
@@ -29,6 +30,29 @@ class DeepSetModel(QKerasModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
+    
+    schema = Schema(
+            {
+                "model": str,
+                ## generic run config coniguration
+                "run_config" : JetTagModel.run_schema,
+                "model_config" : {"name" : str,
+                                  "conv1d_layers" : list,
+                                  "classification_layers" : list,
+                                  "regression_layers" : list,
+                                  "kernel_initializer" : str,
+                                  "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])},
+                "quantization_config" : QKerasModel.quantization_schema,
+                "training_config_schema" : QKerasModel.training_config_schema,
+                ## generic hls4ml configuration
+                "firmware_config" : {"input_precision" : str,
+                                    "class_precision" : str,
+                                    "reg_precision": str,
+                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
+                                    "fpga_part" : str,
+                                    "project_name" : str}
+            }
+    )
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
@@ -122,10 +146,6 @@ class DeepSetModel(QKerasModel):
                 alpha=self.quantization_config['quantizer_alpha_val'],
             ),
             kernel_initializer='lecun_uniform',
-            # activation=QActivation(quantized_bits( self.quantization_config['pt_output_quantization'][0],
-            #                                      self.quantization_config['pt_output_quantization'][1],
-            #                                      alpha=self.quantization_config['quantizer_alpha_val'],
-            #                                     ))
             )(pt_regress)
 
         # Define the model using both branches
@@ -133,7 +153,7 @@ class DeepSetModel(QKerasModel):
 
         print(self.jet_model.summary())
 
-    def hls4ml_convert(self, firmware_dir: str, build: bool = False):
+    def firmware_convert(self, firmware_dir: str, build: bool = False):
         """Run the hls4ml model conversion
 
         Args:
@@ -142,13 +162,13 @@ class DeepSetModel(QKerasModel):
         """
 
         # Remove the old directory if it exists
-        hls4ml_outdir = firmware_dir + '/' + self.hls4ml_config['project_name']
+        hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
         os.system(f'rm -rf {hls4ml_outdir}')
 
         # Create default config
         config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
         config['IOType'] = 'io_parallel'
-        config['LayerName']['model_input']['Precision']['result'] = self.hls4ml_config['input_precision']
+        config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor
@@ -160,8 +180,8 @@ class DeepSetModel(QKerasModel):
             layer_name = layer.__class__.__name__
 
             if layer_name in ["BatchNormalization", "InputLayer"]:
-                config["LayerName"][layer.name]["Precision"] = self.hls4ml_config['input_precision']
-                config["LayerName"][layer.name]["result"] = self.hls4ml_config['input_precision']
+                config["LayerName"][layer.name]["Precision"] = self.firmware_config['input_precision']
+                config["LayerName"][layer.name]["result"] = self.firmware_config['input_precision']
                 config["LayerName"][layer.name]["Trace"] = not build
 
             elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:
@@ -169,20 +189,20 @@ class DeepSetModel(QKerasModel):
             else:
                 config["LayerName"][layer.name]["Trace"] = not build
 
-        config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.hls4ml_config['class_precision']
+        config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
         config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
-        config["LayerName"]["pT_output"]["Precision"]["result"] = self.hls4ml_config['reg_precision']
+        config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
 
         # Write HLS
         self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
             self.jet_model,
             backend='Vitis',
-            project_name=self.hls4ml_config['project_name'],
-            clock_period=self.hls4ml_config['clock_period'],
+            project_name=self.firmware_config['project_name'],
+            clock_period=self.firmware_config['clock_period'],
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
-            part= self.hls4ml_config['fpga_part'],
+            part= self.firmware_config['fpga_part'],
         )
 
         # Compile the project

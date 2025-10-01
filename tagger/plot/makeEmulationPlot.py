@@ -30,7 +30,7 @@ def doPlots(model, outputdir, inputdir):
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
-    model.hls4ml_convert("temp", build=False)
+    model.firmware_convert("temp", build=False)
 
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(np.ascontiguousarray(X_test))
     y_class, y_ptreg = model.jet_model.predict(np.ascontiguousarray(X_test))

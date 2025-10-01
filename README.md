@@ -201,10 +201,13 @@ save(out_dir)
 @JetTagModel.load_decorator
 load(out_dir)
 # The load decorator is required.
-hls4ml_convert(firmware_dir, build)
-# where to save the firmware and whether or not to run the full hls4ml synthesis (needs a vitis install)
-
 ```
+OPTIONAL if you want to run firmware synthesis
+```
+firmware_convert(firmware_dir, build)
+# where to save the firmware and whether or not to run the full hls4ml synthesis (needs a vitis install)
+```
+
 
 Secondly, add your model to the `tagger/model/__init__.py` as `from tagger.model.MyModel import MyModel`
 
@@ -226,8 +229,10 @@ quantization_config:
 training_config :
   weight_method: "onlyclass"
   validation_split : 0.1
-
-hls4ml_config:
+```
+OPTIONAL if you want to run firmware synthesis
+```
+firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'

@@ -56,7 +56,7 @@ def doPlots(model, outputdir, inputdir):
 
     labels = list(class_labels.keys())
 
-    model.hls4ml_convert("temp", build=False)
+    model.firmware_convert("temp", build=False)
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(np.ascontiguousarray(X_test))
     y_class, y_ptreg = model.jet_model.predict(np.ascontiguousarray(X_test))
 
@@ -141,18 +141,18 @@ if __name__ == "__main__":
 
     doPlots(model, args.outpath, "profiling_data/")
 
-    report = getReports(args.outpath_firmware + '/' + model.hls4ml_config['project_name'])
+    report = getReports(args.outpath_firmware + '/' + model.firmware_config['project_name'])
 
     print("===================")
-    print('Input Precision : ', model.hls4ml_config['input_precision'])
-    print('Class Precision : ', model.hls4ml_config['class_precision'])
-    print('Regression Precision : ', model.hls4ml_config['reg_precision'])
+    print('Input Precision : ', model.firmware_config['input_precision'])
+    print('Class Precision : ', model.firmware_config['class_precision'])
+    print('Regression Precision : ', model.firmware_config['reg_precision'])
     print(" Resource Usage of a VU13P")
     print('Flip Flops : ', report['ff_rel'], ' %')
     print('Look Up Tables : ', report['lut_rel'], ' %')
     print('Block RAM : ', report['bram_rel'], ' %')
     print('Digital Signal Processors : ', report['dsp_rel'], ' %')
     print('Latency : ', report['latency_clks'], ' clock cycles')
-    print('Latency : ', report['latency_clks'] * model.hls4ml_config['clock_period'] * 1e-3, ' mus')
+    print('Latency : ', report['latency_clks'] * model.firmware_config['clock_period'] * 1e-3, ' mus')
     print('Initiation Interval : ', report['latency_ii'], ' clock cycles')
     print("===================")

@@ -12,6 +12,7 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from schema import Schema, And, Use, Optional
 
 from qkeras.quantizers import quantized_bits
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, initialise_tensorflow
@@ -108,6 +109,22 @@ class InteractionNetModel(QKerasModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
+    schema = Schema(
+            {
+                "model": str,
+                ## generic run config coniguration
+                "run_config" : JetTagModel.run_schema,
+                "model_config" : {"name" : str,
+                                 "effects_layers" : list,
+                                 "objects_layers" : list,
+                                 "classification_layers" : list,
+                                 "regression_layers" : list,
+                                 "kernel_initializer" : str,
+                                 "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])},
+                "quantization_config" : QKerasModel.quantization_schema,
+                "training_config"     : QKerasModel.training_config_schema,
+            }
+    )
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """Interaction network model from https://arxiv.org/abs/1612.00222.
@@ -270,66 +287,23 @@ class InteractionNetModel(QKerasModel):
         print(self.jet_model.summary())
 
         return self.jet_model
-
-    def hls4ml_convert(self, firmware_dir: str, build: bool = False):
-        """Run the hls4ml model conversion
+    
+    # Override load to allow node edge projection to also be loaded
+    @JetTagModel.load_decorator
+    def load(self, out_dir: str = "None"):
+        """Load the model file
 
         Args:
-            firmware_dir (str): Where to save the firmware
-            build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
+            out_dir (str, optional): Where to load it if not in the output_directory. Defaults to "None".
         """
-        # Remove the old directory if they exist
-        hls4ml_outdir = firmware_dir + '/' + self.hls4ml_config['project_name']
-        os.system(f'rm -rf {hls4ml_outdir}')
 
-        # Create default config
-        config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-        config['IOType'] = 'io_parallel'
-        config['LayerName']['model_input']['Precision']['result'] = self.hls4ml_config['input_precision']
+        # Additional custom objects for attention layers
+        custom_objects_ = {
+            "NodeEdgeProjection": NodeEdgeProjection,
+            "AAtt": AAtt,
+            "AttentionPooling": AttentionPooling,
+        }
 
-        # Configuration for conv1d layers
-        # hls4ml automatically figures out the paralellization factor
-        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
+        # Load the model
+        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
 
-        # Additional config
-        for layer in self.jet_model.layers:
-            layer_name = layer.__class__.__name__
-
-            if layer_name in ["BatchNormalization", "InputLayer"]:
-                config["LayerName"][layer.name]["Precision"] = self.hls4ml_config['input_precision']
-                config["LayerName"][layer.name]["result"] = self.hls4ml_config['input_precision']
-                config["LayerName"][layer.name]["Trace"] = not build
-
-            elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:
-                print("Skipping trace for:", layer.name)
-            else:
-                config["LayerName"][layer.name]["Trace"] = not build
-
-        config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.hls4ml_config['class_precision']
-        config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
-        config["LayerName"]["pT_output"]["Precision"]["result"] = self.hls4ml_config['class_precision']
-        config["LayerName"]["pT_output"]["Implementation"] = "latency"
-
-        # Write HLS
-        self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
-            self.jet_model,
-            backend='Vitis',
-            project_name=self.hls4ml_config['project_name'],
-            clock_period=self.hls4ml_config['clock_period'],
-            hls_config=config,
-            output_dir=f'{hls4ml_outdir}',
-            part=self.hls4ml_config['fpga_part'],
-        )
-
-        # Compile and build the project
-        self.hls_jet_model.compile()
-
-        # Save config  as json file
-        print("Saving default config as config.json ...")
-        with open(hls4ml_outdir + '/config.json', 'w') as fp:
-            json.dump(config, fp)
-
-        if build:
-            # build the project
-            self.hls_jet_model.build(csim=False, reset=True)

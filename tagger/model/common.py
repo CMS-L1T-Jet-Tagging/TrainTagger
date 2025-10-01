@@ -15,7 +15,6 @@ from qkeras.qlayers import QDense
 from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.configs.scheme import generate_scheme
 
 class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
     """Attention Layer class
@@ -165,12 +164,12 @@ def fromYaml(yaml_path: str, folder: str, recreate: bool = True) -> JetTagModel:
 
     with open(yaml_path, 'r') as stream:
         yaml_dict = yaml.safe_load(stream)
-    # Validate model yaml file
-    schema = generate_scheme(yaml_dict)
-    valid_yaml_dict = schema.validate(yaml_dict)
+    
     # Create a model based on what is specified in the yaml 'model' field
     # Model must be registered for this to function
-    model = JetModelFactory.create_JetTagModel(valid_yaml_dict['model'], folder)
+    model = JetModelFactory.create_JetTagModel(yaml_dict['model'], folder)
+    # Validate yaml dict before loading
+    model.schema.validate(yaml_dict)
     model.load_yaml(yaml_path)
     if recreate:
         # Remove output dir if exists

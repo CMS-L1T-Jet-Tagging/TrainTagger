@@ -11,7 +11,7 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
-
+from schema import Schema, And, Use, Optional
 
 # Qkeras
 from qkeras.quantizers import quantized_bits
@@ -27,6 +27,24 @@ class QKerasModel(JetTagModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
+    
+    quantization_schema = {'quantizer_bits' : And(int, lambda s: 32 >= s >= 0),
+                           'quantizer_bits_int' : And(int, lambda s: 32 >= s >= 0),
+                           'quantizer_alpha_val' : And(float, lambda s: 1.0 >= s >= 0.0),
+                           'pt_output_quantization' : list}
+                
+    training_config_schema =    {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
+                                 "validation_split" : And(float, lambda s: s > 0.0),
+                                 "epochs" : And(int, lambda s: s >= 1),
+                                 "batch_size" : And(int, lambda s: s >= 1),
+                                 "learning_rate" : And(float, lambda s: s > 0.0),
+                                 "loss_weights" : And(list, lambda s: len(s) == 2),
+                                 "initial_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                 "final_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                 "EarlyStopping_patience" : And(int, lambda s: s > 0),
+                                 "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                 "ReduceLROnPlateau_patience" : int,
+                                 "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
 
     def _prune_model(self, num_samples: int):
         """Pruning setup for the model, internal model function called by compile
@@ -154,7 +172,6 @@ class QKerasModel(JetTagModel):
 
         # Additional custom objects for attention layers
         custom_objects_ = {
-            "NodeEdgeProjection": NodeEdgeProjection,
             "AAtt": AAtt,
             "AttentionPooling": AttentionPooling,
         }

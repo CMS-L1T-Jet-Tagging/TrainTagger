@@ -6,7 +6,7 @@ import yaml
 
 def generate_scheme(yaml_dict):
     model = yaml_dict['model']
-    
+
     ## General training coniguration
     training_config = {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                        "validation_split" : And(float, lambda s: s > 0.0),
@@ -18,9 +18,9 @@ def generate_scheme(yaml_dict):
 
 
     if model == 'DeepSetModel':
-        
+
         ## Deepset model model, quantization and additional training coniguration
-        
+
         model_config = {"name" : str,
                         "conv1d_layers" : list,
                         "classification_layers" : list,
@@ -41,9 +41,9 @@ def generate_scheme(yaml_dict):
                                        "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
 
     elif model == 'DeepSetModelHGQ':
-        
+
         ## Deepset HGQ model model, quantization and additional training coniguration
-        
+
         model_config = {"name" : str,
                         "conv1d_layers" : list,
                         "classification_layers" : list,
@@ -57,9 +57,9 @@ def generate_scheme(yaml_dict):
                                        "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
 
     elif model == 'InteractionNetModel':
-        
+
         ## Interaction net model model, quantization and additional training coniguration
-        
+
         model_config = {"name" : str,
                         "effects_layers" : list,
                         "objects_layers" : list,
@@ -104,16 +104,16 @@ def generate_scheme(yaml_dict):
                                 "project_name" : str}
             }
     )
-    
+
     return schema
-    
+
 if __name__ == "__main__":
     pathlist = Path("./").glob('*.yaml')
     for path in pathlist:
 
         with open(str(path), 'r') as stream:
             yaml_dict = yaml.safe_load(stream)
-        
+
         schema = generate_scheme(yaml_dict)
         schema.validate(yaml_dict)
 

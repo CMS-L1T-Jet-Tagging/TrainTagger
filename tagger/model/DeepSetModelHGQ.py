@@ -22,9 +22,9 @@ from tagger.model.common import initialise_tensorflow
 class DeepSetModelHGQ(QKerasModel):
 
     def build_model(self, inputs_shape, outputs_shape):
-        
+
         initialise_tensorflow(self.run_config['num_threads'])
-        
+
         beta = self.model_config["beta"]
 
         # Initialize inputs
@@ -64,8 +64,8 @@ class DeepSetModelHGQ(QKerasModel):
         self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
 
         print(self.jet_model.summary())
-    
-    # Redefine save and load for HGQ due to needing h5 format    
+
+    # Redefine save and load for HGQ due to needing h5 format
     @JetTagModel.save_decorator
     def save(self, out_dir):
         # Export the model

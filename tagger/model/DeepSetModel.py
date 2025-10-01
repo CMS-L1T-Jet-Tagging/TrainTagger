@@ -30,7 +30,7 @@ class DeepSetModel(QKerasModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
-    
+
     schema = Schema(
             {
                 "model": str,

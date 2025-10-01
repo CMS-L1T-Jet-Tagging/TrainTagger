@@ -27,12 +27,12 @@ class QKerasModel(JetTagModel):
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
-    
+
     quantization_schema = {'quantizer_bits' : And(int, lambda s: 32 >= s >= 0),
                            'quantizer_bits_int' : And(int, lambda s: 32 >= s >= 0),
                            'quantizer_alpha_val' : And(float, lambda s: 1.0 >= s >= 0.0),
                            'pt_output_quantization' : list}
-                
+
     training_config_schema =    {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                  "validation_split" : And(float, lambda s: s > 0.0),
                                  "epochs" : And(int, lambda s: s >= 1),

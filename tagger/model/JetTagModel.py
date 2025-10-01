@@ -48,7 +48,7 @@ class JetTagModel(ABC):
         self.callbacks = []
 
         self.history = None
-        
+
     run_schema = {"verbose" : And(int, lambda s: s in [1,2,3]),
                   "debug": bool,
                   "num_threads" : And(int, lambda s: 1 <= s <= 128),

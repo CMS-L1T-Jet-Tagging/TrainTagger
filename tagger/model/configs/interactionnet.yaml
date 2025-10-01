@@ -36,4 +36,3 @@ training_config :
   ReduceLROnPlateau_factor : 0.5
   ReduceLROnPlateau_patience : 5
   ReduceLROnPlateau_min_lr : 0.00001
-

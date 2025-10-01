@@ -22,7 +22,7 @@ from tagger.model.common import initialise_tensorflow
 
 @JetModelFactory.register('DeepSetModelHGQ')
 class DeepSetModelHGQ(QKerasModel):
-    
+
     schema = Schema(
             {
                 "model": str,
@@ -34,9 +34,9 @@ class DeepSetModelHGQ(QKerasModel):
                                   "regression_layers" : list,
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
-                
+
                 "quantization_config" : {'pt_output_quantization' : list},
-                
+
                 "training_config" :     {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                          "validation_split" : And(float, lambda s: s > 0.0),
                                          "epochs" : And(int, lambda s: s >= 1),

@@ -287,7 +287,7 @@ class InteractionNetModel(QKerasModel):
         print(self.jet_model.summary())
 
         return self.jet_model
-    
+
     # Override load to allow node edge projection to also be loaded
     @JetTagModel.load_decorator
     def load(self, out_dir: str = "None"):
@@ -306,4 +306,3 @@ class InteractionNetModel(QKerasModel):
 
         # Load the model
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
-

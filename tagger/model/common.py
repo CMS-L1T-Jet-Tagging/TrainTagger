@@ -164,7 +164,7 @@ def fromYaml(yaml_path: str, folder: str, recreate: bool = True) -> JetTagModel:
 
     with open(yaml_path, 'r') as stream:
         yaml_dict = yaml.safe_load(stream)
-    
+
     # Create a model based on what is specified in the yaml 'model' field
     # Model must be registered for this to function
     model = JetModelFactory.create_JetTagModel(yaml_dict['model'], folder)

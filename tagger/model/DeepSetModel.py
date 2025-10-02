@@ -43,7 +43,7 @@ class DeepSetModel(QKerasModel):
                                   "kernel_initializer" : str,
                                   "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])},
                 "quantization_config" : QKerasModel.quantization_schema,
-                "training_config_schema" : QKerasModel.training_config_schema,
+                "training_config" : QKerasModel.training_config_schema,
                 ## generic hls4ml configuration
                 "firmware_config" : {"input_precision" : str,
                                     "class_precision" : str,

@@ -18,7 +18,9 @@ from qkeras.quantizers import quantized_bits
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
+
 from qkeras import QConv1D
+from qkeras.utils import load_qmodel
 from qkeras.qlayers import QActivation, QDense
 from qkeras.quantizers import quantized_bits, quantized_relu
 from tensorflow.keras.layers import Activation, BatchNormalization, Concatenate, Layer

@@ -64,7 +64,7 @@ def bbtt_seed(jet_pt, tau_eta, tau_pt, tau_scores, ht_thresh=380):
     ht_mask_tau = ht > ht_thresh_tau
     ht_mask = ht > ht_thresh
 
-    mask = ht_mask | (tau_mask1 & ht_mask) | tau_mask2 
+    mask = ht_mask | (tau_mask1 & ht_mask) | tau_mask2
     n_passed = np.sum(mask)
 
     return mask, n_passed
@@ -77,8 +77,8 @@ def ditau_seed(tau_pts, tau_scores, tau_etas):
     tau_pts = tau_pts[order]
     tau_etas = tau_etas[order]
 
-    pt_thresh = WPs_CMSSW['tau_l1_pt'] 
-    score_thresh = WPs_CMSSW['tau'] 
+    pt_thresh = WPs_CMSSW['tau_l1_pt']
+    score_thresh = WPs_CMSSW['tau']
     eta_cut = 2.1
 
     pt_mask = (tau_pts[:, 0] > pt_thresh ) & (tau_pts[:, 1] > pt_thresh)
@@ -287,9 +287,9 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
 
     # Export the working point
     fixed_ht_wp = {
-            "HT": float(ht), 
+            "HT": float(ht),
             "BB": float(target_bb[wp_ht_eff_idx]),
-            "TT": float(target_tt[wp_ht_eff_idx]), 
+            "TT": float(target_tt[wp_ht_eff_idx]),
             'eff': float(target_eff[wp_ht_eff_idx]),
     }
 
@@ -301,7 +301,7 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
 
 
     #make plots
-    #2D proj of ditau vs bb score 
+    #2D proj of ditau vs bb score
     plot_dir = os.path.join(model_dir, 'plots/physics/bbtt')
     os.makedirs(plot_dir, exist_ok=True)
 
@@ -407,7 +407,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, ht_cut, apply_sel, signal_path, n_e
     """
     model = load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
-    #comparison rate 
+    #comparison rate
     with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
 

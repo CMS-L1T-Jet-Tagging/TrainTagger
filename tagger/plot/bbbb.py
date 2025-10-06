@@ -357,10 +357,10 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     for HT_cut in HT_range:
         working_point_NN = interp_func(HT_cut)
         cand_model_selection = (jet_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_selection(jet_pt, jet_eta, apply_sel)
-        cand_pure_model_selection = cand_model_selection & ~ht_only_selection
+        cand_model_pure_selection = cand_model_selection & ~ht_only_selection
 
         eff = np.mean(cand_model_selection)
-        pure_eff = np.mean(cand_pure_model_selection)
+        pure_eff = np.mean(cand_model_pure_selection)
         if( eff > max_eff):
             max_eff = eff
             model_ht_wp = HT_cut
@@ -376,14 +376,16 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     model_selection = (jet_ht > model_ht_wp) & (model_bscore_sum > model_btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
     model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
-    pure_model_selection = model_selection & ~ht_only_selection
+    model_pure_selection = model_selection & ~ht_only_selection
+    model_pure_efficiency = np.round(ak.sum(model_pure_selection) / n_events, 2)
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
     if all_event_gen_mHH is not None and event_gen_mHH is not None:
         bbbb_eff_mHH(model_dir,
                     all_event_gen_mHH,
                     event_gen_mHH,
-                    cmssw_selection, model_selection, ht_only_selection,
+                    cmssw_selection, model_selection, 
+                    model_pure_selection, ht_only_selection,
                     n_events,
                     apply_sel,
                     apply_light)
@@ -395,21 +397,25 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     all_events = Hist(ht_axis)
     cmssw_selected_events = Hist(ht_axis)
     model_selected_events = Hist(ht_axis)
+    model_pure_events = Hist(ht_axis)
     ht_only_selected_events = Hist(ht_axis)
 
     all_events.fill(all_jet_genht)
     cmssw_selected_events.fill(jet_genht[cmssw_selection])
     model_selected_events.fill(jet_genht[model_selection])
+    model_pure_events.fill(jet_genht[model_pure_selection])
     ht_only_selected_events.fill(jet_genht[ht_only_selection])
 
     #Plot the ratio
     eff_cmssw = plot_ratio(all_events, cmssw_selected_events)
     eff_model = plot_ratio(all_events, model_selected_events)
+    eff_model_pure = plot_ratio(all_events, model_pure_events)
+    eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
 
     #Get data from handles
     cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
     model_x, model_y, model_err = get_bar_patch_data(eff_model)
-    eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
+    model_pure_x, model_pure_y, model_pure_err = get_bar_patch_data(eff_model_pure)
     ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
 
     # Plot ht distribution in the background
@@ -444,10 +450,12 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     fig2, ax2 = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax2, fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
-    ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
-                label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, model_ht_wp, round(model_btag_wp, 2)))
     ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
                 label=r'HT + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
+    ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
+                label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, model_ht_wp, round(model_btag_wp, 2)))
+    ax2.errorbar(model_pure_x, model_pure_y, yerr=model_pure_err, c=style.color_cycle[3], fmt='o', linewidth=3,
+                label=r'Multiclass Gain (Pure eff. wrt HT trigger) {}={} '.format(eff_str, model_pure_efficiency,))
 
     # Common plot settings for second plot
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -467,7 +475,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     eff_cmssw = np.mean(cmssw_selection)
     eff_model = np.mean(model_selection)
     eff_ht = np.mean(ht_only_selection)
-    eff_pure_model = np.mean(pure_model_selection)
+    eff_model_pure = np.mean(model_pure_selection)
     eff_pure_cmssw = np.mean(pure_cmssw_selection)
 
     plot_dir = os.path.join(model_dir, f"plots/physics/bbbb/")
@@ -477,7 +485,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
         outfile.write("HT Trigger %.4f \n" % eff_ht)
         outfile.write("Model Eff %.4f \n" % eff_model)
         outfile.write("CMSSW Model Eff %.4f \n" % eff_cmssw)
-        outfile.write("Model Pure Eff (exclude HT overlap) %.4f \n" % eff_pure_model)
+        outfile.write("Model Pure Eff (exclude HT overlap) %.4f \n" % eff_model_pure)
         outfile.write("CMSSW Model Pure Eff (exclude HT overlap) %.4f \n" % eff_pure_cmssw)
 
 
@@ -486,7 +494,8 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 def bbbb_eff_mHH(model_dir,
                 all_event_gen_mHH,
                 event_gen_mHH,
-                cmssw_selection, model_selection, ht_only_selection,
+                cmssw_selection, model_selection, 
+                model_pure_selection, ht_only_selection,
                 n_events,
                 apply_sel,
                 apply_light):
@@ -501,27 +510,32 @@ def bbbb_eff_mHH(model_dir,
     # Efficiencies
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
     model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
+    model_pure_efficiency = np.round(ak.sum(model_pure_selection) / n_events, 2)
     ht_only_efficiency = np.round(ak.sum(ht_only_selection) / n_events, 2)
 
     #Create the histograms
     all_events = Hist(mHH_axis)
     cmssw_selected_events = Hist(mHH_axis)
     model_selected_events = Hist(mHH_axis)
+    model_pure_events = Hist(mHH_axis)
     ht_only_selected_events = Hist(mHH_axis)
 
     all_events.fill(all_event_gen_mHH)
     cmssw_selected_events.fill(event_gen_mHH[cmssw_selection])
     model_selected_events.fill(event_gen_mHH[model_selection])
+    model_pure_events.fill(event_gen_mHH[model_pure_selection])
     ht_only_selected_events.fill(event_gen_mHH[ht_only_selection])
 
     #Plot the ratio
     eff_cmssw = plot_ratio(all_events, cmssw_selected_events)
     eff_model = plot_ratio(all_events, model_selected_events)
+    eff_model_pure = plot_ratio(all_events, model_pure_events)
+    eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
 
     #Get data from handles
     cmssw_x, cmssw_y, cmssw_err = get_bar_patch_data(eff_cmssw)
     model_x, model_y, model_err = get_bar_patch_data(eff_model)
-    eff_ht_only = plot_ratio(all_events, ht_only_selected_events)
+    model_pure_x, model_pure_y, model_pure_err = get_bar_patch_data(eff_model_pure)
     ht_only_x, ht_only_y, ht_only_err = get_bar_patch_data(eff_ht_only)
 
     # Plot ht distribution in the background
@@ -539,10 +553,12 @@ def bbbb_eff_mHH(model_dir,
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE-2)
 
     hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$m_{HH}^{gen}$")
-    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
-                label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)))
     ax.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
                 label=r'HT + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
+    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
+                label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, btag_ht_wp, round(btag_wp, 2)))
+    ax.errorbar(model_pure_x, model_pure_y, yerr=model_pure_err, c=style.color_cycle[3], fmt='o', linewidth=3,
+                label=r'Multiclass Gain (Pure eff. wrt HT trigger) {}={} '.format(eff_str, model_pure_efficiency,))
 
 
     # Common plot settings for second plot

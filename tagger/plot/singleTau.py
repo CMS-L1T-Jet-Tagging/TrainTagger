@@ -654,4 +654,3 @@ if __name__ == "__main__":
         plot_bkg_rate_tau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
         eff_tau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)
-

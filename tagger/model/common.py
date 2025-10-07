@@ -11,6 +11,7 @@ import yaml
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
 def initialise_tensorflow(num_threads):
+    import tensorflow as tf
     # Set some tensorflow constants
     os.environ["OMP_NUM_THREADS"] = str(num_threads)
     os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)

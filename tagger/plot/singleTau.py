@@ -57,8 +57,7 @@ def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']]
 
     tau = sum([preds[:,idx] for idx in tau_index] )
-    bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
-    #bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
 
     return tau / (tau + bkg)
 
@@ -102,7 +101,6 @@ def pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate = 31, 
     # Export the working point
     working_point = {"PTs": target_rate_PT, "NNs": target_rate_NN}
 
-    print(working_point)
 
     with open(os.path.join(plot_dir, label+ "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
@@ -470,11 +468,9 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     model_uncs = np.sqrt(model_effs) / denoms
     cmssw_uncs = np.sqrt(cmssw_effs) / denoms
 
-    print(model_effs)
     seeded_cone_effs = np.array(seeded_cone_effs) / denoms
     model_effs = np.array(model_effs) / denoms
     cmssw_effs = np.array(cmssw_effs) / denoms
-    print(model_effs)
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)

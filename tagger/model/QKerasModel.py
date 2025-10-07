@@ -20,7 +20,6 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from qkeras.qlayers import QDense
 from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D
 
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
 

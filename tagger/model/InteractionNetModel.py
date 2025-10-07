@@ -15,9 +15,9 @@ import tensorflow_model_optimization as tfmot
 from schema import Schema, And, Use, Optional
 
 from qkeras.quantizers import quantized_bits
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, initialise_tensorflow
+from tagger.model.common import initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.QKerasModel import QKerasModel
+from tagger.model.QKerasModel import QKerasModel, AAtt, AttentionPooling, choose_aggregator
 
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel

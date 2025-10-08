@@ -48,8 +48,8 @@ DeepSet:floating_5param_extended_trk:
     Name: floating_5param_extended_trk
     Model: floating_baseline
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:

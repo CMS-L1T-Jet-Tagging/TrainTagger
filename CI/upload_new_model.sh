@@ -33,7 +33,7 @@ rm -rf php-plots
 git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping
 export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
 pb_copy_index.py TrainTagger/${Name} --recursive
-pb_copy_index.py ${EOS_STORAGE_DIR} --recursive
+pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive
 cd TrainTagger/$Name
 pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
 pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,json

@@ -216,7 +216,7 @@ profile:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - pip uninstall hls4ml -y
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
+  - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping
   - cd hls4ml
   - pip install .[profiling]
   - cd ..

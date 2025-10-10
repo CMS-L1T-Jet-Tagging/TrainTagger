@@ -183,6 +183,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    from IPython import embed; embed()
 
     # Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump input variables
@@ -272,7 +273,7 @@ if __name__ == "__main__":
 
     # Training argument
     parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
-    parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
+    parser.add_argument('-p','--percent', default=10, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
     parser.add_argument('-t','--tree', default='outnano/Jets', help = 'Tree within the ntuple containing the jets')

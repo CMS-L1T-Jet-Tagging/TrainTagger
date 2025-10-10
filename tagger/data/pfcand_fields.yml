@@ -98,6 +98,9 @@ baseline_hardware_inputs:
 extra_fields:
   - jet_pt_phys
   - jet_genmatch_pt
+  - jet_pt_raw
+  - jet_pt
+  - jet_eta
 
 extra_emulation_fields:
   - jet_SC4NGJet_score_b

@@ -725,7 +725,7 @@ def basic(model_dir,signal_dirs) :
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5", custom_objects=custom_objects_)
     X_test_concat = np.concatenate((X_test, constituents_mask_test), axis=-1)
-    model_outputs = model.predict(X_test_concat)
+    model_outputs = model.predict([X_test, constituents_mask_test])
 
     #Get classification outputs
     y_pred = model_outputs[0]
@@ -754,7 +754,7 @@ def basic(model_dir,signal_dirs) :
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
             sample_constituents_mask = constituents_mask(sample_data, model.get_layer("pool").input_shape[-1])
-            sample_preds = model.predict(np.concatenate((sample_data, sample_constituents_mask), axis=-1))[0]
+            sample_preds = model.predict([sample_data, sample_constituents_mask])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)

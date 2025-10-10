@@ -4,7 +4,7 @@ Here all the models are defined to be called in train.py
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow.keras.layers import (BatchNormalization, Input, Activation, GlobalAveragePooling1D,
-    GlobalMaxPooling1D, Concatenate, Layer, Multiply, Lambda)
+    GlobalMaxPooling1D, Concatenate, Layer, Multiply)
 
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
@@ -131,9 +131,8 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     }
 
     #Initialize inputs
-    concat_inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
-    inputs = Lambda(lambda x: x[:, :, :-conv1d_layers[-1]], name='inputs')(concat_inputs)
-    constituents_mask = Lambda(lambda x: x[:, :, -conv1d_layers[-1]:], name='constituents_mask')(concat_inputs)
+    inputs = Input(shape=inputs_shape[0], name='model_input')
+    constituents_mask = Input(shape=inputs_shape[1], name='constituents_mask')
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
@@ -180,7 +179,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
                         kernel_initializer='lecun_uniform')(pt_regress)
 
     #Define the model using both branches
-    model = tf.keras.Model(inputs = concat_inputs, outputs = [jet_id, pt_regress])
+    model = tf.keras.Model(inputs = [inputs, constituents_mask], outputs = [jet_id, pt_regress])
 
     print(model.summary())
 

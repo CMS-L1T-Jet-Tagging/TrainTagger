@@ -29,7 +29,7 @@ tf.config.threading.set_intra_op_parallelism_threads(
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) # not a special number
 BATCH_SIZE = 1024
-EPOCHS = 2
+EPOCHS = 200
 VALIDATION_SPLIT = 0.2 # 20% of training set will be used for validation set.
 LOSS_WEIGHTS = [1., 1.]
 WEIGHT_METHOD = "onlyclass"
@@ -183,7 +183,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
     os.makedirs(out_dir)
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=100)
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
 
     # Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump input variables
@@ -219,8 +219,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
         print (sample_weight)
 
     # Get input shape
-    X_train = np.concatenate((X_train, constituents_mask_train), axis=-1)
-    input_shape = X_train.shape[1:]
+    input_shape = [X_train.shape[1:], constituents_mask_train.shape[1:]]
     output_shape = y_train.shape[1:]
 
     # Dynamically get the model
@@ -238,8 +237,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
     callbacks = [tfmot.sparsity.keras.UpdatePruningStep(),
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=15, min_lr=1e-5)]
-
-    history = pruned_model.fit({'model_input': X_train},
+    history = pruned_model.fit({'model_input': X_train, 'constituents_mask': constituents_mask_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
                             sample_weight=sample_weight,
                             epochs=EPOCHS,
@@ -297,7 +295,7 @@ if __name__ == "__main__":
 
     #Either make data or start the training
     if args.make_data:
-        # make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
         # Format all the signal processes used for plotting later
         for signal_process in args.signal_processes:
             signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")

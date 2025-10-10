@@ -294,7 +294,7 @@ def to_ML(data, class_labels):
     reco_pt = np.asarray(data['jet_pt_phys'])
     raw_pt = np.asarray(data['jet_pt_raw'])
     jet_pt = np.asarray(data['jet_pt'])
-    jet_eta = np.asarray(data['jet_eta'])
+    jet_eta = np.asarray(data['jet_eta_phys'])
 
     return X, y, pt_target, truth_pt, reco_pt, raw_pt, jet_pt, jet_eta
 

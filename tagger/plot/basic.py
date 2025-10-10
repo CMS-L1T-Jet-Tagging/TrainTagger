@@ -770,7 +770,6 @@ def basic(model_dir,signal_dirs) :
         ROC_jets(y_p, y_t, class_labels, binary_dir_test, process_label)
         ROC_taus(y_p, y_t, class_labels, binary_dir_test, process_label)
 
-
         if i != -1:
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
             ROC_jets(sample_preds, sample_labels, class_labels, binary_dir_full, process_label)

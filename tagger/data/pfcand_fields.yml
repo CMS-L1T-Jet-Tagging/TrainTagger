@@ -100,7 +100,7 @@ extra_fields:
   - jet_genmatch_pt
   - jet_pt_raw
   - jet_pt
-  - jet_eta
+  - jet_eta_phys
 
 extra_emulation_fields:
   - jet_SC4NGJet_score_b

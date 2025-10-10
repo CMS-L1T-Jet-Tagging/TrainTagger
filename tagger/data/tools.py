@@ -354,7 +354,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     return train_data, test_data, class_labels, input_vars, extra_vars
 
 def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200.root',
-              outdir='/eos/user/s/stella/TrainTagger/training_data/',
+              outdir='training_data/',
               tag=INPUT_TAG,
               extras=EXTRA_FIELDS,
               n_parts=N_PARTICLES,

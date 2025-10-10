@@ -29,7 +29,7 @@ tf.config.threading.set_intra_op_parallelism_threads(
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) # not a special number
 BATCH_SIZE = 1024
-EPOCHS = 200
+EPOCHS = 2
 VALIDATION_SPLIT = 0.2 # 20% of training set will be used for validation set.
 LOSS_WEIGHTS = [1., 1.]
 WEIGHT_METHOD = "onlyclass"
@@ -63,7 +63,7 @@ def prune_model(model, num_samples):
 
     return pruned_model
 
-def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels):
+def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_features, class_labels):
 
     os.makedirs(os.path.join(out_dir,'testing_data'), exist_ok=True)
 
@@ -71,6 +71,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_l
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
+    np.save(os.path.join(out_dir, "testing_data/jet_features.npy"), jet_features)
     with open(os.path.join(out_dir, "class_label.json"), "w") as f: json.dump(class_labels, f, indent=4) #Dump output variables
 
     print(f"Test data saved to {out_dir}")
@@ -183,7 +184,6 @@ def train(out_dir, percent, model_name, new_epochs = None):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
-    from IPython import embed; embed()
 
     # Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump input variables
@@ -202,11 +202,13 @@ def train(out_dir, percent, model_name, new_epochs = None):
     with open(os.path.join(out_dir, "model_metadata.json"), "w") as f: json.dump(model_metadata, f, indent=4) #Dump model variables
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, raw_pt, jet_pt, jet_eta = to_ML(data_train, class_labels)
+    jet_features_train = np.stack([raw_pt, jet_pt, jet_eta], axis=-1)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels)
+    X_test, y_test, _, truth_pt_test, reco_pt_test, raw_pt_test, jet_pt_test, jet_eta_test = to_ML(data_test, class_labels)
+    jet_features_test = np.stack([raw_pt_test, jet_pt_test, jet_eta_test], axis=-1)
+    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_features_test, class_labels)
 
     # Calculate the sample weights for training
     sample_weight = train_weights(y_train, reco_pt_train, class_labels)
@@ -215,7 +217,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
         print (sample_weight)
 
     # Get input shape
-    input_shape = X_train.shape[1:] # First dimension is batch size
+    input_shape = [X_train.shape[1:], jet_features_train.shape[1:]] # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     # Dynamically get the model
@@ -234,7 +236,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
                  EarlyStopping(monitor='val_loss', patience=10),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=15, min_lr=1e-5)]
 
-    history = pruned_model.fit({'model_input': X_train},
+    history = pruned_model.fit({'model_input': X_train, 'jet_features': jet_features_train},
                             {'prune_low_magnitude_jet_id_output': y_train, 'prune_low_magnitude_pT_output': pt_target_train},
                             sample_weight=sample_weight,
                             epochs=EPOCHS,
@@ -273,7 +275,7 @@ if __name__ == "__main__":
 
     # Training argument
     parser.add_argument('-o','--output', default='output/baseline', help = 'Output model directory path, also save evaluation plots')
-    parser.add_argument('-p','--percent', default=10, type=int, help = 'Percentage of how much processed data to train on')
+    parser.add_argument('-p','--percent', default=100, type=int, help = 'Percentage of how much processed data to train on')
     parser.add_argument('-m','--model', default='baseline', help = 'Model object name to train on')
     parser.add_argument('-n','--name', default='baseline', help = 'Model experiment name')
     parser.add_argument('-t','--tree', default='outnano/Jets', help = 'Tree within the ntuple containing the jets')

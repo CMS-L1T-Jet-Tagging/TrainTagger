@@ -292,8 +292,11 @@ def to_ML(data, class_labels):
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
+    raw_pt = np.asarray(data['jet_pt_raw'])
+    jet_pt = np.asarray(data['jet_pt'])
+    jet_eta = np.asarray(data['jet_eta'])
 
-    return X, y, pt_target, truth_pt, reco_pt
+    return X, y, pt_target, truth_pt, reco_pt, raw_pt, jet_pt, jet_eta
 
 def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """

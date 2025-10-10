@@ -670,7 +670,6 @@ def filter_process(test_data, process_dir):
     """
     train, test, class_labels = load_data(os.path.join("signal_process_data", process_dir), percentage=100)[:3]
     train, test = to_ML(train, class_labels), to_ML(test, class_labels)
-
     # apply unique to sets to be compared, since there tend to be duplicates
     process_data = np.unique(np.concatenate((train[0], test[0]), axis=0), axis=0)
     unique_test_data, indices_unique_test_data = np.unique(test_data, axis=0, return_index=True)
@@ -713,6 +712,7 @@ def basic(model_dir,signal_dirs) :
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
+    jet_features = np.load(f"{model_dir}/testing_data/jet_features.npy")
 
     from models import AAtt, NodeEdgeProjection, AttentionPooling
     custom_objects_ = {
@@ -723,7 +723,7 @@ def basic(model_dir,signal_dirs) :
 
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5", custom_objects=custom_objects_)
-    model_outputs = model.predict(X_test)
+    model_outputs = model.predict([X_test, jet_features])
 
     #Get classification outputs
     y_pred = model_outputs[0]
@@ -750,8 +750,9 @@ def basic(model_dir,signal_dirs) :
         else:
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
+            sample_jet_features = np.concatenate((np.stack(sample_train[-3:], axis=1), np.stack(sample_test[-3:], axis=1)), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.predict(sample_data)[0]
+            sample_preds = model.predict([sample_data, sample_jet_features])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)

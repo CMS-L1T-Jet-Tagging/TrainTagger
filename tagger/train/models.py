@@ -131,10 +131,12 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     }
 
     #Initialize inputs
-    inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+    inputs = Input(shape=inputs_shape[0], name='model_input')
+    jet_features = Input(shape=inputs_shape[1], name='jet_features')
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
+    jet_features_normed = BatchNormalization(name='norm_jet_features')(jet_features)
 
     # Make Conv1D layers
     for iconv1d, depthconv1d in enumerate(conv1d_layers):
@@ -146,6 +148,9 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     main = QActivation(activation='quantized_bits(18,8)', name = 'act_pool')(main)
     agg = choose_aggregator(choice = aggregator, name = "pool")
     main = agg(main)
+
+    # Concatenate jet features
+    main = Concatenate(axis=1, name='concatenate')([main, jet_features])
 
     #Now split into jet ID and pt regression
 
@@ -176,7 +181,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
                         kernel_initializer='lecun_uniform')(pt_regress)
 
     #Define the model using both branches
-    model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+    model = tf.keras.Model(inputs = [inputs, jet_features], outputs = [jet_id, pt_regress])
 
     print(model.summary())
 

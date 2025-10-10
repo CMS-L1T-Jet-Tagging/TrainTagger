@@ -28,7 +28,7 @@ import histbook
 import pandas
 np.bool = np.bool_
 
-from tagger.data.tools import load_data, to_ML
+from tagger.data.tools import load_data, to_ML, constituents_mask
 
 style.set_style()
 
@@ -711,6 +711,7 @@ def basic(model_dir,signal_dirs) :
     #Load the testing data
     X_test = np.load(f"{model_dir}/testing_data/X_test.npy")
     y_test = np.load(f"{model_dir}/testing_data/y_test.npy")
+    constituents_mask_test = np.load(f"{model_dir}/testing_data/constituents_mask.npy")
     truth_pt_test = np.load(f"{model_dir}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model_dir}/testing_data/reco_pt_test.npy")
 
@@ -723,7 +724,8 @@ def basic(model_dir,signal_dirs) :
 
     #Load model
     model = load_qmodel(f"{model_dir}/model/saved_model.h5", custom_objects=custom_objects_)
-    model_outputs = model.predict(X_test)
+    X_test_concat = np.concatenate((X_test, constituents_mask_test), axis=-1)
+    model_outputs = model.predict(X_test_concat)
 
     #Get classification outputs
     y_pred = model_outputs[0]
@@ -751,7 +753,8 @@ def basic(model_dir,signal_dirs) :
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.predict(sample_data)[0]
+            sample_constituents_mask = constituents_mask(sample_data, model.get_layer("pool").input_shape[-1])
+            sample_preds = model.predict(np.concatenate((sample_data, sample_constituents_mask), axis=-1))[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)
@@ -794,6 +797,6 @@ def basic(model_dir,signal_dirs) :
     rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     #Plot the shaply feature importance
-    plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
+    # plot_shaply(model, X_test, class_labels, input_vars, plot_dir)
 
     return ROC_dict

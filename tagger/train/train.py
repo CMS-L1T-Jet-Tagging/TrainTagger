@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import os, shutil, json
 
 # Import from other modules
-from tagger.data.tools import make_data, load_data, to_ML
+from tagger.data.tools import make_data, load_data, to_ML, constituents_mask
 from tagger.plot.basic import loss_history, basic
 import models
 
@@ -29,7 +29,7 @@ tf.config.threading.set_intra_op_parallelism_threads(
 # GLOBAL PARAMETERS TO BE DEFINED WHEN TRAINING
 tf.keras.utils.set_random_seed(420) # not a special number
 BATCH_SIZE = 1024
-EPOCHS = 200
+EPOCHS = 2
 VALIDATION_SPLIT = 0.2 # 20% of training set will be used for validation set.
 LOSS_WEIGHTS = [1., 1.]
 WEIGHT_METHOD = "onlyclass"
@@ -63,12 +63,13 @@ def prune_model(model, num_samples):
 
     return pruned_model
 
-def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels):
+def save_test_data(out_dir, X_test, y_test, constituents_mask, truth_pt_test, reco_pt_test, class_labels):
 
     os.makedirs(os.path.join(out_dir,'testing_data'), exist_ok=True)
 
     np.save(os.path.join(out_dir, "testing_data/X_test.npy"), X_test)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
+    np.save(os.path.join(out_dir, "testing_data/constituents_mask.npy"), constituents_mask)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
     with open(os.path.join(out_dir, "class_label.json"), "w") as f: json.dump(class_labels, f, indent=4) #Dump output variables
@@ -182,7 +183,7 @@ def train(out_dir, percent, model_name, new_epochs = None):
     os.makedirs(out_dir)
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=100)
 
     # Save input variables and extra variables metadata
     with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump input variables
@@ -203,9 +204,13 @@ def train(out_dir, percent, model_name, new_epochs = None):
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
 
+    conv1d_layers = [10, 10]
+    constituents_mask_train = constituents_mask(X_train, conv1d_layers[-1])
+
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, class_labels)
+    constituents_mask_test = constituents_mask(X_test, conv1d_layers[-1])
+    save_test_data(out_dir, X_test, y_test, constituents_mask_test, truth_pt_test, reco_pt_test, class_labels)
 
     # Calculate the sample weights for training
     sample_weight = train_weights(y_train, reco_pt_train, class_labels)
@@ -214,13 +219,14 @@ def train(out_dir, percent, model_name, new_epochs = None):
         print (sample_weight)
 
     # Get input shape
-    input_shape = X_train.shape[1:] # First dimension is batch size
+    X_train = np.concatenate((X_train, constituents_mask_train), axis=-1)
+    input_shape = X_train.shape[1:]
     output_shape = y_train.shape[1:]
 
     # Dynamically get the model
     try:
         model_func = getattr(models, model_name)
-        model = model_func(input_shape, output_shape)  # Assuming the model function doesn't require additional arguments
+        model = model_func(input_shape, output_shape, conv1d_layers = conv1d_layers)  # Assuming the model function doesn't require additional arguments
     except AttributeError:
         raise ValueError(f"Model '{model_name}' is not defined in the 'models' module.")
 
@@ -265,7 +271,7 @@ if __name__ == "__main__":
 
     # Making input arguments
     parser.add_argument('--make-data', action='store_true', help='Prepare the data if set.')
-    parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root' , help = 'Path to input training data')
+    parser.add_argument('-i','--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200_part0.root' , help = 'Path to input training data')
     parser.add_argument('-r','--ratio', default=1, type=float, help = 'Ratio (0-1) of the input data root file to process')
     parser.add_argument('-s','--step', default='100MB' , help = 'The maximum memory size to process input root file')
     parser.add_argument('-e','--extras', default='extra_fields', help= 'Which extra fields to add to output tuples, in pfcand_fields.yml')
@@ -291,7 +297,7 @@ if __name__ == "__main__":
 
     #Either make data or start the training
     if args.make_data:
-        make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
+        # make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree) #Write to training_data/, can be specified using outdir, but keeping it simple here for now
         # Format all the signal processes used for plotting later
         for signal_process in args.signal_processes:
             signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")

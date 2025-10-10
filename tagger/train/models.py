@@ -3,7 +3,8 @@ Here all the models are defined to be called in train.py
 """
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
-from tensorflow.keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, GlobalMaxPooling1D, Concatenate, Layer
+from tensorflow.keras.layers import (BatchNormalization, Input, Activation, GlobalAveragePooling1D,
+    GlobalMaxPooling1D, Concatenate, Layer, Multiply, Lambda)
 
 # Qkeras
 from qkeras.quantizers import quantized_bits, quantized_relu
@@ -90,7 +91,6 @@ class AttentionPooling(Layer, tfmot.sparsity.keras.PrunableLayer):
     def get_prunable_weights(self):
         return self.score_dense._trainable_weights
 
-
 # Some helper functions used in the InteractionNet base model
 def choose_aggregator(choice, name, bits=9, bits_int=2, alpha_val=1, **common_args):
     """Choose the aggregator keras object based on an input string."""
@@ -131,7 +131,9 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
     }
 
     #Initialize inputs
-    inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+    concat_inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+    inputs = Lambda(lambda x: x[:, :, :-conv1d_layers[-1]], name='inputs')(concat_inputs)
+    constituents_mask = Lambda(lambda x: x[:, :, -conv1d_layers[-1]:], name='constituents_mask')(concat_inputs)
 
     #Main branch
     main = BatchNormalization(name='norm_input')(inputs)
@@ -143,9 +145,11 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
         #ToDo: fix the bits_int part later, ie use the default not 0
 
     # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
+
     main = QActivation(activation='quantized_bits(18,8)', name = 'act_pool')(main)
     agg = choose_aggregator(choice = aggregator, name = "pool")
-    main = agg(main)
+    masked_main = Multiply()([main, constituents_mask])
+    main = agg(masked_main)
 
     #Now split into jet ID and pt regression
 
@@ -176,7 +180,7 @@ def baseline(inputs_shape, output_shape, bits=9, bits_int=2, alpha_val=1,
                         kernel_initializer='lecun_uniform')(pt_regress)
 
     #Define the model using both branches
-    model = tf.keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+    model = tf.keras.Model(inputs = concat_inputs, outputs = [jet_id, pt_regress])
 
     print(model.summary())
 

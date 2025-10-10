@@ -414,3 +414,15 @@ def make_data(infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_
         chunk += 1
         print(f"Processed {num_entries_done}/{num_entries} entries | {np.round(num_entries_done / num_entries * 100, 1)}%")
         if num_entries_done / num_entries >= ratio: break
+
+def constituents_mask(x, features_dim):
+    # Step 1: check each row for zeros
+    all_zero = tf.reduce_all(tf.equal(x, 0), axis=-1, keepdims=True)  # shape: (batch, particles, 1)
+
+    # Step 2: create mask: 1 if not all-zero, 0 if all-zero
+    all_zero_float = tf.cast(all_zero, x.dtype)  # convert bool -> float (or same dtype as x)
+    mask = tf.ones_like(all_zero_float) - all_zero_float
+
+    # Step 3: broadcast to features
+    mask = tf.broadcast_to(mask, (mask.shape[0], mask.shape[1], features_dim))  # still fixed shape
+    return mask

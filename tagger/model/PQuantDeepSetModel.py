@@ -172,6 +172,18 @@ class PQuantDeepSetModel(JetTagModel):
             }
     )
 
+    def __init__(self, out_dir):
+        super().__init__(out_dir)
+        self.device = "cpu"
+        self.n_workers = 8
+        self.pin_memory = False
+        if torch.cuda.is_available():
+            self.device = "cuda"
+            self.n_workers = 24
+            self.pin_memory= True
+            
+        self.quantizer = get_fixed_quantizer(overflow_mode="SAT")
+
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
 
@@ -188,15 +200,14 @@ class PQuantDeepSetModel(JetTagModel):
         
         self.input_shape = inputs_shape
         self.output_shape = outputs_shape
-        
         self.pquant_config = self.yaml_dict['pquant_config']
-        # Set target sparsity to 80% (20% of weights are non-zero). This parameter exists only for some pruning methods
-        self.quantizer = get_fixed_quantizer(overflow_mode="SAT")
 
         self.jet_model = TorchDeepSetNetwork( self.model_config, inputs_shape, outputs_shape)
 
         #Define the model using both branches
         self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,inputs_shape[0],inputs_shape[1]))
+        
+        self.jet_model.to(self.device)
         
     def firmware_convert(self, firmware_dir: str, build: bool = False):
         """Run the hls4ml model conversion
@@ -393,19 +404,11 @@ class PQuantDeepSetModel(JetTagModel):
         train_dataset = JetTagDataset(x_train,y_train,pt_target_train,sample_weight_train)
         test_dataset = JetTagDataset(x_test,y_test,pt_target_test,sample_weight_test)
         
-        device = "cpu"
-        n_workers = 8
-        pin_memory = False
-        if torch.cuda.is_available():
-            device = "cuda"
-            n_workers = 24
-            pin_memory= True
-        
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.training_config['batch_size'],
-                                          shuffle=True, num_workers=n_workers, pin_memory=pin_memory)
+                                          shuffle=True, num_workers=self.n_workers, pin_memory=self.pin_memory)
 
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=self.training_config['batch_size'],
-                                            shuffle=False, num_workers=n_workers, pin_memory=pin_memory)
+                                            shuffle=False, num_workers=self.n_workers, pin_memory=self.pin_memory)
         
         
         
@@ -415,7 +418,7 @@ class PQuantDeepSetModel(JetTagModel):
                                          valid_func = self.validation_func, 
                                          trainloader = train_loader, 
                                          testloader = test_loader, 
-                                         device = device,
+                                         device = self.device,
                                          loss_func = self.loss_function_wrapper,
                                          optimizer = self.optimizer, 
                                          scheduler = self.scheduler
@@ -433,18 +436,18 @@ class PQuantDeepSetModel(JetTagModel):
         Returns:
             tuple: (class_predictions , pt_ratio_predictions)
         """
+        self.jet_model.to(self.device)
         self.jet_model.eval()
         batch_dim = X_test.shape[0]
 
         test_dataset = JetTagDataset(X_test,np.zeros([batch_dim,8]),np.zeros([batch_dim,1]),np.zeros([batch_dim,1]))
         testloader = torch.utils.data.DataLoader(test_dataset, batch_size=self.training_config['batch_size'],
-                                            shuffle=False, num_workers=8, pin_memory=False)
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+                                            shuffle=False, num_workers=self.n_workers, pin_memory=self.pin_memory)
         class_predictions = []
         pt_ratio_predictions = []
         with torch.no_grad():
             for data in testloader:
-                inputs, y, y_pt, sample_weight = data['X'].to(device), data['y'].to(device), data['y_pt'].to(device), data['sample_weight'].to(device)
+                inputs, y, y_pt, sample_weight = data['X'].to(self.device), data['y'].to(self.device), data['y_pt'].to(self.device), data['sample_weight'].to(self.device)
                 inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
                 output_class, outputs_pt = self.jet_model(inputs)
                 class_predictions.append(output_class.detach().numpy())
@@ -492,6 +495,5 @@ class PQuantDeepSetModel(JetTagModel):
         
         self.jet_model = TorchDeepSetNetwork(self.model_config, self.input_shape, self.output_shape )
         self.pquant_config = self.yaml_dict['pquant_config']
-        self.quantizer = get_fixed_quantizer(overflow_mode="SAT")
         self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,self.input_shape[0],self.input_shape[1]))
         self.jet_model.load_state_dict(torch.load(f"{out_dir}/model/saved_model.keras", weights_only=True))

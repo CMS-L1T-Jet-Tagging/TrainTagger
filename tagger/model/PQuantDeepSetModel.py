@@ -203,11 +203,11 @@ class PQuantDeepSetModel(JetTagModel):
         self.pquant_config = self.yaml_dict['pquant_config']
 
         self.jet_model = TorchDeepSetNetwork( self.model_config, inputs_shape, outputs_shape)
-
+        self.jet_model.to(self.device)
         #Define the model using both branches
         self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,inputs_shape[0],inputs_shape[1]))
         
-        self.jet_model.to(self.device)
+        
         
     def firmware_convert(self, firmware_dir: str, build: bool = False):
         """Run the hls4ml model conversion

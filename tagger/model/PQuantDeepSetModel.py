@@ -318,13 +318,13 @@ class PQuantDeepSetModel(JetTagModel):
             _,predicted_class = torch.max(output_class,1)
             y = y.cpu().detach().numpy()
             y_categorical = [ np.argmax(y[i])  for i in range(len(y))]
-            accuracy_step += (metrics.accuracy_score(predicted_class.detach().numpy(), y_categorical))
-            mae_step += (metrics.mean_absolute_error(outputs_pt.detach().numpy(), y_pt.detach().numpy()))
-            mse_step += (metrics.mean_squared_error(outputs_pt.detach().numpy(), y_pt.detach().numpy()))
+            accuracy_step += (metrics.accuracy_score(predicted_class.cpu().detach().numpy(), y_categorical))
+            mae_step += (metrics.mean_absolute_error(outputs_pt.cpu().detach().numpy(), y_pt.cpu().detach().numpy()))
+            mse_step += (metrics.mean_squared_error(outputs_pt.cpu().detach().numpy(), y_pt.cpu().detach().numpy()))
             len_step += 1
             
-        self.history[self.loss_name + self.output_id_name+ '_loss'].append(loss_class.mean().detach().numpy())
-        self.history[self.loss_name + self.output_pt_name+ '_loss'].append(loss_pt.mean().detach().numpy())
+        self.history[self.loss_name + self.output_id_name+ '_loss'].append(loss_class.mean().cpu().detach().numpy())
+        self.history[self.loss_name + self.output_pt_name+ '_loss'].append(loss_pt.mean().cpu().detach().numpy())
             
         self.history['train_acc'].append(accuracy_step/len_step)
         self.history['train_mae'].append(mae_step/len_step)
@@ -332,9 +332,9 @@ class PQuantDeepSetModel(JetTagModel):
         
         epoch += 1
         
-        print(f'Epoch {epoch.detach().numpy():d} \nloss: {loss.mean().detach().numpy():1.3f} '
-              f'jet_id_output_loss: {loss_class.mean().detach().numpy():1.3f} '
-              f'pT_output_loss: {loss_pt.mean().detach().numpy():1.3f} '
+        print(f'Epoch {epoch.cpu().detach().numpy():d} \nloss: {loss.mean().cpu().detach().numpy():1.3f} '
+              f'jet_id_output_loss: {loss_class.mean().cpu().detach().numpy():1.3f} '
+              f'pT_output_loss: {loss_pt.mean().cpu().detach().numpy():1.3f} '
               f'jet_id_output_categorical_accuracy: {self.history['train_acc'][-1]:1.3f} '
               f'pT_output_mae:  {self.history['train_mae'][-1]:1.3f} '
               f'pT_output_mean_squared_error:  {self.history['train_mse'][-1]:1.3f} '
@@ -359,24 +359,24 @@ class PQuantDeepSetModel(JetTagModel):
                 y = y.cpu().detach().numpy()
                 y_categorical = [ np.argmax(y[i])  for i in range(len(y))]
                 
-                accuracy_step += metrics.accuracy_score(predicted_class.detach().numpy(), y_categorical)
-                mae_step += metrics.mean_absolute_error(outputs_pt.detach().numpy(), y_pt.detach().numpy())
-                mse_step += metrics.mean_squared_error(outputs_pt.detach().numpy(), y_pt.detach().numpy())
+                accuracy_step += metrics.accuracy_score(predicted_class.cpu().detach().numpy(), y_categorical)
+                mae_step += metrics.mean_absolute_error(outputs_pt.cpu().detach().numpy(), y_pt.cpu().detach().numpy())
+                mse_step += metrics.mean_squared_error(outputs_pt.cpu().detach().numpy(), y_pt.cpu().detach().numpy())
                 len_step += 1
             
             if scheduler is not None:
                 scheduler.step(loss.mean())
                 
-        self.history['val_' + self.loss_name + self.output_id_name+ '_loss'].append(loss_class.mean().detach().numpy())
-        self.history['val_' + self.loss_name + self.output_pt_name+ '_loss'].append(loss_pt.mean().detach().numpy())
+        self.history['val_' + self.loss_name + self.output_id_name+ '_loss'].append(loss_class.mean().cpu().detach().numpy())
+        self.history['val_' + self.loss_name + self.output_pt_name+ '_loss'].append(loss_pt.mean().cpu().detach().numpy())
             
         self.history['test_acc'].append(accuracy_step/len_step)
         self.history['test_mae'].append(mae_step/len_step)
         self.history['test_mse'].append(mse_step/len_step)
         
-        print(f'val_loss: {loss.mean().detach().numpy():1.3f} '
-              f'val_jet_id_output_loss: {loss_class.mean().detach().numpy():1.3f} '
-              f'val_pT_output_loss: {loss_pt.mean().detach().numpy():1.3f} '
+        print(f'val_loss: {loss.mean().cpu().detach().numpy():1.3f} '
+              f'val_jet_id_output_loss: {loss_class.mean().cpu().detach().numpy():1.3f} '
+              f'val_pT_output_loss: {loss_pt.mean().cpu().detach().numpy():1.3f} '
               f'val_jet_id_output_categorical_accuracy: {self.history['test_acc'][-1]:1.3f} '
               f'val_pT_output_mae: {self.history['test_mae'][-1]:1.3f} '
               f'val_pT_output_mean_squared_error:  {self.history['test_mse'][-1]:1.3f} '

@@ -262,7 +262,7 @@ class QKerasModel(JetTagModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        self.history = self.jet_model.fit(
+        history = self.jet_model.fit(
             {'model_input': X_train},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight=sample_weight,
@@ -273,6 +273,8 @@ class QKerasModel(JetTagModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
+        
+        self.history = history.history
 
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator

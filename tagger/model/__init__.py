@@ -7,3 +7,5 @@ try:
     from tagger.model.QKerasModel import QKerasModel
 except:
     from tagger.model.FloatingDeepSetModel import FloatingDeepSetModel
+    from tagger.model.PQuantDeepSetModel import PQuantDeepSetModel
+

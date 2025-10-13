@@ -247,7 +247,7 @@ class FloatingDeepSetModel(JetTagModel):
                             "pT_output": sample_weight,
         }
         # Train the model using hyperparameters in yaml config
-        self.history = self.jet_model.fit(
+        history = self.jet_model.fit(
             {'model_input': X_train},
             [y_train,pt_target_train],
             sample_weight = [sample_weight, sample_weight],
@@ -258,6 +258,9 @@ class FloatingDeepSetModel(JetTagModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
+        
+        self.history = history.history
+
 
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator

@@ -1,0 +1,90 @@
+model: PQuantDeepSetModel
+run_config :
+  verbose : 2
+  debug : True
+  num_threads : 64
+
+model_config :
+  name : baseline
+  conv1d_layers : [10,10]
+  classification_layers : [32,16]
+  regression_layers : [10]
+  kernel_initializer : 'lecun_uniform'
+  aggregator : 'mean'
+
+quantization_config:
+  input_quantization : [24,12]
+  pt_output_quantization : [16,6]
+
+training_config :
+  weight_method: "onlyclass"
+  epochs : 100
+  batch_size : 1024
+  learning_rate : 0.001
+  validation_split : 0.1
+
+  loss_weights : [1,1]
+
+  EarlyStopping_patience : 10
+
+  ReduceLROnPlateau_factor : 0.5
+  ReduceLROnPlateau_patience : 5
+  ReduceLROnPlateau_min_lr : 0.00001
+
+firmware_config:
+  input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
+  class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
+  reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
+
+  clock_period : 2.5
+  fpga_part : 'xcvu13p-flga2577-2-e'
+
+  project_name: 'L1TSC4NGJetModel_test'
+
+pquant_config :
+  pruning_parameters: {disable_pruning_for_layers: [norm_input,avgpool,flatten_dim],
+                       enable_pruning: True, 
+                       epsilon: 0.015, 
+                       pruning_method: 'pdp', 
+                       sparsity: 0.1, 
+                       temperature: 0.00005, 
+                       threshold_decay: 0.0, 
+                       structured_pruning: False} 
+  quantization_parameters: {default_integer_bits: 2.0, 
+                            default_fractional_bits: 9.0, 
+                            enable_quantization: True, 
+                            hgq_gamma: 0.0003, 
+                            hgq_heterogeneous: True, 
+                            layer_specific: [], 
+                            use_high_granularity_quantization: False, 
+                            use_real_tanh: False, 
+                            use_relu_multiplier: True, 
+                            use_symmetric_quantization: False} 
+  fitcompress_parameters: {enable_fitcompress: False,
+                           optimize_quantization: True, 
+                           quantization_schedule: [7.0, 4.0, 3.0, 2.0, 1.0],
+                           pruning_schedule: {start: 0, end: -3, steps: 40},
+                           compression_goal: 0.1,
+                           optimize_pruning: True, 
+                           greedy_astar: True, 
+                           approximate: True, 
+                           lambda: 1} 
+  training_parameters: {epochs: 30, 
+                        fine_tuning_epochs: 30, 
+                        pretraining_epochs: 30, 
+                        pruning_first: False, 
+                        rewind: 'never', 
+                        rounds: 1, 
+                        save_weights_epoch: -1} 
+  batch_size: 1024
+  cosine_tmax: 200
+  gamma: 0.1 
+  l2_decay: 0.0001
+  label_smoothing: 0.0
+  lr: 0.001
+  lr_schedule: 'cosine'
+  milestones: [-1, -1] 
+  momentum: 0.9 
+  optimizer: 'sgd' 
+  plot_frequency: 100
+

@@ -62,14 +62,14 @@ class JetTagModel(ABC):
         """
 
         with open(yaml_path, 'r') as stream:
-            yaml_dict = yaml.safe_load(stream)
+            self.yaml_dict = yaml.safe_load(stream)
 
-        self.run_config = yaml_dict['run_config']
-        self.model_config = yaml_dict['model_config']
-        self.quantization_config = yaml_dict['quantization_config']
-        self.training_config = yaml_dict['training_config']
-        if "firmware_config" in yaml_dict:
-            self.firmware_config = yaml_dict['firmware_config']
+        self.run_config = self.yaml_dict['run_config']
+        self.model_config = self.yaml_dict['model_config']
+        self.quantization_config = self.yaml_dict['quantization_config']
+        self.training_config = self.yaml_dict['training_config']
+        if "firmware_config" in self.yaml_dict:
+            self.firmware_config = self.yaml_dict['firmware_config']
 
     @abstractmethod
     def build_model(self, **kwargs):

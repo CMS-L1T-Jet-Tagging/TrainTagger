@@ -1,4 +1,7 @@
 import os
+# Default behaviour for PQUuant to work?
+os.environ["KERAS_BACKEND"] = "torch" 
+
 from argparse import ArgumentParser
 
 # Third parties

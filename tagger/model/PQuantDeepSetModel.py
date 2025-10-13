@@ -316,7 +316,7 @@ class PQuantDeepSetModel(JetTagModel):
             
             
             _,predicted_class = torch.max(output_class,1)
-            y = y.detach().numpy()
+            y = y.cpu().detach().numpy()
             y_categorical = [ np.argmax(y[i])  for i in range(len(y))]
             accuracy_step += (metrics.accuracy_score(predicted_class.detach().numpy(), y_categorical))
             mae_step += (metrics.mean_absolute_error(outputs_pt.detach().numpy(), y_pt.detach().numpy()))
@@ -356,7 +356,7 @@ class PQuantDeepSetModel(JetTagModel):
                 losses = get_model_losses(model, torch.tensor(0.).to(device))
                 loss += losses
                 _,predicted_class = torch.max(output_class,1)
-                y = y.detach().numpy()
+                y = y.cpu().detach().numpy()
                 y_categorical = [ np.argmax(y[i])  for i in range(len(y))]
                 
                 accuracy_step += metrics.accuracy_score(predicted_class.detach().numpy(), y_categorical)
@@ -450,8 +450,8 @@ class PQuantDeepSetModel(JetTagModel):
                 inputs, y, y_pt, sample_weight = data['X'].to(self.device), data['y'].to(self.device), data['y_pt'].to(self.device), data['sample_weight'].to(self.device)
                 inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
                 output_class, outputs_pt = self.jet_model(inputs)
-                class_predictions.append(output_class.detach().numpy())
-                pt_ratio_predictions.append(outputs_pt.detach().numpy().flatten())
+                class_predictions.append(output_class.cpu().detach().numpy())
+                pt_ratio_predictions.append(outputs_pt.cpu().detach().numpy().flatten())
 
         class_predictions = np.concatenate(class_predictions)
         pt_ratio_predictions = np.concatenate(pt_ratio_predictions)

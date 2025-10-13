@@ -303,7 +303,7 @@ class PQuantDeepSetModel(JetTagModel):
         len_step = 0
         for data in trainloader:
             inputs, y, y_pt, sample_weight = data['X'].to(device), data['y'].to(device), data['y_pt'].to(device), data['sample_weight'].to(device)
-            inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
+            inputs = self.quantizer(inputs, k=torch.tensor(1.), i=(torch.tensor(self.quantization_config['input_quantization'][0] - torch.tensor(self.quantization_config['input_quantization'][1]))-1, f=torch.tensor(self.quantization_config['input_quantization'][1])) 
             optimizer.zero_grad()
             output_class, outputs_pt = model(inputs)
             loss_class, loss_pt = loss_func(output_class,y,outputs_pt,y_pt,sample_weight)
@@ -349,7 +349,7 @@ class PQuantDeepSetModel(JetTagModel):
         with torch.no_grad():
             for data in testloader:
                 inputs, y, y_pt, sample_weight = data['X'].to(device), data['y'].to(device), data['y_pt'].to(device), data['sample_weight'].to(device)
-                inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
+                inputs = self.quantizer(inputs, k=torch.tensor(1.), i=(torch.tensor(self.quantization_config['input_quantization'][0] - torch.tensor(self.quantization_config['input_quantization'][1]))-1, f=torch.tensor(self.quantization_config['input_quantization'][1]))
                 output_class, outputs_pt = self.jet_model(inputs)
                 loss_class, loss_pt = loss_func(output_class,y,outputs_pt,y_pt,sample_weight)
                 loss = self.training_config['loss_weights'][0]*loss_class + self.training_config['loss_weights'][0]*loss_pt
@@ -448,7 +448,7 @@ class PQuantDeepSetModel(JetTagModel):
         with torch.no_grad():
             for data in testloader:
                 inputs, y, y_pt, sample_weight = data['X'].to(self.device), data['y'].to(self.device), data['y_pt'].to(self.device), data['sample_weight'].to(self.device)
-                inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
+                inputs = self.quantizer(inputs, k=torch.tensor(1.), i=(torch.tensor(self.quantization_config['input_quantization'][0] - torch.tensor(self.quantization_config['input_quantization'][1]))-1, f=torch.tensor(self.quantization_config['input_quantization'][1]))
                 output_class, outputs_pt = self.jet_model(inputs)
                 class_predictions.append(output_class.cpu().detach().numpy())
                 pt_ratio_predictions.append(outputs_pt.cpu().detach().numpy().flatten())
@@ -494,6 +494,7 @@ class PQuantDeepSetModel(JetTagModel):
         self.output_shape = meta_dict['output_shape']
         
         self.jet_model = TorchDeepSetNetwork(self.model_config, self.input_shape, self.output_shape )
+        self.jet_model.to(self.device)
         self.pquant_config = self.yaml_dict['pquant_config']
         self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,self.input_shape[0],self.input_shape[1]))
         self.jet_model.load_state_dict(torch.load(f"{out_dir}/model/saved_model.keras", weights_only=True))

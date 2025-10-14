@@ -314,7 +314,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     return
 
-def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000 ):
+def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000, inc_seeded_cone=False ):
     """
     Plot the single tau efficiency for signal in signal_path w.r.t pt
     eta range for barrel: |eta| < 1.5
@@ -428,7 +428,8 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
         ax.plot([], [], 'none', label=eta_label)
 
     # Plot errorbars for both sets of efficiencies
-    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
+    if(inc_seeded_cone):
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
     ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 28kHz')
     ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 28kHz')
 
@@ -468,6 +469,7 @@ if __name__ == "__main__":
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')
     parser.add_argument('--eff', action='store_true', help='plot efficiency for VBF-> tautau')
     parser.add_argument('--BkgRate', action='store_true', help='plot background rate for VBF->tautau')
+    parser.add_argument('--seedcone_eff', action='store_true', help='Include the seeded cone eff on the plot')
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
@@ -480,5 +482,5 @@ if __name__ == "__main__":
     elif args.BkgRate:
         plot_bkg_rate_ditau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree)
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)
+        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
+        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)

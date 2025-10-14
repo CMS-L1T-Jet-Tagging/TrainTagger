@@ -435,7 +435,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.15])
+    ax.set_ylim([0., 1.17])
     ax.set_xlim([0, 800])
     ax.set_xlabel(r"$HT^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b)")
@@ -460,7 +460,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     # Common plot settings for second plot
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
     ax2.grid(True)
-    ax2.set_ylim([0., 1.15])
+    ax2.set_ylim([0., 1.22])
     ax2.set_xlim([0, 800])
     ax2.set_xlabel(r"$HT^{gen}$ [GeV]")
     ax2.set_ylabel(r"$\epsilon$(HH $\to$ 4b)")
@@ -564,7 +564,7 @@ def bbbb_eff_mHH(model_dir,
     # Common plot settings for second plot
     ax.hlines(1, 0, 1000, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.17])
+    ax.set_ylim([0., 1.23])
     ax.set_xlim([0, 1000])
     ax.set_xlabel(r"$m_{HH}^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ 4b)")

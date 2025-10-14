@@ -330,6 +330,7 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
 
     ax.legend(loc='upper right')
     plt.savefig(f"{plot_dir}/bbtt_rate_{score_type}_{apply_sel}_{rate}.pdf", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/bbtt_rate_{score_type}_{apply_sel}_{rate}.png", bbox_inches='tight')
 
 
 def make_predictions(data_path, model_dir, n_entries, tree='outnano/Jets', njets=4):
@@ -734,7 +735,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, target_rate = 14,
     #Plot other labels
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
     ax2.grid(True)
-    ax2.set_ylim([0., 1.15])
+    ax2.set_ylim([0., 1.23])
     ax2.set_xlim([0, 800])
     ax2.set_xlabel(r"$HT^{gen}$ [GeV]")
     ax2.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$)")
@@ -854,7 +855,7 @@ def bbtt_eff_mHH(model_dir,
     # Common plot settings for second plot
     ax.hlines(1, 0, 1000, linestyles='dashed', color='black', linewidth=4)
     ax.grid(True)
-    ax.set_ylim([0., 1.17])
+    ax.set_ylim([0., 1.23])
     ax.set_xlim([0, 1000])
     ax.set_xlabel(r"$m_{HH}^{gen}$ [GeV]")
     ax.set_ylabel(r"$\epsilon$(HH $\to$ bb$\tau \tau$)")

@@ -87,18 +87,10 @@ def nn_score_sums(model, jet_nn_inputs, n_jets=4):
 
     return bscore_sums, bscore_idxs
 
-
-def pick_and_plot(
-    rate_list, ht_list, bb_list, ht, raw_score, apply_sel, model_dir, signal_path, n_entries, target_rate, tree
-):
+def pick_and_plot(target_rate_idx, ht_list, bb_list, raw_score, apply_sel, model_dir, tree):
     """
     Pick the working points and plot
     """
-    # plus, minus range
-    RateRange = 0.5
-
-    # Find the target rate points, plot them and print out some info as well
-    target_rate_idx = find_rate(rate_list, target_rate=target_rate, RateRange=RateRange)
 
     # Get the coordinates
     target_rate_bb = np.array([bb_list[i] for i in target_rate_idx])  # NN cut dimension
@@ -219,42 +211,51 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
 
     jet_ht = ak.sum(jet_pt, axis=1)
 
-    # Define the histograms (pT edge and NN Score edge)
-    # Make sure to capture everything
-    ht_edges = list(np.arange(150, 500, 1)) + [10000]
-    NN_edges = list([round(i, 3) for i in np.arange(0, 1.2, 0.001)]) + [2.0]
+    #Define the histograms (pT edge and NN Score edge)
+    ht_edges = list(np.arange(150,500,1)) + [10000] #Make sure to capture everything
+    granularity = 0.5
+    NN_edges = list([round(i,3) for i in np.arange(0, 1.2, 0.005 / granularity)]) + [2.0]
 
     # for raw and vs light preds
     raw = True
     for bscore_sum, def_sel in zip(bscore_sums, def_sels):
-        sel_ht = jet_ht[def_sel]
-        RateHist = Hist(
-            hist.axis.Variable(ht_edges, name="ht", label="ht"), hist.axis.Variable(NN_edges, name="nn", label="nn_bb")
-        )
-        RateHist.fill(ht=sel_ht, nn=bscore_sum)
+        target_rate_idx = []
+        while len(target_rate_idx) < 1:
+            print("running  rates with granularity factor = ", granularity)
+            sel_ht = jet_ht[def_sel]
+            RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
+                            hist.axis.Variable(NN_edges, name="nn", label="nn_bb"))
+            RateHist.fill(ht = sel_ht, nn = bscore_sum)
 
-        assert len(bscore_sum) == len(sel_ht)
-        assert len(bscore_sum) == len(sel_ht)
+            assert(len(bscore_sum) == len(sel_ht))
+            assert(len(bscore_sum) == len(sel_ht))
 
-        # Derive the rate
-        rate_list = []
-        ht_list = []
-        bb_list = []
+            #Derive the rate
+            rate_list = []
+            ht_list = []
+            bb_list = []
 
-        # Loop through the edges and integrate
-        for bb in NN_edges[:-1]:
-            # Calculate the rate
-            counts = RateHist[{"ht": slice(ht_cut * 1j, None, sum)}][{"nn": slice(bb * 1.0j, None, sum)}]
-            rate_list.append((counts / n_events) * MINBIAS_RATE)
+            #Loop through the edges and integrate
+            for bb in NN_edges[:-1]:
+                #Calculate the rate
+                counts = RateHist[{"ht": slice(ht_cut*1j, None, sum)}][{"nn": slice(bb*1.0j, None, sum)}]
+                rate_list.append((counts / n_events)*MINBIAS_RATE)
 
-            # Append the results
-            ht_list.append(ht_cut)
-            bb_list.append(bb)
+                #Append the results
+                ht_list.append(ht_cut)
+                bb_list.append(bb)
 
-        # Pick target rate and plot it
-        pick_and_plot(
-            rate_list, ht_list, bb_list, ht_cut, raw, apply_sel, model.output_directory, signal_path, n_entries, rate, tree
-        )
+            # Find the target rate points, and pass them to plotting function
+            RateRange = 0.5
+            target_rate_idx = find_rate(rate_list, target_rate = rate, RateRange=RateRange)
+            granularity += .5
+            range_center = NN_edges[np.argmin((np.abs(np.array(rate_list) - rate)))]
+            significant_range = [range_center - .1, range_center + .1]
+            NN_edges = np.arange(significant_range[0], significant_range[1], 0.001 / granularity).tolist()
+
+        #Pick target rate and plot it
+        target_rate_idx = [np.argmin(np.abs(np.array(rate_list) - rate))]
+        pick_and_plot(target_rate_idx, ht_list, bb_list, raw, apply_sel, model_dir, tree)
         gc.collect()
         raw = False
 

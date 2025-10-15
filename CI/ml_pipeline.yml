@@ -109,8 +109,11 @@ evaluate:
   - eos cp $BBBB_EOS_DIR/$BBBB .
   - eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
-  - eos cp $EOS_DATA_DIR/GluGluHHTo2B2Tau_PU200.root .
   - cd ..
+  - echo "bbtt performance"
+  - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
   - echo "VBF tautau performance"
   - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE
@@ -122,6 +125,9 @@ evaluate:
   - echo "bbbb performance"
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE
+  - echo "Single tau performance"
+  - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE
+  - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE
   artifacts:
     paths:
       - output
@@ -281,7 +287,7 @@ upload_tagged_model:
     - mv output/baseline/plots/physics/ $Name/plots
     - cd ..
     - rm -rf php-plots
-    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cms-analysis/general/php-plots.git -b feature/update_extension_grouping
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
     # - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive

@@ -23,7 +23,18 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
+
+
+def tau_score(preds, class_labels):
+    tau_index = [class_labels['taup'], class_labels['taum']]
+
+    tau = sum([preds[:,idx] for idx in tau_index] )
+    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+
+    return x_vs_y(tau, bkg)
+
+
 
 def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28, RateRange = 1.0):
     """
@@ -107,6 +118,7 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
 
+
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
@@ -133,7 +145,6 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
 
     #Get the NN predictions
-    tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
     pred_score1, ratio1 = model.predict(input1)
     pred_score2, ratio2 = model.predict(input2)
 
@@ -141,8 +152,8 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     pt1 = pt1_uncorrected*(ratio1.flatten())
     pt2 = pt2_uncorrected*(ratio2.flatten())
 
-    tau_score1=pred_score1[:,tau_index[0]] + pred_score1[:,tau_index[1]]
-    tau_score2=pred_score2[:,tau_index[0]] + pred_score2[:,tau_index[1]]
+    tau_score1 = tau_score(pred_score1, class_labels)
+    tau_score2 = tau_score(pred_score2, class_labels)
 
     #Put them together
     NN_score = np.vstack([tau_score1, tau_score2]).transpose()
@@ -182,7 +193,7 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
 
     return
 
-def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets'):
+def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
@@ -205,9 +216,8 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     nn_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
 
     #Get the NN predictions
-    tau_index = [class_labels['taup'], class_labels['taum']] #Tau positives and tau negatives
     pred_score, ratio = model.predict(nn_inputs[eta_selection])
-    model_tau = pred_score[:, tau_index[0]] + pred_score[:, tau_index[1]]
+    model_tau = tau_score(pred_score, class_labels )
 
     #Emulator tau score
     cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)[eta_selection]
@@ -232,6 +242,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     #Cut on jet pT to extract the rate
     jet_pt = extract_array(minbias, 'jet_pt', n_entries)[eta_selection]
+
 
     jet_pt_cmssw = extract_array(minbias, 'jet_taupt', n_entries)[eta_selection][cmssw_tau > WPs_CMSSW["tau"]]
     jet_pt_model = (jet_pt*ratio.flatten())[model_tau > tautau_wp]
@@ -303,7 +314,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     return
 
-def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000):
+def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000, inc_seeded_cone=False ):
     """
     Plot the single tau efficiency for signal in signal_path w.r.t pt
     eta range for barrel: |eta| < 1.5
@@ -346,7 +357,7 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
     pred_score, ratio = model.predict(nn_inputs)
 
-    nn_tauscore_raw = pred_score[:,class_labels['taup'],] + pred_score[:,class_labels['taum']]
+    nn_tauscore_raw = tau_score(pred_score, class_labels )
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     #selecting the eta region
@@ -357,6 +368,23 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > model_pt_WP)
     tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP) & (nn_tauscore_raw > model_NN_WP)
     tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt']) & (jet_tauscore_raw > WPs_CMSSW['tau'])
+
+
+    #write out total eff to text file
+    total_eff_nn = np.mean(tau_nume_nn) / np.mean(tau_deno)
+    total_eff_seedcone = np.mean(tau_nume_seedcone) / np.mean(tau_deno)
+    total_eff_cmssw = np.mean(tau_nume_cmssw) / np.mean(tau_deno)
+
+    outname = plot_dir + "/TotalEff_%s.txt" % eta_region
+    with open(outname, "w") as outfile:
+        outfile.write("Total diTau Eff \n")
+        outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
+        outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
+        outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
+
+
+
+
 
     #Get the needed attributes
     #Basically we want to bin the selected truth pt and divide it by the overall count
@@ -400,7 +428,8 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
         ax.plot([], [], 'none', label=eta_label)
 
     # Plot errorbars for both sets of efficiencies
-    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
+    if(inc_seeded_cone):
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
     ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 28kHz')
     ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 28kHz')
 
@@ -433,13 +462,14 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/VBFHtt_PU200.root' , help = 'Signal sample for VBF -> ditaus')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/extendedTRK_5param_221124/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')
     parser.add_argument('--eff', action='store_true', help='plot efficiency for VBF-> tautau')
     parser.add_argument('--BkgRate', action='store_true', help='plot background rate for VBF->tautau')
+    parser.add_argument('--seedcone_eff', action='store_true', help='Include the seeded cone eff on the plot')
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
@@ -452,5 +482,5 @@ if __name__ == "__main__":
     elif args.BkgRate:
         plot_bkg_rate_ditau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree)
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)
+        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
+        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)

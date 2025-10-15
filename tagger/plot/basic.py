@@ -623,35 +623,40 @@ def shapPlot(shap_values, feature_names, class_names):
 def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
 
     labels = list(class_labels.keys())
-    model2 = tf.keras.Model(model.jet_model.input, model.jet_model.output[0])
-    model3 = tf.keras.Model(model.jet_model.input, model.jet_model.output[1])
+    try:
+        model2 = tf.keras.Model(model.jet_model.input, model.jet_model.output[0])
+        model3 = tf.keras.Model(model.jet_model.input, model.jet_model.output[1])
 
-    for explainer, name in [
-        (shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"),
-    ]:
-        print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(X_test[:1000])
-        new = np.sum(shap_values, axis=1)
-        print("... shap summary_plot classification")
-        plt.clf()
-        new = np.transpose(new, (2, 0, 1))
-        shapPlot(new, input_vars, labels)
-        plt.savefig(plot_dir + "/shap_summary_class.pdf", bbox_inches='tight')
-        plt.savefig(plot_dir + "/shap_summary_class.png", bbox_inches='tight')
+        for explainer, name in [
+            (shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"),
+        ]:
+            print("... {0}: explainer.shap_values(X)".format(name))
+            shap_values = explainer.shap_values(X_test[:1000])
+            new = np.sum(shap_values, axis=1)
+            print("... shap summary_plot classification")
+            plt.clf()
+            new = np.transpose(new, (2, 0, 1))
+            shapPlot(new, input_vars, labels)
+            plt.savefig(plot_dir + "/shap_summary_class.pdf", bbox_inches='tight')
+            plt.savefig(plot_dir + "/shap_summary_class.png", bbox_inches='tight')
 
-    for explainer, name in [
-        (shap.GradientExplainer(model3, X_test[:1000]), "GradientExplainer"),
-    ]:
-        print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(X_test[:1000])
-        new = np.sum(shap_values, axis=1)
-        print("... shap summary_plot regression")
-        plt.clf()
-        labels = ["Regression"]
-        new = np.transpose(new, (2, 0, 1))
-        shapPlot(new, input_vars, labels)
-        plt.savefig(plot_dir + "/shap_summary_reg.pdf", bbox_inches='tight')
-        plt.savefig(plot_dir + "/shap_summary_reg.png", bbox_inches='tight')
+        for explainer, name in [
+            (shap.GradientExplainer(model3, X_test[:1000]), "GradientExplainer"),
+        ]:
+            print("... {0}: explainer.shap_values(X)".format(name))
+            shap_values = explainer.shap_values(X_test[:1000])
+            new = np.sum(shap_values, axis=1)
+            print("... shap summary_plot regression")
+            plt.clf()
+            labels = ["Regression"]
+            new = np.transpose(new, (2, 0, 1))
+            shapPlot(new, input_vars, labels)
+            plt.savefig(plot_dir + "/shap_summary_reg.pdf", bbox_inches='tight')
+            plt.savefig(plot_dir + "/shap_summary_reg.png", bbox_inches='tight')
+            
+    except AttributeError:
+        print('Shapely not yet implemented for non-keras models')
+
 
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):

@@ -5,7 +5,7 @@ Written 07/10/2025 cebrown@cern.ch
 
 import json
 import os
-import time
+from datetime import datetime
 
 import hls4ml
 import numpy as np
@@ -19,20 +19,100 @@ from torch.utils.data import Dataset
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tagger.model.TorchDeepSetModel import JetTagDataset, TorchDeepSetNetwork,TorchDeepSetModel
-
-from pquant import get_default_config
-from quantizers.fixed_point.fixed_point_ops import get_fixed_quantizer
-from pquant import get_layer_keep_ratio, get_model_losses,add_compression_layers
-from pquant import iterative_train,remove_pruning_from_model
-
 from sklearn import model_selection, metrics
 
-# Register the model in the factory with the string name corresponding to what is in the yaml config
-@JetModelFactory.register('PQuantDeepSetModel')
-class PQuantDeepSetModel(TorchDeepSetModel):
+import keras
+from keras.models import load_model
+from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D,AveragePooling1D, Dense, Conv1D, Flatten
 
-    """PQuantDeepSetModel class
+class TorchDeepSetNetwork(nn.Module):
+    def __init__(self, model_config, inputs_shape, outputs_shape ):
+        super(TorchDeepSetNetwork, self).__init__()
+        
+        num_features = inputs_shape[1]  # channels
+        num_particles = inputs_shape[0]     # sequence length
+        
+        self.norm_input = nn.BatchNorm1d(num_features,eps=0.001,momentum=0.99)
+        
+        # Conv1D layers (Keras Conv1D: (batch, L, C) → PyTorch Conv1d: (batch, C, L))
+        conv_layers = []
+        in_channels = num_features
+        for i, depth in enumerate(model_config['conv1d_layers']):
+            conv_layers.append(nn.Conv1d(in_channels, depth, kernel_size=1))
+            conv_layers.append(nn.ReLU())
+            in_channels = depth
+        self.conv1d_layers = nn.Sequential(*conv_layers)
+        
+        # Average pooling (same as Keras AveragePooling1D)
+        self.avgpool = nn.AvgPool1d(kernel_size=num_particles)
+        
+        # Compute flattened size after pooling
+        self.flatten_dim = in_channels  # because AvgPool1d reduces L → 1
+        
+        # ---- Jet ID (classification) branch ----
+        class_layers = []
+        in_features = self.flatten_dim
+        for i, depth in enumerate(model_config['classification_layers']):
+            class_layers.append(nn.Linear(in_features, depth))
+            class_layers.append(nn.ReLU())
+            in_features = depth
+        class_layers.append(nn.Linear(in_features, outputs_shape[0]))
+        self.jet_id_head = nn.Sequential(*class_layers)
+
+        # ---- pT Regression branch ----
+        reg_layers = []
+        in_features = self.flatten_dim
+        for i, depth in enumerate(model_config['regression_layers']):
+            reg_layers.append(nn.Linear(in_features, depth))
+            reg_layers.append(nn.ReLU())
+            in_features = depth
+        reg_layers.append(nn.Linear(in_features, 1))
+        self.pt_head = nn.Sequential(*reg_layers)
+        
+    def forward(self, x):
+        # Keras: (batch, L, C) → PyTorch expects (batch, C, L)
+        x = x.type(torch.float32)
+        x = x.permute(0, 2, 1)
+        x = self.norm_input(x)
+        x = self.conv1d_layers(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, start_dim=1)
+
+        jet_id = self.jet_id_head(x)
+        #jet_id = F.softmax(jet_id, dim=1)
+
+        pt_regress = self.pt_head(x)
+
+        return jet_id, pt_regress
+
+
+class JetTagDataset(Dataset):
+
+    def __init__(self, X, y, y_pt, sample_weight):
+        
+        self.X = X
+        self.y = y
+        self.y_pt = y_pt
+        self.sample_weight = sample_weight
+        
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        
+        sample = {'X': self.X[idx], 'y' : self.y[idx], 'y_pt':self.y_pt[idx], 'sample_weight':self.sample_weight[idx]}
+
+        return sample
+    
+
+# Register the model in the factory with the string name corresponding to what is in the yaml config
+@JetModelFactory.register('TorchDeepSetModel')
+class TorchDeepSetModel(JetTagModel):
+
+    """TorchDeepSetModel class
 
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
@@ -69,28 +149,19 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                                      "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                      "fpga_part" : str,
                                      "project_name" : str},
-                "pquant_config" : {"pruning_parameters" : dict,
-                                   "quantization_parameters" : dict,
-                                   "fitcompress_parameters" : dict,
-                                   "training_parameters" : dict,
-                                   'batch_size': int, 
-                                   'cosine_tmax': int, 
-                                   'gamma': float, 
-                                   'l2_decay': float, 
-                                   'label_smoothing': float, 
-                                   'lr': float, 
-                                   'lr_schedule': str, 
-                                   'milestones': list, 
-                                   'momentum': float, 
-                                   'optimizer': str, 
-                                   'plot_frequency': int}
             }
     )
 
     def __init__(self, out_dir):
-        super().__init__(out_dir)            
-        self.quantizer = get_fixed_quantizer(overflow_mode="SAT")
-
+        super().__init__(out_dir)
+        self.device = "cpu"
+        self.n_workers = 8
+        self.pin_memory = False
+        if torch.cuda.is_available():
+            self.device = "cuda"
+            self.n_workers = 24
+            self.pin_memory= True
+            
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
 
@@ -107,38 +178,61 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         
         self.input_shape = inputs_shape
         self.output_shape = outputs_shape
-        self.pquant_config = self.yaml_dict['pquant_config']
-
         self.jet_model = TorchDeepSetNetwork( self.model_config, inputs_shape, outputs_shape)
         print(self.jet_model)
         self.jet_model.to(self.device)
-        #Define the model using both branches
-        self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,inputs_shape[0],inputs_shape[1]))
-        print(self.jet_model)
 
-    def loss_function_wrapper(self,y,y_true,y_pt, y_true_pt,sample_weight):
-            return self.class_loss_fn(y,y_true), self.regression_loss_fn(torch.squeeze(y_pt),y_true_pt)
         
-    def train_func(self, model, trainloader, device, loss_func, epoch, optimizer, scheduler, *args, **kwargs):
-        accuracy_step = 0
-        mae_step = 0
-        mse_step = 0
-        len_step = 0
-        for data in trainloader:
-            inputs, y, y_pt, sample_weight = data['X'].to(device), data['y'].to(device), data['y_pt'].to(device), data['sample_weight'].to(device)
-            inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
-            optimizer.zero_grad()
-            output_class, outputs_pt = model(inputs)
-            loss_class, loss_pt = loss_func(output_class,y,outputs_pt,y_pt,sample_weight)
+    def compile_model(self, num_samples: int):
+        """compile the model generating callbacks and loss function
+        Args:
+            num_samples (int): Number of samples in the training set used for scheduling
+        """
+            
+        self.optimizer = torch.optim.Adam(self.jet_model.parameters(), lr=self.training_config['learning_rate'],eps=1e-07)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer , factor=self.training_config['ReduceLROnPlateau_factor'], patience=self.training_config['ReduceLROnPlateau_patience'],min_lr=self.training_config['ReduceLROnPlateau_min_lr'])
+        
+        # Instantiate a loss function.
+        self.class_loss_fn = nn.CrossEntropyLoss(reduction='none')
+        self.regression_loss_fn = nn.HuberLoss(reduction='none')
+        
+       
+        
+        self.history = { self.loss_name + self.output_id_name + '_loss':[], self.loss_name + self.output_pt_name + '_loss':[], 
+                         'val_' + self.loss_name + self.output_id_name + '_loss' :[], 'val_' + self.loss_name + self.output_pt_name + '_loss':[], 
+                        "train_acc":[], 'train_mae':[],'train_mse':[],
+                        "test_acc":[], 'test_mae':[],'test_mse':[],}
+       
+    def train_one_epoch(self, train_loader):
+        last_loss = 0.
+        accuracy_step = 0.
+        mae_step = 0.
+        mse_step = 0.
+        len_step = 0.
+        # Here, we use enumerate(train_loader) instead of
+        # iter(train_loader) so that we can track the batch
+        # index and do some intra-epoch reporting
+        for i, data in enumerate(train_loader):
+            # Every data instance is an input + label pair
+            inputs, y, y_pt, sample_weight = data['X'].to(self.device), data['y'].to(self.device), data['y_pt'].to(self.device), data['sample_weight'].to(self.device)
+
+            # Zero your gradients for every batch!
+            self.optimizer.zero_grad()
+
+            # Make predictions for this batch
+            output_class, outputs_pt = self.jet_model(inputs)
+
+            # Compute the loss and its gradients       
             loss_class = sum(self.class_loss_fn(output_class,y)*sample_weight)/len(output_class)
             loss_pt =  sum(self.regression_loss_fn(torch.squeeze(outputs_pt),y_pt)*sample_weight)/len(outputs_pt)
             loss = loss_class + loss_pt
-            losses = get_model_losses(model, torch.tensor(0.).to(device))
-            loss += losses
+            
             loss.backward()
-            
-            optimizer.step()
-            
+
+            # Adjust learning weights
+            self.optimizer.step()
+
+            # Gather data and report
             _,predicted_class = torch.max(output_class,1)
             y = nn.functional.softmax(y,dim=1) 
             y = y.cpu().detach().numpy()
@@ -154,10 +248,8 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         self.history['train_acc'].append(accuracy_step/len_step)
         self.history['train_mae'].append(mae_step/len_step)
         self.history['train_mse'].append(mse_step/len_step)
-        
-        epoch += 1
-        
-        print(f'Epoch {epoch.cpu().detach().numpy():d} \nloss: {loss.mean().cpu().detach().numpy():1.3f} '
+        last_loss = loss.mean().cpu().detach().numpy()
+        print(f'loss: {last_loss:1.3f} '
               f'jet_id_output_loss: {loss_class.mean().cpu().detach().numpy():1.3f} '
               f'pT_output_loss: {loss_pt.mean().cpu().detach().numpy():1.3f} '
               f'jet_id_output_categorical_accuracy: {self.history['train_acc'][-1]:1.3f} '
@@ -165,23 +257,24 @@ class PQuantDeepSetModel(TorchDeepSetModel):
               f'pT_output_mean_squared_error:  {self.history['train_mse'][-1]:1.3f} '
               )
         
-    def validation_func(self,model, testloader, device, loss_func, epoch, scheduler, *args, **kwargs):
+        return last_loss
+            
+        
+    def validation_func(self, testloader):
         self.jet_model.eval()
-        accuracy_step = 0
-        mae_step = 0
-        mse_step = 0
-        len_step = 0
+        accuracy_step = 0.
+        mae_step = 0.
+        mse_step = 0.
+        len_step = 0.
+        last_loss = 0.
         with torch.no_grad():
             for data in testloader:
-                inputs, y, y_pt, sample_weight = data['X'].to(device), data['y'].to(device), data['y_pt'].to(device), data['sample_weight'].to(device)
-                inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
+                inputs, y, y_pt, sample_weight = data['X'].to(self.device), data['y'].to(self.device), data['y_pt'].to(self.device), data['sample_weight'].to(self.device)
                 output_class, outputs_pt = self.jet_model(inputs)
-                loss_class, loss_pt = loss_func(output_class,y,outputs_pt,y_pt,sample_weight)
                 loss_class = sum(self.class_loss_fn(output_class,y)*sample_weight)/len(output_class)
                 loss_pt = sum(self.regression_loss_fn(torch.squeeze(outputs_pt),y_pt)*sample_weight)/len(outputs_pt)
-                loss = loss_class + loss_pt
-                losses = get_model_losses(model, torch.tensor(0.).to(device))
-                loss += losses
+                loss = self.training_config['loss_weights'][0]*loss_class + self.training_config['loss_weights'][0]*loss_pt
+                
                 _,predicted_class = torch.max(output_class,1)
                 y = nn.functional.softmax(y,dim=1)
                 y = y.cpu().detach().numpy()
@@ -190,10 +283,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                 accuracy_step += metrics.accuracy_score(predicted_class.cpu().detach().numpy(), y_categorical)
                 mae_step += metrics.mean_absolute_error(outputs_pt.cpu().detach().numpy(), y_pt.cpu().detach().numpy())
                 mse_step += metrics.mean_squared_error(outputs_pt.cpu().detach().numpy(), y_pt.cpu().detach().numpy())
-                len_step += 1
-            
-            if scheduler is not None:
-                scheduler.step(loss.mean())
+                len_step += 1        
                 
         self.history['val_' + self.loss_name + self.output_id_name+ '_loss'].append(loss_class.mean().cpu().detach().numpy())
         self.history['val_' + self.loss_name + self.output_pt_name+ '_loss'].append(loss_pt.mean().cpu().detach().numpy())
@@ -201,8 +291,9 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         self.history['test_acc'].append(accuracy_step/len_step)
         self.history['test_mae'].append(mae_step/len_step)
         self.history['test_mse'].append(mse_step/len_step)
-        
-        print(f'val_loss: {loss.mean().cpu().detach().numpy():1.3f} '
+        last_loss = loss.mean().cpu().detach().numpy()
+        self.scheduler.step(last_loss)
+        print(f'val_loss: {last_loss:1.3f} '
               f'val_jet_id_output_loss: {loss_class.mean().cpu().detach().numpy():1.3f} '
               f'val_pT_output_loss: {loss_pt.mean().cpu().detach().numpy():1.3f} '
               f'val_jet_id_output_categorical_accuracy: {self.history['test_acc'][-1]:1.3f} '
@@ -210,6 +301,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
               f'val_pT_output_mean_squared_error:  {self.history['test_mse'][-1]:1.3f} '
               f'lr: {self.scheduler.get_last_lr()[0]}'
               )
+        return last_loss
       
     def fit(
         self,
@@ -239,21 +331,23 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                                             shuffle=False, num_workers=self.n_workers, pin_memory=self.pin_memory)
         
         
-        
-        self.jet_model = iterative_train(model = self.jet_model, 
-                                         config = self.pquant_config, 
-                                         train_func = self.train_func, 
-                                         valid_func = self.validation_func, 
-                                         trainloader = train_loader, 
-                                         testloader = test_loader, 
-                                         device = self.device,
-                                         loss_func = self.loss_function_wrapper,
-                                         optimizer = self.optimizer, 
-                                         scheduler = self.scheduler
-                                        )
-        
-        self.jet_model = remove_pruning_from_model(self.jet_model, self.pquant_config)
-        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        epoch_number = 0
+        best_vloss = 1_000_000.
+
+        for epoch in range(self.training_config['epochs']):
+            print('Epoch {}:'.format(epoch_number + 1))
+
+            # Make sure gradient tracking is on, and do a pass over the data
+            self.jet_model.train(True)
+            avg_loss = self.train_one_epoch(train_loader)
+
+
+            self.jet_model.eval()
+            val_loss = self.validation_func(test_loader)
+
+            epoch_number += 1
+                
     
     def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
         """Predict method for model
@@ -276,8 +370,8 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         with torch.no_grad():
             for data in testloader:
                 inputs, y, y_pt, sample_weight = data['X'].to(self.device), data['y'].to(self.device), data['y_pt'].to(self.device), data['sample_weight'].to(self.device)
-                inputs = self.quantizer(inputs, k=torch.tensor(1.), i=torch.tensor(self.quantization_config['input_quantization'][1]), f=torch.tensor(self.quantization_config['input_quantization'][0]) - 1) 
                 output_class, outputs_pt = self.jet_model(inputs)
+                output_class = nn.functional.softmax(output_class,dim=1)
                 class_predictions.append(output_class.cpu().detach().numpy())
                 pt_ratio_predictions.append(outputs_pt.cpu().detach().numpy().flatten())
 
@@ -286,6 +380,28 @@ class PQuantDeepSetModel(TorchDeepSetModel):
 
         return (class_predictions, pt_ratio_predictions)
     
+    # Decorated with save decorator for added functionality
+    @JetTagModel.save_decorator
+    def save(self, out_dir: str = "None"):
+        """Save the model file
+
+        Args:
+            out_dir (str, optional): Where to save it if not in the output_directory. Defaults to "None".
+        """
+        # Export the model
+        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
+        # Use keras save format !NOT .h5! due to depreciation
+        export_path = os.path.join(out_dir, "model/saved_model.keras")
+        torch.save(self.jet_model.state_dict(), export_path)
+        
+        meta_dict = {"input_shape":self.input_shape, 
+                     "output_shape":self.output_shape}
+            
+        with open(f'{out_dir}/model/meta_data.json', 'w') as fp:
+            json.dump(meta_dict, fp)
+        
+        print(f"Model saved to {export_path}")
+
     @JetTagModel.load_decorator
     def load(self, out_dir: str = "None"):
         """Load the model file
@@ -295,11 +411,9 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         """
         # Load the model
         with open(f"{out_dir}/model/meta_data.json", 'r') as fp:
-            meta_dict = json.load(fp)
+             meta_dict = json.load(fp)
         self.input_shape = meta_dict['input_shape']
         self.output_shape = meta_dict['output_shape']
         
         self.jet_model = TorchDeepSetNetwork(self.model_config, self.input_shape, self.output_shape )
-        self.pquant_config = self.yaml_dict['pquant_config']
-        self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,self.input_shape[0],self.input_shape[1]))
         self.jet_model.load_state_dict(torch.load(f"{out_dir}/model/saved_model.keras", weights_only=True))

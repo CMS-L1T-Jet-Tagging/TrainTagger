@@ -858,7 +858,7 @@ def basic(model, signal_dirs):
 
     # Get classification outputs
     y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1][:, 0]
+    pt_ratio = model_outputs[1]
 
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)

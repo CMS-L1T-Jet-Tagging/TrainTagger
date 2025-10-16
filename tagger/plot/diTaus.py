@@ -459,7 +459,7 @@ if __name__ == "__main__":
     parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
 
     args = parser.parse_args()
-    
+
     model = fromFolder(args.model_dir)
 
     if args.deriveWPs:

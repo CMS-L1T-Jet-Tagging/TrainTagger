@@ -408,7 +408,7 @@ if __name__ == "__main__":
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
     args = parser.parse_args()
-    
+
     model = fromFolder(args.model_dir)
 
     if args.deriveRate:

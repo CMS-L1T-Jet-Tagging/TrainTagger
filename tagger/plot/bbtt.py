@@ -335,7 +335,7 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
 
 def make_predictions(data_path, model, n_entries, tree='outnano/Jets', njets=4):
     data = uproot.open(data_path)[tree]
-    
+
     raw_event_id = extract_array(data, 'event', n_entries)
     raw_jet_pt = extract_array(data, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(data, 'jet_eta_phys', n_entries)

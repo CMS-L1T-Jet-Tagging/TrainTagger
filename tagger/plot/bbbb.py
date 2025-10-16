@@ -593,7 +593,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model = fromFolder(args.model_dir)
-    
+
     if args.deriveWPs:
         derive_bbbb_WPs(model, args.minbias, True, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()

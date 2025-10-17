@@ -56,7 +56,7 @@ pquant_config :
                             hgq_gamma: 0.0003, 
                             hgq_heterogeneous: True, 
                             layer_specific: [], 
-                            use_high_granularity_quantization: False, 
+                            use_high_granularity_quantization: True, 
                             use_real_tanh: False, 
                             use_relu_multiplier: True, 
                             use_symmetric_quantization: False} 
@@ -85,6 +85,6 @@ pquant_config :
   lr_schedule: 'cosine'
   milestones: [-1, -1] 
   momentum: 0.9 
-  optimizer: 'sgd' 
+  optimizer: 'adam' 
   plot_frequency: 100
 

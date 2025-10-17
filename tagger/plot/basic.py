@@ -855,7 +855,6 @@ def basic(model, signal_dirs):
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
     constituents_pt = X_test[:, :, 0]
-    from IPython import embed; embed()
     model_outputs = model.jet_model.predict([X_test, constituents_pt])
 
     # Get classification outputs

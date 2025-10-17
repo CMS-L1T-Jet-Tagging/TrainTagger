@@ -22,6 +22,9 @@ import torch.nn.functional as F
 from tagger.model.TorchDeepSetModel import JetTagDataset, TorchDeepSetNetwork,TorchDeepSetModel
 
 from pquant import get_default_config
+from pquant import add_default_layer_quantization_pruning_to_config
+from pquant.core.utils import write_config_to_yaml
+
 from quantizers.fixed_point.fixed_point_ops import get_fixed_quantizer
 from pquant import get_layer_keep_ratio, get_model_losses,add_compression_layers
 from pquant import iterative_train,remove_pruning_from_model
@@ -108,12 +111,12 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         self.input_shape = inputs_shape
         self.output_shape = outputs_shape
         self.pquant_config = self.yaml_dict['pquant_config']
-
+        
         self.jet_model = TorchDeepSetNetwork( self.model_config, inputs_shape, outputs_shape)
-        print(self.jet_model)
         self.jet_model.to(self.device)
         #Define the model using both branches
         self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,inputs_shape[0],inputs_shape[1]))
+        
         print(self.jet_model)
 
     def loss_function_wrapper(self,y,y_true,y_pt, y_true_pt,sample_weight):

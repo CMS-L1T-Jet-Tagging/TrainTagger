@@ -2,7 +2,6 @@ import os, json
 import gc
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
 import awkward as ak
 import numpy as np
 import uproot
@@ -21,6 +20,7 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
 
 # Helpers
@@ -54,12 +54,12 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
 
     return bscore_sum
 
-def pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light, target_rate = 14):
+def pick_and_plot(rate_list, ht_list, nn_list, model, apply_sel, apply_light, target_rate = 14):
     """
     Pick the working points and plot
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb')
     os.makedirs(plot_dir, exist_ok=True)
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -108,12 +108,12 @@ def pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light
     plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.png", bbox_inches='tight')
 
-def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, RateRange=0.8):
+def derive_HT_WP(RateHist, ht_edges, n_events, model, target_rate = 14, RateRange=0.8):
     """
     Derive the HT only working points (without bb cuts)
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb')
 
     #Derive the rate
     rate_list = []
@@ -137,16 +137,10 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate = 14, Rate
     json.dump(working_point, open(WP_json, "w"), indent=4)
 
 # WPs
-def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate=14, n_entries=100, tree='outnano/Jets'):
+def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
-
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-
-    #Load input/ouput variables of the NN
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -154,7 +148,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -169,7 +163,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     jet_nn_inputs = jet_nn_inputs[default_selection(jet_pt, jet_eta, apply_sel)]
 
 
-    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labels)
+    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, model.class_labels)
 
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]
     jet_ht = ak.sum(jet_pt, axis=1)
@@ -203,18 +197,18 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
             nn_list.append(NN)
 
     #Pick target rate and plot it
-    pick_and_plot(rate_list, ht_list, nn_list, model_dir, apply_sel, apply_light, target_rate=target_rate)
+    pick_and_plot(rate_list, ht_list, nn_list, model, apply_sel, apply_light, target_rate=target_rate)
 
     # refill with full ht for ht wp derivation
     RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
 
     RateHist.fill(ht = jet_ht, nn = np.zeros(len(jet_ht)))
-    derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate=target_rate)
+    derive_HT_WP(RateHist, ht_edges, n_events, model, target_rate=target_rate)
 
     return
 
-def load_bbbb_WPs(model_dir, apply_sel, apply_light):
+def load_bbbb_WPs(model, apply_sel, apply_light):
     """
     Check and lodad all bbbb working points
     """
@@ -222,8 +216,8 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    WP_path = os.path.join(model_dir, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
-    HT_WP_path = os.path.join(model_dir, f"plots/physics/bbbb/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
+    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
@@ -237,7 +231,7 @@ def load_bbbb_WPs(model_dir, apply_sel, apply_light):
     return btag_wp, btag_ht_wp, ht_only_wp
 
 
-def load_all_bbbb_WPs(model_dir, apply_sel, apply_light):
+def load_all_bbbb_WPs(model, apply_sel, apply_light):
     """
     Check and load all bbbb working points
     """
@@ -245,8 +239,8 @@ def load_all_bbbb_WPs(model_dir, apply_sel, apply_light):
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    WP_path = os.path.join(model_dir, f"plots/physics/bbbb/all_working_points_{score_type}_{sel_type}.json")
-    HT_WP_path = os.path.join(model_dir, f"plots/physics/bbbb/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/all_working_points_{score_type}_{sel_type}.json")
+    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
@@ -261,12 +255,10 @@ def load_all_bbbb_WPs(model_dir, apply_sel, apply_light):
 
 
 # Efficiency
-def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
+def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
-
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
     ht_edges = list(np.arange(0,800,20))
     ht_axis = hist.axis.Variable(ht_edges, name = r"$HT^{gen}$")
@@ -275,7 +267,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     cmssw_btag = WPs_CMSSW['btag']
     cmssw_btag_ht =  WPs_CMSSW['btag_l1_ht']
 
-    btag_wps, btag_ht_wps, ht_only_wp = load_all_bbbb_WPs(model_dir, apply_sel, apply_light)
+    btag_wps, btag_ht_wps, ht_only_wp = load_all_bbbb_WPs(model, apply_sel, apply_light)
 
     #Load the signal data
     signal = uproot.open(signal_path)[tree]
@@ -300,9 +292,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
         raw_gen_mHH = None
 
     # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
-    raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
 
     #Group event_id, gen_mHH, and genpt separately
     if raw_gen_mHH is not None:
@@ -334,7 +324,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labels)
+    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, model.class_labels)
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
@@ -370,7 +360,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     #Save this best WP
     working_point = {"HT": float(model_ht_wp), "NN": float(model_btag_wp)}
-    wp_path = os.path.join(model_dir, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
+    wp_path = os.path.join(model.output_directory, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
     with open(wp_path, "w") as f:
         json.dump(working_point, f, indent=4)
 
@@ -381,7 +371,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
     if all_event_gen_mHH is not None and event_gen_mHH is not None:
-        bbbb_eff_mHH(model_dir,
+        bbbb_eff_mHH(model,
                     all_event_gen_mHH,
                     event_gen_mHH,
                     cmssw_selection, model_selection,
@@ -442,7 +432,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 
@@ -467,7 +457,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     ax2.legend(loc='upper left')
 
     # Save second plot
-    ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
+    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 
@@ -478,7 +468,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
     eff_model_pure = np.mean(model_pure_selection)
     eff_pure_cmssw = np.mean(pure_cmssw_selection)
 
-    plot_dir = os.path.join(model_dir, f"plots/physics/bbbb/")
+    plot_dir = os.path.join(model.output_directory, f"plots/physics/bbbb/")
     outname = plot_dir + f"/TotalEff_{score_type}_{sel_type}.txt"
     with open(outname, "w") as outfile:
         outfile.write("Total HH Eff \n")
@@ -491,7 +481,7 @@ def bbbb_eff(model_dir, signal_path, apply_sel, apply_light, n_entries=100000, t
 
 
 
-def bbbb_eff_mHH(model_dir,
+def bbbb_eff_mHH(model,
                 all_event_gen_mHH,
                 event_gen_mHH,
                 cmssw_selection, model_selection,
@@ -545,7 +535,7 @@ def bbbb_eff_mHH(model_dir,
     normalized_counts = counts / np.sum(counts)
 
     #Load the working point from model directory
-    btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_WPs(model_dir, apply_sel, apply_light)
+    btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_WPs(model, apply_sel, apply_light)
 
     #Plot a plot comparing the multiclass with ht only selection
     eff_str = r"$\int \epsilon$"
@@ -573,7 +563,7 @@ def bbbb_eff_mHH(model_dir,
     # Save second plot
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    ht_compare_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_mHH_{score_type}_{sel_type}")
+    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_mHH_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 
@@ -602,19 +592,21 @@ if __name__ == "__main__":
     parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
     args = parser.parse_args()
 
+    model = fromFolder(args.model_dir)
+
     if args.deriveWPs:
-        derive_bbbb_WPs(args.model_dir, args.minbias, True, True, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, True, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbbb_WPs(args.model_dir, args.minbias, True, False, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, True, False, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbbb_WPs(args.model_dir, args.minbias, False, True, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, False, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbbb_WPs(args.model_dir, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
-        bbbb_eff(args.model_dir, args.sample, True, True, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, True, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbbb_eff(args.model_dir, args.sample, True, False, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, True, False, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbbb_eff(args.model_dir, args.sample, False, True, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, False, True, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbbb_eff(args.model_dir, args.sample, False, False, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, False, False, n_entries=args.n_entries,tree=args.tree)

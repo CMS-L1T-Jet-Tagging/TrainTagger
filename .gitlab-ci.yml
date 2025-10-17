@@ -1,8 +1,12 @@
 include:
   - local: "CI/template.yml"
 
+# Any of these variables can be defined in the pipeline, for ease of
+# reading only often changed variables are kept here. All variables are
+# defined with their default shared across all other pipeline values in ml_pipeline.yml
 # Name = Name of child pipeline
 # Inputs = Which input configuration to use
+# Model = Name of yaml config to use, found in tagger/model/configs
 # N_PARAMS = Number of tracking parameters for the track fit
 # TRACK_ALGO = Tracking Algorithm, baseline or extended
 # TRAIN = Which dataset to use for training
@@ -23,34 +27,61 @@ include:
 # CMSSW_EMULATOR_WRAPPER = Which CMSSW emulator wrapper to use
 # RERUN_ON_TAG = Switch to only run the evaluation and firmware steps on the tagged model and not rerun a training.
 # Default false to run a full retraining of a model
-# RUN_EMULATION = Switch on CMSSW emulation verification
-# RUN_SYNTHESIS = Switch on hls4ml and vivado synth. This must be True for the emulation above to run
+# RUN_EMULATION = Switch to turn on the CMSSW emulator, need to have a working CMSSW emualtor for this. Has to run for rerun on tag. Tagged models need FW
+# RUN_SYNTHESIS = Switch to turn on the hls4ml and synthesis steps. Emulator needs synthesis to run
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 
-DeepSet:new_samples_baseline_5param_extended_trk:
+DeepSet:baseline_5param_extended_trk:
   extends: .ml_pipeline
   variables:
-    Name: new_samples_baseline_5param_extended_trk
+    Name: baseline_5param_extended_trk
     Model: baseline
-    Inputs: baseline
-    N_PARAMS: 5
-    TRACK_ALGO: extended
-    TRAIN: All200.root
-    MINBIAS: MinBias_PU200.root
-    BBBB: GluGluHHTo4B_PU200.root
-    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
-    BBTT: GluGluHHTo2B2Tau_PU200.root
-    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
-    VBFHTAUTAU: VBFHToTauTau_PU200.root
-    SIGNAL: TT_PU200
-    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
-    EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
-    EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
-    EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
-    CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:for-DPS'
-    CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    TAG: 'v0.0.0'
+
+# DeepSetHGQ:baseline_hgq_5param_extended_trk:
+#  extends: .ml_pipeline
+#  variables:
+#    Name: baseline_hgq_5param_extended_trk
+#    Model: baseline_HGQ
+#    RERUN_ON_TAG: 'False'
+#    RUN_EMULATION: 'False'
+#    RUN_SYNTHESIS: 'False'
+
+# DeepSet_reduced_precision:baseline_reduced_precision_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_reduced_precision_5param_extended_trk
+#     Model: baseline_reduced_precision
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+
+# DeepSet_larger:baseline_larger_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_larger_5param_extended_trk
+#     Model: baseline_larger
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+
+# DeepSet_attention:baseline_attention_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_attention_5param_extended_trk
+#     Inputs: baseline
+#     Model: baseline_attention
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'False'
+
+# interactionnet:interactionnet_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: interactionnet_5param_extended_trk
+#     Model: interactionnet
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'False'

@@ -15,20 +15,28 @@ stages:
   - test
 
 variables:
-    Name:  baseline_4_params
+    Name: new_samples_baseline_5param_extended_trk
     Inputs: baseline
+    Model: baseline
+    N_PARAMS: 5
+    TRACK_ALGO: extended
     TRAIN: All200.root
+    MINBIAS: MinBias_PU200.root
+    BBBB: GluGluHHTo4B_PU200.root
+    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
+    BBTT: GluGluHHTo2B2Tau_PU200.root
+    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/
+    VBFHTAUTAU: VBFHToTauTau_PU200.root
     NTUPLE_TREE: outnano/Jets
-    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
-    EOS_STORAGE_DIR: /eos/cms/store/cmst3/group/l1tr/MultiJetTagger
-    EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/pipeline${CI_PIPELINE_ID}
-    EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
-    SCRAM_ARCH: 'el9_amd64_gcc12'
-    CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:15_1_pre1_L1TSC4NGJetTagger'
     SIGNAL: TT_PU200
-    MODEL_LOCATION: ${EOS_STORAGE_DIR}/tags/${TAG}
-    RERUN_ON_TAG: 'True'
+    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/
+    EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
+    EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
+    EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
+    CMSSW_VERSION: 'CMSSW_15_1_0_pre1'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:for-DPS'
+    CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
+    RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
@@ -38,6 +46,7 @@ variables:
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags: [cern-nextgen-h100]
@@ -65,7 +74,7 @@ data:
   - eos cp $EOS_DATA_DIR/${TRAIN} .
   - eos cp $EOS_DATA_DIR/${SIGNAL}.root .
   - cd ..
-  - python tagger/train/train.py --make-data -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
+  - python tagger/data/make_data.py -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
   - tar -cf training_data_$Inputs.tgz training_data
   - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
@@ -88,7 +97,6 @@ train:
   artifacts:
     paths:
       - output
-      - mlflow_run_id.txt
     exclude:
       - .npy
     expire_in: 1 day
@@ -97,7 +105,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  needs: [train]
+  tags: [cern-nextgen-h100]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -111,48 +119,52 @@ evaluate:
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "bbtt performance"
-  - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
-  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE
-  - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE -m output/$Model
   - echo "VBF tautau performance"
-  - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
-  - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE
-  - python tagger/plot/diTaus.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE
+  - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/diTaus.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE -m output/$Model
   - echo "Topology tautau performance"
-  - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
-  - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE
-  - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE
+  - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE -m output/$Model
   - echo "bbbb performance"
-  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE
-  - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE
+  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE -m output/$Model
   - echo "Single tau performance"
-  - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE
-  - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE
+  - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   artifacts:
     paths:
       - output
-      - mlflow_run_id.txt
     when: always
     exclude:
       - .npy
     expire_in: 7 days
 
 hls4ml:
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 4
   extends:
     - .template
+  rules:
+    - if: $RUN_SYNTHESIS == "True"
   stage: hls4ml
   needs:
     - job : train
+      optional: true
   script:
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/firmware/hls4ml_convert.py
+  - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
   artifacts:
     paths:
-      - tagger/firmware
+      - output/$Model/firmware
     expire_in: 1 day
 
 synth:
@@ -164,13 +176,13 @@ synth:
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:
-    - cd tagger/firmware/L1TSC4NGJetModel
+    - cd output/$Model/firmware/L1TSC4NGJetModel_test
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../..
   artifacts:
     paths:
-      - tagger/firmware/L1TSC4NGJetModel
+      - output/$Model/firmware/L1TSC4NGJetModel_test
     expire_in: 1 day
 
 emulation-evaluate:
@@ -191,10 +203,10 @@ emulation-evaluate:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
+  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model
   artifacts:
     paths:
-      - output/baseline
+      - output/$Model
     expire_in: 1 day
 
 profile:
@@ -205,10 +217,10 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  rules:
-    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
+  rules:
+    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
   - mkdir data
@@ -220,10 +232,10 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - python tagger/firmware/hls4ml_profile.py -r True -n $Name -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
+  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
   artifacts:
     paths:
-      - output/baseline
+      - output/$Model
     expire_in: 1 day
 
 upload_new_model:
@@ -281,10 +293,10 @@ upload_tagged_model:
     - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
     - cd ../..
     - mkdir $Name/plots
-    - mv output/baseline/plots/emulation $Name/plots
-    - mv output/baseline/plots/profile $Name/plots
-    - mv output/baseline/plots/training/ $Name/plots
-    - mv output/baseline/plots/physics/ $Name/plots
+    - mv output/$Model/plots/emulation $Name/plots
+    - mv output/$Model/plots/profile $Name/plots
+    - mv output/$Model/plots/training/ $Name/plots
+    - mv output/$Model/plots/physics/ $Name/plots
     - cd ..
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping
@@ -302,4 +314,28 @@ code_quality:
    tags:
     - docker-privileged-xl
    artifacts:
-    paths: [gl-code-quality-report.json]
+    reports:
+      codequality: gl-code-quality-report.json
+
+pylint:
+  stage: test
+  image: python:3.7-slim
+  before_script:
+    - mkdir -p public/badges public/lint
+    - echo undefined > public/badges/$CI_JOB_NAME.score
+    - pip install pylint-gitlab
+  script:
+    - pylint --exit-zero --output-format=text $(find -type f -name "*.py" ! -path "**/.venv/**") | tee /tmp/pylint.txt
+    - sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' /tmp/pylint.txt > public/badges/$CI_JOB_NAME.score
+    - pylint --exit-zero --output-format=pylint_gitlab.GitlabCodeClimateReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > codeclimate.json
+    - pylint --exit-zero --output-format=pylint_gitlab.GitlabPagesHtmlReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > public/lint/index.html
+  after_script:
+    - anybadge --overwrite --label $CI_JOB_NAME --value=$(cat public/badges/$CI_JOB_NAME.score) --file=public/badges/$CI_JOB_NAME.svg 4=red 6=orange 8=yellow 10=green
+    - |
+      echo "Your score is: $(cat public/badges/$CI_JOB_NAME.score)"
+  artifacts:
+    paths:
+      - public
+    reports:
+      codequality: codeclimate.json
+    when: always

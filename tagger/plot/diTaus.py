@@ -221,7 +221,7 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
     nn_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
 
     #Get the NN predictions
-    pred_score, ratio = model.predict([nn_inputs[eta_selection], nn_inputs[eta_selection][:,:,0]])
+    pred_score, ratio = model.predict([nn_inputs[eta_selection], nn_inputs[eta_selection][:, :, 0]])
     model_tau = tau_score(pred_score, model.class_labels )
 
     # Emulator tau score

@@ -5,7 +5,7 @@ run_config :
   num_threads : 64
 
 model_config :
-  name : baseline_weightedAverage
+  name : weightedAverage
   conv1d_layers : [10,10]
   classification_layers : [32,16]
   regression_layers : [16]

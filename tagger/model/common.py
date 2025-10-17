@@ -12,7 +12,7 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 import yaml
 from qkeras.qlayers import QDense
-from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D
+from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D, Multiply, Reshape, RepeatVector, Permute
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
@@ -125,6 +125,56 @@ class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer
     # define all prunable weights
     def get_prunable_weights(self):
         return self.score_dense._trainable_weights
+
+import tensorflow_model_optimization as tfmot
+import tensorflow as tf
+
+
+class WeightedGlobalAverage1D(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def build(self, input_shape):
+        # Expect input shape: (batch, timesteps, features)
+        timesteps = input_shape[1]
+        features = input_shape[2]
+
+        # One learnable weight per timestep (shared across features)
+        self.weights_t = self.add_weight(
+            name="constituents_weights",
+            shape=(1, timesteps),
+            initializer="uniform",
+            trainable=True,
+        )
+
+    def call(self, inputs):
+        # Normalize weights so they act like attention coefficients
+        w = tf.nn.softmax(self.weights_t, axis=0)  # shape: (timesteps, 1)
+
+        # Broadcast across feature dimension
+        w_repeat = RepeatVector(inputs.shape[2], name='repeat_weights')(w)  # shape: (batch, features, timesteps)
+        w_reshape = Permute((2, 1), name='transpose_weights')(w_repeat)  # shape: (batch, timesteps, features)
+        weighted = Multiply(name='weigh_inputs')([inputs, w_reshape])  # elementwise multiplication
+        weighted_average = GlobalAveragePooling1D(name='global_avg_pool')(weighted)  # shape: (batch, features)
+
+        # Average over the time axis (weighted global average)
+        return weighted_average
+
+    def get_prunable_weights(self):
+        return [] # Required for pruning support
+
+    def get_weights_tensors(self):
+        return tf.nn.softmax(self.weights_t, axis=0)
+
+
+class WeightedPtResponse(tf.keras.layers.Layer):
+    def call(self, inputs):
+        pt_regress, pt = inputs
+        return pt_regress * pt / tf.reduce_sum(pt)
+
+    def get_prunable_weights(self):
+        return [] # Required for pruning support
+
 
 def initialise_tensorflow(num_threads):
     # Set some tensorflow constants

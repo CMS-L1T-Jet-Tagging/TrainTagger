@@ -325,6 +325,19 @@ def to_ML(data, class_labels):
     return X, y, pt_target, truth_pt, reco_pt
 
 
+def constituents_mask(x, features_dim):
+    # Step 1: check each row for zeros
+    all_zero = tf.reduce_all(tf.equal(x, 0), axis=-1, keepdims=True)  # shape: (batch, particles, 1)
+
+    # Step 2: create mask: 1 if not all-zero, 0 if all-zero
+    all_zero_float = tf.cast(all_zero, x.dtype)  # convert bool -> float (or same dtype as x)
+    mask = tf.ones_like(all_zero_float) - all_zero_float
+
+    # Step 3: broadcast to features
+    mask = tf.broadcast_to(mask, (mask.shape[0], mask.shape[1], features_dim))  # still fixed shape
+    return mask
+
+
 def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
@@ -383,7 +396,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
 def make_data(
     infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200.root',
-    outdir='training_data/',
+    outdir='/eos/user/s/stella/TrainTagger/training_data/',
     tag=INPUT_TAG,
     extras=EXTRA_FIELDS,
     n_parts=N_PARTICLES,

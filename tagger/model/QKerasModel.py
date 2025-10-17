@@ -54,6 +54,10 @@ class QKerasModel(JetTagModel):
         """
 
         print("Begin pruning the model...")
+        for layer in self.jet_model.layers:
+            if layer.__class__.__name__ == "TFOpLambda":
+                print("Found TFOpLambda:", layer.name)
+
 
         # Calculate the ending step for pruning
         end_step = (

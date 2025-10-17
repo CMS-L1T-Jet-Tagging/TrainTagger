@@ -67,6 +67,15 @@ DeepSet_larger:baseline_larger_5param_extended_trk:
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'True'
 
+DeepSet_masking:baseline_masking_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: baseline_masking_5param_extended_trk
+    Model: baseline_masking
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'True'
+
 DeepSet_attention:baseline_attention_5param_extended_trk:
   extends: .ml_pipeline
   variables:

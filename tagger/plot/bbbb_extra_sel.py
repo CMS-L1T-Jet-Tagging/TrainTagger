@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
+from tagger.data.tools import constituents_mask
 
 style.set_style()
 
@@ -44,7 +45,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, 
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
     #Get the nn outputs
-    nn_outputs = [model.predict([nn_input, nn_inputs[:, :, 0]]) for nn_input in btag_inputs]
+    nn_outputs = [model.predict([nn_input, constituents_mask(nn_input, 10), nn_inputs[:, :, 0]]) for nn_input in btag_inputs]
 
     #Sum them together
     bscore_sum = sum([x_vs_y(pred_score[0][:, b_index], pred_score[0][:, light_index], apply_light) for pred_score in nn_outputs])
@@ -168,7 +169,7 @@ def derive_bbbb_WPs(model_dir, minbias_path, apply_sel, apply_light, target_rate
     jet_nn_inputs = jet_nn_inputs[default_selection(jet_pt, jet_eta, apply_sel)]
 
     #Btag input list for first 4 jets
-    nn_outputs = [model.predict(np.asarray([jet_nn_inputs[:, i], jet_nn_inputs[:, i][:, :, 0]])) for i in range(0,4)]
+    nn_outputs = [model.predict(np.asarray([jet_nn_inputs[:, i], constituents_mask(jet_nn_inputs[:, i], 10), jet_nn_inputs[:, i][:, :, 0]])) for i in range(0,4)]
 
     #Calculate the output sum
     b_index = class_labels['b']

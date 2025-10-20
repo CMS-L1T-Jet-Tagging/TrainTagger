@@ -13,6 +13,7 @@ from tagger.model.common import fromFolder
 
 # Import from other modules
 from tagger.plot import common, style
+from tagger.data.tools import constituents_mask
 
 style.set_style()
 
@@ -32,8 +33,8 @@ def doPlots(model, outputdir, inputdir):
     labels = list(class_labels.keys())
     model.firmware_convert("temp", build=False)
 
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict([np.ascontiguousarray(X_test), np.ascontiguousarray(X_test[:, :, 0])])
-    y_class, y_ptreg = model.jet_model.predict([np.ascontiguousarray(X_test), np.ascontiguousarray(X_test[:, :, 0])])
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict([np.ascontiguousarray(X_test), np.ascontiguousarray(constituents_mask(X_test, 10)), np.ascontiguousarray(X_test[:, :, 0])])
+    y_class, y_ptreg = model.jet_model.predict([np.ascontiguousarray(X_test), np.ascontiguousarray(constituents_mask(X_test, 10)), np.ascontiguousarray(X_test[:, :, 0])])
     jet_pt_phys = np.array(data['jet_pt_phys'])
 
     modelsAndNames["Y_predict"] = y_class

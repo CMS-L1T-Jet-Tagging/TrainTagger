@@ -60,7 +60,11 @@ class WeightedAverageModel(DeepSetModel):
 
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
-        pt = tf.keras.layers.Input(shape=inputs_shape[1], name='raw_pt')
+        mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
+        pt = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_input')
+        mask_permuted = tf.keras.layers.Permute((2,1), name='pt_weights_permute')(mask)
+        pt_mask = tf.keras.layers.Cropping1D(cropping=((9,0)), name='pt_mask_crop')(mask_permuted)
+        pt_mask = tf.keras.layers.Flatten(name='pt_mask')(pt_mask)
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
@@ -73,14 +77,18 @@ class WeightedAverageModel(DeepSetModel):
             )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
+        # Make the pT weights branch
+        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_weights', **self.common_args)(main)
+        pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
+        pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_1')([pt_weights, pt_mask])
+        pt_weights_softmax = QActivation('softmax', name='pt_weights_softmax')(pt_weights)
+
         # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-        weighted_average_layer = WeightedGlobalAverage1D(name='weighted_average')
-        main = weighted_average_layer(main)
-        weights_tensor = weighted_average_layer.get_weights_tensors()
+        main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
+        main = WeightedGlobalAverage1D(name='weighted_avg_pool')([main, pt_weights_softmax])  # Apply the learned pT weights before pooling
 
         # Now split into jet ID and pt regression
-
         # Make fully connected dense layers for classification task
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             if iclass == 0:
@@ -97,7 +105,8 @@ class WeightedAverageModel(DeepSetModel):
         jet_id = QDense(outputs_shape[0], name='Dense_' + str(iclass + 2) + '_jetID', **self.common_args)(jet_id)
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-        pt_regress = QDense(
+        # Make fully connected dense layers for regression task
+        pt_weights = QDense(
             16,
             name='weights_output',
             kernel_quantizer=quantized_bits(
@@ -111,18 +120,17 @@ class WeightedAverageModel(DeepSetModel):
                 alpha=self.quantization_config['quantizer_alpha_val'],
             ),
             kernel_initializer='lecun_uniform',
-            )(weights_tensor)
-
-        pt_regress = WeightedPtResponse(name="pT_output")([pt_regress, pt])
+            )(pt_weights)
+        pt_weights = WeightedPtResponse(name="pT_output")([pt_weights, pt])
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, pt], outputs=[jet_id, pt_regress])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_weights])
 
         print(self.jet_model.summary())
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: npt.NDArray[np.float64],
@@ -137,9 +145,9 @@ class WeightedAverageModel(DeepSetModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        inputs, pt = X_train
+        inputs, mask, pt = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'raw_pt': pt},
+            {'model_input': inputs, 'masking_input': mask, 'pt_input': pt},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight=sample_weight,
             epochs=self.training_config['epochs'],
@@ -232,70 +240,4 @@ class WeightedAverageModel(DeepSetModel):
 
         # Load the model
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
-
-    # def _prune_model(self, num_samples: int):
-    #     """Pruning setup for the model, internal model function called by compile
-
-    #     Args:
-    #         num_samples (int): number of samples in the training set used for scheduling
-    #     """
-
-    #     print("Begin pruning the model...")
-    #     for layer in self.jet_model.layers:
-    #         if layer.__class__.__name__ == "TFOpLambda":
-    #             print("Found TFOpLambda:", layer.name)
-
-    #     # Calculate the ending step for pruning
-    #     end_step = (
-    #         np.ceil(num_samples / self.training_config['batch_size']).astype(np.int32)
-    #         * self.training_config['epochs']
-    #     )
-
-    #     # Define pruning parameters
-    #     pruning_params = {
-    #         'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
-    #             initial_sparsity=self.training_config['initial_sparsity'],
-    #             final_sparsity=self.training_config['final_sparsity'],
-    #             begin_step=0,
-    #             end_step=end_step,
-    #         )
-    #     }
-
-    #     # Custom clone function to skip unprunable layers
-    #     def apply_pruning(layer):
-    #         layer_name = layer.__class__.__name__
-
-    #         # Skip weighted average and unsupported TFOpLambda layers
-    #         if layer_name in ["WeightedGlobalAverage1D", "TFOpLambda"]:
-    #             print(f"Skipping pruning for {layer.name}")
-    #             return layer
-
-    #         # Apply pruning to standard Dense/Conv layers
-    #         if isinstance(layer, (tf.keras.layers.Dense, tf.keras.layers.Conv1D, tf.keras.layers.Conv2D)):
-    #             return tfmot.sparsity.keras.prune_low_magnitude(layer, **pruning_params)
-
-    #         # Leave everything else untouched
-    #         return layer
-
-    #     # Clone the model applying selective pruning
-    #     self.jet_model = tf.keras.models.clone_model(
-    #         self.jet_model,
-    #         clone_function=apply_pruning
-    #     )
-
-    #     # Rebuild model outputs to point to original output tensors
-    #     jet_id_output = self.jet_model.get_layer("jet_id_output").output
-    #     pt_output = self.jet_model.get_layer("pt_regress").output
-
-    #     self.jet_model = tf.keras.models.Model(
-    #         inputs=self.jet_model.input,
-    #         outputs=[jet_id_output, pt_output],
-    #         name="jet_model_pruned"
-    #     )
-
-    #     # Update loss name prefix
-    #     self.loss_name = 'prune_low_magnitude_'
-
-    #     # Add pruning callback
-    #     self.callbacks.append(tfmot.sparsity.keras.UpdatePruningStep())
 

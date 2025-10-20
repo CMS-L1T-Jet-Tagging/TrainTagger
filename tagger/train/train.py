@@ -129,6 +129,7 @@ def train(model, out_dir, percent):
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+    mask = constituents_mask(X_train, 10)
     constituents_pt = X_train[:, :, 0]
 
     # Save X_test, y_test, and truth_pt_test for plotting later
@@ -148,14 +149,14 @@ def train(model, out_dir, percent):
         print(sample_weight)
 
     # Get input shape
-    input_shape = [X_train.shape[1:], constituents_pt.shape[1:]]  # First dimension is batch size
+    input_shape = [X_train.shape[1:], mask.shape[1:], constituents_pt.shape[1:]]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shape, output_shape)
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
-    model.fit([X_train, constituents_pt], y_train, pt_target_train, sample_weight)
+    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, sample_weight)
 
     model.save()
 

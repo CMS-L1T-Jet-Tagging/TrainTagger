@@ -16,6 +16,7 @@ from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
 from tagger.plot import style
 from tagger.plot.common import MINBIAS_RATE, find_rate, get_bar_patch_data, plot_ratio
+from tagger.data.tools import constituents_mask
 
 style.set_style()
 
@@ -66,7 +67,7 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
 
 def nn_score_sums(model, jet_nn_inputs, n_jets=4):
     # Btag input list for first 4 jets
-    nn_outputs = [model.jet_model.predict(np.asarray([jet_nn_inputs[:, i], jet_nn_inputs[:, i][:, :, 0]]))[0] for i in range(0, n_jets)]
+    nn_outputs = [model.jet_model.predict(np.asarray([jet_nn_inputs[:, i], constituents_mask(jet_nn_inputs[:, i], 10), jet_nn_inputs[:, i][:, :, 0]]))[0] for i in range(0, n_jets)]
 
     # Calculate the output sum
     b_idx = model.class_labels['b']

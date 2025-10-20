@@ -18,6 +18,7 @@ from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
 from tagger.plot import style
 from tagger.plot.common import MINBIAS_RATE, WPs_CMSSW, find_rate, get_bar_patch_data, plot_ratio
+from tagger.data.tools import constituents_mask
 
 style.set_style()
 
@@ -51,7 +52,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, 
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
     # Get the nn outputs
-    nn_outputs = [model.jet_model.predict([nn_input, nn_inputs[:, :, 0]])[0] for nn_input in btag_inputs]
+    nn_outputs = [model.jet_model.predict([nn_input, constituents_mask(nn_inputs, 10), nn_inputs[:, :, 0]])[0] for nn_input in btag_inputs]
 
 
     #Sum them together

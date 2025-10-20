@@ -46,13 +46,11 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
     l_index=class_labels['light']
     g_index=class_labels['gluon']
 
-def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, n_jets=4, b_index=0, l_index=2, g_index=3):
-
-    # Get the inputs for the first n_jets
+    #Get the inputs for the first n_jets
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
-    # Get the nn outputs
-    nn_outputs = [model.jet_model.predict([nn_input, constituents_mask(nn_inputs, 10), nn_inputs[:, :, 0]])[0] for nn_input in btag_inputs]
+    #Get the nn outputs
+    nn_outputs = [model.predict([nn_input, constituents_mask(nn_input, 10), nn_input[:, :, 0]])[0] for nn_input in btag_inputs]
 
 
     #Sum them together
@@ -172,7 +170,6 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
     jet_nn_inputs = jet_nn_inputs[default_selection(jet_pt, jet_eta, apply_sel)]
-
 
     bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, model.class_labels)
 

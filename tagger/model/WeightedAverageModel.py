@@ -77,15 +77,19 @@ class WeightedAverageModel(DeepSetModel):
             )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
-        # Make the pT weights branch
+        # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
+        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
+
+        # Apply the constituents mask
+        main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
+
+        # Make the pT weights
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_1')([pt_weights, pt_mask])
-        pt_weights_softmax = QActivation('softmax', name='pt_weights_softmax')(pt_weights)
+        pt_weights_softmax = QActivation('softmax', name='pt_weights_softmax')(pt_weights) # only for pooling
 
-        # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-        main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
+        # Weighted Global Average Pooling
         main = WeightedGlobalAverage1D(name='weighted_avg_pool')([main, pt_weights_softmax])  # Apply the learned pT weights before pooling
 
         # Now split into jet ID and pt regression
@@ -174,7 +178,8 @@ class WeightedAverageModel(DeepSetModel):
         config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
         config['IOType'] = 'io_parallel'
         config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['raw_pt']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['masking_input']['Precision']['result'] = self.firmware_config['mask_precision']
+        config['LayerName']['pt_input']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor

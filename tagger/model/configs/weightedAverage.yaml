@@ -38,6 +38,7 @@ training_config :
 
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
+  mask_precision: 'ap_ufixed<1,1>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
 

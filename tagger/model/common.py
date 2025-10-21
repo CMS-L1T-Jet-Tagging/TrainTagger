@@ -141,7 +141,9 @@ class WeightedGlobalAverage1D(tf.keras.layers.Layer, tfmot.sparsity.keras.Prunab
 class WeightedPtResponse(tf.keras.layers.Layer):
     def call(self, inputs):
         pt_weights, pt_correction, pt = inputs
-        response = (tf.reduce_sum(pt_weights * pt, axis=1) + pt_correction) / tf.reduce_sum(pt, axis=1)
+        weighted_pt = tf.reduce_sum(pt_weights * pt, axis=1)
+        weighted_pt = tf.expand_dims(weighted_pt, axis=-1)
+        response = (weighted_pt + pt_correction) / pt_correction
         return tf.expand_dims(response, axis=-1)
 
     def get_prunable_weights(self):

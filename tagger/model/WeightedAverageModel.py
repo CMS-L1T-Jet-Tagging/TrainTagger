@@ -68,6 +68,7 @@ class WeightedAverageModel(DeepSetModel):
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
+        pt_normed = BatchNormalization(name='pt_norm')(pt)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -86,11 +87,11 @@ class WeightedAverageModel(DeepSetModel):
         # Make the pT weights
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
+        pt_weights = QActivation('softplus', name='pt_weights_softplus_1')(pt_weights)  # Ensure weights are positive
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_1')([pt_weights, pt_mask])
-        pt_weights_softmax = QActivation('softmax', name='pt_weights_softmax')(pt_weights) # only for pooling
 
         # Weighted Global Average Pooling
-        main = WeightedGlobalAverage1D(name='weighted_avg_pool')([main, pt_weights_softmax])  # Apply the learned pT weights before pooling
+        main = WeightedGlobalAverage1D(name='weighted_avg_pool')([main, pt_weights])  # Apply the learned pT weights before pooling
 
         # Now split into jet ID and pt regression
         # Make fully connected dense layers for classification task
@@ -125,7 +126,10 @@ class WeightedAverageModel(DeepSetModel):
             ),
             kernel_initializer='lecun_uniform',
             )(pt_weights)
-        pt_weights = WeightedPtResponse(name="pT_output")([pt_weights, pt])
+        pt_weights = QActivation('softplus', name='pt_weights_softplus_2')(pt_weights)
+        pt_correction = QDense(1, activation='relu', name='relu_correction')(pt_normed)
+        pt_weights = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt])
+
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_weights])

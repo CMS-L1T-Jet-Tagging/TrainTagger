@@ -19,7 +19,7 @@ quantization_config:
   pt_output_quantization : [16,6]
 
 training_config :
-  weight_method: "onlyclass"
+  weight_method: "ptref"
   epochs : 150
   batch_size : 1024
   learning_rate : 0.001

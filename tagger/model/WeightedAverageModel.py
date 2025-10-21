@@ -68,7 +68,6 @@ class WeightedAverageModel(DeepSetModel):
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
-        pt_normed = BatchNormalization(name='pt_norm')(pt)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -89,6 +88,9 @@ class WeightedAverageModel(DeepSetModel):
         pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = QActivation('softplus', name='pt_weights_softplus_1')(pt_weights)  # Ensure weights are positive
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_1')([pt_weights, pt_mask])
+        pt_correction = QConv1D(filters=1, kernel_size=1, name='Conv1D_correction', **self.common_args)(main)
+        pt_correction = tf.keras.layers.Flatten(name='pt_correction_flat')(pt_correction)  # shape: (batch, timesteps)
+        pt_correction = tf.keras.layers.Multiply(name='apply_pt_mask_2')([pt_correction, pt_mask])
 
         # Weighted Global Average Pooling
         main = WeightedGlobalAverage1D(name='weighted_avg_pool')([main, pt_weights])  # Apply the learned pT weights before pooling
@@ -127,12 +129,26 @@ class WeightedAverageModel(DeepSetModel):
             kernel_initializer='lecun_uniform',
             )(pt_weights)
         pt_weights = QActivation('softplus', name='pt_weights_softplus_2')(pt_weights)
-        pt_correction = QDense(1, activation='relu', name='relu_correction')(pt_normed)
-        pt_weights = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt])
 
+        pt_correction = QDense(
+            16,
+            name='corrections_output',
+            kernel_quantizer=quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            bias_quantizer=quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            kernel_initializer='lecun_uniform',
+            )(pt_correction)
+        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt])
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_weights])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
@@ -141,7 +157,7 @@ class WeightedAverageModel(DeepSetModel):
         X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
-        sample_weight: npt.NDArray[np.float64],
+        sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
     ):
         """Fit the model to the training dataset
 
@@ -157,7 +173,10 @@ class WeightedAverageModel(DeepSetModel):
         self.history = self.jet_model.fit(
             {'model_input': inputs, 'masking_input': mask, 'pt_input': pt},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight=sample_weight,
+            sample_weight={
+                self.loss_name + self.output_id_name: sample_weight[0],
+                self.loss_name + self.output_pt_name: sample_weight[1],
+            },
             epochs=self.training_config['epochs'],
             batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],

@@ -137,16 +137,25 @@ def train(model, out_dir, percent):
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
-    sample_weight = train_weights(
+    sample_weight_class = train_weights(
         y_train,
         reco_pt_train,
         class_labels,
-        weightingMethod=model.training_config['weight_method'],
+        weightingMethod="onlyclass",
         debug=model.run_config['debug'],
     )
-    if model.run_config['debug']:
-        print("DEBUG - Checking sample_weight:")
-        print(sample_weight)
+
+    sample_weight_regresion = train_weights(
+        y_train,
+        reco_pt_train,
+        class_labels,
+        weightingMethod="ptref",
+        debug=model.run_config['debug'],
+    )
+
+    # if model.run_config['debug']:
+    #     print("DEBUG - Checking sample_weight:")
+    #     print(sample_weight)
 
     # Get input shape
     input_shape = [X_train.shape[1:], mask.shape[1:], constituents_pt.shape[1:]]  # First dimension is batch size
@@ -156,7 +165,7 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
-    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, sample_weight)
+    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regresion])
 
     model.save()
 

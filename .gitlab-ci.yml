@@ -43,7 +43,7 @@ DeepSet:baseline_5param_extended_trk:
 DeepSetPtOnly:baseline_ptonly_5param_extended_trk:
 extends: .ml_pipeline
 variables:
-  Name: baseline_pt_only_5param_extended_trk
+  Name: baseline_ptonly_5param_extended_trk
   Model: baseline_ptonly
   RERUN_ON_TAG: 'False'
   RUN_EMULATION: 'True'

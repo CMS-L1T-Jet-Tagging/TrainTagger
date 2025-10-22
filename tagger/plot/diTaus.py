@@ -156,8 +156,8 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
 
     #Get the NN predictions
-    pred_score1, ratio1 = model.predict([input1, constituents_mask(input1, 10),  inputs1[:, :, 0]])
-    pred_score2, ratio2 = model.predict([input2, constituents_mask(input2, 10), inputs2[:, :, 0]])
+    pred_score1, ratio1 = model.predict([input1, constituents_mask(input1, 10),  input1[:, :, 0]])
+    pred_score2, ratio2 = model.predict([input2, constituents_mask(input2, 10), input2[:, :, 0]])
 
     # Correct the pT and add the score
     pt1 = pt1_uncorrected * (ratio1.flatten())

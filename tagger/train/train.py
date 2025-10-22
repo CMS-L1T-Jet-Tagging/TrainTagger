@@ -154,11 +154,11 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
-    model.fit(X_train, y_train, pt_target_train, sample_weight)
+    model.fit(X_train, pt_target_train, sample_weight)
 
     model.save()
 
-    model.plot_loss()
+    # model.plot_loss()
 
     return
 

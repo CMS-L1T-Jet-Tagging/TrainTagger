@@ -40,6 +40,15 @@ DeepSet:baseline_5param_extended_trk:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 
+DeepSetPtOnly:baseline_ptonly_5param_extended_trk:
+extends: .ml_pipeline
+variables:
+  Name: baseline_pt_only_5param_extended_trk
+  Model: baseline_ptonly
+  RERUN_ON_TAG: 'False'
+  RUN_EMULATION: 'True'
+  RUN_SYNTHESIS: 'True'
+
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:
 #  extends: .ml_pipeline
 #  variables:

@@ -165,6 +165,23 @@ def _pad_fill(array, target):
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
+def _correct_pfcand_pt(field, data):
+    def factor_4(data):
+        return data / 4
+
+    def log_4(data):
+        return data - np.log(4)
+
+    corrections = {
+        'pt': factor_4,
+        'pt_rel': factor_4,
+        'pt_log': log_4,
+    }
+
+    if field in corrections:
+        return corrections[field](data)
+    else:
+        return data
 
 def _make_nn_inputs(data_split, tag, n_parts):
 
@@ -178,6 +195,7 @@ def _make_nn_inputs(data_split, tag, n_parts):
     # Also pad and fill them with 0 to the number of constituents we are using (nconstit)
     for field in features:
         field_array = data_split["jet_pfcand"][field]
+        field_array = _correct_pfcand_pt(field, field_array)
 
         padded_filled_array = _pad_fill(field_array, n_parts)
         inputs_list.append(padded_filled_array[:, :, np.newaxis])

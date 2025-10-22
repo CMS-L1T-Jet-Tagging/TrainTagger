@@ -31,23 +31,23 @@ include:
 # RUN_SYNTHESIS = Switch to turn on the hls4ml and synthesis steps. Emulator needs synthesis to run
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 
-DeepSet:baseline_5param_extended_trk:
+# DeepSet:baseline_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline_5param_extended_trk
+#     Model: baseline
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
+
+DeepSetPtOnly:baseline_ptonly_5param_extended_trk:
   extends: .ml_pipeline
   variables:
-    Name: baseline_5param_extended_trk
-    Model: baseline
+    Name: baseline_ptonly_5param_extended_trk
+    Model: baseline_ptonly
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-
-DeepSetPtOnly:baseline_ptonly_5param_extended_trk:
-extends: .ml_pipeline
-variables:
-  Name: baseline_ptonly_5param_extended_trk
-  Model: baseline_ptonly
-  RERUN_ON_TAG: 'False'
-  RUN_EMULATION: 'True'
-  RUN_SYNTHESIS: 'True'
 
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:
 #  extends: .ml_pipeline

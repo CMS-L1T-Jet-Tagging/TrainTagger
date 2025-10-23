@@ -49,6 +49,15 @@ WeightedAverage:weightedAverage_5param_extended_trk:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 
+DoubleAggregate:doubleAggregate_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: doubleAggregate_5param_extended_trk
+    Model: doubleAggregate
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:
 #  extends: .ml_pipeline
 #  variables:

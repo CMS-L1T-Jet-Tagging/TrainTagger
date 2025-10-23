@@ -15,13 +15,13 @@ from tagger.model.QKerasModel import QKerasModel
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 from qkeras.qlayers import QActivation, QDense
-from qkeras.quantizers import quantized_bits, quantized_relu, quantized_linear
-from tensorflow.keras.layers import Activation, BatchNormalization
+from qkeras.quantizers import quantized_bits, quantized_relu
+from tensorflow.keras.layers import Activation, BatchNormalization, GlobalAveragePooling1D
 from tagger.model.DeepSetModel import DeepSetModel
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
-@JetModelFactory.register('WeightedAverageModel')
-class WeightedAverageModel(DeepSetModel):
+@JetModelFactory.register('DoubleAggregateModel')
+class DoubleAggregateModel(DeepSetModel):
     """WeightedAverageModel class
 
     Args:
@@ -76,8 +76,6 @@ class WeightedAverageModel(DeepSetModel):
         inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
         mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
         pt = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_input')
-
-        # Create pT mask to apply to weights and corrections
         mask_permuted = tf.keras.layers.Permute((2,1), name='pt_weights_permute')(mask)
         pt_mask = tf.keras.layers.Cropping1D(cropping=((9,0)), name='pt_mask_crop')(mask_permuted)
         pt_mask = tf.keras.layers.Flatten(name='pt_mask')(pt_mask)
@@ -99,23 +97,18 @@ class WeightedAverageModel(DeepSetModel):
         # Apply the constituents mask
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
-        # Make the pT weights and corrections
-        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_weights', **self.common_args)(main)
-        pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
-        pt_weights = QActivation('relu', name='pt_weights_softplus_1')(pt_weights)  # Ensure weights are positive
-        pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_1')([pt_weights, pt_mask])
-        pt_correction = QConv1D(filters=1, kernel_size=1, name='Conv1D_correction', **self.common_args)(main)
-        pt_correction = tf.keras.layers.Flatten(name='pt_correction_flat')(pt_correction)  # shape: (batch, timesteps)
-        pt_correction = tf.keras.layers.Multiply(name='apply_pt_mask_2')([pt_correction, pt_mask])
+        # Weighted Global Average Pooling for jet id
+        main_id = GlobalAveragePooling1D(name='global_avg_pool_jet_id')(main)
 
-        # Weighted Global Average Pooling
-        main = WeightedGlobalAverage1D(name='weighted_avg_pool')([main, pt_weights]) # Apply the learned pT weights before pooling
+        # Weighted Pt Response branch
+        main_regression = tf.keras.layers.Permute((2,1), name='pt_response_permute')(main)
+        main_regression = GlobalAveragePooling1D(name='global_avg_pool_regression')(main_regression)
 
         # Now split into jet ID and pt regression
         # Make fully connected dense layers for classification task
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             if iclass == 0:
-                jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **self.common_args)(main)
+                jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **self.common_args)(main_id)
             else:
                 jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **self.common_args)(jet_id)
             jet_id = QActivation(
@@ -129,10 +122,14 @@ class WeightedAverageModel(DeepSetModel):
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         # Make fully connected dense layers for regression task
-        pt_weights = QDense(16, name='weights_output', **self.pt_args)(pt_weights)
-        pt_weights = QActivation('relu', name='pt_weights_softplus_2')(pt_weights)
+        # pt weights
+        pt_weights = QDense(16, name='weights_output_dense', **self.pt_args)(main_regression)
+        pt_weights = QActivation(
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='pt_weights_softplus_2'
+            )(pt_weights)
 
-        pt_correction = QDense(16, name='corrections_output', **self.pt_args)(pt_correction)
+        # pt corrections
+        pt_correction = QDense(16, name='weights_output', **self.pt_args)(main_regression)
 
         pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt])
 

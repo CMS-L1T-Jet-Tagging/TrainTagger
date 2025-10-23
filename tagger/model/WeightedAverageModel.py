@@ -15,7 +15,7 @@ from tagger.model.QKerasModel import QKerasModel
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 from qkeras.qlayers import QActivation, QDense
-from qkeras.quantizers import quantized_bits, quantized_relu
+from qkeras.quantizers import quantized_bits, quantized_relu, quantized_linear
 from tensorflow.keras.layers import Activation, BatchNormalization
 from tagger.model.DeepSetModel import DeepSetModel
 
@@ -58,10 +58,26 @@ class WeightedAverageModel(DeepSetModel):
             'kernel_initializer': self.model_config['kernel_initializer'],
         }
 
+        self.pt_args = {
+            'kernel_quantizer': quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'bias_quantizer' : quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'kernel_initializer' : 'lecun_uniform',
+        }
+
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
         mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
         pt = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_input')
+
+        # Create pT mask to apply to weights and corrections
         mask_permuted = tf.keras.layers.Permute((2,1), name='pt_weights_permute')(mask)
         pt_mask = tf.keras.layers.Cropping1D(cropping=((9,0)), name='pt_mask_crop')(mask_permuted)
         pt_mask = tf.keras.layers.Flatten(name='pt_mask')(pt_mask)
@@ -83,7 +99,7 @@ class WeightedAverageModel(DeepSetModel):
         # Apply the constituents mask
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
-        # Make the pT weights
+        # Make the pT weights and corrections
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = QActivation('softplus', name='pt_weights_softplus_1')(pt_weights)  # Ensure weights are positive
@@ -113,38 +129,11 @@ class WeightedAverageModel(DeepSetModel):
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         # Make fully connected dense layers for regression task
-        pt_weights = QDense(
-            16,
-            name='weights_output',
-            kernel_quantizer=quantized_bits(
-                self.quantization_config['pt_output_quantization'][0],
-                self.quantization_config['pt_output_quantization'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            bias_quantizer=quantized_bits(
-                self.quantization_config['pt_output_quantization'][0],
-                self.quantization_config['pt_output_quantization'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            kernel_initializer='lecun_uniform',
-            )(pt_weights)
-        pt_weights = QActivation('softplus', name='pt_weights_softplus_2')(pt_weights)
+        pt_weights = QDense(16, name='weights_output', **self.pt_args)(pt_weights)
+        pt_weights = QActivation('relu', name='pt_weights_softplus_2')(pt_weights)
 
-        pt_correction = QDense(
-            16,
-            name='corrections_output',
-            kernel_quantizer=quantized_bits(
-                self.quantization_config['pt_output_quantization'][0],
-                self.quantization_config['pt_output_quantization'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            bias_quantizer=quantized_bits(
-                self.quantization_config['pt_output_quantization'][0],
-                self.quantization_config['pt_output_quantization'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            kernel_initializer='lecun_uniform',
-            )(pt_correction)
+        pt_correction = QDense(16, name='corrections_output', **self.pt_args)(pt_correction)
+
         pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt])
 
         # Define the model using both branches

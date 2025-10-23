@@ -129,7 +129,7 @@ def train(model, out_dir, percent):
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-    from IPython import embed; embed()
+
     mask = constituents_mask(X_train, 10)
     constituents_pt = X_train[:, :, 0]
 

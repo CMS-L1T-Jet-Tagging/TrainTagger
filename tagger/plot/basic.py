@@ -854,11 +854,11 @@ def basic(model, signal_dirs):
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
-    model_outputs = model.predict(X_test)
+    pt_ratio = model.predict(X_test)
 
     # Get classification outputs
     # y_pred = model_outputs[0]
-    pt_ratio = model_outputs
+    # pt_ratio = model_outputs[1]
 
     # Plot ROC curves
     # ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
@@ -903,17 +903,17 @@ def basic(model, signal_dirs):
     #         ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
     #         ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
 
-    # Efficiencies
+    # # Efficiencies
     # efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
 
-    # Confusion matrix
+    # # Confusion matrix
     # confusion(y_pred, y_test, model.class_labels, plot_dir)
 
     # Plot pt corrections
-    # pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
+    pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     # Plot input distributions
-    # plot_input_vars(X_test, model.input_vars, plot_dir)
+    plot_input_vars(X_test, model.input_vars, plot_dir)
 
     # Plot inclusive response and individual flavor
     response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)

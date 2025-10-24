@@ -106,7 +106,7 @@ class JetTagModel(ABC):
         Returns:
             tuple: (class_predictions , pt_ratio_predictions)
         """
-        model_outputs = self.jet_model.predict(X_test)
+        model_outputs = self.jet_model.predict(X_test).flatten()
         return model_outputs
 
     def save_decorator(save_func):

@@ -845,6 +845,7 @@ def basic(model, signal_dirs):
     """
 
     plot_dir = os.path.join(model.output_directory, "plots/training")
+    os.makedirs(plot_dir, exist_ok=True)
 
     ROC_dict = {class_label: 0 for class_label in model.class_labels}
 

@@ -135,6 +135,7 @@ class WeightedAverageModel(DeepSetModel):
         pt_correction = QDense(16, name='corrections_output', **self.pt_args)(pt_correction)
 
         jet_correction = QDense(1, name='jet_correction', **self.pt_args)(pt)
+        jet_correction = QActivation('tanh', name='jet_correction_tanh', **self.pt_args)(jet_correction)
 
         pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, jet_correction])
 

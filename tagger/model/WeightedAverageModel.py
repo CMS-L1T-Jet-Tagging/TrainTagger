@@ -134,7 +134,9 @@ class WeightedAverageModel(DeepSetModel):
 
         pt_correction = QDense(16, name='corrections_output', **self.pt_args)(pt_correction)
 
-        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt])
+        jet_correction = QDense(1, name='jet_correction', **self.pt_args)(pt)
+
+        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, jet_correction])
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_output])

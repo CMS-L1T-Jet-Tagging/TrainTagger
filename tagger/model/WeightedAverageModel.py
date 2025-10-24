@@ -84,6 +84,7 @@ class WeightedAverageModel(DeepSetModel):
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
+        pt_norm = BatchNormalization(name='norm_pt')(pt)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -102,7 +103,7 @@ class WeightedAverageModel(DeepSetModel):
         # Make the pT weights and corrections
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
-        pt_weights = QActivation('relu', name='pt_weights_relu_1')(pt_weights)  # Ensure weights are positive
+        pt_weights = QActivation('relu', name='pt_weights_relu')(pt_weights)  # Ensure weights are positive
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_1')([pt_weights, pt_mask])
         pt_correction = QConv1D(filters=1, kernel_size=1, name='Conv1D_correction', **self.common_args)(main)
         pt_correction = tf.keras.layers.Flatten(name='pt_correction_flat')(pt_correction)  # shape: (batch, timesteps)
@@ -129,12 +130,16 @@ class WeightedAverageModel(DeepSetModel):
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         # Make fully connected dense layers for regression task
-        pt_weights = QDense(16, name='weights_output', **self.pt_args)(pt_weights)
-        pt_weights = QActivation('relu', name='pt_weights_relu_2')(pt_weights)
+        pt_weights = QDense(16, name='weights_output_1', **self.pt_args)(pt_weights)
+        pt_weights = QActivation('relu', name='pt_weights_output_relu_1')(pt_weights)
 
-        pt_correction = QDense(16, name='corrections_output', **self.pt_args)(pt_correction)
+        pt_weights = QDense(16, name='weights_output_2', **self.pt_args)(pt_weights)
+        pt_weights = QActivation('relu', name='pt_weights_output_relu_2')(pt_weights)
 
-        jet_correction = QDense(1, name='jet_correction', **self.pt_args)(pt)
+        pt_correction = QDense(16, name='corrections_output_1', **self.pt_args)(pt_correction)
+        pt_correction = QDense(16, name='corrections_output_2', **self.pt_args)(pt_correction)
+
+        jet_correction = QDense(1, name='jet_correction', **self.pt_args)(pt_norm)
         jet_correction = QActivation('tanh', name='jet_correction_tanh')(jet_correction)
 
         pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, jet_correction])

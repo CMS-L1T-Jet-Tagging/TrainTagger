@@ -26,10 +26,12 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     """
     Re-balancing the class weights and then flatten them based on truth pT
     """
-    if weightingMethod not in ["none", "ptref", "onlyclass"]:
+    if weightingMethod not in ["none", "ptref", "onlyclass", "onlypt"]:
         raise ValueError(
             "Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass."
         )
+    if weightingMethod == "onlypt":
+        return flat_pt_weights(reco_pt_train)
     num_samples = y_train.shape[0]
 
     sample_weights = np.ones(num_samples)
@@ -90,6 +92,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
         6: 1.0,  # muon
         7: 1.0,  # electron
     }
+
     for idx in class_labels.values():
         weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * weights_per_class[idx]
 
@@ -114,6 +117,45 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
 
     if weightingMethod == "none":
         return None
+    return sample_weights
+
+def flat_pt_weights(reco_pt_train):
+    """
+    Simple flattening of pT spectrum
+    """
+    num_samples = reco_pt_train.shape[0]
+
+    sample_weights = np.ones(num_samples)
+
+    # Define pT bins (without the high pT part we don't care about)
+    pt_bins = np.array(
+        [15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, np.inf]
+    )  # Use np.inf to cover all higher values
+
+    # Calculate counts per pT bin
+    pt_counts, _ = np.histogram(reco_pt_train, bins=pt_bins)
+
+    # Compute the maximum counts per pT bin over all classes
+    max_counts_per_bin = max(pt_counts)
+
+    # Compute weights per pT bin
+    weights_per_pt_bin = np.zeros(len(pt_bins) - 1)
+    for bin_idx in range(len(pt_bins) - 1):
+        bin_count = pt_counts[bin_idx]
+        if bin_count == 0:
+            weights_per_pt_bin[bin_idx] = 0.0
+        else:
+            weights_per_pt_bin[bin_idx] = max_counts_per_bin / bin_count
+
+    # Assign weights to samples
+    bin_indices = np.digitize(reco_pt_train, pt_bins) - 1
+
+    sample_weights = weights_per_pt_bin[bin_indices]
+    sample_weights = np.where(bin_indices < 4, sample_weights * 1.5, sample_weights)
+
+    # Normalize sample weights
+    sample_weights = sample_weights / np.mean(sample_weights)
+
     return sample_weights
 
 
@@ -146,11 +188,11 @@ def train(model, out_dir, percent):
         debug=model.run_config['debug'],
     )
 
-    sample_weight_regresion = train_weights(
+    sample_weight_regression = train_weights(
         y_train,
         reco_pt_train,
         class_labels,
-        weightingMethod="ptref",
+        weightingMethod="onlypt",
         debug=model.run_config['debug'],
     )
 
@@ -166,7 +208,7 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
-    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regresion])
+    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     model.save()
 

@@ -33,7 +33,7 @@ class QKerasModel(JetTagModel):
                            'quantizer_alpha_val' : And(float, lambda s: 1.0 >= s >= 0.0),
                            'pt_output_quantization' : list}
 
-    training_config_schema =    {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
+    training_config_schema =    {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass", "onlypt"]),
                                  "validation_split" : And(float, lambda s: s > 0.0),
                                  "epochs" : And(int, lambda s: s >= 1),
                                  "batch_size" : And(int, lambda s: s >= 1),

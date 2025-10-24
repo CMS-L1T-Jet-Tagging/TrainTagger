@@ -125,13 +125,16 @@ class DoubleAggregateModel(DeepSetModel):
         # pt weights
         pt_weights = QDense(16, name='weights_output_dense', **self.pt_args)(main_regression)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='pt_weights_softplus_2'
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='pt_weights_relu_2'
             )(pt_weights)
 
         # pt corrections
         pt_correction = QDense(16, name='weights_output', **self.pt_args)(main_regression)
 
-        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt])
+        jet_correction = QDense(1, name='jet_correction_output', **self.pt_args)(pt)
+        jet_correction = QActivation('tanh', name='jet_correction_tanh')(jet_correction)
+
+        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, jet_correction])
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_output])

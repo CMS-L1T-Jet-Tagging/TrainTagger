@@ -171,9 +171,13 @@ def train(model, out_dir, percent):
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+    low_pt = reco_pt_train < 50
+    X_train_1, y_train_1, pt_target_train_1, truth_pt_train_1, reco_pt_train_1 = X_train[low_pt], y_train[low_pt], pt_target_train[low_pt], truth_pt_train[low_pt], reco_pt_train[low_pt]
 
     mask = constituents_mask(X_train, 10)
+    mask_1 = mask[low_pt]
     constituents_pt = X_train[:, :, 0]
+    constituents_pt_1 = constituents_pt[low_pt]
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
@@ -192,7 +196,7 @@ def train(model, out_dir, percent):
         y_train,
         reco_pt_train,
         class_labels,
-        weightingMethod="onlypt",
+        weightingMethod="ptref",
         debug=model.run_config['debug'],
     )
 
@@ -208,6 +212,7 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
+    model.fit([X_train_1, mask_1, constituents_pt_1], y_train_1, pt_target_train_1, [sample_weight_class[low_pt], sample_weight_regression[low_pt]])
     model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     model.save()

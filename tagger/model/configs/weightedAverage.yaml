@@ -20,7 +20,7 @@ quantization_config:
 
 training_config :
   weight_method: "ptref"
-  epochs : 150
+  epochs : 100
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1

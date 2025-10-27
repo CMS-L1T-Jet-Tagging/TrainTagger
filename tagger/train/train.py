@@ -204,7 +204,7 @@ def train(model, out_dir, percent):
     sample_weight_class_1 = train_weights(
         y_train[low_pt],
         reco_pt_train[low_pt],
-        class_labels[low_pt],
+        class_labels,
         weightingMethod="onlyclass",
         debug=model.run_config['debug'],
     )
@@ -212,7 +212,7 @@ def train(model, out_dir, percent):
     sample_weight_regression_1 = train_weights(
         y_train[low_pt],
         reco_pt_train[low_pt],
-        class_labels[low_pt],
+        class_labels,
         weightingMethod="ptref",
         debug=model.run_config['debug'],
     )

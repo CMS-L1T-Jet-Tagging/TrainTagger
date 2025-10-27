@@ -200,6 +200,23 @@ def train(model, out_dir, percent):
         debug=model.run_config['debug'],
     )
 
+    # weights for low pt pretraining
+    sample_weight_class_1 = train_weights(
+        y_train[low_pt],
+        reco_pt_train[low_pt],
+        class_labels[low_pt],
+        weightingMethod="onlyclass",
+        debug=model.run_config['debug'],
+    )
+
+    sample_weight_regression_1 = train_weights(
+        y_train[low_pt],
+        reco_pt_train[low_pt],
+        class_labels[low_pt],
+        weightingMethod="ptref",
+        debug=model.run_config['debug'],
+    )
+
     # if model.run_config['debug']:
     #     print("DEBUG - Checking sample_weight:")
     #     print(sample_weight)
@@ -212,7 +229,7 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
     model.compile_model(num_samples)
-    model.fit([X_train_1, mask_1, constituents_pt_1], y_train_1, pt_target_train_1, [sample_weight_class[low_pt], sample_weight_regression[low_pt]])
+    model.fit([X_train_1, mask_1, constituents_pt_1], y_train_1, pt_target_train_1, [sample_weight_class_1, sample_weight_regression_1])
     model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     model.save()

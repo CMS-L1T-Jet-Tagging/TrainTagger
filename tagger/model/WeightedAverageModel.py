@@ -134,6 +134,7 @@ class WeightedAverageModel(DeepSetModel):
         pt_weights = QDense(16, name='weights_output_1', **self.pt_args)(pt_weights)
         pt_weights = QActivation('relu', name='pt_weights_output_relu_1')(pt_weights)
 
+        pt_correction = tf.keras.layers.Concatenate(name='pt_correction_concat')([pt_correction, jet_id])
         pt_correction = QDense(16, name='corrections_output_1', **self.pt_args)(pt_correction)
 
         pt_norm = tf.keras.layers.Concatenate(name='pt_norm_concat')([pt_norm, jet_id])

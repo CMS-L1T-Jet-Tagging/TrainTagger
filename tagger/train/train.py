@@ -22,7 +22,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
     print(f"Test data saved to {out_dir}")
 
 
-def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
+def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, low_pt=False):
     """
     Re-balancing the class weights and then flatten them based on truth pT
     """
@@ -40,6 +40,8 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     pt_bins = np.array(
         [15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, np.inf]
     )  # Use np.inf to cover all higher values
+    if low_pt:
+        pt_bins = pt_bins[pt_bins <= 50]
 
     if weightingMethod == "onlyclass":
         pt_bins = np.array([0.0, np.inf])  # Use np.inf to cover all higher values
@@ -191,7 +193,6 @@ def train(model, out_dir, percent):
         weightingMethod="onlyclass",
         debug=model.run_config['debug'],
     )
-
     sample_weight_regression = train_weights(
         y_train,
         reco_pt_train,
@@ -207,14 +208,15 @@ def train(model, out_dir, percent):
         class_labels,
         weightingMethod="onlyclass",
         debug=model.run_config['debug'],
+        low_pt=True,
     )
-
     sample_weight_regression_1 = train_weights(
         y_train[low_pt],
         reco_pt_train[low_pt],
         class_labels,
         weightingMethod="ptref",
         debug=model.run_config['debug'],
+        low_pt=True,
     )
 
     # if model.run_config['debug']:

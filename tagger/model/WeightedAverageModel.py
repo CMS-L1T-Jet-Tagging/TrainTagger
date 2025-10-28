@@ -130,15 +130,13 @@ class WeightedAverageModel(DeepSetModel):
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         # Make fully connected dense layers for regression task
+        pt_weights = tf.keras.layers.Concatenate(name='pt_weights_concat')([pt_weights, jet_id])
         pt_weights = QDense(16, name='weights_output_1', **self.pt_args)(pt_weights)
         pt_weights = QActivation('relu', name='pt_weights_output_relu_1')(pt_weights)
 
-        pt_weights = QDense(16, name='weights_output_2', **self.pt_args)(pt_weights)
-        pt_weights = QActivation('relu', name='pt_weights_output_relu_2')(pt_weights)
-
         pt_correction = QDense(16, name='corrections_output_1', **self.pt_args)(pt_correction)
-        pt_correction = QDense(16, name='corrections_output_2', **self.pt_args)(pt_correction)
 
+        pt_norm = tf.keras.layers.Concatenate(name='pt_norm_concat')([pt_norm, jet_id])
         jet_correction = QDense(1, name='jet_correction', **self.pt_args)(pt_norm)
         jet_correction = QActivation('tanh', name='jet_correction_tanh')(jet_correction)
 

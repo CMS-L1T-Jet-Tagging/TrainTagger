@@ -126,7 +126,7 @@ def train(model, out_dir, percent):
         extra_vars,
         class_labels,
     )
-    data_test1, data_test2, _, _, _ = load_data("testing_data/", percentage=100)
+    data_test1, data_test2, _, _, _ = load_data("fixed_data/", percentage=100)
     data_test = np.concatenate((data_test1, data_test2))
 
     # Make into ML-like data for training

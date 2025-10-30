@@ -40,7 +40,7 @@ if __name__ == "__main__":
         if not os.path.exists(signal_output):
             make_data(
                 infile=signal_input,
-                outdir=signal_output,
+                outfile=signal_output,
                 step_size=args.step,
                 extras=args.extras,
                 ratio=args.ratio,

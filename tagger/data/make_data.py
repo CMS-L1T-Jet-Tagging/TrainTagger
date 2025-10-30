@@ -20,7 +20,7 @@ if __name__ == "__main__":
         '-e', '--extras', default='extra_fields', help='Which extra fields to add to output tuples, in pfcand_fields.yml'
     )
     parser.add_argument('-t', '--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
-
+    parser.add_argument('-o', '--output', default='training_data/', help='Output directory for processed data')
     parser.add_argument(
         '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
     )

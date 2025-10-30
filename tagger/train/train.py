@@ -120,15 +120,18 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
 def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    data_train, _, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
     model.set_labels(
         input_vars,
         extra_vars,
         class_labels,
     )
+    data_test1, data_test2, _, _, _ = load_data("testing_data/", percentage=100)
+    data_test = np.concatenate((data_test1, data_test2))
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)

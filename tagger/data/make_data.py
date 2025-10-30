@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    make_data(infile=args.input, outfile=args.output, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:

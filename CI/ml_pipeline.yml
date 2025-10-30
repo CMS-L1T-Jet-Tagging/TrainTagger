@@ -75,7 +75,7 @@ data:
   - eos cp $EOS_DATA_DIR/${SIGNAL}.root .
   - cd ..
   - python tagger/data/make_data.py -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
-  - python tagger/data/make_signal_process_data.py -i /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_301025_151X/TT_PU200.root -o 'testing_data/' --tree $NTUPLE_TREE
+  - python tagger/data/make_data.py -i /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_301025_151X/TT_PU200.root -o 'testing_data/' --tree $NTUPLE_TREE
   - tar -cf training_data_$Inputs.tgz training_data
   - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch

@@ -232,11 +232,7 @@ def load_bbbb_WPs(model, apply_sel, apply_light):
     return btag_wp, btag_ht_wp, ht_only_wp
 
 
-<<<<<<< HEAD
-def load_all_bbbb_WPs(model_dir, apply_sel, apply_light):
-=======
 def load_all_bbbb_WPs(model, apply_sel, apply_light):
->>>>>>> main
     """
     Check and load all bbbb working points
     """
@@ -244,13 +240,8 @@ def load_all_bbbb_WPs(model, apply_sel, apply_light):
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-<<<<<<< HEAD
-    WP_path = os.path.join(model_dir, f"plots/physics/bbbb/all_working_points_{score_type}_{sel_type}.json")
-    HT_WP_path = os.path.join(model_dir, f"plots/physics/bbbb/ht_working_point.json")
-=======
     WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/all_working_points_{score_type}_{sel_type}.json")
     HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/ht_working_point.json")
->>>>>>> main
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
@@ -277,11 +268,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     cmssw_btag = WPs_CMSSW['btag']
     cmssw_btag_ht =  WPs_CMSSW['btag_l1_ht']
 
-<<<<<<< HEAD
-    btag_wps, btag_ht_wps, ht_only_wp = load_all_bbbb_WPs(model_dir, apply_sel, apply_light)
-=======
     btag_wps, btag_ht_wps, ht_only_wp = load_all_bbbb_WPs(model, apply_sel, apply_light)
->>>>>>> main
 
     #Load the signal data
     signal = uproot.open(signal_path)[tree]
@@ -361,17 +348,10 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     for HT_cut in HT_range:
         working_point_NN = interp_func(HT_cut)
         cand_model_selection = (jet_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_selection(jet_pt, jet_eta, apply_sel)
-<<<<<<< HEAD
-        cand_pure_model_selection = cand_model_selection & ~ht_only_selection
-
-        eff = np.mean(cand_model_selection)
-        pure_eff = np.mean(cand_pure_model_selection)
-=======
         cand_model_pure_selection = cand_model_selection & ~ht_only_selection
 
         eff = np.mean(cand_model_selection)
         pure_eff = np.mean(cand_model_pure_selection)
->>>>>>> main
         if( eff > max_eff):
             max_eff = eff
             model_ht_wp = HT_cut
@@ -381,22 +361,14 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
 
     #Save this best WP
     working_point = {"HT": float(model_ht_wp), "NN": float(model_btag_wp)}
-<<<<<<< HEAD
-    wp_path = os.path.join(model_dir, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
-=======
     wp_path = os.path.join(model.output_directory, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
->>>>>>> main
     with open(wp_path, "w") as f:
         json.dump(working_point, f, indent=4)
 
     model_selection = (jet_ht > model_ht_wp) & (model_bscore_sum > model_btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
     model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
-<<<<<<< HEAD
-    pure_model_selection = model_selection & ~ht_only_selection
-=======
     model_pure_selection = model_selection & ~ht_only_selection
     model_pure_efficiency = np.round(ak.sum(model_pure_selection) / n_events, 2)
->>>>>>> main
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
     if all_event_gen_mHH is not None and event_gen_mHH is not None:
@@ -461,11 +433,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     plt.legend(loc='upper left')
 
     #Save plot
-<<<<<<< HEAD
-    plot_path = os.path.join(model_dir, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
-=======
     plot_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
->>>>>>> main
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 
@@ -473,11 +441,6 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     fig2, ax2 = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax2, fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
-<<<<<<< HEAD
-    ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
-                label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, model_ht_wp, round(model_btag_wp, 2)))
-=======
->>>>>>> main
     ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3,
                 label=r'HT + QuadJets @ 14 kHz, {}={} (L1 $HT$ > {} GeV)'.format(eff_str, ht_only_efficiency, ht_only_wp))
     ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3,
@@ -503,26 +466,8 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     eff_cmssw = np.mean(cmssw_selection)
     eff_model = np.mean(model_selection)
     eff_ht = np.mean(ht_only_selection)
-<<<<<<< HEAD
-    eff_pure_model = np.mean(pure_model_selection)
-    eff_pure_cmssw = np.mean(pure_cmssw_selection)
-
-    plot_dir = os.path.join(model_dir, f"plots/physics/bbbb/")
-    outname = plot_dir + f"/TotalEff_{score_type}_{sel_type}.txt"
-    with open(outname, "w") as outfile:
-        outfile.write("Total HH Eff \n")
-        outfile.write("HT Trigger %.4f \n" % eff_ht)
-        outfile.write("Model Eff %.4f \n" % eff_model)
-        outfile.write("CMSSW Model Eff %.4f \n" % eff_cmssw)
-        outfile.write("Model Pure Eff (exclude HT overlap) %.4f \n" % eff_pure_model)
-        outfile.write("CMSSW Model Pure Eff (exclude HT overlap) %.4f \n" % eff_pure_cmssw)
-
-
-
-=======
     eff_model_pure = np.mean(model_pure_selection)
     eff_pure_cmssw = np.mean(pure_cmssw_selection)
->>>>>>> main
 
     plot_dir = os.path.join(model.output_directory, f"plots/physics/bbbb/")
     outname = plot_dir + f"/TotalEff_{score_type}_{sel_type}.txt"

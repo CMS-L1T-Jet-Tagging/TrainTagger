@@ -126,28 +126,11 @@ def train(model, out_dir, percent, merge_pu_class=False):
     if(merge_pu_class and 'pileup' in class_labels):
         class_labels["pileup"] = class_labels['gluon']
 
-    # Save input variables and extra variables metadata
-    with open(os.path.join(out_dir, "input_vars.json"), "w") as f: json.dump(input_vars, f, indent=4) #Dump input variables
-    with open(os.path.join(out_dir, "extra_vars.json"), "w") as f: json.dump(extra_vars, f, indent=4) #Dump output variables
-
-    # store model metadata for later analysis
-    model_metadata = {
-        "model_name": model_name,
-        "epochs": EPOCHS,
-        "batchsize": BATCH_SIZE,
-        "valsplit": VALIDATION_SPLIT,
-        "loss_weights": LOSS_WEIGHTS,
-        "percent": percent,
-        "weighting": WEIGHT_METHOD,
-    }
-    with open(os.path.join(out_dir, "model_metadata.json"), "w") as f: json.dump(model_metadata, f, indent=4) #Dump model variables
-=======
     model.set_labels(
         input_vars,
         extra_vars,
         class_labels,
     )
->>>>>>> main
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)

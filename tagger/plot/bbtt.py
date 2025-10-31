@@ -195,9 +195,6 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
 
     return bscore_sums, tscore_sums, tau_indices
 
-<<<<<<< HEAD
-def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, score_type, apply_sel, model_dir, n_entries, rate, tree):
-=======
 
 # derive rate, wps and efficiency plotting functions
 def derive_rate(minbias_path, model, n_entries=100000, tree='jetntuple/Jets'):
@@ -260,7 +257,6 @@ def parallel_in_parallel(params):
     return np.array([rate_raw, rate_qg, eff_signal_raw, eff_signal_qg, 220, bb, tt])
 
 def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_type, apply_sel, model, n_entries, rate, tree):
->>>>>>> main
     """
     Pick the working points and plot
     """
@@ -885,15 +881,9 @@ if __name__ == "__main__":
     if args.deriveRate:
         derive_rate(args.minbias, model, n_entries=args.n_entries,tree=args.tree)
     if args.deriveWPs:
-<<<<<<< HEAD
-        derive_bbtt_WPs(args.model_dir, args.minbias, 'tau', args.signal, n_entries=args.n_entries,tree=args.tree)
-        gc.collect()
-        derive_bbtt_WPs(args.model_dir, args.minbias, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
-=======
         derive_bbtt_WPs(model, args.minbias, 220, 'tau', args.signal, target_rate=args.rate, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
         derive_bbtt_WPs(model, args.minbias, 220, 'all', args.signal, target_rate=args.rate, n_entries=args.n_entries,tree=args.tree)
->>>>>>> main
     elif args.eff:
         bbtt_eff_HT(model, args.signal, 'raw', 'tau', target_rate=args.rate, n_entries=args.n_entries,tree=args.tree)
         gc.collect()

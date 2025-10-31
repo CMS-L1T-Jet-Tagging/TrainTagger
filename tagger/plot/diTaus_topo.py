@@ -26,8 +26,6 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
-from matplotlib.gridspec import GridSpec
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tagger.model.common import fromFolder
 
 def calculate_topo_score(tau_plus, tau_minus, bkg, apply_light=False):

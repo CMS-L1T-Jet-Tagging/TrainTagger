@@ -146,8 +146,8 @@ def _split_flavor(data):
     matched_entries =  data['class_label'] != pileup_idx
     if split_data_sum != len(data[jet_ptmin_gen & matched_entries]):
         raise ValueError(
-            f"Data splitting error: Total matched entries ({split_data_sum}) 
-            do not match the filtered data length ({len(data[jet_ptmin_gen])})."
+            f"""Data splitting error: Total matched entries ({split_data_sum}) 
+            do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
 
     return data[jet_ptmin_gen], class_labels

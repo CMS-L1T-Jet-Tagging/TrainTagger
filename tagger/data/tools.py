@@ -108,8 +108,12 @@ def _split_flavor(data):
     # Automatically generate class labels based on the order of keys in conditions
     class_labels = {label: idx for idx, label in enumerate(conditions)}
 
-    # Initialize the new array in data for numeric labels with default -1 for unmatched entries
-    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], -1)
+    #keep pileup jets separate at first (for determining the pt target), but then add to gluon class
+    temp_pileup_idx = -1
+    final_pileup_idx = class_labels['gluon']
+
+    # Initialize the new array in data for numeric labels with default pileup idx for unmatched entries
+    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], temp_pileup_idx)
 
     # Assign numeric values based on conditions using awkward's where function
     for label, condition in conditions.items():
@@ -128,6 +132,10 @@ def _split_flavor(data):
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
 
+    #Set pt correction target of pileup jets to 1.0
+    data['target_pt'] = ak.where(data['class_label'] == temp_pileup_idx, 1.0, data['target_pt'])
+    data['target_pt_phys'] = ak.where(data['class_label'] == temp_pileup_idx, data['jet_pt_phys'], data['target_pt_phys'])
+
     # Apply pt_cut
     jet_ptmin_gen = data['target_pt_phys'] > 5.0
     for key in conditions:
@@ -135,11 +143,15 @@ def _split_flavor(data):
 
     # Sanity check for data consistency
     split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
-    if split_data_sum != len(data[jet_ptmin_gen]):
+    matched_entries =  data['class_label'] != temp_pileup_idx
+    if split_data_sum != len(data[jet_ptmin_gen & matched_entries]):
         raise ValueError(
-            f"""Data splitting error: Total entries ({split_data_sum})
-            do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
+            f"""Data splitting error: Total matched entries ({split_data_sum})
+            do not match the filtered data length ({len(data[jet_ptmin_gen & matched_entries])})."""
         )
+
+    #merge pileup class 
+    data['class_label'] = ak.where(data['class_label'] == temp_pileup_idx, final_pileup_idx, data['class_label'])
 
     return data[jet_ptmin_gen], class_labels
 

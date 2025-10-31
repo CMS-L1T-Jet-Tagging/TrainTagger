@@ -487,11 +487,12 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
     figname = f'tau_eff_pt_comparison'
     plt.legend()
+    plt.ylim([0., 1.2])
 
     ax.set_xlabel(r"Single $\tau_h$ $p_T$ Threshold [GeV]")
     ax.set_ylabel(r"Trigger Efficiency")
 
-    ax.legend(loc='upper left', fontsize=style.LEGEND_WIDTH)
+    ax.legend(loc='upper left', fontsize=style.MEDIUM_SIZE)
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
 
@@ -506,7 +507,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         #Pick a single pt WP for comparison
         pt_WP = 75.
 
-        tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & eta_selection
+        tau_deno = (tau_flav==1) & (gen_pt_raw > pt_WP) & gen_eta_selection
 
         model_cut = model_WP_interp(pt_WP)
         cmssw_cut = cmssw_WP_interp(pt_WP)
@@ -516,9 +517,9 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > pt_WP) & (jet_tauscore_raw > cmssw_cut)
 
         ##write out total eff to text file
-        total_eff_nn = np.mean(tau_nume_nn) / np.mean(tau_deno)
-        total_eff_seedcone = np.mean(tau_nume_seedcone) / np.mean(tau_deno)
-        total_eff_cmssw = np.mean(tau_nume_cmssw) / np.mean(tau_deno)
+        total_eff_nn = np.sum(tau_nume_nn) / np.sum(tau_deno)
+        total_eff_seedcone = np.sum(tau_nume_seedcone) / np.sum(tau_deno)
+        total_eff_cmssw = np.sum(tau_nume_cmssw) / np.sum(tau_deno)
 
         outname = plot_dir + "/TotalEff_%s.txt" % eta_region
         with open(outname, "w") as outfile:
@@ -578,21 +579,24 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
 
         # Plot errorbars for both sets of efficiencies
-        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
-        ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 31kHz')
-        ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 31kHz')
+        eff_str = r"$\int \epsilon$"
+        #Theoretical limit, uncomment for common sense check.
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit, {}={}'.format(eff_str, round(total_eff_seedcone, 2)))
+
+        ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 31kHz, {}={}'.format(eff_str,round( total_eff_cmssw, 2)))
+        ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 31kHz, {}={}'.format(eff_str, round(total_eff_nn, 2)))
 
         # Plot a horizontal dashed line at y=1
         ax.axhline(1, xmin=0, xmax=150, linestyle='dashed', color='black', linewidth=3)
 
         # Set plot limits and labels
         ax.set_ylim([0., 1.1])
-        ax.set_xlim([0, 150])
+        ax.set_xlim([pt_WP, 150])
         ax.set_xlabel(r"$\tau_h$ $p_T^{gen}$ [GeV]")
         ax.set_ylabel(r"Efficiency")
 
         # Add legend
-        ax.legend(loc='lower right', fontsize=style.LEGEND_WIDTH)
+        ax.legend(loc='lower right', fontsize=style.MEDIUM_SIZE)
 
         # Save and show the plot
         figname = f'sc_and_tau_eff_{eta_region}'

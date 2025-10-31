@@ -57,7 +57,8 @@ def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']]
 
     tau = sum([preds[:,idx] for idx in tau_index] )
-    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    bkg = preds[:,class_labels['pileup']] + preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    #bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
 
     return tau / (tau + bkg)
 
@@ -101,7 +102,6 @@ def pick_and_plot_tau(rate_list, pt_list, nn_list, model, target_rate = 31, Rate
     # Export the working point
     working_point = {"PTs": target_rate_PT, "NNs": target_rate_NN}
 
-
     with open(os.path.join(plot_dir, label+ "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
 
@@ -137,6 +137,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
+
     raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
 
@@ -459,7 +460,6 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
 
     ax.plot([],[], linestyle='none', label=r'$|\eta| < 2.172$')
-
     ax.plot(pT_edges, seeded_cone_effs, c=style.color_cycle[2], label=r'Raw Seeded Cone Eff.', linewidth=style.LINEWIDTH)
     ax.plot(pT_edges, model_effs, c=style.color_cycle[0], label=r'CMSSW PuppiTau Emulator Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
     ax.plot(pT_edges, cmssw_effs, c=style.color_cycle[1],label=r'SeedCone Tau Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)

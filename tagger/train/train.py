@@ -81,14 +81,15 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     # Multiply by some custom class weights
     # All same weight
     weights_per_class = {
-        0: 1,  # b
-        1: 1,  # charm
+        0: 1.0,  # b
+        1: 1.0,  # charm
         2: 1.0,  # light
         3: 1.0,  # gluon
         4: 1.0,  # taup
         5: 1.0,  # taum
         6: 1.0,  # muon
         7: 1.0,  # electron
+        8: 1.0   # pileup
     }
     for idx in class_labels.values():
         weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * weights_per_class[idx]
@@ -117,10 +118,14 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     return sample_weights
 
 
-def train(model, out_dir, percent):
+def train(model, out_dir, percent, merge_pu_class=False):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+
+    if(merge_pu_class and 'pileup' in class_labels):
+        class_labels["pileup"] = class_labels['gluon']
+
     model.set_labels(
         input_vars,
         extra_vars,
@@ -174,6 +179,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
     )
+    parser.add_argument('--merge-pu-class', action='store_true', help='Merge pileup class into gluons')
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
@@ -190,4 +196,4 @@ if __name__ == "__main__":
 
     else:
         model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.percent)
+        train(model, args.output, args.percent, merge_pu_class=args.merge_pu_class)

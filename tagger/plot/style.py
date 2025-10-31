@@ -52,6 +52,7 @@ CLASS_LABEL_STYLE = {
     "taus": "Taus",
     "jets": "Jets (b, c, light, gluon)",
     "leptons": "Leptons (muon, electron)",
+    "pileup": "Pileup",
 }
 
 INPUT_FEATURE_STYLE = {

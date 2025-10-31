@@ -67,6 +67,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     b_idx = class_labels['b']
     l_idx = class_labels['light']
     g_idx = class_labels['gluon']
+    u_idx = class_labels['pileup']
 
     # get sums of 2 leading b scores
     rows = np.arange(len(nn_outputs[0])).reshape((-1, 1))
@@ -77,7 +78,7 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     b_preds_sums = np.sum(b_preds[rows, b_preds_arg], axis=1)
 
     # vs light preds
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
+    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, u_idx]) for pred_score in nn_outputs])
     b_vs_qg_arg = np.argsort(b_vs_qg, axis=1)[:,-2:]
     b_vs_qg_sums = np.sum(b_vs_qg[rows, b_vs_qg_arg], axis=1)
 
@@ -92,18 +93,18 @@ def pick_and_plot(target_rate_idx, ht_list, bb_list, raw_score, apply_sel, model
     """
 
     #Get the coordinates
-    target_rate_bb = np.array([bb_list[i] for i in target_rate_idx]) # NN cut dimension
-    target_rate_ht = np.array([ht_list[i] for i in target_rate_idx]) # HT cut dimension
+    target_rate_bb = [float(bb_list[i]) for i in target_rate_idx] # NN cut dimension
+    target_rate_ht = [float(ht_list[i]) for i in target_rate_idx] # HT cut dimension
 
     # Export the working point
-    fixed_ht_wp = {"HT": float(target_rate_ht[0]), "BB": float(target_rate_bb[0])}
+    all_working_points = {"HT" : target_rate_ht, "NN": target_rate_bb}
 
     # save WPs
     score_type = 'raw' if raw_score else 'qg'
     plot_dir = os.path.join(model.output_directory, 'plots/physics/bbtt_bb_only')
     os.makedirs(plot_dir, exist_ok=True)
-    with open(os.path.join(plot_dir, f"bbtt_fixed_wp_{score_type}_{apply_sel}.json"), "w") as f:
-        json.dump(fixed_ht_wp, f, indent=4)
+    with open(os.path.join(plot_dir, f"bbtt_all_wps_{score_type}_{apply_sel}.json"), "w") as f:
+        json.dump(all_working_points, f, indent=4)
 
 # derive rate, wps and efficiency plotting functions
 def derive_rate(minbias_path, model, n_entries=100000, tree='jetntuple/Jets'):
@@ -266,11 +267,11 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     HT_path = os.path.join(model.output_directory, "plots/physics/bbtt_bb_only/ht_working_point.json")
 
     #Get derived working points
-    if os.path.exists(WP_path) & os.path.exists(HT_path):
+    if os.path.exists(all_WPs_path) & os.path.exists(HT_path):
         # first WP Path
-        with open(WP_path, "r") as f:  WPs = json.load(f)
-        btag_wp = WPs['BB']
-        ht_wp = int(WPs['HT'])
+        with open(all_WPs_path, "r") as f:  WPs = json.load(f)
+        btag_wps = WPs['NN']
+        ht_wps = WPs['HT']
         # HT only WP Path
         with open(HT_path, "r") as f:  WPs = json.load(f)
         ht_only_wp = int(WPs['ht_only_cut'])
@@ -309,8 +310,38 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
         model_bscore_sum = model_bscore_sums[1]
         default_sel = default_selection(jet_pt, jet_eta, bscore_indices[1], apply_sel)
 
-    model_selection = (jet_ht > ht_wp) & (model_bscore_sum > btag_wp) & default_sel
+
+    interp_func = interp1d(ht_wps, btag_wps, kind='linear', fill_value='extrapolate')
+
     ht_only_selection = jet_ht > ht_only_wp
+
+    #Find model WP that maximizes efficiency
+    HT_range = np.arange(150, 250, 5)
+    max_eff = -1.0
+    model_HT_wp = -1.0
+    model_btag_wp = -1.0
+
+    for HT_cut in HT_range:
+        working_point_NN = interp_func(HT_cut)
+        cand_model_selection = (jet_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_sel
+        cand_pure_model_selection = cand_model_selection & ~ht_only_selection
+
+        eff = np.mean(cand_model_selection)
+        if( eff > max_eff):
+            max_eff = eff
+            model_HT_wp = HT_cut
+            model_btag_wp = float(working_point_NN)
+
+    print("Setting HT cut at %.2f, model HH eff is %.3f" % (model_HT_wp, max_eff))
+
+
+    #write out best working point
+    working_point = {"HT": float(model_HT_wp), "NN": float(model_btag_wp)}
+    WP_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/bbtt_fixed_wp_{score_type}_{apply_sel}.json")
+    with open(WP_path, "w") as f:
+        json.dump(working_point, f, indent=4)
+
+    model_selection = (jet_ht > model_HT_wp) & (model_bscore_sum > model_btag_wp) & default_sel
 
     #PLot the efficiencies
     #Basically we want to bin the selected truth ht and divide it by the overall count
@@ -346,7 +377,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax, histtype='step', color='grey', label=r"$HT^{gen}$")
     ax.errorbar(baseline_x, baseline_y, yerr=baseline_err, c=style.color_cycle[0], fmt='o', linewidth=3, label=r'bb$\tau \tau$ seed@ {} kHz (L1 $HT$ > {} GeV, {} $p_T$ > {} GeV)'.format(rate, 220, tau_str, 34))
-    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz (L1 $HT$ > {} GeV, $\sum$ bb > {})'.format(rate, ht_wp, round(btag_wp,2)))
+    ax.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz (L1 $HT$ > {} GeV, $\sum$ bb > {})'.format(rate, model_HT_wp, round(model_btag_wp,2)))
 
     #Plot other labels
     ax.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -367,7 +398,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     fig2,ax2 = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
     hep.histplot((normalized_counts, bin_edges), ax=ax2, histtype='step', color='grey', label=r"$HT^{gen}$")
-    ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz (L1 $HT$ > {} GeV, $\sum$ bb > {})'.format(rate, ht_wp, round(btag_wp,2)))
+    ax2.errorbar(model_x, model_y, yerr=model_err, c=style.color_cycle[1], fmt='o', linewidth=3, label=r'Multiclass @ {} kHz (L1 $HT$ > {} GeV, $\sum$ bb > {})'.format(rate, model_HT_wp, round(model_btag_wp,2)))
     ax2.errorbar(ht_only_x, ht_only_y, yerr=ht_only_err, c=style.color_cycle[2], fmt='o', linewidth=3, label=r'HT-only @ {} kHz (L1 $HT$ > {} GeV)'.format(rate, ht_only_wp))
 
     #Plot other labels

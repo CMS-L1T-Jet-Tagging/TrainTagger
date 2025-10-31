@@ -4,7 +4,6 @@ Script to plot all di-taus related physics performance plot
 import os, json
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
 import awkward as ak
 import numpy as np
 import uproot
@@ -23,13 +22,12 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
-
+from tagger.model.common import fromFolder
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
 
 def tau_score(preds, class_labels):
-    tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']]
+    tau_index = [class_labels['taup'], class_labels['taum']]
 
-    #foo
     tau = sum([preds[:,idx] for idx in tau_index] )
     bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
 
@@ -37,12 +35,12 @@ def tau_score(preds, class_labels):
 
 
 
-def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28, RateRange = 1.0):
+def pick_and_plot_ditau(rate_list, pt_list, nn_list, model, target_rate = 28, RateRange = 1.0):
     """
     Pick the working points and plot
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tautau')
     os.makedirs(plot_dir, exist_ok=True)
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -94,7 +92,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate = 28
     plt.savefig(f"{plot_dir}/tautau_WPs.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/tautau_WPs.png", bbox_inches='tight')
 
-def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tree='jetntuple/Jets'):
+def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='jetntuple/Jets'):
     """
     Derive the di-tau rate.
     Seed definition can be found here (2024 Annual Review):
@@ -104,20 +102,15 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     Double Puppi Tau Seed, same NN cut and pT (52 GeV) on both taus to give 28 kHZ based on the definition above.
     """
 
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
-
-    # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
+
 
 
     #Count number of total event
@@ -153,8 +146,8 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
     pt1 = pt1_uncorrected*(ratio1.flatten())
     pt2 = pt2_uncorrected*(ratio2.flatten())
 
-    tau_score1 = tau_score(pred_score1, class_labels)
-    tau_score2 = tau_score(pred_score2, class_labels)
+    tau_score1 = tau_score(pred_score1, model.class_labels)
+    tau_score2 = tau_score(pred_score2, model.class_labels)
 
     #Put them together
     NN_score = np.vstack([tau_score1, tau_score2]).transpose()
@@ -190,19 +183,14 @@ def derive_diTaus_WPs(model_dir, minbias_path, target_rate=28, n_entries=100, tr
             nn_list.append(NN)
 
     #Pick target rate and plot it
-    pick_and_plot_ditau(rate_list, pt_list, nn_list, model_dir, target_rate=target_rate)
+    pick_and_plot_ditau(rate_list, pt_list, nn_list, model, target_rate=target_rate)
 
     return
 
-def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
+def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
-
-    #Load metadata from the model directory
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     pt_cuts = list(np.arange(0,250,10))
 
@@ -214,11 +202,11 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
-    nn_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
+    nn_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
 
     #Get the NN predictions
     pred_score, ratio = model.predict(nn_inputs[eta_selection])
-    model_tau = tau_score(pred_score, class_labels )
+    model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score
     cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)[eta_selection]
@@ -229,7 +217,7 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
 
     #Load the working point from json file
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tautau/working_point.json")
+    WP_path = os.path.join(model.output_directory, "plots/physics/tautau/working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path):
@@ -309,28 +297,23 @@ def plot_bkg_rate_ditau(model_dir, minbias_path, n_entries=500000, tree='jetntup
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
 
     # Save the plot
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tautau')
     fig.savefig(os.path.join(plot_dir, "tautau_BkgRate.pdf"), bbox_inches='tight')
     fig.savefig(os.path.join(plot_dir, "tautau_BkgRate.png"), bbox_inches='tight')
 
     return
 
-def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000 ):
+def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_entries=10000, inc_seeded_cone=False ):
     """
     Plot the single tau efficiency for signal in signal_path w.r.t pt
     eta range for barrel: |eta| < 1.5
     eta range for endcap: 1.5 < |eta| < 2.5
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tautau')
-
-    #Load metadata from the model directory
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tautau')
 
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tautau/working_point.json")
+    WP_path = os.path.join(model.output_directory, "plots/physics/tautau/working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path):
@@ -355,10 +338,10 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
-    nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
+    nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
     pred_score, ratio = model.predict(nn_inputs)
 
-    nn_tauscore_raw = tau_score(pred_score, class_labels )
+    nn_tauscore_raw = tau_score(pred_score, model.class_labels )
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     #selecting the eta region
@@ -429,7 +412,8 @@ def eff_ditau(model_dir, signal_path, eta_region='barrel', tree='jetntuple/Jets'
         ax.plot([], [], 'none', label=eta_label)
 
     # Plot errorbars for both sets of efficiencies
-    ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
+    if(inc_seeded_cone):
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
     ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 28kHz')
     ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 28kHz')
 
@@ -469,6 +453,7 @@ if __name__ == "__main__":
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')
     parser.add_argument('--eff', action='store_true', help='plot efficiency for VBF-> tautau')
     parser.add_argument('--BkgRate', action='store_true', help='plot background rate for VBF->tautau')
+    parser.add_argument('--seedcone_eff', action='store_true', help='Include the seeded cone eff on the plot')
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
@@ -476,10 +461,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    model = fromFolder(args.model_dir)
+
     if args.deriveWPs:
-        derive_diTaus_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        derive_diTaus_WPs(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.BkgRate:
-        plot_bkg_rate_ditau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        plot_bkg_rate_ditau(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree)
-        eff_ditau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree)
+        eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
+        eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)

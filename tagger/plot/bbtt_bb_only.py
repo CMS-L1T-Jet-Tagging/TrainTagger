@@ -2,7 +2,6 @@ import os, json
 import gc
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
 import awkward as ak
 import numpy as np
 import uproot
@@ -21,6 +20,7 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
 # Helpers
@@ -87,15 +87,10 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
 
     return bscore_sums, bscore_idxs
 
-def pick_and_plot(rate_list, ht_list, bb_list, raw_score, apply_sel, model_dir, signal_path, n_entries, target_rate, tree):
+def pick_and_plot(target_rate_idx, ht_list, bb_list, raw_score, apply_sel, model, tree):
     """
     Pick the working points and plot
     """
-    #plus, minus range
-    RateRange = 0.5
-
-    #Find the target rate points, plot them and print out some info as well
-    target_rate_idx = find_rate(rate_list, target_rate = target_rate, RateRange=RateRange)
 
     #Get the coordinates
     target_rate_bb = [float(bb_list[i]) for i in target_rate_idx] # NN cut dimension
@@ -106,13 +101,13 @@ def pick_and_plot(rate_list, ht_list, bb_list, raw_score, apply_sel, model_dir, 
 
     # save WPs
     score_type = 'raw' if raw_score else 'qg'
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt_bb_only')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbtt_bb_only')
     os.makedirs(plot_dir, exist_ok=True)
     with open(os.path.join(plot_dir, f"bbtt_all_wps_{score_type}_{apply_sel}.json"), "w") as f:
         json.dump(all_working_points, f, indent=4)
 
 # derive rate, wps and efficiency plotting functions
-def derive_rate(minbias_path, model_dir, n_entries=100000, tree='jetntuple/Jets'):
+def derive_rate(minbias_path, model, n_entries=100000, tree='jetntuple/Jets'):
 
     minbias = uproot.open(minbias_path)[tree]
 
@@ -133,7 +128,7 @@ def derive_rate(minbias_path, model_dir, n_entries=100000, tree='jetntuple/Jets'
     # convert to rate [kHz]
     rate = {'rate': (n_passed / n_events) * MINBIAS_RATE}
 
-    rate_dir = os.path.join(model_dir, "plots/physics/bbtt")
+    rate_dir = os.path.join(model.output_directory, "plots/physics/bbtt")
     os.makedirs(rate_dir, exist_ok=True)
     with open(os.path.join(rate_dir, f"bbtt_seed_rate.json"), "w") as f:
         json.dump(rate, f, indent=4)
@@ -141,11 +136,11 @@ def derive_rate(minbias_path, model_dir, n_entries=100000, tree='jetntuple/Jets'
 
     return
 
-def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange=0.85):
+def derive_HT_WP(RateHist, ht_edges, n_events, model, target_rate, RateRange=0.85):
     """
     Derive the HT only working points (without bb cuts)
     """
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbtt_bb_only')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbtt_bb_only')
 
     #Derive the rate
     rate_list = []
@@ -168,19 +163,14 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model_dir, target_rate, RateRange
     working_point = {"ht_only_cut": float(ht_list[target_rate_idx[0]])}
     json.dump(working_point, open(WP_json, "w"), indent=4)
 
-def derive_bbtt_WPs(model_dir, minbias_path, apply_sel, signal_path, n_entries=100, tree='outnano/Jets'):
+def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
 
-    model = load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
-    with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
+    with open(os.path.join(model.output_directory, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
-
-    #Load input/ouput variables of the NN
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
@@ -188,7 +178,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, apply_sel, signal_path, n_entries=1
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -201,7 +191,7 @@ def derive_bbtt_WPs(model_dir, minbias_path, apply_sel, signal_path, n_entries=1
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
 
-    bscore_sums, bscore_idxs = nn_score_sums(model, jet_nn_inputs, class_labels)
+    bscore_sums, bscore_idxs = nn_score_sums(model, jet_nn_inputs, model.class_labels)
     def_sels = [default_selection(jet_pt, jet_eta, bscore_idxs[0], apply_sel),
                default_selection(jet_pt, jet_eta, bscore_idxs[1], apply_sel)]
 
@@ -210,62 +200,71 @@ def derive_bbtt_WPs(model_dir, minbias_path, apply_sel, signal_path, n_entries=1
 
     jet_ht = ak.sum(jet_pt, axis=1)
 
-
     #Define the histograms (pT edge and NN Score edge)
-    ht_edges = list(np.arange(150,500,2)) + [10000] #Make sure to capture everything
-    NN_edges = list([round(i,3) for i in np.arange(0, 1.2, 0.01)]) + [2.0]
+    ht_edges = list(np.arange(150,500,1)) + [10000] #Make sure to capture everything
+    granularity = 0.5
+    NN_edges = list([round(i,3) for i in np.arange(0, 1.2, 0.005 / granularity)]) + [2.0]
 
     # for raw and vs light preds
     raw = True
     for bscore_sum, def_sel in zip(bscore_sums, def_sels):
-        sel_ht = jet_ht[def_sel]
-        RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
-                        hist.axis.Variable(NN_edges, name="nn", label="nn_bb"))
-        RateHist.fill(ht = sel_ht, nn = bscore_sum)
+        target_rate_idx = []
+        while len(target_rate_idx) < 1:
+            print("running  rates with granularity factor = ", granularity)
+            sel_ht = jet_ht[def_sel]
+            RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
+                            hist.axis.Variable(NN_edges, name="nn", label="nn_bb"))
+            RateHist.fill(ht = sel_ht, nn = bscore_sum)
 
-        assert(len(bscore_sum) == len(sel_ht))
-        assert(len(bscore_sum) == len(sel_ht))
+            assert(len(bscore_sum) == len(sel_ht))
+            assert(len(bscore_sum) == len(sel_ht))
 
-        #Derive the rate
-        rate_list = []
-        ht_list = []
-        bb_list = []
+            #Derive the rate
+            rate_list = []
+            ht_list = []
+            bb_list = []
 
-        #Loop through the edges and integrate
-        for ht in ht_edges:
+            #Loop through the edges and integrate
             for bb in NN_edges[:-1]:
                 #Calculate the rate
-                counts = RateHist[{"ht": slice(ht*1j, None, sum)}][{"nn": slice(bb*1.0j, None, sum)}]
+                counts = RateHist[{"ht": slice(ht_cut*1j, None, sum)}][{"nn": slice(bb*1.0j, None, sum)}]
                 rate_list.append((counts / n_events)*MINBIAS_RATE)
 
                 #Append the results
-                ht_list.append(ht)
+                ht_list.append(ht_cut)
                 bb_list.append(bb)
 
+            # Find the target rate points, and pass them to plotting function
+            RateRange = 0.5
+            target_rate_idx = find_rate(rate_list, target_rate = rate, RateRange=RateRange)
+            granularity += .5
+            range_center = NN_edges[np.argmin((np.abs(np.array(rate_list) - rate)))]
+            significant_range = [range_center - .1, range_center + .1]
+            NN_edges = np.arange(significant_range[0], significant_range[1], 0.001 / granularity).tolist()
+
         #Pick target rate and plot it
-        pick_and_plot(rate_list, ht_list, bb_list, raw, apply_sel, model_dir, signal_path, n_entries, rate, tree)
+        target_rate_idx = [np.argmin(np.abs(np.array(rate_list) - rate))]
+        pick_and_plot(target_rate_idx, ht_list, bb_list, raw, apply_sel, model, tree)
         gc.collect()
         raw = False
 
     #Derive the HT working point
-    derive_HT_WP(RateHist, ht_edges, n_events, model_dir, rate)
+    derive_HT_WP(RateHist, ht_edges, n_events, model, rate)
     return
 
-def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000, tree='outnano/Jets'):
+def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
-    with open(os.path.join(model_dir, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
+    with open(os.path.join(model.output_directory, f"plots/physics/bbtt/bbtt_seed_rate.json"), "r") as f: rate = json.load(f)
     rate = np.round(rate['rate'], 1)
-
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
     ht_egdes = list(np.arange(0,800,20))
     ht_axis = hist.axis.Variable(ht_egdes, name = r"$HT^{gen}$")
 
     #Check if the working point have been derived
-    all_WPs_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/bbtt_all_wps_{score_type}_{apply_sel}.json")
-    HT_path = os.path.join(model_dir, "plots/physics/bbtt_bb_only/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbtt_bb_only/bbtt_fixed_wp_{score_type}_{apply_sel}.json")
+    HT_path = os.path.join(model.output_directory, "plots/physics/bbtt_bb_only/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(all_WPs_path) & os.path.exists(HT_path):
@@ -289,11 +288,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
     raw_tau_pt = extract_array(signal, 'jet_taupt', n_entries)
 
-    # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
-
-    raw_inputs = extract_nn_inputs(signal, input_vars, n_entries=n_entries)
+    raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
     event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
@@ -305,7 +300,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
 
     # Result from the baseline selection, multiclass tagger and ht only working point
     baseline_selection, _ = bbtt_seed(jet_pt, tau_pt)
-    model_bscore_sums, bscore_indices = nn_score_sums(model, jet_nn_inputs, class_labels)
+    model_bscore_sums, bscore_indices = nn_score_sums(model, jet_nn_inputs, model.class_labels)
 
     # use either raw or vs light scores
     if score_type == 'raw':
@@ -394,7 +389,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/HHbbtt_bbtt_seed_eff_{score_type}_{apply_sel}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbtt_bb_only/HHbbtt_bbtt_seed_eff_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
     plt.clf()
@@ -416,7 +411,7 @@ def bbtt_eff_HT(model_dir, signal_path, score_type, apply_sel, n_entries=100000,
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model_dir, f"plots/physics/bbtt_bb_only/HHbbtt_HT_only_eff_{score_type}_{apply_sel}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbtt_bb_only/HHbbtt_HT_only_eff_{score_type}_{apply_sel}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 
@@ -445,17 +440,19 @@ if __name__ == "__main__":
     parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
     args = parser.parse_args()
 
+    model = fromFolder(args.model_dir)
+
     if args.deriveRate:
-        derive_rate(args.minbias, args.model_dir, n_entries=args.n_entries,tree=args.tree)
+        derive_rate(args.minbias, model, n_entries=args.n_entries,tree=args.tree)
     if args.deriveWPs:
-        derive_bbtt_WPs(args.model_dir, args.minbias,'bb', args.signal, n_entries=args.n_entries,tree=args.tree)
+        derive_bbtt_WPs(model, args.minbias, 220, 'bb', args.signal, n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        derive_bbtt_WPs(args.model_dir, args.minbias,'all', args.signal, n_entries=args.n_entries,tree=args.tree)
+        derive_bbtt_WPs(model, args.minbias, 220, 'all', args.signal, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
-        bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'bb', n_entries=args.n_entries,tree=args.tree)
+        bbtt_eff_HT(model, args.signal, 'raw', 'bb', n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbtt_eff_HT(args.model_dir, args.signal, 'raw', 'all', n_entries=args.n_entries,tree=args.tree)
+        bbtt_eff_HT(model, args.signal, 'raw', 'all', n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'bb', n_entries=args.n_entries,tree=args.tree)
+        bbtt_eff_HT(model, args.signal, 'qg', 'bb', n_entries=args.n_entries,tree=args.tree)
         gc.collect()
-        bbtt_eff_HT(args.model_dir, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)
+        bbtt_eff_HT(model, args.signal, 'qg', 'all', n_entries=args.n_entries,tree=args.tree)

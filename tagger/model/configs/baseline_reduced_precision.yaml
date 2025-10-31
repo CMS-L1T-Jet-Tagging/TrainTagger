@@ -1,0 +1,47 @@
+model: DeepSetModel
+run_config :
+  verbose : 2
+  debug : True
+  num_threads : 24
+
+model_config :
+  name : baseline
+  conv1d_layers : [10,10]
+  classification_layers : [32,16]
+  regression_layers : [10]
+  kernel_initializer : 'lecun_uniform'
+  aggregator : 'mean'
+
+quantization_config:
+  quantizer_bits : 9
+  quantizer_bits_int : 2
+  quantizer_alpha_val : 1.0
+  pt_output_quantization : [16,6]
+
+training_config :
+  weight_method: "onlyclass"
+  epochs : 10
+  batch_size : 1024
+  learning_rate : 0.001
+  validation_split : 0.1
+
+  loss_weights : [1,1]
+
+  initial_sparsity : 0.0
+  final_sparsity : 0.1
+
+  EarlyStopping_patience : 10
+
+  ReduceLROnPlateau_factor : 0.5
+  ReduceLROnPlateau_patience : 5
+  ReduceLROnPlateau_min_lr : 0.00001
+
+firmware_config:
+  input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
+  class_precision: 'ap_ufixed<8,1,AP_RND,AP_SAT>'
+  reg_precision: 'ap_fixed<22,12,AP_RND,AP_SAT>'
+
+  clock_period : 2.5
+  fpga_part : 'xcvu13p-flga2577-2-e'
+
+  project_name: 'L1TSC4NGJetModel_test'

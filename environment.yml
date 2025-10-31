@@ -14,11 +14,18 @@ dependencies:
     - xxhash
     - pyarrow==17.0.0
     - hist==2.7.3
+    - onnx==1.18.0
     - shap
     - awkward-pandas
     - mlflow
+    - hgq
+    - histbook
+    - ydf
+    - ray[tune]
+    - notebook
+    - schema
+    - tqdm
 
-    # For hardware synthesis
     - tensorflow==2.14
     - pyparsing
     - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger

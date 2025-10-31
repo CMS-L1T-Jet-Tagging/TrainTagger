@@ -4,7 +4,6 @@ Script to plot all di-taus related physics performance plot
 import os, json
 from argparse import ArgumentParser
 
-from qkeras.utils import load_qmodel
 import awkward as ak
 import numpy as np
 import uproot
@@ -23,6 +22,7 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 
 def get_interp_func(WP_path):
@@ -64,12 +64,12 @@ def tau_score(preds, class_labels):
 
 
 
-def pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate = 31, RateRange = 1.0, label=""):
+def pick_and_plot_tau(rate_list, pt_list, nn_list, model, target_rate = 31, RateRange = 1.0, label=""):
     """
     Pick the working points and plot
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tau')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tau')
     os.makedirs(plot_dir, exist_ok=True)
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -102,8 +102,6 @@ def pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate = 31, 
     # Export the working point
     working_point = {"PTs": target_rate_PT, "NNs": target_rate_NN}
 
-    print(working_point)
-
     with open(os.path.join(plot_dir, label+ "working_point.json"), "w") as f:
         json.dump(working_point, f, indent=4)
 
@@ -121,7 +119,7 @@ def pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate = 31, 
     plt.savefig(f"{plot_dir}/{label}tau_WPs.pdf", bbox_inches='tight')
     plt.savefig(f"{plot_dir}/{label}tau_WPs.png", bbox_inches='tight')
 
-def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n_entries=100, tree='jetntuple/Jets'):
+def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_entries=100, tree='jetntuple/Jets'):
     """
     Derive the single tau rate.
     Seed definition can be found here (2024 Annual Review):
@@ -135,15 +133,12 @@ def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n
     #Load the minbias data
     minbias = uproot.open(minbias_path)[tree]
 
-    # Load the inputs
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
-
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, input_vars, n_entries=n_entries)
+
+    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
 
 
@@ -182,10 +177,9 @@ def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n
         all_scores = ak.where(~cuts, all_scores, 0.)
 
     else: #scores from new model
-        model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
 
         pred_scores, pt_ratios = model.predict(jet_inputs[cuts])
-        all_scores[cuts] = tau_score(pred_scores, class_labels)
+        all_scores[cuts] = tau_score(pred_scores, model.class_labels)
         all_corr_pts[cuts] = pt_ratios.flatten() * jet_pts[cuts]
 
     #Reshape to orig shape
@@ -231,19 +225,14 @@ def derive_tau_WPs(model_dir, minbias_path, target_rate=31, cmssw_model=False, n
 
     #Pick target rate and plot it
     label = "cmssw_" if cmssw_model else ""
-    pick_and_plot_tau(rate_list, pt_list, nn_list, model_dir, target_rate=target_rate, label=label)
+    pick_and_plot_tau(rate_list, pt_list, nn_list, model, target_rate=target_rate, label=label)
 
     return
 
-def plot_bkg_rate_tau(model_dir, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
+def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jets' ):
     """
     Plot the background (mimbias) rate w.r.t pT cuts.
     """
-
-    #Load metadata from the model directory
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
 
     pt_cuts = list(np.arange(0,250,10))
 
@@ -255,11 +244,11 @@ def plot_bkg_rate_tau(model_dir, minbias_path, n_entries=500000, tree='jetntuple
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
-    nn_inputs = np.asarray(extract_nn_inputs(minbias, input_vars, n_entries=n_entries))
+    nn_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
 
     #Get the NN predictions
     pred_score, ratio = model.predict(nn_inputs[eta_selection])
-    model_tau = tau_score(pred_score, class_labels )
+    model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score
     cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)[eta_selection]
@@ -270,7 +259,7 @@ def plot_bkg_rate_tau(model_dir, minbias_path, n_entries=500000, tree='jetntuple
 
     #Load the working point from json file
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tau/working_point.json")
+    WP_path = os.path.join(model.output_directory, "plots/physics/tau/working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path):
@@ -350,33 +339,27 @@ def plot_bkg_rate_tau(model_dir, minbias_path, n_entries=500000, tree='jetntuple
     ax.legend(loc='upper right', fontsize=style.MEDIUM_SIZE)
 
     # Save the plot
-    plot_dir = os.path.join(model_dir, 'plots/physics/tau')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tau')
     fig.savefig(os.path.join(plot_dir, "tau_BkgRate.pdf"), bbox_inches='tight')
     fig.savefig(os.path.join(plot_dir, "tau_BkgRate.png"), bbox_inches='tight')
 
     return
 
-def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
+def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     """
     Plot the single tau efficiency for signal in signal_path w.r.t pt
     eta range for barrel: |eta| < 1.5
     eta range for endcap: 1.5 < |eta| < 2.172
     """
 
-    plot_dir = os.path.join(model_dir, 'plots/physics/tau')
-
-    #Load metadata from the model directory
-    model=load_qmodel(os.path.join(model_dir, "model/saved_model.h5"))
-    with open(os.path.join(model_dir, "input_vars.json"), "r") as f: input_vars = json.load(f)
-    with open(os.path.join(model_dir, "class_label.json"), "r") as f: class_labels = json.load(f)
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/tau')
 
     #Check if the working point have been derived
-    WP_path = os.path.join(model_dir, "plots/physics/tau/working_point.json")
-    cmssw_WP_path = os.path.join(model_dir, "plots/physics/tau/cmssw_working_point.json")
+    WP_path = os.path.join(model.output_directory, "plots/physics/tau/working_point.json")
+    cmssw_WP_path = os.path.join(model.output_directory, "plots/physics/tau/cmssw_working_point.json")
 
     model_WP_interp = get_interp_func(WP_path)
     cmssw_WP_interp = get_interp_func(cmssw_WP_path)
-
 
     signal = uproot.open(signal_path)[tree]
 
@@ -391,32 +374,34 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
-    nn_inputs = np.asarray(extract_nn_inputs(signal, input_vars, n_entries=n_entries))
+    nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
     pred_score, ratio = model.predict(nn_inputs)
 
-    nn_tauscore_raw = tau_score(pred_score, class_labels )
+    nn_tauscore_raw = tau_score(pred_score, model.class_labels )
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     cut = nn_taupt_raw > 30.
 
 
-    plt.figure()
-    plt.hist(nn_taupt_raw, bins=30)
-    plt.xlabel("Tau pT")
-    plt.xlim([0., 200.])
-    plt.savefig(f"{plot_dir}/tau_pt.png")
+    debug_plots = False
 
-    plt.figure()
-    plt.hist(nn_tauscore_raw[cut], bins=30)
-    plt.xlabel("Model Tau Score")
-    plt.savefig(f"{plot_dir}/model_tau_score.png")
+    if(debug_plots):
+        plt.figure()
+        plt.hist(nn_taupt_raw, bins=30)
+        plt.xlabel("Tau pT")
+        plt.xlim([0., 200.])
+        plt.savefig(f"{plot_dir}/tau_pt.png")
+
+        plt.figure()
+        plt.hist(nn_tauscore_raw[cut], bins=30)
+        plt.xlabel("Model Tau Score")
+        plt.savefig(f"{plot_dir}/model_tau_score.png")
 
 
-    plt.figure()
-    plt.hist(jet_tauscore_raw[cut], bins=30)
-    plt.xlabel("CMSSW Tau Score")
-    plt.savefig(f"{plot_dir}/cmssw_tau_score.png")
-
+        plt.figure()
+        plt.hist(jet_tauscore_raw[cut], bins=30)
+        plt.xlabel("CMSSW Tau Score")
+        plt.savefig(f"{plot_dir}/cmssw_tau_score.png")
 
     pT_edges = [0] + np.arange(30, 150, 2)
 
@@ -427,6 +412,7 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     seeded_cone_effs = [0.]
     model_effs =[0.]
     cmssw_effs =[0.]
+    denoms = [1e-6]
 
     #min number of events to compute a reliable eff
     min_mc = 50
@@ -439,7 +425,9 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
 
         tau_deno = (tau_flav==1) & (gen_pt_raw > pt_cut) & eta_selection
-        deno_eff = np.mean(tau_deno)
+        denom = np.sum(tau_deno)
+
+        denoms.append(denom)
 
 
         if(np.sum(tau_deno) < min_mc):
@@ -452,12 +440,21 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
             tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > pt_cut) & (nn_tauscore_raw > model_cut)
             tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > pt_cut) & (jet_tauscore_raw > cmssw_cut)
 
-            seeded_cone_effs.append(np.mean(tau_nume_seedcone)/ deno_eff)
-            model_effs.append(np.mean(tau_nume_nn) / deno_eff)
-            cmssw_effs.append(np.mean(tau_nume_cmssw) / deno_eff)
+            seeded_cone_effs.append(np.sum(tau_nume_seedcone))
+            model_effs.append(np.sum(tau_nume_nn))
+            cmssw_effs.append(np.sum(tau_nume_cmssw))
+
+            #print(pt_cut, np.sum(tau_deno), np.sum(cmssw_cut), np.sum(model_cut))
 
 
-            print(pt_cut, np.sum(tau_deno), np.sum(cmssw_cut), np.sum(model_cut))
+    denoms = np.array(denoms)
+    seeded_cone_uncs = np.sqrt(seeded_cone_effs) / denoms
+    model_uncs = np.sqrt(model_effs) / denoms
+    cmssw_uncs = np.sqrt(cmssw_effs) / denoms
+
+    seeded_cone_effs = np.array(seeded_cone_effs) / denoms
+    model_effs = np.array(model_effs) / denoms
+    cmssw_effs = np.array(cmssw_effs) / denoms
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
@@ -466,6 +463,27 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     ax.plot(pT_edges, seeded_cone_effs, c=style.color_cycle[2], label=r'Raw Seeded Cone Eff.', linewidth=style.LINEWIDTH)
     ax.plot(pT_edges, model_effs, c=style.color_cycle[0], label=r'CMSSW PuppiTau Emulator Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
     ax.plot(pT_edges, cmssw_effs, c=style.color_cycle[1],label=r'SeedCone Tau Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
+
+
+    # Add uncertainty bands
+    ax.fill_between(pT_edges,
+                    seeded_cone_effs + seeded_cone_uncs,
+                    seeded_cone_effs - seeded_cone_uncs,
+                    color=style.color_cycle[2],
+                    alpha=0.3)
+
+
+    ax.fill_between(pT_edges,
+                    model_effs + model_uncs,
+                    model_effs - model_uncs,
+                    color=style.color_cycle[0],
+                    alpha=0.3)
+
+    ax.fill_between(pT_edges,
+                    cmssw_effs + cmssw_uncs,
+                    cmssw_effs - cmssw_uncs,
+                    color=style.color_cycle[1],
+                    alpha=0.3)
 
     figname = f'tau_eff_pt_comparison'
     plt.legend()
@@ -580,7 +598,6 @@ def eff_tau(model_dir, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         figname = f'sc_and_tau_eff_{eta_region}'
         fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
         fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
-        plt.show(block=False)
 
     return
 
@@ -608,10 +625,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    model = fromFolder(args.model_dir)
+
     if args.deriveWPs:
-        derive_tau_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree, cmssw_model=True)
-        derive_tau_WPs(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        derive_tau_WPs(model, args.minbias, n_entries=args.n_entries, tree=args.tree, cmssw_model=True)
+        derive_tau_WPs(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.BkgRate:
-        plot_bkg_rate_tau(args.model_dir, args.minbias, n_entries=args.n_entries, tree=args.tree)
+        plot_bkg_rate_tau(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        eff_tau(args.model_dir, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)
+        eff_tau(model, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)

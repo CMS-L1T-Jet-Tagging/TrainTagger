@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
-from tagger.data.tools import constituents_mask
 
 style.set_style()
 
@@ -22,7 +21,7 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, constituents_mask
 from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
 
@@ -178,7 +177,10 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
 
     else: #scores from new model
 
-        pred_scores, pt_ratios = model.predict([jet_inputs[cuts], constituents_mask(jet_inputs[cuts], 10), jet_inputs[cuts][:, :, 0]])
+        pred_scores, pt_ratios = model.predict([jet_inputs[cuts],
+            constituents_mask(jet_inputs[cuts], 10),
+            jet_inputs[cuts][:, :, 0]]
+            )
         all_scores[cuts] = tau_score(pred_scores, model.class_labels)
         all_corr_pts[cuts] = pt_ratios.flatten() * jet_pts[cuts]
 
@@ -247,7 +249,11 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
     nn_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
 
     #Get the NN predictions
-    pred_score, ratio = model.predict([nn_inputs[eta_selection], constituents_mask(nn_inputs[eta_selection], 10), nn_inputs[eta_selection][:, :, 0]])
+    eta_selected_inputs = nn_inputs[eta_selection]
+    pred_score, ratio = model.predict([eta_selected_inputs,
+        constituents_mask(eta_selected_inputs, 10),
+        eta_selected_inputs[:, :, 0]]
+        )
     model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score
@@ -375,7 +381,10 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
     #Get the model prediction
     nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
-    pred_score, ratio = model.predict([nn_inputs, constituents_mask(nn_inputs[eta_selection], 10), nn_inputs[:, :, 0]])
+    pred_score, ratio = model.predict([nn_inputs,
+        constituents_mask(nn_inputs, 10),
+        nn_inputs[:, :, 0]]
+        )
 
     nn_tauscore_raw = tau_score(pred_score, model.class_labels )
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())

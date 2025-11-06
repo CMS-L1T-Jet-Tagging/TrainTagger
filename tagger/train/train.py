@@ -11,7 +11,7 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
+def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_eta_test):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
 
@@ -19,6 +19,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
+    np.save(os.path.join(out_dir, "testing_data/jet_eta_test.npy"), jet_eta_test)
 
     print(f"Test data saved to {out_dir}")
 
@@ -173,18 +174,14 @@ def train(model, out_dir, percent):
     )
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-    low_pt = reco_pt_train < 50
-    X_train_1, y_train_1, pt_target_train_1, truth_pt_train_1, reco_pt_train_1 = X_train[low_pt], y_train[low_pt], pt_target_train[low_pt], truth_pt_train[low_pt], reco_pt_train[low_pt]
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, jet_eta = to_ML(data_train, class_labels)
 
     mask = constituents_mask(X_train, 10)
-    mask_1 = mask[low_pt]
     constituents_pt = X_train[:, :, 0]
-    constituents_pt_1 = constituents_pt[low_pt]
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
+    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_eta_test = to_ML(data_test, class_labels)
+    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_eta_test)
 
     # Calculate the sample weights for training
     sample_weight_class = train_weights(
@@ -208,7 +205,7 @@ def train(model, out_dir, percent):
 
     # Get input shape
     ratio_factor = np.zeros([X_train.shape[1], 1])
-    input_shape = [X_train.shape[1:], mask.shape[1:], constituents_pt.shape[1:]]  # First dimension is batch size
+    input_shape = [X_train.shape[1:], mask.shape[1:], constituents_pt.shape[1:], jet_eta.shape[1:]]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shape, output_shape)
@@ -219,26 +216,26 @@ def train(model, out_dir, percent):
     print("Training without ratio correction...")
     train_ratio = False
     for layer in model.jet_model.layers:
-        if "ratio_correction" in layer.name or "norm_pt" in layer.name:
+        if "ratio_correction" in layer.name or "norm_pt" in layer.name or "norm_eta" in layer.name:
             layer.trainable = train_ratio
         else:
             layer.trainable = not train_ratio
     initialized_weights = model.jet_model.get_layer("ratio_correction").get_weights()
     model.jet_model.get_layer("ratio_correction").set_weights([np.zeros((16, 1)), np.zeros((1,))])
     model.compile_model(num_samples)
-    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.fit([X_train, mask, constituents_pt, jet_eta], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     # then train with ratio correction
     print("Training with ratio correction...")
     train_ratio = True
     for layer in model.jet_model.layers:
-        if "ratio_correction" in layer.name or "norm_pt" in layer.name:
+        if "ratio_correction" in layer.name or "norm_pt" in layer.name or "norm_eta" in layer.name:
             layer.trainable = train_ratio
         else:
             layer.trainable = not train_ratio
     model.jet_model.get_layer("prune_low_magnitude_ratio_correction").set_weights(initialized_weights)
     model.compile_model(num_samples)
-    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.fit([X_train, mask, constituents_pt, jet_eta], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     model.save()
 

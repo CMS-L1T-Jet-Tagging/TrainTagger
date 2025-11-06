@@ -76,6 +76,7 @@ class WeightedAverageModel(DeepSetModel):
         inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
         mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
         pt = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_input')
+        jet_eta = tf.keras.layers.Input(shape=inputs_shape[3], name='eta_input')
 
         # Create pT mask to apply to weights and corrections
         mask_permuted = tf.keras.layers.Permute((2,1), name='pt_weights_permute')(mask)
@@ -85,6 +86,7 @@ class WeightedAverageModel(DeepSetModel):
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
         pt_norm = BatchNormalization(name='norm_pt')(pt)
+        jet_eta = BatchNormalization(name='norm_eta')(jet_eta)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -135,19 +137,24 @@ class WeightedAverageModel(DeepSetModel):
 
         pt_correction = QDense(16, name='corrections_output_1', **self.pt_args)(pt_correction)
 
-        ratio_correction = QDense(1, name='ratio_correction', **self.pt_args)(pt_norm)
-        ratio_correction = QActivation('tanh', name='ratio_correction_tanh')(ratio_correction)
+        ratio_inputs = tf.keras.layers.Concatenate(name='ratio_correction_inputs')([pt_norm, jet_id, jet_eta])
 
-        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, ratio_correction])
+        ratio_correction_delta = QDense(1, name='ratio_correction_d', **self.pt_args)(ratio_inputs)
+        ratio_correction_delta = QActivation('tanh', name='ratio_correction_tanh')(ratio_correction_delta)
+
+        ratio_correction_w = QDense(1, name='ratio_correction_w', **self.pt_args)(ratio_inputs)
+        ratio_correction_w = QActivation('relu', name='ratio_correction_relu')(ratio_correction_w)
+
+        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, ratio_correction_w, ratio_correction_delta])
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt, jet_eta], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
@@ -162,9 +169,9 @@ class WeightedAverageModel(DeepSetModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        inputs, mask, pt = X_train
+        inputs, mask, pt, eta_input = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'masking_input': mask, 'pt_input': pt},
+            {'model_input': inputs, 'masking_input': mask, 'pt_input': pt, 'eta_input': eta_input},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
                 'prune_low_magnitude_jet_id_output': sample_weight[0],
@@ -196,6 +203,7 @@ class WeightedAverageModel(DeepSetModel):
         config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['masking_input']['Precision']['result'] = self.firmware_config['mask_precision']
         config['LayerName']['pt_input']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['eta_input']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor

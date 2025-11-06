@@ -135,8 +135,8 @@ class WeightedAverageModel(DeepSetModel):
 
         pt_correction = QDense(16, name='corrections_output_1', **self.pt_args)(pt_correction)
 
-        ratio_correction = QDense(1, name='jet_correction', **self.pt_args)(pt_norm)
-        ratio_correction = QActivation('tanh', name='jet_correction_tanh')(ratio_correction)
+        ratio_correction = QDense(1, name='ratio_correction', **self.pt_args)(pt_norm)
+        ratio_correction = QActivation('tanh', name='ratio_correction_tanh')(ratio_correction)
 
         pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, ratio_correction])
 
@@ -167,8 +167,8 @@ class WeightedAverageModel(DeepSetModel):
             {'model_input': inputs, 'masking_input': mask, 'pt_input': pt},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
-                self.loss_name + self.output_id_name: sample_weight[0],
-                self.loss_name + self.output_pt_name: sample_weight[1],
+                'prune_low_magnitude_jet_id_output': sample_weight[0],
+                'prune_low_magnitude_pT_output': sample_weight[1],
             },
             epochs=self.training_config['epochs'],
             batch_size=self.training_config['batch_size'],
@@ -261,4 +261,5 @@ class WeightedAverageModel(DeepSetModel):
 
         # Load the model
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
+
 

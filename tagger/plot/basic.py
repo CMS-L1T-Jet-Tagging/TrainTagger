@@ -6,6 +6,7 @@ import awkward as ak
 import matplotlib
 import matplotlib.pyplot as plt
 import mplhep as hep
+from tensorflow.keras.models import Model
 
 # Third parties
 import pandas
@@ -857,10 +858,17 @@ def basic(model, signal_dirs):
     constituents_pt = X_test[:, :, 0]
     mask = constituents_mask(X_test, 10)
     model_outputs = model.jet_model.predict([X_test, mask, constituents_pt])
+    pt_weights = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('pt_weights_output_relu_1').output).predict([X_test, mask, constituents_pt])
+    pt_delta = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('corrections_output_1').output).predict([X_test, mask, constituents_pt])
+    raw_ratio = np.sum((pt_weights * constituents_pt) + pt_delta, axis=1) / np.sum(constituents_pt, axis=1)
 
     # Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1][:, 0]
+
+    # Plot inclusive response and individual flavor
+    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, raw_ratio, os.path.join(plot_dir, 'raw_response'))
 
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
@@ -919,8 +927,6 @@ def basic(model, signal_dirs):
     # Plot input distributions
     plot_input_vars(X_test, model.input_vars, plot_dir)
 
-    # Plot inclusive response and individual flavor
-    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     # Plot the rms of the residuals vs pt
     rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)

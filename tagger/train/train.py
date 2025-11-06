@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 
 # Third parties
 import numpy as np
+import tensorflow as tf
 
 # Import from other modules
 from tagger.data.tools import load_data, to_ML, constituents_mask
@@ -206,12 +207,36 @@ def train(model, out_dir, percent):
     #     print(sample_weight)
 
     # Get input shape
+    ratio_factor = np.zeros([X_train.shape[1], 1])
     input_shape = [X_train.shape[1:], mask.shape[1:], constituents_pt.shape[1:]]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shape, output_shape)
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
+
+    # first train without ratio correction
+    print("Training without ratio correction...")
+    train_ratio = False
+    for layer in model.jet_model.layers:
+        if "ratio_correction" in layer.name or "norm_pt" in layer.name:
+            layer.trainable = train_ratio
+        else:
+            layer.trainable = not train_ratio
+    initialized_weights = model.jet_model.get_layer("ratio_correction").get_weights()
+    model.jet_model.get_layer("ratio_correction").set_weights([np.zeros((16, 1)), np.zeros((1,))])
+    model.compile_model(num_samples)
+    model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+
+    # then train with ratio correction
+    print("Training with ratio correction...")
+    train_ratio = True
+    for layer in model.jet_model.layers:
+        if "ratio_correction" in layer.name or "norm_pt" in layer.name:
+            layer.trainable = train_ratio
+        else:
+            layer.trainable = not train_ratio
+    model.jet_model.get_layer("prune_low_magnitude_ratio_correction").set_weights(initialized_weights)
     model.compile_model(num_samples)
     model.fit([X_train, mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 

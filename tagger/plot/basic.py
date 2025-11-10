@@ -854,10 +854,11 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
+    jet_eta_test = np.load(f"{model.output_directory}/testing_data/jet_eta_test.npy")
 
     constituents_pt = X_test[:, :, 0]
     mask = constituents_mask(X_test, 10)
-    model_outputs = model.jet_model.predict([X_test, mask, constituents_pt])
+    model_outputs = model.jet_model.predict([X_test, mask, constituents_pt, jet_eta_test])
     pt_weights = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('pt_weights_output_relu_1').output).predict([X_test, mask, constituents_pt])
     pt_delta = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('corrections_output_1').output).predict([X_test, mask, constituents_pt])
     raw_ratio = np.sum((pt_weights * constituents_pt) + pt_delta, axis=1) / np.sum(constituents_pt, axis=1)
@@ -889,10 +890,11 @@ def basic(model, signal_dirs):
         else:
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
+            sample_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
             sample_constituents_pt = sample_data[:, :, 0]
             sample_mask = constituents_mask(sample_data, 10)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_constituents_pt])[0]
+            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_constituents_pt, sample_eta])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)

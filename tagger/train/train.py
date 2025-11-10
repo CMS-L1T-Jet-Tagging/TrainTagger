@@ -181,6 +181,7 @@ def train(model, out_dir, percent):
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test, jet_eta_test = to_ML(data_test, class_labels)
+    jet_eta, jet_eta_test = jet_eta.reshape(-1, 1), jet_eta_test.reshape(-1, 1)
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_eta_test)
 
     # Calculate the sample weights for training
@@ -216,12 +217,14 @@ def train(model, out_dir, percent):
     print("Training without ratio correction...")
     train_ratio = False
     for layer in model.jet_model.layers:
-        if "ratio_correction" in layer.name or "norm_pt" in layer.name or "norm_eta" in layer.name:
+        if "ratio_correction" in layer.name:
             layer.trainable = train_ratio
         else:
             layer.trainable = not train_ratio
-    initialized_weights = model.jet_model.get_layer("ratio_correction").get_weights()
-    model.jet_model.get_layer("ratio_correction").set_weights([np.zeros((16, 1)), np.zeros((1,))])
+    initialized_weights = model.jet_model.get_layer("ratio_correction_w").get_weights()
+    initialized_delta = model.jet_model.get_layer("ratio_correction_d").get_weights()
+    model.jet_model.get_layer("ratio_correction_w").set_weights([np.zeros((17, 1)), np.zeros((1,))])
+    model.jet_model.get_layer("ratio_correction_d").set_weights([np.zeros((17, 1)), np.zeros((1,))])
     model.compile_model(num_samples)
     model.fit([X_train, mask, constituents_pt, jet_eta], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
@@ -233,7 +236,8 @@ def train(model, out_dir, percent):
             layer.trainable = train_ratio
         else:
             layer.trainable = not train_ratio
-    model.jet_model.get_layer("prune_low_magnitude_ratio_correction").set_weights(initialized_weights)
+    model.jet_model.get_layer("prune_low_magnitude_ratio_correction_w").set_weights(initialized_weights)
+    model.jet_model.get_layer("prune_low_magnitude_ratio_correction_d").set_weights(initialized_delta)
     model.compile_model(num_samples)
     model.fit([X_train, mask, constituents_pt, jet_eta], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 

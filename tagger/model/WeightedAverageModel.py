@@ -85,8 +85,8 @@ class WeightedAverageModel(DeepSetModel):
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
-        pt_norm = BatchNormalization(name='norm_pt')(pt)
-        jet_eta = BatchNormalization(name='norm_eta')(jet_eta)
+        ratio_input = tf.keras.layers.Concatenate(name='ratio_correction_input')([pt, jet_eta])
+        ratio_input = BatchNormalization(name='norm_ratio_correction_input')(ratio_input)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -137,12 +137,10 @@ class WeightedAverageModel(DeepSetModel):
 
         pt_correction = QDense(16, name='corrections_output_1', **self.pt_args)(pt_correction)
 
-        ratio_inputs = tf.keras.layers.Concatenate(name='ratio_correction_inputs')([pt_norm, jet_id, jet_eta])
-
-        ratio_correction_delta = QDense(1, name='ratio_correction_d', **self.pt_args)(ratio_inputs)
+        ratio_correction_delta = QDense(1, name='ratio_correction_d', **self.pt_args)(ratio_input)
         ratio_correction_delta = QActivation('tanh', name='ratio_correction_tanh')(ratio_correction_delta)
 
-        ratio_correction_w = QDense(1, name='ratio_correction_w', **self.pt_args)(ratio_inputs)
+        ratio_correction_w = QDense(1, name='ratio_correction_w', **self.pt_args)(ratio_input)
         ratio_correction_w = QActivation('relu', name='ratio_correction_relu')(ratio_correction_w)
 
         pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, ratio_correction_w, ratio_correction_delta])

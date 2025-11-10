@@ -341,8 +341,9 @@ def to_ML(data, class_labels):
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
+    jet_eta = np.asarray(data['jet_eta_phys'])
 
-    return X, y, pt_target, truth_pt, reco_pt
+    return X, y, pt_target, truth_pt, reco_pt, jet_eta
 
 
 def constituents_mask(x, features_dim):
@@ -415,7 +416,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
 
 def make_data(
-    infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200.root',
+    infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200_part0.root',
     outdir='training_data/',
     tag=INPUT_TAG,
     extras=EXTRA_FIELDS,

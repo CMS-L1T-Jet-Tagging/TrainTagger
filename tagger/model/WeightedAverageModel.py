@@ -8,7 +8,7 @@ import tensorflow as tf
 from schema import Schema, And, Use, Optional
 import tensorflow_model_optimization as tfmot
 
-from tagger.model.common import WeightedGlobalAverage1D, WeightedPtResponse, choose_aggregator, initialise_tensorflow
+from tagger.model.common import WeightedGlobalAverage1D, WeightedPtResponse, CorrectedPtResponse, choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
@@ -143,10 +143,12 @@ class WeightedAverageModel(DeepSetModel):
         ratio_correction_w = QDense(1, name='ratio_correction_w', **self.pt_args)(ratio_input)
         ratio_correction_w = QActivation('relu', name='ratio_correction_relu')(ratio_correction_w)
 
-        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, ratio_correction_w, ratio_correction_delta])
+        pt_output = WeightedPtResponse(name="weighted_pT_response")([pt_weights, pt_correction, pt])
+
+        corrected_pt_output = CorrectedPtResponse(name="pT_output")([pt_output, ratio_correction_w, ratio_correction_delta])
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt, jet_eta], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt, jet_eta], outputs=[jet_id, corrected_pt_output])
 
         print(self.jet_model.summary())
 

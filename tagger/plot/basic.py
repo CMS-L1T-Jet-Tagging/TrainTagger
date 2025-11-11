@@ -859,9 +859,7 @@ def basic(model, signal_dirs):
     constituents_pt = X_test[:, :, 0]
     mask = constituents_mask(X_test, 10)
     model_outputs = model.jet_model.predict([X_test, mask, constituents_pt, jet_eta_test])
-    pt_weights = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('pt_weights_output_relu_1').output).predict([X_test, mask, constituents_pt, jet_eta_test])
-    pt_delta = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('corrections_output_1').output).predict([X_test, mask, constituents_pt, jet_eta_test])
-    raw_ratio = np.sum((pt_weights * constituents_pt) + pt_delta, axis=1) / np.sum(constituents_pt, axis=1)
+    raw_ratio = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('weighted_pT_response').output).predict([X_test, mask, constituents_pt, jet_eta_test])
 
     # Get classification outputs
     y_pred = model_outputs[0]

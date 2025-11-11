@@ -223,7 +223,7 @@ def train(model, out_dir, percent):
             layer.trainable = not train_ratio
     initialized_weights = model.jet_model.get_layer("ratio_correction_w").get_weights()
     initialized_delta = model.jet_model.get_layer("ratio_correction_d").get_weights()
-    model.jet_model.get_layer("ratio_correction_w").set_weights([np.zeros((17, 1)), np.zeros((1,))])
+    model.jet_model.get_layer("ratio_correction_w").set_weights([np.ones((17, 1)), np.zeros((1,))])
     model.jet_model.get_layer("ratio_correction_d").set_weights([np.zeros((17, 1)), np.zeros((1,))])
     model.compile_model(num_samples)
     model.fit([X_train, mask, constituents_pt, jet_eta], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])

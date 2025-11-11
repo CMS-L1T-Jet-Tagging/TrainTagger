@@ -264,7 +264,8 @@ class WeightedAverageModel(DeepSetModel):
         # Additional custom objects for attention layers
         custom_objects_ = {
             "WeightedGlobalAverage1D": WeightedGlobalAverage1D,
-            "WeightedPtResponse": WeightedPtResponse
+            "WeightedPtResponse": WeightedPtResponse,
+            "CorrectedPtResponse": CorrectedPtResponse,
         }
 
         # Load the model

@@ -150,6 +150,9 @@ def _split_flavor(data):
             do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
 
+    #merge pileup class 
+    data['class_label'] = ak.where(data['class_label'] == temp_pileup_idx, final_pileup_idx, data['class_label'])
+
     return data[jet_ptmin_gen], class_labels
 
 

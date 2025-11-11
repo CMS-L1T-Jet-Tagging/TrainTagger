@@ -146,7 +146,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,model.class_labels['taup']]
     raw_tau_minus = raw_pred_score[:, model.class_labels['taum']]
-    raw_bkg =  raw_pred_score[:, model.class_labels['gluon']] + raw_pred_score[:, model.class_labels['light']]
+    raw_bkg =  raw_pred_score[:, model.class_labels['gluon']] + raw_pred_score[:, model.class_labels['light']] + raw_pred_score[:, model.class_labels['pileup']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -307,7 +307,7 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,model.class_labels['taup']]
     raw_tau_minus = raw_pred_score[:, model.class_labels['taum']]
-    raw_bkg =  raw_pred_score[:, model.class_labels['gluon']] + raw_pred_score[:, model.class_labels['light']]
+    raw_bkg =  raw_pred_score[:, model.class_labels['gluon']] + raw_pred_score[:, model.class_labels['light']] + raw_pred_score[:, model.class_labels['pileup']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -451,7 +451,7 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
     raw_tau_plus = raw_pred_score[:,model.class_labels['taup']]
     raw_tau_minus = raw_pred_score[:, model.class_labels['taum']]
-    raw_bkg =  raw_pred_score[:, model.class_labels['gluon']] + raw_pred_score[:, model.class_labels['light']]
+    raw_bkg =  raw_pred_score[:, model.class_labels['gluon']] + raw_pred_score[:, model.class_labels['light']]  + raw_pred_score[:, model.class_labels['pileup']]
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))

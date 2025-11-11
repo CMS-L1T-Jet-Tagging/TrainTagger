@@ -50,7 +50,7 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
 
     #Sum them together
     bscore_sum = sum(
-            [x_vs_y(pred_score[:, b_index],  pred_score[:,l_index] + pred_score[:,g_index] , apply_light) for pred_score in nn_outputs]
+            [x_vs_y(pred_score[:, b_index],  pred_score[:,l_index] + pred_score[:,g_index] + pred_score[:,g_index] , apply_light) for pred_score in nn_outputs]
         )
 
     return bscore_sum

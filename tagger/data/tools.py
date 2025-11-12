@@ -20,7 +20,6 @@ gc.set_threshold(0)
 
 # >>>>>>>>>>>>>>>>>>>PRIVATE FUNCTIONS<<<<<<<<<<<<<<<<<<<<<<
 
-
 def _add_response_vars(data):
     data['jet_ptUncorr_div_ptGen'] = ak.nan_to_num(
         data['jet_pt_phys'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0

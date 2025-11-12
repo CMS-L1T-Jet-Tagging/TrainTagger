@@ -45,7 +45,7 @@ make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_0/L1TSC4NGJetTagger
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_X_NGJet
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi

@@ -137,13 +137,16 @@ class WeightedAverageModel(DeepSetModel):
 
         pt_correction = QDense(16, name='corrections_output_1', **self.pt_args)(pt_correction)
 
+        pt_output, weighted_pt = WeightedPtResponse(name="weighted_pT_response")([pt_weights, pt_correction, pt])
+
+        # response correction branch, trained in a second fit iteration
+        weighted_pt = BatchNormalization(name='ratio_correction_weighted_pt')(weighted_pt)
+        ratio_input = tf.keras.layers.Concatenate(name='final_ratio_correction_input')([weighted_pt, ratio_input])
         ratio_correction_delta = QDense(1, name='ratio_correction_d', **self.pt_args)(ratio_input)
         ratio_correction_delta = QActivation('tanh', name='ratio_correction_tanh')(ratio_correction_delta)
 
         ratio_correction_w = QDense(1, name='ratio_correction_w', **self.pt_args)(ratio_input)
         ratio_correction_w = QActivation('relu', name='ratio_correction_relu')(ratio_correction_w)
-
-        pt_output = WeightedPtResponse(name="weighted_pT_response")([pt_weights, pt_correction, pt])
 
         corrected_pt_output = CorrectedPtResponse(name="pT_output")([pt_output, ratio_correction_w, ratio_correction_delta])
 

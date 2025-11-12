@@ -232,7 +232,7 @@ def train(model, out_dir, percent):
     print("Training with ratio correction...")
     train_ratio = True
     for layer in model.jet_model.layers:
-        if "ratio_correction" in layer.name or "norm_pt" in layer.name or "norm_eta" in layer.name:
+        if "ratio_correction" in layer.name:
             layer.trainable = train_ratio
         else:
             layer.trainable = not train_ratio

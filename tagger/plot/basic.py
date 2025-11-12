@@ -861,10 +861,11 @@ def basic(model, signal_dirs):
     constituents_pt = X_test[:, :, 0]
     mask = constituents_mask(X_test, 10)
     model_outputs = model.jet_model.predict([X_test, mask, constituents_pt, jet_eta_test])
-    raw_ratio = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('weighted_pT_response').output).predict([X_test, mask, constituents_pt, jet_eta_test])[:, 0]
+    raw_ratio = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('weighted_pT_response').output).predict([X_test, mask, constituents_pt, jet_eta_test])[0][:, 0]
     # Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1][:, 0]
+    from IPython import embed; embed()
 
     # Plot inclusive response and individual flavor
     response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)

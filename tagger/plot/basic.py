@@ -889,7 +889,7 @@ def basic(model, signal_dirs):
         else:
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
+            sample_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0).reshape(-1, 1)
             sample_constituents_pt = sample_data[:, :, 0]
             sample_mask = constituents_mask(sample_data, 10)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)

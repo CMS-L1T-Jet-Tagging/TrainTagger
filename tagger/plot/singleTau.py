@@ -177,8 +177,10 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
 
     else: #scores from new model
 
-        pred_scores, pt_ratios = model.predict([jet_inputs[cuts],
+        pred_scores, pt_ratios = model.predict([
+            jet_inputs[cuts],
             constituents_mask(jet_inputs[cuts], 10),
+            constituents_mask(jet_inputs[cuts], 10)[:, :, 0],
             jet_inputs[cuts][:, :, 0]]
             )
         all_scores[cuts] = tau_score(pred_scores, model.class_labels)
@@ -250,8 +252,10 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
 
     #Get the NN predictions
     eta_selected_inputs = nn_inputs[eta_selection]
-    pred_score, ratio = model.predict([eta_selected_inputs,
+    pred_score, ratio = model.predict([
+        eta_selected_inputs,
         constituents_mask(eta_selected_inputs, 10),
+        constituents_mask(eta_selected_inputs, 10)[:, :, 0],
         eta_selected_inputs[:, :, 0]]
         )
     model_tau = tau_score(pred_score, model.class_labels )
@@ -381,8 +385,10 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
     #Get the model prediction
     nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
-    pred_score, ratio = model.predict([nn_inputs,
+    pred_score, ratio = model.predict([
+        nn_inputs,
         constituents_mask(nn_inputs, 10),
+        constituents_mask(nn_inputs, 10)[:, :, 0],
         nn_inputs[:, :, 0]]
         )
 

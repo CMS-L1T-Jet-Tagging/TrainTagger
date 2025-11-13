@@ -11,7 +11,7 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_eta_test):
+def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
 
@@ -19,7 +19,6 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_eta
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
-    np.save(os.path.join(out_dir, "testing_data/jet_eta_test.npy"), jet_eta_test)
 
     print(f"Test data saved to {out_dir}")
 
@@ -28,7 +27,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
     """
     Re-balancing the class weights and then flatten them based on truth pT
     """
-    if weightingMethod not in ["none", "ptref", "onlyclass", "onlypt"]:
+    if weightingMethod not in ["none", "ptref", "onlyclass"]:
         raise ValueError(
             "Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass."
         )
@@ -42,8 +41,6 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
     pt_bins = np.array(
         [15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, np.inf]
     )  # Use np.inf to cover all higher values
-    if low_pt:
-        pt_bins = pt_bins[pt_bins <= 50]
 
     if weightingMethod == "onlyclass":
         pt_bins = np.array([0.0, np.inf])  # Use np.inf to cover all higher values
@@ -123,45 +120,6 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         return None
     return sample_weights
 
-def flat_pt_weights(reco_pt_train):
-    """
-    Simple flattening of pT spectrum
-    """
-    num_samples = reco_pt_train.shape[0]
-
-    sample_weights = np.ones(num_samples)
-
-    # Define pT bins (without the high pT part we don't care about)
-    pt_bins = np.array(
-        [15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, np.inf]
-    )  # Use np.inf to cover all higher values
-
-    # Calculate counts per pT bin
-    pt_counts, _ = np.histogram(reco_pt_train, bins=pt_bins)
-
-    # Compute the maximum counts per pT bin over all classes
-    max_counts_per_bin = max(pt_counts)
-
-    # Compute weights per pT bin
-    weights_per_pt_bin = np.zeros(len(pt_bins) - 1)
-    for bin_idx in range(len(pt_bins) - 1):
-        bin_count = pt_counts[bin_idx]
-        if bin_count == 0:
-            weights_per_pt_bin[bin_idx] = 0.0
-        else:
-            weights_per_pt_bin[bin_idx] = max_counts_per_bin / bin_count
-
-    # Assign weights to samples
-    bin_indices = np.digitize(reco_pt_train, pt_bins) - 1
-
-    sample_weights = weights_per_pt_bin[bin_indices]
-    sample_weights = np.where(bin_indices < 4, sample_weights * 1.5, sample_weights)
-
-    # Normalize sample weights
-    sample_weights = sample_weights / np.mean(sample_weights)
-
-    return sample_weights
-
 
 def train(model, out_dir, percent):
 
@@ -174,15 +132,15 @@ def train(model, out_dir, percent):
     )
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, jet_eta = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
 
     mask = constituents_mask(X_train, 10)
+    pt_mask = mask[:, :, 0]
     constituents_pt = X_train[:, :, 0]
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_eta_test = to_ML(data_test, class_labels)
-    jet_eta, jet_eta_test = jet_eta.reshape(-1, 1), jet_eta_test.reshape(-1, 1)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, jet_eta_test)
+    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
+    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
     sample_weight_class = train_weights(
@@ -206,40 +164,16 @@ def train(model, out_dir, percent):
 
     # Get input shape
     ratio_factor = np.zeros([X_train.shape[1], 1])
-    input_shape = [X_train.shape[1:], mask.shape[1:], constituents_pt.shape[1:], jet_eta.shape[1:]]  # First dimension is batch size
+    input_shape = [X_train.shape[1:], mask.shape[1:], pt_mask.shape[1:], constituents_pt.shape[1:]]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shape, output_shape)
+
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    # first train without ratio correction
-    print("Training without ratio correction...")
-    train_ratio = False
-    for layer in model.jet_model.layers:
-        if "ratio_correction" in layer.name:
-            layer.trainable = train_ratio
-        else:
-            layer.trainable = not train_ratio
-    initialized_weights = model.jet_model.get_layer("ratio_correction_w").get_weights()
-    initialized_delta = model.jet_model.get_layer("ratio_correction_d").get_weights()
-    model.jet_model.get_layer("ratio_correction_w").set_weights([np.zeros((33, 1)), np.ones((1,))])
-    model.jet_model.get_layer("ratio_correction_d").set_weights([np.zeros((33, 1)), np.zeros((1,))])
     model.compile_model(num_samples)
-    model.fit([X_train, mask, constituents_pt, jet_eta], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
-
-    # then train with ratio correction
-    print("Training with ratio correction...")
-    train_ratio = True
-    for layer in model.jet_model.layers:
-        if "ratio_correction" in layer.name:
-            layer.trainable = train_ratio
-        else:
-            layer.trainable = not train_ratio
-    model.jet_model.get_layer("prune_low_magnitude_ratio_correction_w").set_weights(initialized_weights)
-    model.jet_model.get_layer("prune_low_magnitude_ratio_correction_d").set_weights(initialized_delta)
-    model.compile_model(num_samples)
-    model.fit([X_train, mask, constituents_pt, jet_eta], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.fit([X_train, mask, pt_mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     model.save()
 

@@ -61,8 +61,10 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
 
 def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     #Btag input list for first 4 jets
-    nn_outputs = [model.predict([np.asarray(jet_nn_inputs[:, i]),
+    nn_outputs = [model.predict([
+        np.asarray(jet_nn_inputs[:, i]),
         constituents_mask(np.asarray(jet_nn_inputs[:, i]), 10),
+        constituents_mask(np.asarray(jet_nn_inputs[:, i]), 10)[:, :, 0],
         np.asarray(jet_nn_inputs[:, i])[:, :, 0]])[0]
         for i in range(0,n_jets)]
 

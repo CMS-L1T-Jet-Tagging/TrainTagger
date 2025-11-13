@@ -856,20 +856,15 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-    jet_eta_test = np.load(f"{model.output_directory}/testing_data/jet_eta_test.npy")
 
     constituents_pt = X_test[:, :, 0]
     mask = constituents_mask(X_test, 10)
-    model_outputs = model.jet_model.predict([X_test, mask, constituents_pt, jet_eta_test])
-    raw_ratio = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('weighted_pT_response').output).predict([X_test, mask, constituents_pt, jet_eta_test])[0][:, 0]
+    pt_mask = mask[:, :, 0]
+    model_outputs = model.jet_model.predict([X_test, mask, pt_mask, constituents_pt])
+
     # Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1][:, 0]
-    from IPython import embed; embed()
-
-    # Plot inclusive response and individual flavor
-    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, raw_ratio, os.path.join(plot_dir, 'raw_response'))
 
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
@@ -890,11 +885,11 @@ def basic(model, signal_dirs):
         else:
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0).reshape(-1, 1)
             sample_constituents_pt = sample_data[:, :, 0]
             sample_mask = constituents_mask(sample_data, 10)
+            sample_pt_mask = sample_mask[:, :, 0]
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_constituents_pt, sample_eta])[0]
+            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)
@@ -929,6 +924,8 @@ def basic(model, signal_dirs):
     # Plot input distributions
     plot_input_vars(X_test, model.input_vars, plot_dir)
 
+    # Plot inclusive response and individual flavor
+    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     # Plot the rms of the residuals vs pt
     rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)

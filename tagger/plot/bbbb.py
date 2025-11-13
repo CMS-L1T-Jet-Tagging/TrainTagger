@@ -44,8 +44,12 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
     btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
 
     #Get the nn outputs
-    nn_outputs = [model.predict([nn_input, constituents_mask(nn_input, 10), nn_input[:, :, 0]])[0] for nn_input in btag_inputs]
-
+    nn_outputs = [model.predict([
+        nn_input,
+        constituents_mask(nn_input, 10),
+        constituents_mask(nn_input, 10)[:, :, 0],
+        nn_input[:, :, 0]])[0]
+        for nn_input in btag_inputs]
 
     #Sum them together
     bscore_sum = sum(

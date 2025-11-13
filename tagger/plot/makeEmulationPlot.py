@@ -32,12 +32,16 @@ def doPlots(model, outputdir, inputdir):
     labels = list(class_labels.keys())
     model.firmware_convert("temp", build=False)
 
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict([np.ascontiguousarray(X_test),
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict([
+        np.ascontiguousarray(X_test),
         np.ascontiguousarray(constituents_mask(X_test, 10)),
+        np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
         np.ascontiguousarray(X_test[:, :, 0])]
         )
-    y_class, y_ptreg = model.jet_model.predict([np.ascontiguousarray(X_test),
+    y_class, y_ptreg = model.jet_model.predict([
+        np.ascontiguousarray(X_test),
         np.ascontiguousarray(constituents_mask(X_test, 10)),
+        np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
         np.ascontiguousarray(X_test[:, :, 0])]
         )
     jet_pt_phys = np.array(data['jet_pt_phys'])

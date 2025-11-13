@@ -341,9 +341,8 @@ def to_ML(data, class_labels):
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
-    jet_eta = np.asarray(data['jet_eta_phys'])
 
-    return X, y, pt_target, truth_pt, reco_pt, jet_eta
+    return X, y, pt_target, truth_pt, reco_pt
 
 
 def constituents_mask(x, features_dim):

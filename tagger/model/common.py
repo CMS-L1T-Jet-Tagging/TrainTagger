@@ -130,7 +130,7 @@ class WeightedGlobalAverage1D(tf.keras.layers.Layer, tfmot.sparsity.keras.Prunab
     def call(self, inputs):
         inp, weights = inputs
         weights = tf.keras.layers.Reshape((16, 1), name='reshape_pt_weights')(weights)
-        weighted_inputs = inp * weights
+        weighted_inputs = tf.keras.layers.Multiply()([inp, weights])
         weighted_pool = GlobalAveragePooling1D()(weighted_inputs)
         return weighted_pool
 

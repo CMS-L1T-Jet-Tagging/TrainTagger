@@ -173,13 +173,19 @@ def train(model, out_dir, percent):
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-    taus_only = (y_train[:, class_labels['taup']] + y_train[:, class_labels['taum']]) == 1
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = X_train[taus_only], y_train[taus_only], pt_target_train[taus_only], truth_pt_train[taus_only], reco_pt_train[taus_only]
+    low_pt = reco_pt_train < 200
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = (
+        X_train[low_pt],
+        y_train[low_pt],
+        pt_target_train[low_pt],
+        truth_pt_train[low_pt],
+        reco_pt_train[low_pt],
+    )
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    taus_only_test = (y_test[:, -3] + y_test[:, -4]) == 1
-    X_test, y_test, truth_pt_test, reco_pt_test = X_test[taus_only_test], y_test[taus_only_test], truth_pt_test[taus_only_test], reco_pt_test[taus_only_test]
+    low_pt_test = reco_pt_test < 200
+    X_test, y_test, truth_pt_test, reco_pt_test = X_test[low_pt_test], y_test[low_pt_test], truth_pt_test[low_pt_test], reco_pt_test[low_pt_test]
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
@@ -187,7 +193,7 @@ def train(model, out_dir, percent):
         y_train,
         reco_pt_train,
         class_labels,
-        weightingMethod=model.training_config['weight_method'],
+        weightingMethod="ptref",
         debug=model.run_config['debug'],
     )
     if model.run_config['debug']:

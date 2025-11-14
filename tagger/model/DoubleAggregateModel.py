@@ -8,7 +8,7 @@ import tensorflow as tf
 from schema import Schema, And, Use, Optional
 import tensorflow_model_optimization as tfmot
 
-from tagger.model.common import WeightedGlobalAverage1D, WeightedPtResponse, choose_aggregator, initialise_tensorflow
+from tagger.model.common import choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
@@ -68,17 +68,14 @@ class DoubleAggregateModel(DeepSetModel):
                 self.quantization_config['pt_output_quantization'][0],
                 self.quantization_config['pt_output_quantization'][1],
                 alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'kernel_initializer' : 'lecun_uniform',
+            )
         }
 
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
         mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
-        pt = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_input')
-        mask_permuted = tf.keras.layers.Permute((2,1), name='pt_weights_permute')(mask)
-        pt_mask = tf.keras.layers.Cropping1D(cropping=((9,0)), name='pt_mask_crop')(mask_permuted)
-        pt_mask = tf.keras.layers.Flatten(name='pt_mask')(pt_mask)
+        pt_mask = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_mask_input')
+        pt = tf.keras.layers.Input(shape=inputs_shape[3], name='pt_input')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
@@ -91,14 +88,12 @@ class DoubleAggregateModel(DeepSetModel):
             )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
-        # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-
         # Apply the constituents mask
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
-        # Weighted Global Average Pooling for jet id
-        main_id = GlobalAveragePooling1D(name='global_avg_pool_jet_id')(main)
+        # Weighted Global Average Pooling
+        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
+        main_jet_id = tf.keras.layers.GlobalAveragePooling1D(name='global_avg_pool_classification')(main)
 
         # Weighted Pt Response branch
         main_regression = tf.keras.layers.Permute((2,1), name='pt_response_permute')(main)
@@ -108,7 +103,7 @@ class DoubleAggregateModel(DeepSetModel):
         # Make fully connected dense layers for classification task
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             if iclass == 0:
-                jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **self.common_args)(main_id)
+                jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **self.common_args)(main_jet_id)
             else:
                 jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **self.common_args)(jet_id)
             jet_id = QActivation(
@@ -122,28 +117,30 @@ class DoubleAggregateModel(DeepSetModel):
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         # Make fully connected dense layers for regression task
-        # pt weights
-        pt_weights = QDense(16, name='weights_output_dense', **self.pt_args)(main_regression)
+        pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(main_regression)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='pt_weights_relu_2'
-            )(pt_weights)
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
+            name='pt_weights_output_relu')(pt_weights)
 
-        # pt corrections
-        pt_correction = QDense(16, name='weights_output', **self.pt_args)(main_regression)
+        pt_correction = QDense(16, name='Dense_pt_corrections_output', **self.common_args)(main_regression)
 
-        jet_correction = QDense(1, name='jet_correction_output', **self.pt_args)(pt)
-        jet_correction = QActivation('tanh', name='jet_correction_tanh')(jet_correction)
-
-        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, jet_correction])
+        weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
+        pt_correction = tf.keras.layers.Multiply(name='mask_pt_corrections')([pt_correction, pt_mask])
+        corrected_pt = tf.keras.layers.Add(name='add_corrections')([weighted_pt, pt_correction])
+        pt_output = QDense(1, name='pT_output',
+            kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
+            use_bias = False,
+            trainable=False,
+            **self.pt_args)(corrected_pt) # fix weights at 1 to perform sum, not updated during training
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
@@ -158,13 +155,14 @@ class DoubleAggregateModel(DeepSetModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        inputs, mask, pt = X_train
+        # Train the model using hyperparameters in yaml config
+        inputs, mask, pt_mask, pt = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'masking_input': mask, 'pt_input': pt},
+            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
-                self.loss_name + self.output_id_name: sample_weight[0],
-                self.loss_name + self.output_pt_name: sample_weight[1],
+                'prune_low_magnitude_jet_id_output': sample_weight[0],
+                'prune_low_magnitude_pT_output': sample_weight[1],
             },
             epochs=self.training_config['epochs'],
             batch_size=self.training_config['batch_size'],
@@ -251,8 +249,6 @@ class DoubleAggregateModel(DeepSetModel):
 
         # Additional custom objects for attention layers
         custom_objects_ = {
-            "WeightedGlobalAverage1D": WeightedGlobalAverage1D,
-            "WeightedPtResponse": WeightedPtResponse
         }
 
         # Load the model

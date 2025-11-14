@@ -126,30 +126,6 @@ class AttentionPooling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer
     def get_prunable_weights(self):
         return self.score_dense._trainable_weights
 
-class WeightedGlobalAverage1D(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
-    def call(self, inputs):
-        inp, weights = inputs
-        weights = tf.keras.layers.Reshape((16, 1), name='reshape_pt_weights')(weights)
-        weighted_inputs = tf.keras.layers.Multiply()([inp, weights])
-        weighted_pool = GlobalAveragePooling1D()(weighted_inputs)
-        return weighted_pool
-
-    def get_prunable_weights(self):
-        return [] # Required for pruning support
-
-
-class WeightedPtResponse(tf.keras.layers.Layer):
-    def call(self, inputs):
-        pt_weights, pt_correction, pt, pt_mask = inputs
-        weighted_pt = pt_weights * pt + pt_correction * pt_mask
-        summed_weighted_pt = tf.reduce_sum(weighted_pt, axis=1)
-        summed_weighted_pt = tf.expand_dims(summed_weighted_pt, axis=-1)
-        response = summed_weighted_pt / tf.expand_dims(tf.reduce_sum(pt, axis=1), axis=-1)
-        return response
-
-    def get_prunable_weights(self):
-        return [] # Required for pruning support
-
 
 def initialise_tensorflow(num_threads):
     # Set some tensorflow constants

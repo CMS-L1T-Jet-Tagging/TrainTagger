@@ -8,7 +8,7 @@ import tensorflow as tf
 from schema import Schema, And, Use, Optional
 import tensorflow_model_optimization as tfmot
 
-from tagger.model.common import WeightedGlobalAverage1D, WeightedPtResponse, choose_aggregator, initialise_tensorflow
+from tagger.model.common import choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
@@ -68,8 +68,7 @@ class WeightedAverageModel(DeepSetModel):
                 self.quantization_config['pt_output_quantization'][0],
                 self.quantization_config['pt_output_quantization'][1],
                 alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'kernel_initializer' : 'lecun_uniform',
+            )
         }
 
         # Initialize inputs
@@ -93,19 +92,19 @@ class WeightedAverageModel(DeepSetModel):
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
         # Make the pT weights and corrections
-        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_weights', **self.common_args)(main)
-        pt_weights = tf.keras.layers.Flatten(name='pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
-        pt_weights = QActivation('relu', name='pt_weights_relu')(pt_weights)  # Ensure positive weights
+        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
+        pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
+        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
-        pt_correction = QConv1D(filters=1, kernel_size=1, name='Conv1D_correction', **self.common_args)(main)
-        pt_correction = tf.keras.layers.Flatten(name='pt_correction_flat')(pt_correction)  # shape: (batch, timesteps)
+        pt_correction = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_correction', **self.common_args)(main)
+        pt_correction = tf.keras.layers.Flatten(name='Conv1D_pt_correction_flat')(pt_correction)  # shape: (batch, timesteps)
         pt_correction = tf.keras.layers.Multiply(name='apply_pt_mask_corrections')([pt_correction, pt_mask])
 
-        # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-
         # Weighted Global Average Pooling
-        main = WeightedGlobalAverage1D(name='weighted_avg_pool')([main, pt_weights]) # Apply the learned pT weights before pooling
+        weights = tf.keras.layers.Reshape((16, 1), name='reshape_pt_weights')(pt_weights)
+        weighted_inputs = tf.keras.layers.Multiply()([main, weights])
+        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
+        main = tf.keras.layers.GlobalAveragePooling1D()(weighted_inputs)
 
         # Now split into jet ID and pt regression
         # Make fully connected dense layers for classification task
@@ -125,14 +124,21 @@ class WeightedAverageModel(DeepSetModel):
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         # Make fully connected dense layers for regression task
-        pt_weights = QDense(16, name='pt_weights_output', **self.pt_args)(pt_weights)
+        pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
             name='pt_weights_output_relu')(pt_weights)
 
-        pt_correction = QDense(16, name='corrections_output', **self.pt_args)(pt_correction)
+        pt_correction = QDense(16, name='Dense_pt_corrections_output', **self.common_args)(pt_correction)
 
-        pt_output = WeightedPtResponse(name="pT_output")([pt_weights, pt_correction, pt, pt_mask])
+        weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
+        pt_correction = tf.keras.layers.Multiply(name='mask_pt_corrections')([pt_correction, pt_mask])
+        corrected_pt = tf.keras.layers.Add(name='add_corrections')([weighted_pt, pt_correction])
+        pt_output = QDense(1, name='pT_output',
+            kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
+            use_bias = False,
+            trainable=False,
+            **self.pt_args)(corrected_pt) # fix weights at 1 to perform sum, not updated during training
 
         # Define the model using both branches
         self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt], outputs=[jet_id, pt_output])
@@ -250,8 +256,6 @@ class WeightedAverageModel(DeepSetModel):
 
         # Additional custom objects for attention layers
         custom_objects_ = {
-            "WeightedGlobalAverage1D": WeightedGlobalAverage1D,
-            "WeightedPtResponse": WeightedPtResponse,
         }
 
         # Load the model

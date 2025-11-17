@@ -87,7 +87,8 @@ def doPlots(model, outputdir, inputdir):
         "",
         'Regression Output',
         'a.u.',
-        range=(0, 2),
+        log = 'linear',
+        x_range=(0, 2),
     )
     bit_accurate = np.count_nonzero(
         (np.array(data['jet_SC4NGJet_score_regression']) - np.array(modelsAndNames['Y_hls_predict_reg'][:, 0]))
@@ -113,7 +114,8 @@ def doPlots(model, outputdir, inputdir):
             "",
             style.CLASS_LABEL_STYLE[label] + ' score',
             'a.u.',
-            range=(0, 1),
+            log = 'linear',
+            x_range=(0, 1),
         )
         bit_accurate = np.count_nonzero(
             (np.array(data['jet_SC4NGJet_score_' + label]) - np.array(modelsAndNames['Y_hls_predict'][:, i]))
@@ -224,7 +226,8 @@ def doPlots(model, outputdir, inputdir):
         "Jet Regression",
         'Jet Response (L1/Gen)',
         'a.u.',
-        range=(0, 2),
+        log = 'linear',
+        x_range=(0, 2),
     )
     plt.savefig(outputdir + "/response_emulation" + ".png", bbox_inches='tight')
     plt.savefig(outputdir + "/response_emulation" + ".pdf", bbox_inches='tight')

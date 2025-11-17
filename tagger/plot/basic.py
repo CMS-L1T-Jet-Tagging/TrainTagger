@@ -277,7 +277,8 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
         '',
         r'$p_T$ [GeV]',
         'a.u',
-        range=(0, 300),
+        log = 'linear',
+        x_range=(0, 300),
     )
     save_path = os.path.join(plot_dir, "pt_hist")
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')

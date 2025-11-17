@@ -287,24 +287,51 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     return
 
 
-def plot_input_vars(X_test, input_vars, plot_dir):
+def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
 
     save_dir = os.path.join(plot_dir, 'inputs')
     os.makedirs(save_dir, exist_ok=True)
 
+    is_filled = (X_test[:, :, 16] == 1)
+
     for i in range(len(input_vars)):
+        inputs = []
+        labels = []
+        for iclass, class_label in enumerate(class_labels):
+            labels.append(style.INPUT_FEATURE_STYLE[input_vars[i]] + " " + style.CLASS_LABEL_STYLE[class_label])
+            # Filter by class (use [:,None] to ignore the candidate dimension) and by if is_filled is 1
+            # don't want all 0 inputs in our plots but also want to preserve real 0s in the plots
+            input_per_class = X_test[:, :, i][(y_test[:, iclass] == 1)[:,None] & is_filled ].flatten()
+            inputs.append(input_per_class[input_per_class != 0])
+            
         plot_histo(
-            [X_test[:, :, i].flatten()],
-            [style.INPUT_FEATURE_STYLE[input_vars[i]]],
+            inputs,
+            labels,
             '',
             style.INPUT_FEATURE_STYLE[input_vars[i]],
             'a.u',
-            range=(np.min(X_test[:, :, i]), np.max(X_test[:, :, i])),
+            log = 'log',
+            x_range=(np.min(X_test[:, :, i]), np.max(X_test[:, :, i])),
         )
-        save_path = os.path.join(save_dir, input_vars[i])
+        save_path = os.path.join(save_dir, input_vars[i]+"_split")
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
         plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
         plt.close()
+
+        for i in range(len(input_vars)):
+            plot_histo(
+                [X_test[:, :, i][is_filled].flatten()],
+                [style.INPUT_FEATURE_STYLE[input_vars[i]]],
+                '',
+                style.INPUT_FEATURE_STYLE[input_vars[i]],
+                'a.u',
+                log = 'log',
+                x_range=(np.min(X_test[:, :, i]), np.max(X_test[:, :, i])),
+            )
+            save_path = os.path.join(save_dir, input_vars[i])
+            plt.savefig(f"{save_path}.png", bbox_inches='tight')
+            plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+            plt.close()
 
 
 def get_response(truth_pt, reco_pt, pt_ratio):
@@ -913,7 +940,7 @@ def basic(model, signal_dirs):
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     # Plot input distributions
-    plot_input_vars(X_test, model.input_vars, plot_dir)
+    plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, plot_dir)
 
     # Plot inclusive response and individual flavor
     response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)

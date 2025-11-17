@@ -16,6 +16,22 @@ from tagger.plot import common, style
 
 style.set_style()
 
+def quantize(value, bits):
+    """
+    Quantizes a floating point number to an integer, given a certain number of bits.
+    The range is from 0.0 to 1.0.
+    
+    Args:
+    value (float): The value to be quantized.
+    bits (int): The number of bits used for quantization.
+    
+    Returns:
+    int: The quantized value.
+    """
+    quantized_value = np.round(value * (2**(bits - 1)))
+    value = int(quantized_value) 
+    return value / (2**(bits - 1))
+
 
 def rms(array):
     return np.sqrt(np.mean(array**2))
@@ -38,10 +54,9 @@ def doPlots(model, outputdir, inputdir):
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg
-
+    y_hls = np.array([[quantize(i,8) for i in xi] for xi in y_hls])
     modelsAndNames["Y_hls_predict"] = y_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
-
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):

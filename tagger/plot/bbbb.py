@@ -48,7 +48,8 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
         nn_input,
         constituents_mask(nn_input, 10),
         constituents_mask(nn_input, 10)[:, :, 0],
-        nn_input[:, :, 0]])[0]
+        nn_input[:, :, 0]])[0],
+        np.sum(nn_input[:, :, 0], axis=1).reshape(-1,1)]
         for nn_input in btag_inputs]
 
     #Sum them together

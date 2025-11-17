@@ -137,6 +137,7 @@ def train(model, out_dir, percent):
     mask = constituents_mask(X_train, 10)
     pt_mask = mask[:, :, 0]
     constituents_pt = X_train[:, :, 0]
+    inverse_jet_pt = (1.0 / (reco_pt_train + 1e-6)).reshape(-1, 1)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
@@ -164,7 +165,7 @@ def train(model, out_dir, percent):
 
     # Get input shape
     ratio_factor = np.zeros([X_train.shape[1], 1])
-    input_shape = [X_train.shape[1:], mask.shape[1:], pt_mask.shape[1:], constituents_pt.shape[1:]]  # First dimension is batch size
+    input_shape = [X_train.shape[1:], mask.shape[1:], pt_mask.shape[1:], constituents_pt.shape[1:], inverse_jet_pt.shape[1:]]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shape, output_shape)
@@ -173,7 +174,7 @@ def train(model, out_dir, percent):
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
     model.compile_model(num_samples)
-    model.fit([X_train, mask, pt_mask, constituents_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     model.save()
 

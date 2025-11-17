@@ -142,12 +142,14 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
         input1,
         constituents_mask(input1, 10),
         constituents_mask(input1, 10)[:, :, 0],
-        input1[:, :, 0]])
+        input1[:, :, 0],
+        np.sum(input1[:, :, 0], axis=1).reshape(-1,1)])
     pred_score2, ratio2 = model.predict([
         input2,
         constituents_mask(input2, 10),
         constituents_mask(input2, 10)[:, :, 0],
-        input2[:, :, 0]])
+        input2[:, :, 0],
+        np.sum(input2[:, :, 0], axis=1).reshape(-1,1)])
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())
@@ -217,7 +219,8 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
         eta_selected_inputs,
         constituents_mask(eta_selected_inputs, 10),
         constituents_mask(eta_selected_inputs, 10)[:, :, 0],
-        eta_selected_inputs[:, :, 0]]
+        eta_selected_inputs[:, :, 0],
+        np.sum(eta_selected_inputs[:, :, 0], axis=1).reshape(-1,1)]
         )
     model_tau = tau_score(pred_score, model.class_labels )
 
@@ -356,7 +359,8 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
         nn_inputs,
         constituents_mask(nn_inputs, 10),
         constituents_mask(nn_inputs, 10)[:, :, 0],
-        nn_inputs[:, :, 0]])
+        nn_inputs[:, :, 0],
+        np.sum(nn_inputs[:, :, 0], axis=1).reshape(-1,1)])
 
     nn_tauscore_raw = tau_score(pred_score, model.class_labels )
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())

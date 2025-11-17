@@ -36,13 +36,15 @@ def doPlots(model, outputdir, inputdir):
         np.ascontiguousarray(X_test),
         np.ascontiguousarray(constituents_mask(X_test, 10)),
         np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
-        np.ascontiguousarray(X_test[:, :, 0])]
+        np.ascontiguousarray(X_test[:, :, 0]),
+        np.ascontiguousarray(np.sum(X_test[:, :, 0], axis=1).reshape(-1,1))]
         )
     y_class, y_ptreg = model.jet_model.predict([
         np.ascontiguousarray(X_test),
         np.ascontiguousarray(constituents_mask(X_test, 10)),
         np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
-        np.ascontiguousarray(X_test[:, :, 0])]
+        np.ascontiguousarray(X_test[:, :, 0]),
+        np.ascontiguousarray(np.sum(X_test[:, :, 0], axis=1).reshape(-1,1))]
         )
     jet_pt_phys = np.array(data['jet_pt_phys'])
 

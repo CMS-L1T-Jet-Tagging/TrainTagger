@@ -162,7 +162,8 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
         np.asarray(jet_nn_inputs[:, i]),
         constituents_mask(np.asarray(jet_nn_inputs[:, i]), 10),
         constituents_mask(np.asarray(jet_nn_inputs[:, i]), 10)[:, :, 0],
-        np.asarray(jet_nn_inputs[:, i])[:, :, 0]])[0] for i in range(0,n_jets)
+        np.asarray(jet_nn_inputs[:, i])[:, :, 0],
+        np.sum(np.asarray(jet_nn_input[:, :, 0]), axis=1).reshape(-1,1)])[0] for i in range(0,n_jets)
         ]
 
     #Calculate the output sum

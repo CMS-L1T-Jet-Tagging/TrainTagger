@@ -181,7 +181,8 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
             jet_inputs[cuts],
             constituents_mask(jet_inputs[cuts], 10),
             constituents_mask(jet_inputs[cuts], 10)[:, :, 0],
-            jet_inputs[cuts][:, :, 0]]
+            jet_inputs[cuts][:, :, 0],
+            np.sum(jet_inputs[:, :, 0], axis=1).reshape(-1,1)]
             )
         all_scores[cuts] = tau_score(pred_scores, model.class_labels)
         all_corr_pts[cuts] = pt_ratios.flatten() * jet_pts[cuts]
@@ -256,7 +257,8 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
         eta_selected_inputs,
         constituents_mask(eta_selected_inputs, 10),
         constituents_mask(eta_selected_inputs, 10)[:, :, 0],
-        eta_selected_inputs[:, :, 0]]
+        eta_selected_inputs[:, :, 0],
+        np.sum(eta_selected_inputs[:, :, 0], axis=1).reshape(-1,1)]
         )
     model_tau = tau_score(pred_score, model.class_labels )
 
@@ -389,7 +391,8 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         nn_inputs,
         constituents_mask(nn_inputs, 10),
         constituents_mask(nn_inputs, 10)[:, :, 0],
-        nn_inputs[:, :, 0]]
+        nn_inputs[:, :, 0],
+        np.sum(nn_inputs[:, :, 0], axis=1).reshape(-1,1)]
         )
 
     nn_tauscore_raw = tau_score(pred_score, model.class_labels )

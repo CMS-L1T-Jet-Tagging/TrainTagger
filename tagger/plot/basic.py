@@ -860,7 +860,8 @@ def basic(model, signal_dirs):
     constituents_pt = X_test[:, :, 0]
     mask = constituents_mask(X_test, 10)
     pt_mask = mask[:, :, 0]
-    model_outputs = model.jet_model.predict([X_test, mask, pt_mask, constituents_pt])
+    inverse_reco_pt_test = (1.0 / reco_pt_test).reshape(-1, 1)
+    model_outputs = model.jet_model.predict([X_test, mask, pt_mask, constituents_pt, inverse_reco_pt_test])
 
     # Get classification outputs
     y_pred = model_outputs[0]
@@ -885,6 +886,7 @@ def basic(model, signal_dirs):
         else:
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
+            sample_reco_pt = (1.0 / np.concatenate((sample_train[-1], sample_test[-1]), axis=0)).reshape(-1, 1)
             sample_constituents_pt = sample_data[:, :, 0]
             sample_mask = constituents_mask(sample_data, 10)
             sample_pt_mask = sample_mask[:, :, 0]

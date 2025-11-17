@@ -891,7 +891,7 @@ def basic(model, signal_dirs):
             sample_mask = constituents_mask(sample_data, 10)
             sample_pt_mask = sample_mask[:, :, 0]
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt])[0]
+            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt, sample_reco_pt])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)

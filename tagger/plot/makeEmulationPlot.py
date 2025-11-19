@@ -28,7 +28,7 @@ def quantize(value, bits):
     Returns:
     int: The quantized value.
     """
-    quantized_value = np.round(value * (2**(bits - 1)))
+    quantized_value = np.round(value * (2**(bits -1 )))
     value = int(quantized_value) 
     return value / (2**(bits - 1))
 
@@ -54,13 +54,13 @@ def doPlots(model, outputdir, inputdir):
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg
-    y_hls = np.array([[quantize(i,8) for i in xi] for xi in y_hls])
-    modelsAndNames["Y_hls_predict"] = y_hls
+    y_quant_hls = np.array([[quantize(i,8) for i in xi] for xi in y_hls])
+    modelsAndNames["Y_hls_predict"] = y_quant_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
-            if abs(np.array(data['jet_SC4NGJet_score_' + label])[iJet] - y_hls[iJet][i]) > 0.001:
+            if abs(np.array(data['jet_SC4NGJet_score_' + label])[iJet] - y_quant_hls[iJet][i]) > 0.001:
                 print_class = True
         if print_class:
             print("=== " + str(iJet) + " ===")
@@ -68,6 +68,7 @@ def doPlots(model, outputdir, inputdir):
             for i, label in enumerate(labels):
                 print(label + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_' + label])[iJet]))
                 print(label + ": hls : " + str(y_hls[iJet][i]))
+                print(label + ": quant hls : " + str(y_quant_hls[iJet][i]))
                 print(label + ": tf : " + str(y_class[iJet][i]))
 
             if abs(np.array(data['jet_SC4NGJet_score_regression'])[iJet] - y_ptreg_hls[iJet]) > 0.001:

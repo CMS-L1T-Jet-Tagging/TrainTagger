@@ -106,7 +106,7 @@ def plot_2d(variable_one, variable_two, range_one, range_two, name_one, name_two
     return fig
 
 
-def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1)):
+def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1), bins = 50):
     plt.clf()
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
@@ -117,17 +117,20 @@ def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1
     else:
         colours = style.colours
         linestyle = style.LINESTYLES
+    colour_list = []
     for i, histo in enumerate(variable):
-
-        ax.hist(
-            histo,
-            bins=50,
+        colour_list.append(colours[i])
+        
+    ax.hist(
+            variable,
+            bins=bins,
             range=x_range,
             histtype="step",
-            color=colours[i],
-            label=name[i],
+            stacked=False,
+            color=[colours[i] for i in range(len(variable))],
+            label=name,
             linewidth=style.LINEWIDTH - 1.5,
-            linestyle=linestyle[i],
+            linestyle=linestyle,
             density=True,
         )
     ax.grid(True)

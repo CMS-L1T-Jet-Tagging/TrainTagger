@@ -302,7 +302,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
             # Filter by class (use [:,None] to ignore the candidate dimension) and by if is_filled is 1
             # don't want all 0 inputs in our plots but also want to preserve real 0s in the plots
             input_per_class = X_test[:, :, i][(y_test[:, iclass] == 1)[:,None] & is_filled ].flatten()
-            inputs.append(input_per_class[input_per_class != 0])
+            inputs.append(input_per_class)
         plot_histo(
             inputs,
             labels,
@@ -331,6 +331,48 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
         plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
         plt.close()
+        
+    labels = ["Multiplicities:  " + style.CLASS_LABEL_STYLE[class_label] for class_label in class_labels]
+    
+    multiplicities = {i : [] for i in range(len(class_labels)+1)}
+    
+    for ibatch,batch in enumerate(X_test):
+        for iclass, class_label in enumerate(class_labels):
+            num_candidates = (batch[(y_test[ibatch, iclass] == 1) & (batch[:,16] != 0)]).shape[0]
+            if num_candidates > 0:
+                multiplicities[iclass].append(num_candidates)
+                multiplicities[len(class_labels)].append(num_candidates)
+          
+    plot_histo(
+            [np.array(multiplicities[i]) for i in range(len(class_labels))],
+            labels,
+            '',
+            'multiplicities',
+            'a.u',
+            log = 'log',
+            x_range=(0,16),
+            bins=17
+    )
+    save_path = os.path.join(save_dir, 'multiplicies_split')
+    plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    plt.close()
+    
+    plot_histo(
+            [np.array(multiplicities[len(class_labels)])],
+            ['Multiplicity'],
+            '',
+            'Multiplicity',
+            'a.u',
+            log = 'log',
+            x_range=(0,16),
+            bins=17
+    )
+    save_path = os.path.join(save_dir, 'multiplicity')
+    plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    plt.close()
+        
 
 
 def get_response(truth_pt, reco_pt, pt_ratio):
@@ -887,56 +929,56 @@ def basic(model, signal_dirs):
     pt_ratio = model_outputs[1]
 
     # Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
-    class_pairs = []
-    # Generate all possible pairs of classes
-    for i in model.class_labels.keys():
-        for j in model.class_labels.keys():
-            if i != j:
-                class_pair = [i, j]
-                class_pairs.append(class_pair)
+    # ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
+    # class_pairs = []
+    # # Generate all possible pairs of classes
+    # for i in model.class_labels.keys():
+    #     for j in model.class_labels.keys():
+    #         if i != j:
+    #             class_pair = [i, j]
+    #             class_pairs.append(class_pair)
 
-    # Make ROC binaries for complete test set and each signal process
-    for i in range(-1, len(signal_dirs), 1):
-        sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
-        if i == -1:
-            y_p, y_t = y_pred, y_test
-            process_label = None
-        else:
-            signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
-            sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.predict(sample_data)[0]
-            y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
-            process_label = process_labels(signal_dirs[i])
-            os.makedirs(binary_dir, exist_ok=True)
+    # # Make ROC binaries for complete test set and each signal process
+    # for i in range(-1, len(signal_dirs), 1):
+    #     sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
+    #     if i == -1:
+    #         y_p, y_t = y_pred, y_test
+    #         process_label = None
+    #     else:
+    #         signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
+    #         sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
+    #         sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
+    #         sample_preds = model.predict(sample_data)[0]
+    #         y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
+    #         process_label = process_labels(signal_dirs[i])
+    #         os.makedirs(binary_dir, exist_ok=True)
 
-        # Plot the binary ROCs for each class pair
-        for class_pair in class_pairs:
-            binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
-            if i != -1:
-                binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
+    #     # Plot the binary ROCs for each class pair
+    #     for class_pair in class_pairs:
+    #         binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
+    #         ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
+    #         if i != -1:
+    #             binary_dir = os.path.join(sample_plot_dir, "full_sample")
+    #             ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
 
-        # Add light vs b/charm/gluon combined plot
-        binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
-        ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
-        ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+    #     # Add light vs b/charm/gluon combined plot
+    #     binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
+    #     ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+    #     ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
 
-        if i != -1:
-            binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-            ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
-            ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+    #     if i != -1:
+    #         binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
+    #         ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+    #         ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
 
-    # Efficiencies
-    efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
+    # # Efficiencies
+    # efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
 
-    # Confusion matrix
-    confusion(y_pred, y_test, model.class_labels, plot_dir)
+    # # Confusion matrix
+    # confusion(y_pred, y_test, model.class_labels, plot_dir)
 
-    # Plot pt corrections
-    pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
+    # # Plot pt corrections
+    # pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     # Plot input distributions
     plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, plot_dir)

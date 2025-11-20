@@ -141,7 +141,6 @@ def _split_flavor(data):
 
     return data[jet_ptmin_gen], class_labels
 
-
 def _get_puppicand_fields(tag):
 
     # Get the directory of the current file (tools.py)

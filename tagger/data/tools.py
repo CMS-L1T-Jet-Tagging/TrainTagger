@@ -162,7 +162,6 @@ def _pad_fill(array, target):
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
-
 def _make_nn_inputs(data_split, tag, n_parts):
 
     features = _get_puppicand_fields(tag)

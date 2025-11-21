@@ -22,7 +22,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
     print(f"Test data saved to {out_dir}")
 
 
-def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
+def train_weights(y_train, reco_pt_train, class_labels, low_pt, weightingMethod, debug):
     """
     Re-balancing the class weights and then flatten them based on truth pT
     """
@@ -42,6 +42,8 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     pt_bins = np.array(
         [15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, np.inf]
     )  # Use np.inf to cover all higher values
+
+    pt_bins = np.append(pt_bins[pt_bins < low_pt], low_pt)
 
     if weightingMethod == "onlyclass":
         pt_bins = np.array([0.0, np.inf])  # Use np.inf to cover all higher values
@@ -173,18 +175,19 @@ def train(model, out_dir, percent):
 
     # Make into ML-like data for training
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-    low_pt = reco_pt_train < 200
+    low_pt = 50
+    low_pt_train = reco_pt_train < low_pt
     X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = (
-        X_train[low_pt],
-        y_train[low_pt],
-        pt_target_train[low_pt],
-        truth_pt_train[low_pt],
-        reco_pt_train[low_pt],
+        X_train[low_pt_train],
+        y_train[low_pt_train],
+        pt_target_train[low_pt_train],
+        truth_pt_train[low_pt_train],
+        reco_pt_train[low_pt_train],
     )
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    low_pt_test = reco_pt_test < 200
+    low_pt_test = reco_pt_test < low_pt
     X_test, y_test, truth_pt_test, reco_pt_test = X_test[low_pt_test], y_test[low_pt_test], truth_pt_test[low_pt_test], reco_pt_test[low_pt_test]
     save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
 
@@ -193,6 +196,7 @@ def train(model, out_dir, percent):
         y_train,
         reco_pt_train,
         class_labels,
+        low_pt,
         weightingMethod="ptref",
         debug=model.run_config['debug'],
     )

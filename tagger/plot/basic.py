@@ -292,7 +292,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
 
     save_dir = os.path.join(plot_dir, 'inputs')
     os.makedirs(save_dir, exist_ok=True)
-    
+
     is_filled = (X_test[:, :, 16] == 1)
     for i in range(len(input_vars)):
         inputs = []
@@ -316,7 +316,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
         plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
         plt.close()
-        
+
     for i in range(len(input_vars)):
         plot_histo(
             [X_test[:, :, i][is_filled].flatten()],
@@ -331,18 +331,18 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
         plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
         plt.close()
-        
+
     labels = ["Multiplicities:  " + style.CLASS_LABEL_STYLE[class_label] for class_label in class_labels]
-    
+
     multiplicities = {i : [] for i in range(len(class_labels)+1)}
-    
+
     for ibatch,batch in enumerate(X_test):
         for iclass, class_label in enumerate(class_labels):
             num_candidates = (batch[(y_test[ibatch, iclass] == 1) & (batch[:,16] != 0)]).shape[0]
             if num_candidates > 0:
                 multiplicities[iclass].append(num_candidates)
                 multiplicities[len(class_labels)].append(num_candidates)
-          
+
     plot_histo(
             [np.array(multiplicities[i]) for i in range(len(class_labels))],
             labels,
@@ -357,7 +357,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.close()
-    
+
     plot_histo(
             [np.array(multiplicities[len(class_labels)])],
             ['Multiplicity'],
@@ -372,7 +372,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.close()
-        
+
 
 
 def get_response(truth_pt, reco_pt, pt_ratio):

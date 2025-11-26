@@ -20,16 +20,16 @@ def quantize(value, bits):
     """
     Quantizes a floating point number to an integer, given a certain number of bits.
     The range is from 0.0 to 1.0.
-    
+
     Args:
     value (float): The value to be quantized.
     bits (int): The number of bits used for quantization.
-    
+
     Returns:
     int: The quantized value.
     """
     quantized_value = np.round(value * (2**(bits -1 )))
-    value = int(quantized_value) 
+    value = int(quantized_value)
     return value / (2**(bits - 1))
 
 

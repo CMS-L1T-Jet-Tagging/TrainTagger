@@ -393,8 +393,8 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
 
         # Save the plot
         save_path = os.path.join(save_dir, plot_name)
-        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
-        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight', transparent=True)
+        plt.savefig(f"{save_path}.png", bbox_inches='tight', transparent=True)
         plt.close()
 
     # Inclusive response

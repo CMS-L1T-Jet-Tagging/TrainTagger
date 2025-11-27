@@ -119,7 +119,7 @@ evaluate:
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "pT weights plots"
-  - python tagger/plot/ptWeights.py -m output/$Model
+  - python tagger/plot/pt_weights.py -m output/$Model
   - echo "bbtt performance"
   - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model

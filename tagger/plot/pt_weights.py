@@ -33,9 +33,37 @@ def get_pt_weights(model, jet_nn_inputs, jet_pt):
 
     return pt_weights
 
-def plot_2D_histogram(pt_weights, x_var, var_name, binning, save_path):
+def plot_1D_histogram(pt_weights, binning, save_path):
+    # show distribution of pt weights
+    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    h = ax.hist(
+        pt_weights,
+        bins=binning,
+        histtype='step',
+        color='blue',
+    )
+    ax.set_xlabel(r"$p_{T}$ weights")
+    ax.set_ylabel("Entries")
+    hep.cms.label(
+        llabel=style.CMSHEADER_LEFT,
+        rlabel=style.CMSHEADER_RIGHT,
+        ax=ax,
+        fontsize=style.MEDIUM_SIZE
+    )
+
+    # Reduce top padding since we handled spacing manually
+    plt.tight_layout()
+
+    plt.savefig(save_path + ".png")
+    plt.savefig(save_path + ".pdf")
+    return
+
+def plot_2D_histogram(pt_weights, x_var, var_name, caps, binning, save_path):
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    mask = (x_var != 0)
+    x_var = np.clip(x_var[mask], caps[0], caps[1])
+    pt_weights = pt_weights[mask]
 
     # Histogram
     h = ax.hist2d(
@@ -76,35 +104,66 @@ def pt_weights_plotting(model, inputs, plot_path):
     plot_path = os.path.join(plot_path, "pt_weights")
     os.makedirs(plot_path, exist_ok=True)
 
+    mask = X_test[:, :, 0].flatten() != 0
+    plot_1D_histogram(
+        pt_weights.flatten()[mask],
+        20,
+        os.path.join(plot_path, "pt_weights_distribution"),
+        )
+
     plot_2D_histogram(
         pt_weights.flatten(),
         X_test[:, :, 0].flatten(),
         r"Constituents $p_{T}$ [GeV]",
+        [0, 800],
         binning=(20, 20),
         save_path=os.path.join(plot_path, "pt_weights_vs_pt"),
         )
     plot_2D_histogram(
         pt_weights.flatten(),
-        X_test[:, :, 3].flatten(),
+        X_test[:, :, 3].flatten() * (np.pi / 720),
         r"Constituents $\Delta \eta$",
-        binning=(10, 10),
+        [-5, 5],
+        binning=(20, 10),
         save_path=os.path.join(plot_path, "pt_weights_vs_eta"),
         )
 
     class_labels = model.class_labels
+    y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
     for flav, i in class_labels.items():
         class_mask = y_test == i
         plot_2D_histogram(
             pt_weights[class_mask].flatten(),
             X_test[:, :, 0][class_mask].flatten(),
             r"Constituents $p_{T}$ [GeV]",
+            [0, 800],
             binning=(20, 20),
             save_path=os.path.join(plot_path, f"pt_weights_vs_pt_{flav}"),
             )
         plot_2D_histogram(
             pt_weights[class_mask].flatten(),
-            X_test[:, :, 3][class_mask].flatten(),
+            X_test[:, :, 3][class_mask].flatten() * (np.pi / 720),
             r"Constituents $\Delta \eta$",
+            [-5, 5],
             binning=(10, 10),
             save_path=os.path.join(plot_path, f"pt_weights_vs_eta_{flav}"),
             )
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument('-m', '--model-dir', required=True, help='model directory')
+
+    # Load model
+    model = Model.fromFolder(args.model_dir)
+
+    # Load testing data
+    X_test = np.load(f"{model.output_directory}/testing_data/X_test.npy")
+    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
+    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
+
+    inputs = (X_test, y_test, reco_pt_test)
+
+    output_dir = os.path.join(model.output_directory, "plots/training")
+
+    # Plot pt weights
+    pt_weights_plotting(model, inputs, output_dir)

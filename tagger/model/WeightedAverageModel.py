@@ -141,12 +141,6 @@ class WeightedAverageModel(DeepSetModel):
             trainable=False,
             **self.pt_args)(weighted_pt) # fix weights at 1 to perform sum, not updated during training
 
-        jet_pt = QDense(1, name='jet_pt',
-            kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
-            use_bias = False,
-            trainable=False,
-            **self.pt_args)(pt) # fix weights at 1 to perform sum, not updated during training
-
         pt_output = tf.keras.layers.Multiply(name='pT_output')([corrected_jet_pt, inverse_jet_pt])
 
         # Define the model using both branches

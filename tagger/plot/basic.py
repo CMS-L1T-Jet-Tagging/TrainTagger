@@ -22,7 +22,6 @@ from sklearn.metrics import auc, roc_curve
 
 from tagger.data.tools import load_data, to_ML, constituents_mask
 from tagger.plot import style
-from tagger.plot.pt_weights import pt_weights_plotting, plot_2D_histogram, get_pt_weights
 
 from .common import PT_BINS, plot_histo
 
@@ -862,8 +861,6 @@ def basic(model, signal_dirs):
     mask = constituents_mask(X_test, 10)
     pt_mask = mask[:, :, 0]
     inverse_reco_pt_test = (1.0 / reco_pt_test).reshape(-1, 1)
-    # p_T weights distibutions
-    pt_weights_plotting(model, [X_test, y_test, reco_pt_test], plot_dir)
 
     model_outputs = model.jet_model.predict([X_test, mask, pt_mask, constituents_pt, inverse_reco_pt_test])
 
@@ -891,7 +888,6 @@ def basic(model, signal_dirs):
         else:
             signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_reco_pt = np.concatenate((sample_train[4], sample_test[4]), axis=0).reshape(-1, 1)
             sample_inverse_reco_pt = (1.0 / np.concatenate((sample_train[-1], sample_test[-1]), axis=0)).reshape(-1, 1)
             sample_constituents_pt = sample_data[:, :, 0]
             sample_mask = constituents_mask(sample_data, 10)
@@ -919,7 +915,6 @@ def basic(model, signal_dirs):
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
             ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
             ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
-            pt_weights_plotting(model, [sample_data, sample_labels, sample_reco_pt], binary_dir_full)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)

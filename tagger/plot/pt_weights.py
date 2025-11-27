@@ -16,8 +16,8 @@ from tagger.data.tools import constituents_mask
 
 from tensorflow.keras.models import Model
 
-def get_pt_weights(model, jet_nn_inputs, jet_pt):
-    pt_weights_model = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer('pt_weights_output').output)
+def get_pt_weights(model, jet_nn_inputs, jet_pt, layer_name):
+    pt_weights_model = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer(layer_name).output)
 
     #Get the pt weights from the model
     mask = constituents_mask(jet_nn_inputs, 10)
@@ -33,7 +33,7 @@ def get_pt_weights(model, jet_nn_inputs, jet_pt):
 
     return pt_weights
 
-def plot_1D_histogram(pt_weights, binning, save_path):
+def plot_1D_histogram(pt_weights, pt_corretion, binning, save_path):
     # show distribution of pt weights
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     h = ax.hist(
@@ -42,7 +42,7 @@ def plot_1D_histogram(pt_weights, binning, save_path):
         histtype='step',
         color='blue',
     )
-    ax.set_xlabel(r"$p_{T}$ weights")
+    ax.set_xlabel(rf"$p_{T}$ {pt_corretion}")
     ax.set_ylabel("Entries")
     hep.cms.label(
         llabel=style.CMSHEADER_LEFT,
@@ -58,7 +58,7 @@ def plot_1D_histogram(pt_weights, binning, save_path):
     plt.savefig(save_path + ".pdf")
     return
 
-def plot_2D_histogram(pt_weights, x_var, var_name, caps, binning, save_path):
+def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, caps, binning, save_path):
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     mask = (x_var != 0)
@@ -74,7 +74,7 @@ def plot_2D_histogram(pt_weights, x_var, var_name, caps, binning, save_path):
     )
 
     ax.set_xlabel(var_name)
-    ax.set_ylabel(r"$p_{T}$ weights")
+    ax.set_ylabel(rf"$p_{T}$ {pt_corretion}")
 
     hep.cms.label(
         llabel=style.CMSHEADER_LEFT,
@@ -95,11 +95,12 @@ def plot_2D_histogram(pt_weights, x_var, var_name, caps, binning, save_path):
     return
 
 
-def pt_weights_plotting(model, inputs, plot_path):
+def pt_weights_plotting(model, inputs, layer_name, plot_path):
 
     # Unpack inputs
     X_test, y_test, reco_pt_test = inputs
-    pt_weights = get_pt_weights(model, X_test, reco_pt_test)
+    pt_correction_type = layer_name.split("_")[1] # 'weights' or 'offsets'
+    pt_weights = get_pt_weights(model, X_test, reco_pt_test, layer_name)
 
     plot_path = os.path.join(plot_path, "pt_weights")
     os.makedirs(plot_path, exist_ok=True)
@@ -107,12 +108,14 @@ def pt_weights_plotting(model, inputs, plot_path):
     mask = X_test[:, :, 0].flatten() != 0
     plot_1D_histogram(
         pt_weights.flatten()[mask],
+        pt_correction_type,
         20,
         os.path.join(plot_path, "pt_weights_distribution"),
         )
 
     plot_2D_histogram(
         pt_weights.flatten(),
+        pt_correction_type,
         X_test[:, :, 0].flatten(),
         r"Constituents $p_{T}$ [GeV]",
         [0, 800],
@@ -121,6 +124,7 @@ def pt_weights_plotting(model, inputs, plot_path):
         )
     plot_2D_histogram(
         pt_weights.flatten(),
+        pt_correction_type,
         X_test[:, :, 3].flatten() * (np.pi / 720),
         r"Constituents $\Delta \eta$",
         [-5, 5],
@@ -134,6 +138,7 @@ def pt_weights_plotting(model, inputs, plot_path):
         class_mask = y_test == i
         plot_2D_histogram(
             pt_weights[class_mask].flatten(),
+            pt_correction_type,
             X_test[:, :, 0][class_mask].flatten(),
             r"Constituents $p_{T}$ [GeV]",
             [0, 800],
@@ -142,6 +147,7 @@ def pt_weights_plotting(model, inputs, plot_path):
             )
         plot_2D_histogram(
             pt_weights[class_mask].flatten(),
+            pt_correction_type,
             X_test[:, :, 3][class_mask].flatten() * (np.pi / 720),
             r"Constituents $\Delta \eta$",
             [-5, 5],
@@ -166,4 +172,9 @@ if __name__ == "__main__":
     output_dir = os.path.join(model.output_directory, "plots/training")
 
     # Plot pt weights
-    pt_weights_plotting(model, inputs, output_dir)
+    pt_weights_plotting(model, inputs, 'pt_weights_output', output_dir)
+    try:
+        pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
+    except:
+        print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
+

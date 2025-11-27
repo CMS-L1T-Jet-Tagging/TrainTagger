@@ -13,8 +13,35 @@ import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
 from tagger.data.tools import constituents_mask
+from tagger.model.common import fromFolder
 
 from tensorflow.keras.models import Model
+
+from tagger.plot import style
+style.set_style()
+
+binning_dict = {
+    'pt': [0, 800, 50],
+    'pt_rel': [0, 1, 10],
+    'pt_log': [0, 6, 20],
+    'deta': [-1, 1, 10],
+    'dphi': [-1, 1, 10],
+    'mass': [0, 50, 20],
+    'isPhoton': [-0.1, 1.1, 2],
+    'isElectronPlus': [-0.1, 1.1, 2],
+    'isElectronMinus': [-0.1, 1.1, 2],
+    'isMuonPlus': [-0.1, 1.1, 2],
+    'isMuonMinus': [-0.1, 1.1, 2],
+    'isNeutralHadron': [-0.1, 1.1, 2],
+    'isChargedHadronPlus': [-0.1, 1.1, 2],
+    'isChargedHadronMinus': [-0.1, 1.1, 2],
+    'z0': [-30, 30, 10],
+    'dxy': [-0.5, 0.5, 10],
+    'isfilled': [-0.1, 1.1, 2],
+    'puppiweight': [-0.1, 1.1, 5],
+    'quality': [-0.1, 1.1, 5],
+    'emid': [-0.1, 1.1, 5],
+}
 
 def get_pt_weights(model, jet_nn_inputs, jet_pt, layer_name):
     pt_weights_model = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer(layer_name).output)
@@ -42,7 +69,7 @@ def plot_1D_histogram(pt_weights, pt_corretion, binning, save_path):
         histtype='step',
         color='blue',
     )
-    ax.set_xlabel(rf"$p_{T}$ {pt_corretion}")
+    ax.set_xlabel(rf"$p_T$ {pt_corretion}")
     ax.set_ylabel("Entries")
     hep.cms.label(
         llabel=style.CMSHEADER_LEFT,
@@ -58,23 +85,27 @@ def plot_1D_histogram(pt_weights, pt_corretion, binning, save_path):
     plt.savefig(save_path + ".pdf")
     return
 
-def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, caps, binning, save_path):
+def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_params, save_path):
+
+    # apply mask to remove weights for padded constituents
+    pt_weights = pt_weights[mask]
+    x_var = x_var[mask]
+    x_var *= np.pi/720 if var_name == "dphi" or var_name == "deta" else 1.0
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-    mask = (x_var != 0)
-    x_var = np.clip(x_var[mask], caps[0], caps[1])
-    pt_weights = pt_weights[mask]
+    caps, bins = plot_params[:-1], plot_params[-1]
+    x_var = np.clip(x_var, caps[0], caps[1])
 
     # Histogram
     h = ax.hist2d(
         x_var,
         pt_weights,
-        bins=binning,
+        bins=[bins, 15],
         cmap="viridis"
     )
 
-    ax.set_xlabel(var_name)
-    ax.set_ylabel(rf"$p_{T}$ {pt_corretion}")
+    ax.set_xlabel(style.INPUT_FEATURE_STYLE[var_name])
+    ax.set_ylabel(rf"$p_T$ {pt_corretion}")
 
     hep.cms.label(
         llabel=style.CMSHEADER_LEFT,
@@ -110,57 +141,42 @@ def pt_weights_plotting(model, inputs, layer_name, plot_path):
         pt_weights.flatten()[mask],
         pt_correction_type,
         20,
-        os.path.join(plot_path, "pt_weights_distribution"),
-        )
-
-    plot_2D_histogram(
-        pt_weights.flatten(),
-        pt_correction_type,
-        X_test[:, :, 0].flatten(),
-        r"Constituents $p_{T}$ [GeV]",
-        [0, 800],
-        binning=(20, 20),
-        save_path=os.path.join(plot_path, "pt_weights_vs_pt"),
-        )
-    plot_2D_histogram(
-        pt_weights.flatten(),
-        pt_correction_type,
-        X_test[:, :, 3].flatten() * (np.pi / 720),
-        r"Constituents $\Delta \eta$",
-        [-5, 5],
-        binning=(20, 10),
-        save_path=os.path.join(plot_path, "pt_weights_vs_eta"),
+        os.path.join(plot_path, f"pt_{pt_correction_type}_distribution"),
         )
 
     class_labels = model.class_labels
     y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
-    for flav, i in class_labels.items():
-        class_mask = y_test == i
+    for i, input_var in enumerate(model.input_vars):
         plot_2D_histogram(
-            pt_weights[class_mask].flatten(),
+            pt_weights.flatten(),
             pt_correction_type,
-            X_test[:, :, 0][class_mask].flatten(),
-            r"Constituents $p_{T}$ [GeV]",
-            [0, 800],
-            binning=(20, 20),
-            save_path=os.path.join(plot_path, f"pt_weights_vs_pt_{flav}"),
+            X_test[:, :, i].flatten(),
+            input_var,
+            mask,
+            binning_dict[input_var],
+            save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}"),
             )
-        plot_2D_histogram(
-            pt_weights[class_mask].flatten(),
-            pt_correction_type,
-            X_test[:, :, 3][class_mask].flatten() * (np.pi / 720),
-            r"Constituents $\Delta \eta$",
-            [-5, 5],
-            binning=(10, 10),
-            save_path=os.path.join(plot_path, f"pt_weights_vs_eta_{flav}"),
-            )
+
+        for flav, c in class_labels.items():
+            class_mask = y_test == c
+            sub_mask = X_test[:, :, 0][class_mask].flatten() != 0
+            plot_2D_histogram(
+                pt_weights[class_mask].flatten(),
+                pt_correction_type,
+                X_test[:, :, i][class_mask].flatten(),
+                input_var,
+                sub_mask,
+                binning_dict[input_var],
+                save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}_{flav}"),
+                )
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m', '--model-dir', required=True, help='model directory')
+    args = parser.parse_args()
 
     # Load model
-    model = Model.fromFolder(args.model_dir)
+    model = model = fromFolder(args.model_dir)
 
     # Load testing data
     X_test = np.load(f"{model.output_directory}/testing_data/X_test.npy")

@@ -159,7 +159,7 @@ class TorchDeepSetModel(JetTagModel):
         self.pin_memory = False
         if torch.cuda.is_available():
             self.device = "cuda"
-            self.n_workers = 24
+            self.n_workers = 46
             self.pin_memory= True
             
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):

@@ -2,7 +2,7 @@ model: PQuantDeepSetModel
 run_config :
   verbose : 2
   debug : True
-  num_threads : 64
+  num_threads : 46
 
 model_config :
   name : baseline
@@ -18,7 +18,7 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  epochs : 100
+  epochs : 10
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1
@@ -118,12 +118,12 @@ pquant_config :
                                 },
                                 jet_id_head.4: {
                                   weight: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
+                                    integer_bits: 24,
+                                    fractional_bits: 12
                                     },
                                   bias: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
+                                    integer_bits: 24,
+                                    fractional_bits: 12
                                     }
                                 },
                                 pt_head.0: {
@@ -161,9 +161,9 @@ pquant_config :
                            greedy_astar: True, 
                            approximate: True, 
                            lambda: 1} 
-  training_parameters: {epochs: 30, 
-                        fine_tuning_epochs: 30, 
-                        pretraining_epochs: 30, 
+  training_parameters: {epochs: 20, 
+                        fine_tuning_epochs: 20, 
+                        pretraining_epochs: 20, 
                         pruning_first: False, 
                         rewind: 'never', 
                         rounds: 1, 

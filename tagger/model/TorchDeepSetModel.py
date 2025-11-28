@@ -154,13 +154,17 @@ class TorchDeepSetModel(JetTagModel):
 
     def __init__(self, out_dir):
         super().__init__(out_dir)
+        os.environ["KERAS_BACKEND"] = "torch" 
         self.device = "cpu"
         self.n_workers = 8
         self.pin_memory = False
         if torch.cuda.is_available():
+            print("Running training on GPU")
             self.device = "cuda"
             self.n_workers = 46
             self.pin_memory= True
+        else:
+            print("No GPU found running training on CPU")
             
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer

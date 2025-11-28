@@ -13,6 +13,10 @@ from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 def initialise_tensorflow(num_threads):
     import tensorflow as tf
     os.environ["KERAS_BACKEND"] = "tf" 
+    
+    print("Using ")
+    print(tf.config.list_physical_devices('GPU'))
+    print("for training")
 
     # Set some tensorflow constants
     os.environ["OMP_NUM_THREADS"] = str(num_threads)

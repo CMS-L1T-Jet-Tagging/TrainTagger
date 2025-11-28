@@ -2,7 +2,7 @@ model: FloatingDeepSetModel
 run_config :
   verbose : 2
   debug : True
-  num_threads : 64
+  num_threads : 46
 
 model_config :
   name : baseline

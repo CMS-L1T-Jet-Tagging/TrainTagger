@@ -60,25 +60,30 @@ def get_pt_weights(model, jet_nn_inputs, jet_pt, layer_name):
 
     return pt_weights
 
-def plot_1D_histogram(pt_weights, pt_corretion, binning, save_path):
+def plot_1D_histogram(pt_weights, pt, pt_corretion, binning, save_path):
     # show distribution of pt weights
+    pt_bins = [0, 0, 5, 15, 30, 80, np.inf]
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-    h = ax.hist(
-        pt_weights,
-        bins=binning,
-        histtype='step',
-        color='blue',
-    )
-    ax.set_xlabel(rf"$p_T$ {pt_corretion}")
-    ax.set_ylabel("Entries")
-    hep.cms.label(
-        llabel=style.CMSHEADER_LEFT,
-        rlabel=style.CMSHEADER_RIGHT,
-        ax=ax,
-        fontsize=style.MEDIUM_SIZE
-    )
-
-    # Reduce top padding since we handled spacing manually
+    colors = ['purple', 'blue', 'green', 'gold', 'orange', 'red']
+    for i, (l, u) in enumerate(zip(pt_bins[:-1], pt_bins[1:])):
+        mask = (pt >= l) & (pt < u) if i>0 else pt < np.inf
+        label = f"{l} < $p_T$ < {u}" if i>0 else f"Full distribution"
+        h = ax.hist(
+            pt_weights[mask],
+            bins=binning,
+            histtype='step',
+            label=label,
+            color=colors[i],
+            density=True
+        )
+        ax.set_ylabel("Entries")
+        hep.cms.label(
+            llabel=style.CMSHEADER_LEFT,
+            rlabel=style.CMSHEADER_RIGHT,
+            ax=ax,
+            fontsize=style.MEDIUM_SIZE,
+        )
+    plt.legend()
     plt.tight_layout()
 
     plt.savefig(save_path + ".png")
@@ -114,6 +119,9 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
         fontsize=style.MEDIUM_SIZE
     )
 
+    hist_counts = h[0]
+    hist_counts_normalized = hist_counts / np.max(hist_counts)
+
     # Colorbar
     cbar = plt.colorbar(h[3], ax=ax, label="Entries")
 
@@ -139,6 +147,7 @@ def pt_weights_plotting(model, inputs, layer_name, plot_path):
     mask = X_test[:, :, 0].flatten() != 0
     plot_1D_histogram(
         pt_weights.flatten()[mask],
+        X_test[:, :, 0].flatten()[mask],
         pt_correction_type,
         20,
         os.path.join(plot_path, f"pt_{pt_correction_type}_distribution"),

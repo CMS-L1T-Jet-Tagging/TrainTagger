@@ -128,15 +128,10 @@ class WeightedAverageOffsetModel(DeepSetModel):
         pt_weights = QDense(16, name='Dense_pt_weights_1', **self.common_args)(pt_weights)
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
-            name='pt_weights_output_relu_1')(pt_weights)
-        pt_weights = QDense(16, name='Dense_pt_weights_2', **self.common_args)(pt_weights)
-        pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
             name='pt_weights_output')(pt_weights)
 
         # pt_offsets
         pt_offsets = QDense(16, name='Dense_pt_offsets_1', **self.common_args)(pt_offsets)
-        pt_offsets = QDense(16, name='Dense_pt_offsets_2', **self.common_args)(pt_offsets)
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])
 
         # apply weights and offsets to constituent pTs

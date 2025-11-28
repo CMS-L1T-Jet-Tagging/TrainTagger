@@ -76,6 +76,7 @@ class DoubleAggregateModel(DeepSetModel):
         mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
         pt_mask = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_mask_input')
         pt = tf.keras.layers.Input(shape=inputs_shape[3], name='pt_input')
+        inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape[4], name='inverse_jet_pt_input')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
@@ -120,27 +121,29 @@ class DoubleAggregateModel(DeepSetModel):
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(main_regression)
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
-            name='pt_weights_output_relu')(pt_weights)
+            name='pt_weights_relu')(pt_weights)
 
-        pt_correction = QDense(16, name='Dense_pt_corrections_output', **self.common_args)(main_regression)
+        pt_offsets = QDense(16, name='pt_offsets_Dense', **self.common_args)(main_regression)
 
-        weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
-        pt_correction = tf.keras.layers.Multiply(name='mask_pt_corrections')([pt_correction, pt_mask])
-        corrected_pt = tf.keras.layers.Add(name='add_corrections')([weighted_pt, pt_correction])
-        pt_output = QDense(1, name='pT_output',
+        weighted_pt = tf.keras.layers.Multiply(name='pt_weights_output')([pt_weights, pt])
+        pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])
+        corrected_pt = tf.keras.layers.Add(name='add_offsets')([weighted_pt, pt_offsets])
+        summed_pt = QDense(1, name='summed_pt',
             kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
             use_bias = False,
             trainable=False,
             **self.pt_args)(corrected_pt) # fix weights at 1 to perform sum, not updated during training
 
+        pt_output = tf.keras.layers.Multiply(name='pT_output')([summed_pt, inverse_jet_pt])
+
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt, inverse_jet_pt], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
@@ -156,9 +159,9 @@ class DoubleAggregateModel(DeepSetModel):
 
         # Train the model using hyperparameters in yaml config
         # Train the model using hyperparameters in yaml config
-        inputs, mask, pt_mask, pt = X_train
+        inputs, mask, pt_mask, pt, inverse_jet_pt = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt},
+            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt, 'inverse_jet_pt_input': inverse_jet_pt},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
                 'prune_low_magnitude_jet_id_output': sample_weight[0],
@@ -190,6 +193,7 @@ class DoubleAggregateModel(DeepSetModel):
         config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['masking_input']['Precision']['result'] = self.firmware_config['mask_precision']
         config['LayerName']['pt_input']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['inverse_jet_pt_input']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor

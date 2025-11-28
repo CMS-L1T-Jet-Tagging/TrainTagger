@@ -1,11 +1,11 @@
-model: WeightedAverageOffsetModel
+model: WeightedAverageConvModel
 run_config :
   verbose : 2
   debug : True
   num_threads : 64
 
 model_config :
-  name : weightedAverageOffset
+  name : weightedAverageConv
   conv1d_layers : [10,10]
   classification_layers : [32,16]
   regression_layers : [16]

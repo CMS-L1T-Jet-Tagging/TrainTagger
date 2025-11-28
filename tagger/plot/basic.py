@@ -455,7 +455,7 @@ def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_d
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
         ax.set_ylabel("Response (L1/Gen)")
         ax.set_xlim(0, 1000)
-        ax.set_ylim(0.6, 1.7)
+        ax.set_ylim(0.7, 1.8)
         ax.legend()
         ax.grid()
 

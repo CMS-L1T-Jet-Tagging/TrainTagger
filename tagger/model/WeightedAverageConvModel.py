@@ -93,8 +93,8 @@ class WeightedAverageConvModel(DeepSetModel):
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
         # Global Average Pooling
-        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-        main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(weighted_inputs)
+        main_act = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
+        main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(main_act)
 
         # Now split into jet ID and pt regression
         # Make fully connected dense layers for classification task
@@ -114,16 +114,16 @@ class WeightedAverageConvModel(DeepSetModel):
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         # Make the pT weights and offsets
-        pt_weights = QConv1D(filters=10, kernel_size=1, name='Conv1D_pt_weights_1', **self.common_args)(main)
+        pt_weights = QConv1D(filters=10, kernel_size=1, name='Conv1D_pt_weights_1', **self.common_args)(main_act)
         pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='Conv1D_pt_weights_relu_1')(pt_weights)  # Ensure positive weights
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights_2', **self.common_args)(pt_weights)
         pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='Conv1D_pt_weights_relu_2')(pt_weights)  # Ensure positive weights
-        pt_weights = Flatten(name='pt_weights_flatten')(pt_weights)
+        pt_weights = tf.keras.layers.Flatten(name='pt_weights_flatten')(pt_weights)
         pt_weights = tf.keras.layers.Multiply(name='pt_weights_output')([pt_weights, pt_mask])
 
-        pt_offsets = QConv1D(filters=10, kernel_size=1, name='Conv1D_pt_offsets_1', **self.common_args)(main)
+        pt_offsets = QConv1D(filters=10, kernel_size=1, name='Conv1D_pt_offsets_1', **self.common_args)(main_act)
         pt_offsets = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_offsets_2', **self.common_args)(pt_offsets)
-        pt_offsets = Flatten(name='pt_offsets_flatten')(pt_offsets)
+        pt_offsets = tf.keras.layers.Flatten(name='pt_offsets_flatten')(pt_offsets)
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])
 
         # apply weights and offsets to constituent pTs

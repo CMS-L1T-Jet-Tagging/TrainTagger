@@ -163,6 +163,8 @@ class TorchDeepSetModel(JetTagModel):
             self.device = "cuda"
             self.n_workers = 46
             self.pin_memory= True
+            print(torch.backends.cudnn.version())
+            print(torch.backends.cudnn.enabled)
         else:
             print("No GPU found running training on CPU")
             

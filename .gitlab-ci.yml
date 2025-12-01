@@ -42,25 +42,25 @@ DeepSet:baseline_5param_extended_trk:
     RUN_SYNTHESIS: 'True'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
-DeepSet:torch_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: torch_5param_extended_trk
-    Model: torch_baseline
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
-
-# DeepSet:floating_5param_extended_trk:
+# DeepSet:torch_5param_extended_trk:
 #   extends: .ml_pipeline
 #   variables:
-#     Name: floating_5param_extended_trk
-#     Model: floating_baseline
+#     Name: torch_5param_extended_trk
+#     Model: torch_baseline
 #     RERUN_ON_TAG: 'False'
 #     RUN_EMULATION: 'False'
 #     RUN_SYNTHESIS: 'False'
 #     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+DeepSet:floating_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: floating_5param_extended_trk
+    Model: floating_baseline
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 # DeepSet:pquant_5param_extended_trk:
 #   extends: .ml_pipeline

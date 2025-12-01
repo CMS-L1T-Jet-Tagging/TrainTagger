@@ -156,6 +156,10 @@ Then, these codes are synthesize again with an hls wrapper, and CMSSW:
 ------
 ## Conda Environment Notes
 
+There are two conda environments provided, environment.yml gives you a qkeras, keras v2, HGQ1, tensorflow CPU only training environment. environment-gpu.yml gives you a keras v3, HGQ2, pquant, tensorflow and pytorch GPU training environment. 
+To run the baseline training use environment.yml or use the prebuilt docker image [here](gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest)
+To run the GPU training use the GPU training environment-gpu.yml or use the prebuilt docker image [here](gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu): 
+
 To deactivate the environment:
 
 ```

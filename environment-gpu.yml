@@ -1,0 +1,38 @@
+name: tagger
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - pandas
+  - pip:
+    - matplotlib
+    - mplhep
+    - scikit-learn
+    - uproot4==4.0.0
+    - xxhash
+    - pyarrow==17.0.0
+    - hist==2.7.3
+    - shap
+    - awkward-pandas
+    - mlflow
+    - histbook
+    - kubeflow
+    - ray[tune]
+    - ydf
+    - notebook
+    - schema
+    - tqdm
+    - da4ml>=0.3
+    - pquant-ml
+    - git+https://github.com/calad0i/HGQ2
+
+    # For hardware synthesis
+    - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger_hls4ml_update
+    - tensorflow[and-cuda]
+    - pyparsing
+
+  - pip:
+    - --extra-index-url https://download.pytorch.org/whl/cu128
+    - torch==2.9.1+cu128

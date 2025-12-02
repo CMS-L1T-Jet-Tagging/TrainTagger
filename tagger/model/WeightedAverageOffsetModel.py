@@ -127,7 +127,7 @@ class WeightedAverageOffsetModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_1', **self.common_args)(pt_weights)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 1),
             name='pt_weights_output')(pt_weights)
 
         # pt_offsets

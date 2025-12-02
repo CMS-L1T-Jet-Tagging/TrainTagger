@@ -21,11 +21,11 @@ from tagger.plot import style
 style.set_style()
 
 binning_dict = {
-    'pt': [0, 800, 50],
+    'pt': [0, 100, 20],
     'pt_rel': [0, 1, 10],
     'pt_log': [0, 6, 20],
-    'deta': [-1, 1, 10],
-    'dphi': [-1, 1, 10],
+    'deta': [-0.5, 0.5, 10],
+    'dphi': [-0.5, 0.5, 10],
     'mass': [0, 50, 20],
     'isPhoton': [-0.1, 1.1, 2],
     'isElectronPlus': [-0.1, 1.1, 2],
@@ -60,21 +60,24 @@ def get_pt_weights(model, jet_nn_inputs, jet_pt, layer_name):
 
     return pt_weights
 
-def plot_1D_histogram(pt_weights, pt, pt_corretion, binning, save_path):
+def plot_1D_histogram(pt_weights, pt, pt_correction, binning, save_path):
     # show distribution of pt weights
     pt_bins = [0, 0, 5, 15, 30, 80, np.inf]
+    colors = ['purple', 'blue', 'cyan', 'green', 'gold', 'red']
+    pt_weights = np.clip(pt_weights, -np.inf, 200)
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-    colors = ['purple', 'blue', 'green', 'gold', 'orange', 'red']
     for i, (l, u) in enumerate(zip(pt_bins[:-1], pt_bins[1:])):
         mask = (pt >= l) & (pt < u) if i>0 else pt < np.inf
-        label = f"{l} < $p_T$ < {u}" if i>0 else f"Full distribution"
+        label = f"{l} < pT < {u}" if u != np.inf else f"pT > {l}"
         h = ax.hist(
             pt_weights[mask],
             bins=binning,
             histtype='step',
             label=label,
             color=colors[i],
-            density=True
+            density=True,
+            linewidth=2.5,
+            range=(pt_weights.min(), pt_weights.max()),
         )
         ax.set_ylabel("Entries")
         hep.cms.label(
@@ -83,17 +86,20 @@ def plot_1D_histogram(pt_weights, pt, pt_corretion, binning, save_path):
             ax=ax,
             fontsize=style.MEDIUM_SIZE,
         )
+    plt.yscale('log')
+    plt.xlabel(rf"$p_T$ {pt_correction}")
     plt.legend()
     plt.tight_layout()
 
-    plt.savefig(save_path + ".png")
-    plt.savefig(save_path + ".pdf")
+    plot_path = os.path.join(save_path, f"pt_{pt_correction}_distribution_pT_binned")
+    plt.savefig(plot_path + ".png")
+    plt.savefig(plot_path + ".pdf")
     return
 
 def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_params, save_path):
 
     # apply mask to remove weights for padded constituents
-    pt_weights = pt_weights[mask]
+    pt_weights = np.clip(pt_weights[mask], -np.inf, 200)
     x_var = x_var[mask]
     x_var *= np.pi/720 if var_name == "dphi" or var_name == "deta" else 1.0
 
@@ -109,9 +115,6 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
         cmap="viridis"
     )
 
-    ax.set_xlabel(style.INPUT_FEATURE_STYLE[var_name])
-    ax.set_ylabel(rf"$p_T$ {pt_corretion}")
-
     hep.cms.label(
         llabel=style.CMSHEADER_LEFT,
         rlabel=style.CMSHEADER_RIGHT,
@@ -122,8 +125,20 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
     hist_counts = h[0]
     hist_counts_normalized = hist_counts / np.max(hist_counts)
 
+    # Redraw heatmap with imshow
+    im = ax.imshow(
+        hist_counts_normalized.T,  # transpose to match axes
+        origin='lower',
+        aspect='auto',
+        cmap='viridis',
+    )
+
+    ax.set_xlabel(style.INPUT_FEATURE_STYLE[var_name])
+    ax.set_ylabel(rf"$p_T$ {pt_corretion}")
+
     # Colorbar
-    cbar = plt.colorbar(h[3], ax=ax, label="Entries")
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_label("Entries (normalized)")
 
     # Reduce top padding since we handled spacing manually
     plt.tight_layout()
@@ -141,7 +156,7 @@ def pt_weights_plotting(model, inputs, layer_name, plot_path):
     pt_correction_type = layer_name.split("_")[1] # 'weights' or 'offsets'
     pt_weights = get_pt_weights(model, X_test, reco_pt_test, layer_name)
 
-    plot_path = os.path.join(plot_path, "pt_weights")
+    plot_path = os.path.join(plot_path, f"pt_weights")
     os.makedirs(plot_path, exist_ok=True)
 
     mask = X_test[:, :, 0].flatten() != 0
@@ -150,34 +165,34 @@ def pt_weights_plotting(model, inputs, layer_name, plot_path):
         X_test[:, :, 0].flatten()[mask],
         pt_correction_type,
         20,
-        os.path.join(plot_path, f"pt_{pt_correction_type}_distribution"),
+        plot_path,
         )
 
-    class_labels = model.class_labels
-    y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
-    for i, input_var in enumerate(model.input_vars):
-        plot_2D_histogram(
-            pt_weights.flatten(),
-            pt_correction_type,
-            X_test[:, :, i].flatten(),
-            input_var,
-            mask,
-            binning_dict[input_var],
-            save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}"),
-            )
+    # class_labels = model.class_labels
+    # y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
+    # for i, input_var in enumerate(model.input_vars):
+    #     plot_2D_histogram(
+    #         pt_weights.flatten(),
+    #         pt_correction_type,
+    #         X_test[:, :, i].flatten(),
+    #         input_var,
+    #         mask,
+    #         binning_dict[input_var],
+    #         save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}"),
+    #         )
 
-        for flav, c in class_labels.items():
-            class_mask = y_test == c
-            sub_mask = X_test[:, :, 0][class_mask].flatten() != 0
-            plot_2D_histogram(
-                pt_weights[class_mask].flatten(),
-                pt_correction_type,
-                X_test[:, :, i][class_mask].flatten(),
-                input_var,
-                sub_mask,
-                binning_dict[input_var],
-                save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}_{flav}"),
-                )
+    #     for flav, c in class_labels.items():
+    #         class_mask = y_test == c
+    #         sub_mask = X_test[:, :, 0][class_mask].flatten() != 0
+    #         plot_2D_histogram(
+    #             pt_weights[class_mask].flatten(),
+    #             pt_correction_type,
+    #             X_test[:, :, i][class_mask].flatten(),
+    #             input_var,
+    #             sub_mask,
+    #             binning_dict[input_var],
+    #             save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}_{flav}"),
+    #             )
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -197,9 +212,10 @@ if __name__ == "__main__":
     output_dir = os.path.join(model.output_directory, "plots/training")
 
     # Plot pt weights
+    pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
     pt_weights_plotting(model, inputs, 'pt_weights_output', output_dir)
-    try:
-        pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
-    except:
-        print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
+    # try:
+    #     pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
+    # except:
+    #     print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
 

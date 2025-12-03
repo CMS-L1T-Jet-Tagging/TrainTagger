@@ -42,6 +42,37 @@ DeepSet:baseline_5param_extended_trk:
     RUN_SYNTHESIS: 'True'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
+JEDILinear:HGQ2_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: JEDILinearHGQ2_5param_extended_trk
+    Model: JEDIlinear_HGQ2
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+MLPmixer:HGQ2_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: MLPmixerHGQ2_5param_extended_trk
+    Model: MLPmixer_HGQ2
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+DeepSet:HGQ2_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: DeepSetHGQ2_5param_extended_trk
+    Model: baseline_HGQ2
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'True'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+
 # DeepSet:torch_5param_extended_trk:
 #   extends: .ml_pipeline
 #   variables:
@@ -52,15 +83,15 @@ DeepSet:baseline_5param_extended_trk:
 #     RUN_SYNTHESIS: 'False'
 #     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
-DeepSet:floating_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: floating_5param_extended_trk
-    Model: floating_baseline
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+# DeepSet:floating_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: floating_5param_extended_trk
+#     Model: floating_baseline
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'False'
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 # DeepSet:pquant_5param_extended_trk:
 #   extends: .ml_pipeline

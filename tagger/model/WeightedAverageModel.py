@@ -127,7 +127,7 @@ class WeightedAverageModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_1', **self.common_args)(pt_weights)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 1),
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 2),
             name='pt_weights_output')(pt_weights)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])

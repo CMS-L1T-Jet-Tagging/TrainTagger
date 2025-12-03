@@ -123,7 +123,7 @@ class DoubleAggregateModel(DeepSetModel):
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 1),
             name='pt_weights_output')(pt_weights)
 
-        pt_offsets = QDense(16, name='pt_offsets_Dense', **self.common_args)(main_regression)
+        pt_offsets = QDense(16, name='pt_offsets_unmasked', **self.common_args)(main_regression)
 
         weighted_pt = tf.keras.layers.Multiply(name='pt_weights_multiply')([pt_weights, pt])
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])

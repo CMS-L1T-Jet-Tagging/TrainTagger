@@ -123,7 +123,7 @@ class WeightedAverageConvModel(DeepSetModel):
 
         pt_offsets = QConv1D(filters=10, kernel_size=1, name='Conv1D_pt_offsets_1', **self.common_args)(main_act)
         pt_offsets = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_offsets_2', **self.common_args)(pt_offsets)
-        pt_offsets = tf.keras.layers.Flatten(name='pt_offsets_flatten')(pt_offsets)
+        pt_offsets = tf.keras.layers.Flatten(name='pt_offsets_unmasked')(pt_offsets)
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])
 
         # apply weights and offsets to constituent pTs

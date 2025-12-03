@@ -1,4 +1,4 @@
-name: tagger
+name: tagger2
 channels:
   - conda-forge
 dependencies:
@@ -18,15 +18,17 @@ dependencies:
     - shap
     - awkward-pandas
     - mlflow
-    - hgq
+    #- hgq
     - histbook
     - ydf
     - ray[tune]
     - notebook
     - schema
     - tqdm
-
-    - tensorflow==2.14
+    - hls4ml
+    - tensorflow>=2.16
     - pyparsing
-    - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger
-    - git+https://github.com/jmitrevs/qkeras.git@qrecurrent_unstack
+    - git+https://github.com/calad0i/da4ml
+    - git+https://github.com/calad0i/HGQ2
+   # - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger
+   # - git+https://github.com/jmitrevs/qkeras.git@qrecurrent_unstack

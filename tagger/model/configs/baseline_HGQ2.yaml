@@ -1,0 +1,33 @@
+model: DeepSetModelHGQ2
+run_config :
+  verbose : 2
+  debug : True
+  num_threads : 24
+
+model_config :
+  name : baseline_HGQ2
+  conv1d_layers : [10,10]
+  classification_layers : [32,16]
+  regression_layers : [10]
+  beta: 1.1e-7
+
+quantization_config:
+  pt_output_quantization : [16,6]
+
+training_config :
+  weight_method: "onlyclass"
+  epochs : 100
+  batch_size : 512
+  learning_rate : 0.001
+  validation_split : 0.1
+
+  loss_weights : [1,1]
+
+
+  EarlyStopping_patience : 10
+
+  ReduceLROnPlateau_factor : 0.5
+  ReduceLROnPlateau_patience : 5
+  ReduceLROnPlateau_min_lr : 0.00005
+
+

@@ -32,3 +32,8 @@ dependencies:
     - git+https://github.com/calad0i/HGQ2
    # - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger
    # - git+https://github.com/jmitrevs/qkeras.git@qrecurrent_unstack
+    - quantizers
+    - tensorflow==2.14
+    - pyparsing
+    - git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger
+    - git+https://github.com/jmitrevs/qkeras.git@qrecurrent_unstack

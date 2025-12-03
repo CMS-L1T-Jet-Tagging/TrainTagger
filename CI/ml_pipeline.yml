@@ -59,10 +59,10 @@ data:
   extends:
     - .template
   stage: data
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 2
+    KUBERNETES_MEMORY_REQUEST: 64Gi
+    KUBERNETES_CPU_REQUEST: 16
   rules:
     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
         - tagger/data/**
@@ -106,7 +106,6 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [cern-nextgen-h100]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -146,10 +145,6 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 4
   extends:
     - .template
   rules:
@@ -169,14 +164,14 @@ hls4ml:
     expire_in: 1 day
 
 synth:
-  tags:
-    - fpga-large
-  image: registry.cern.ch/ci4fpga/vivado:2023.2
+  tags: [cern-nextgen-highmem]
+  image: registry.cern.ch/ci4fpga/vivado:2024.2
   stage: synth
   needs : [hls4ml]
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:
+    - source /opt/Xilinx/Vitis_HLS/2024.2/settings64.sh
     - cd output/$Model/firmware/L1TSC4NGJetModel_test
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
@@ -190,10 +185,10 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+    KUBERNETES_MEMORY_REQUEST: 64Gi
+    KUBERNETES_CPU_REQUEST: 16
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -214,10 +209,10 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+    KUBERNETES_MEMORY_REQUEST: 64Gi
+    KUBERNETES_CPU_REQUEST: 16
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:
@@ -242,10 +237,10 @@ profile:
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_CPU_REQUEST: 1
+    KUBERNETES_MEMORY_REQUEST: 64Gi
+    KUBERNETES_CPU_REQUEST: 16
   rules:
     - if: $RERUN_ON_TAG == "False"
   needs:
@@ -273,10 +268,10 @@ upload_new_model:
 upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_CPU_REQUEST: 1
+    KUBERNETES_MEMORY_REQUEST: 64Gi
+    KUBERNETES_CPU_REQUEST: 16
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
   rules:

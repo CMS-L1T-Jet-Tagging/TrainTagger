@@ -49,7 +49,7 @@ JEDILinear:HGQ2_5param_extended_trk:
     Model: JEDIlinear_HGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
+    RUN_SYNTHESIS: 'True'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 MLPmixer:HGQ2_5param_extended_trk:
@@ -59,7 +59,7 @@ MLPmixer:HGQ2_5param_extended_trk:
     Model: MLPmixer_HGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
+    RUN_SYNTHESIS: 'True'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 DeepSet:HGQ2_5param_extended_trk:

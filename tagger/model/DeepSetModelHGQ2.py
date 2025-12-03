@@ -2,10 +2,6 @@ import json
 import os
 from schema import Schema, And, Use, Optional
 
-
-import tensorflow as tf
-
-
 import keras
 import numpy as np
 import numpy.typing as npt
@@ -16,7 +12,7 @@ from hgq.regularizers import MonoL1
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler
 # Qkeras
 
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML

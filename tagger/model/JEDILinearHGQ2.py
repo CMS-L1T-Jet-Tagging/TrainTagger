@@ -1,31 +1,27 @@
 import json
 import os
 from schema import Schema, And, Use, Optional
-
-
-import tensorflow as tf
+from math import log2
 
 import numpy.typing as npt
 import keras
 import numpy as np
 from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten
-from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd
+from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd,QSum
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
-from hgq.utils.sugar import FreeEBOPs, BetaScheduler
-# Qkeras
+from hgq.constraints import MinMax
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule
 
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.TorchDeepSetModel import JetTagDataset, TorchDeepSetNetwork,TorchDeepSetModel
-#from tagger.model.QKerasModel import QKerasModel
 from tagger.model.common import initialise_tensorflow
 
 @JetModelFactory.register('JEDILinearHGQ2')
-class JEDILinearHGQ2(TorchDeepSetModel):
+class JEDILinearHGQ2(JetTagModel):
 
     schema = Schema(
             {
@@ -55,45 +51,70 @@ class JEDILinearHGQ2(TorchDeepSetModel):
     )
 
     def build_model(self, inputs_shape, outputs_shape):
-
+        
         initialise_tensorflow(self.run_config['num_threads'])
 
-        iq_conf = QuantizerConfig(place='datalane', round_mode='RND')
+        scope0 = QuantizerConfigScope(default_q_type='kbi',
+                                      b0=7,
+                                      overflow_mode='wrap',
+                                      i0=0,
+                                      fr=MonoL1(1.e-8),
+                                      ir=MonoL1(1.e-8),
+                                    )
 
-        N = 16
-        #n = 3 if conf.pt_eta_phi else 16
+        scope1 = QuantizerConfigScope(default_q_type='kif',
+                                      place='datalane',
+                                      overflow_mode='wrap',
+                                      f0=7,
+                                      fr=MonoL1(1.e-8),
+                                      ic=MinMax(0, 12),
+                                    )
         heterogeneous_axis = None
 
-        with (
-            QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT'),
-            QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
-            #LayerConfigScope(enable_ebops=True, heterogeneous_axis=heterogeneous_axis,beta0=1e-8)):
-            inp = tf.keras.layers.Input((N, 20),name='model_input')
-            inp_b = QBatchNormalization()(inp)
-            #pool_scale = 2.**-round(log2(N))
-            x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', iq_conf=iq_conf)(inp_b)
-            s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', )(x)
-            d = QEinsumDenseBatchnorm('bnc,cC->bnC', (1, 20), bias_axes='C', activation='relu', )(AveragePooling1D(16)(x))
-            x = QAdd()([s, d])
-            x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', )(x)
-            #x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', )(x)
-            #x = QSum(axes=1, scale=1/16, keepdims=False)(x)
-            x = AveragePooling1D(16,name='avgpool')(x)
-            x = Flatten()(x)
-            jet_id = QEinsumDenseBatchnorm('bc,cC->bC',20, bias_axes='C', activation='relu', )(x)
-            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(jet_id)
-            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(jet_id)
-            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C')(jet_id)
-            jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+        scope2 = LayerConfigScope(enable_ebops=True, heterogeneous_axis=heterogeneous_axis,beta0=1e-8)
+        
+        with scope0, scope1, scope2:
 
-            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(x)
-            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(pt_regress)
-            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C' )(pt_regress)
-            #pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(pt_regress)
+            iq_conf = QuantizerConfig(place='datalane', round_mode='RND')
 
-            #Define the model using both branches
-            self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
-            print(self.jet_model.summary())
+            N = 16
+            n_inputs = 20
+            #n = 3 if conf.pt_eta_phi else 16
+        
+            with (
+                QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT_SYM'),
+                QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
+                inp_b = keras.layers.Input((N, n_inputs),name='model_input')
+                #inp_b = QBatchNormalization()(inp)
+                pool_scale = 2.**-round(log2(N))
+                
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n_inputs), bias_axes='C', activation='relu'  )(inp_b)
+                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n_inputs), bias_axes='C', activation='relu', )(x)
+                
+                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, n_inputs), bias_axes='C', activation='relu')(QSum(axes=1, scale=pool_scale, keepdims=True)(x))
+                x = QAdd()([s, d])
+
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC',
+                                          (N, n_inputs),
+                                          bias_axes='C',
+                                          activation='relu',
+                                        )(x)
+                x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
+                
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',n_inputs, bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C')(jet_id)
+                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C' )(pt_regress)
+
+                #Define the model using both branches
+                self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
+                print(self.jet_model.summary())
 
     # Redefine save and load for HGQ due to needing h5 format
     @JetTagModel.save_decorator
@@ -110,6 +131,7 @@ class JEDILinearHGQ2(TorchDeepSetModel):
         # Load model
 
         self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
+
     def firmware_convert(self, firmware_dir: str, build: bool = False):
             """Run the hls4ml model conversion
 
@@ -124,7 +146,7 @@ class JEDILinearHGQ2(TorchDeepSetModel):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"]="distributed_arithmetic"
+            config["Model"]["Strategy"] = "distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
            
@@ -172,16 +194,35 @@ class JEDILinearHGQ2(TorchDeepSetModel):
             log_beta_end = np.log10(1e-4)
             log_beta = log_beta_start + (log_beta_end - log_beta_start) * (epoch / max_epochs)
             return 10 ** log_beta
-        beta_scheduler = BetaScheduler(beta_fn=lambda epoch: log_beta_schedule(epoch, max_epochs=100))
+        
+        def cosine_decay_restarts(global_step):
+            from math import cos, pi
+
+            n_cycle = 1
+            cycle_step = global_step
+            cycle_len = 100
+            while cycle_step >= cycle_len:
+                cycle_step -= cycle_len
+                cycle_len *= 1
+                n_cycle += 1
+
+            cycle_t = min(cycle_step / (cycle_len - 10), 1)
+            lr = 1.e-6 + 0.5 * (3.e-3 - 1.e-6) * (
+                1 + cos(pi * cycle_t)
+            ) * 1 ** max(n_cycle - 1, 0)
+            return lr
+
+        scheduler = keras.callbacks.LearningRateScheduler(cosine_decay_restarts)
+        terminate_on_nan = keras.callbacks.TerminateOnNaN()
+
+    
+        #beta_scheduler = BetaScheduler(beta_fn=lambda epoch: log_beta_schedule(epoch, max_epochs=100))
+        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
             EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
+            scheduler,
+            terminate_on_nan,
             FreeEBOPs(),
             beta_scheduler
 

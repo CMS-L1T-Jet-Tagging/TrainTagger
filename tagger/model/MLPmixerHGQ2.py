@@ -59,39 +59,36 @@ class MLPmixerHGQ2(TorchDeepSetModel):
         initialise_tensorflow(self.run_config['num_threads'])
 
         iq_conf = QuantizerConfig(place='datalane', round_mode='RND')
-   	    iq_default = QuantizerConfig(place='datalane')
-
-    	N = 16
-   	    n =  20
-       	heterogeneous_axis = None
-        	with (
-        	    QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT'),
-                QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
-                inp = tf.keras.layers.Input((N, 20),name='model_input')
-           	    inp_b = QBatchNormalization()(inp)
-    
-           	    x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu')(inp_b)
-                x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n), bias_axes='C', activation='relu', )(x1)
-                x2 = QEinsumDenseBatchnorm('bnc,nN->bNc', (N, n), bias_axes='N')(x1)
-                x = QAdd()([inp_b, x2])
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', )(x)
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', )(x)
-                x = QEinsumDense('bnc,n->bc', 20)(x)
-    
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(x)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C' )(pt_regress)
-    
-       	
-                #Define the model using both branches
-                self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
-                print(self.jet_model.summary())
+        iq_default = QuantizerConfig(place='datalane')
+        N = 16
+        n =  20
+        heterogeneous_axis = None
+        with (
+            QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT'),
+            QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
+            inp = tf.keras.layers.Input((N, 20),name='model_input')
+            inp_b = QBatchNormalization()(inp)
+                
+            x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu')(inp_b)
+            x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n), bias_axes='C', activation='relu', )(x1)
+            x2 = QEinsumDenseBatchnorm('bnc,nN->bNc', (N, n), bias_axes='N')(x1)
+            x = QAdd()([inp_b, x2])
+            x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', )(x)
+            x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, 20), bias_axes='C', activation='relu', )(x)
+            x = QEinsumDense('bnc,n->bc', 20)(x)
+                
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(x)
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(jet_id)
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(jet_id)
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C')(jet_id)
+            jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(x)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(pt_regress)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(pt_regress)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C' )(pt_regress)
+            #Define the model using both branches
+            self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
+            print(self.jet_model.summary())
 
     # Redefine save and load for HGQ due to needing h5 format
     @JetTagModel.save_decorator

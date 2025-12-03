@@ -115,9 +115,9 @@ class WeightedAverageConvModel(DeepSetModel):
 
         # Make the pT weights and offsets
         pt_weights = QConv1D(filters=10, kernel_size=1, name='Conv1D_pt_weights_1', **self.common_args)(main_act)
-        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 1), name='Conv1D_pt_weights_relu_1')(pt_weights)  # Ensure positive weights
+        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 2), name='Conv1D_pt_weights_relu_1')(pt_weights)  # Ensure positive weights
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights_2', **self.common_args)(pt_weights)
-        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 1), name='Conv1D_pt_weights_relu_2')(pt_weights)  # Ensure positive weights
+        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 2), name='Conv1D_pt_weights_relu_2')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Flatten(name='pt_weights_flatten')(pt_weights)
         pt_weights = tf.keras.layers.Multiply(name='pt_weights_output')([pt_weights, pt_mask])
 

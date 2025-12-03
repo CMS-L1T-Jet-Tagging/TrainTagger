@@ -11,7 +11,7 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
+def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, reco_eta_test):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
 
@@ -19,6 +19,7 @@ def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
+    np.save(os.path.join(out_dir, "testing_data/reco_eta_test.npy"), reco_eta_test)
 
     print(f"Test data saved to {out_dir}")
 
@@ -132,7 +133,7 @@ def train(model, out_dir, percent):
     )
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, reco_eta_train = to_ML(data_train, class_labels)
 
     mask = constituents_mask(X_train, 10)
     pt_mask = mask[:, :, 0]
@@ -140,8 +141,8 @@ def train(model, out_dir, percent):
     inverse_jet_pt = (1.0 / (reco_pt_train + 1e-6)).reshape(-1, 1)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
+    X_test, y_test, _, truth_pt_test, reco_pt_test, reco_eta_test = to_ML(data_test, class_labels)
+    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, reco_eta_test)
 
     # Calculate the sample weights for training
     sample_weight_class = train_weights(
@@ -159,23 +160,55 @@ def train(model, out_dir, percent):
         debug=model.run_config['debug'],
     )
 
-    # if model.run_config['debug']:
-    #     print("DEBUG - Checking sample_weight:")
-    #     print(sample_weight)
-
     # Get input shape
     ratio_factor = np.zeros([X_train.shape[1], 1])
     input_shape = [X_train.shape[1:], mask.shape[1:], pt_mask.shape[1:], constituents_pt.shape[1:], inverse_jet_pt.shape[1:]]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shape, output_shape)
-
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
+    # Freeze the pt offset layer and set to zeros, train weights only
+    for l in model.jet_model.layers:
+        if "pt_offsets" in l.name:
+            l.trainable = False
+    old_weights = model.jet_model.get_layer("pt_offsets_unmasked").get_weights()
+    model.jet_model.get_layer("pt_offsets_unmasked").set_weights(
+        [
+            np.zeros(old_weights[0].shape),
+            np.zeros(old_weights[1].shape),
+        ]
+    )
     model.compile_model(num_samples)
     model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
+    # Now unfreeze and train only the pt offsets, freeze the rest
+    for l in model.jet_model.layers:
+        if "pt_offsets" in l.name:
+            l.trainable = True
+        else:
+            l.trainable = False
+
+    model.jet_model.get_layer("prune_low_magnitude_pt_offsets_unmasked").set_weights(
+        [
+            old_weights[0],
+            old_weights[1],
+        ]
+    )
+    model.compile_model(num_samples)
+    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+
+    for l in model.jet_model.layers:
+        if "pt_weights" or "pt_offsets" in l.name:
+            l.trainable = True
+        else:
+            l.trainable = False
+    model.compile_model(num_samples)
+    model.jet_model.optimizer.learning_rate.assign(0.0002)
+    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+
+    # Finished training, save model
     model.save()
 
     model.plot_loss()

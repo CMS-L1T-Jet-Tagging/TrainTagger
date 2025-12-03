@@ -120,7 +120,7 @@ class DoubleAggregateModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(main_regression)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 1),
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 2),
             name='pt_weights_output')(pt_weights)
 
         pt_offsets = QDense(16, name='pt_offsets_unmasked', **self.common_args)(main_regression)

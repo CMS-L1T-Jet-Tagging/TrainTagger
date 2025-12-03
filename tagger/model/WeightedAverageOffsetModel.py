@@ -97,9 +97,9 @@ class WeightedAverageOffsetModel(DeepSetModel):
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
-        pt_offsets = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_offset', **self.common_args)(main)
-        pt_offsets = tf.keras.layers.Flatten(name='Conv1D_pt_offset_flat')(pt_offsets)  # shape: (batch, timesteps)
-        pt_offsets = tf.keras.layers.Multiply(name='apply_pt_mask_corrections')([pt_offsets, pt_mask])
+        pt_offsets = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_offsets', **self.common_args)(main)
+        pt_offsets = tf.keras.layers.Flatten(name='Conv1D_pt_offsets_flat')(pt_offsets)  # shape: (batch, timesteps)
+        pt_offsets = tf.keras.layers.Multiply(name='apply_pt_offsets_mask')([pt_offsets, pt_mask])
 
         # Weighted Global Average Pooling
         weights = tf.keras.layers.Reshape((16, 1), name='reshape_pt_weights')(pt_weights)
@@ -127,11 +127,12 @@ class WeightedAverageOffsetModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_1', **self.common_args)(pt_weights)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 1),
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 2),
             name='pt_weights_output')(pt_weights)
 
         # pt_offsets
         pt_offsets = QDense(16, name='pt_offsets_unmasked', **self.common_args)(pt_offsets)
+        pt_offsets = QActivation(activation='quantized_bits(18, 5)', name="pt_offsets_linear_quant")(pt_offsets)
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])
 
         # apply weights and offsets to constituent pTs

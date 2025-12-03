@@ -212,10 +212,9 @@ if __name__ == "__main__":
     output_dir = os.path.join(model.output_directory, "plots/training")
 
     # Plot pt weights
-    pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
     pt_weights_plotting(model, inputs, 'pt_weights_output', output_dir)
-    # try:
-    #     pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
-    # except:
-    #     print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
+    try:
+        pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
+    except:
+        print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
 

@@ -22,7 +22,7 @@ from tagger.model.common import initialise_tensorflow
 
 from da4ml.converter.hgq2.parser import trace_model
 from da4ml.trace import comb_trace, HWConfig
-from da4ml.codegen import VHDLModel
+from da4ml.codegen import HLSModel
 
 @JetModelFactory.register('JEDILinearHGQ2')
 class JEDILinearHGQ2(JetTagModel):
@@ -160,23 +160,23 @@ class JEDILinearHGQ2(JetTagModel):
             inp, out = trace_model(removed_softmax_model, solver_options={"hard_dc": 2}, hwconf=HWConfig(1, -1, -1) )
             solution = comb_trace(inp, out)
             solution.save_binary("/tmp/emulator.bin")  # <- This file
-            self.vhdl_model = VHDLModel(
+            self.hls_model = HLSModel(
                     solution,
                     prj_name=self.firmware_config['project_name'],
                     path=hdl_outdir,
                     part_name="xcvu13p-flga2577-2-e",
                     clock_period=self.firmware_config['clock_period'],
                     clock_uncertainty=0.0,
-                    latency_cutoff=2,
                 )
 
             # Compile the project
-            self.vhdl_model.compile(nproc=8)
+            self.hls_model.compile()
+            
 
-            # Save config  as json file
-            print("Saving default config as config.json ...")
-            with open(hls4ml_outdir + '/config.json', 'w') as fp:
-                json.dump(config, fp)
+            # # Save config  as json file
+            # print("Saving default config as config.json ...")
+            # with open(hls4ml_outdir + '/config.json', 'w') as fp:
+            #     json.dump(config, fp)
 
             if build:
                 # build the project

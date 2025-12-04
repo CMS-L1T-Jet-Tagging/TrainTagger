@@ -61,8 +61,8 @@ data:
   stage: data
   tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 64Gi
-    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_REQUEST: 128Gi
+    KUBERNETES_CPU_REQUEST: 32
   rules:
     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
         - tagger/data/**
@@ -187,8 +187,8 @@ emulation-evaluate:
   stage: emulation-evaluate
   tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 64Gi
-    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_REQUEST: 128Gi
+    KUBERNETES_CPU_REQUEST: 32
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -211,8 +211,8 @@ profile:
   stage: profile
   tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 64Gi
-    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_REQUEST: 128Gi
+    KUBERNETES_CPU_REQUEST: 32
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:
@@ -239,8 +239,8 @@ upload_new_model:
   stage: upload
   tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 64Gi
-    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_REQUEST: 128Gi
+    KUBERNETES_CPU_REQUEST: 32
   rules:
     - if: $RERUN_ON_TAG == "False"
   needs:
@@ -270,8 +270,8 @@ upload_tagged_model:
   stage: upload
   tags: [cern-nextgen-highmem]
   variables:
-    KUBERNETES_MEMORY_REQUEST: 64Gi
-    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_REQUEST: 128Gi
+    KUBERNETES_CPU_REQUEST: 32
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
   rules:

@@ -191,7 +191,7 @@ class DeepSetModelHGQ2(JetTagModel):
                 n_cycle += 1
 
             cycle_t = min(cycle_step / (cycle_len - 10), 1)
-            lr = 1.e-6 + 0.5 * (3.e-3 - 1.e-6) * (
+            lr = 1.e-6 + 0.5 * (0.001 - 1.e-6) * (
                 1 + cos(pi * cycle_t)
             ) * 1 ** max(n_cycle - 1, 0)
             return lr
@@ -205,7 +205,12 @@ class DeepSetModelHGQ2(JetTagModel):
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
             EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
-            scheduler,
+            ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=self.training_config['ReduceLROnPlateau_factor'],
+                patience=self.training_config['ReduceLROnPlateau_patience'],
+                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
+            ),
             terminate_on_nan,
             FreeEBOPs(),
             beta_scheduler

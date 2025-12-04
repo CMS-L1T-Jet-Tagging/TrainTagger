@@ -46,7 +46,14 @@ class JEDILinearHGQ2(JetTagModel):
                                          "EarlyStopping_patience" : And(int, lambda s: s > 0),
                                          "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
                                          "ReduceLROnPlateau_patience" : int,
-                                         "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
+                                         "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)},
+                
+                "firmware_config" : {"input_precision" : str,
+                                    "class_precision" : str,
+                                    "reg_precision": str,
+                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
+                                    "fpga_part" : str,
+                                    "project_name" : str}
             }
     )
 

@@ -9,7 +9,7 @@ from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePoo
 from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
-from hgq.utils.sugar import FreeEBOPs, BetaScheduler
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule
 # Qkeras
 
 from keras.models import load_model
@@ -60,11 +60,15 @@ class DeepSetModelHGQ2(JetTagModel):
     def build_model(self, inputs_shape, outputs_shape):
 
         initialise_tensorflow(self.run_config['num_threads'])
+        
+        scope0 = QuantizerConfigScope(place='all', k0=1, b0=3, i0=0, default_q_type='kbi',homogeneous_axis=(), overflow_mode='sat_sym')
 
-        with QuantizerConfigScope(place='all', k0=1, b0=3, i0=0, default_q_type='kbi',homogeneous_axis=(), overflow_mode='sat_sym'):
+        scope1 = QuantizerConfigScope(place='datalane', k0=0, default_q_type='kif',homogeneous_axis=(0,1),overflow_mode='wrap', f0=3, i0=3)
+        heterogeneous_axis = None
+        scope2 = LayerConfigScope(enable_ebops=True, heterogeneous_axis=heterogeneous_axis,beta0=1e-8)
+        
 
-            with QuantizerConfigScope(place='datalane', k0=0, default_q_type='kif',homogeneous_axis=(0,1),overflow_mode='wrap', f0=3, i0=3):
-            #with LayerConfigScope(enable_ebops=True, homogeneous_axis=(0,)):
+        with scope0, scope1, scope2:
                 
                 L, C = (16,20)
                 inputs = Input(shape=(16,20), name='model_input')
@@ -79,7 +83,7 @@ class DeepSetModelHGQ2(JetTagModel):
                 jet_id = QDense(32,parallelization_factor=32, activation='relu',name='Dense_1_jetID')(main)
                 jet_id = QDense(16,parallelization_factor=16, activation='relu',name='Dense_2_jetID')(jet_id)
                 jet_id = QDense(8, parallelization_factor=8,name='dense_3')(jet_id)
-                jet_id = keras.layers.Activation('softmax', name='jet_id_output')(jet_id)
+                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
                 #pT regression branch
                 pt_regress = QDense(10,parallelization_factor=10,activation='relu', name='Dense_1_pT')(main)
@@ -174,16 +178,35 @@ class DeepSetModelHGQ2(JetTagModel):
             log_beta_end = np.log10(1e-4)
             log_beta = log_beta_start + (log_beta_end - log_beta_start) * (epoch / max_epochs)
             return 10 ** log_beta
-        beta_scheduler = BetaScheduler(beta_fn=lambda epoch: log_beta_schedule(epoch, max_epochs=100))
+        
+        def cosine_decay_restarts(global_step):
+            from math import cos, pi
+
+            n_cycle = 1
+            cycle_step = global_step
+            cycle_len = 100
+            while cycle_step >= cycle_len:
+                cycle_step -= cycle_len
+                cycle_len *= 1
+                n_cycle += 1
+
+            cycle_t = min(cycle_step / (cycle_len - 10), 1)
+            lr = 1.e-6 + 0.5 * (3.e-3 - 1.e-6) * (
+                1 + cos(pi * cycle_t)
+            ) * 1 ** max(n_cycle - 1, 0)
+            return lr
+
+        scheduler = keras.callbacks.LearningRateScheduler(cosine_decay_restarts)
+        terminate_on_nan = keras.callbacks.TerminateOnNaN()
+
+    
+        #beta_scheduler = BetaScheduler(beta_fn=lambda epoch: log_beta_schedule(epoch, max_epochs=100))
+        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
             EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
+            scheduler,
+            terminate_on_nan,
             FreeEBOPs(),
             beta_scheduler
 

@@ -172,13 +172,13 @@ synth:
     - if: $RUN_SYNTHESIS == "True"
   script:
     - source /opt/Xilinx/Vitis_HLS/2024.2/settings64.sh
-    - cd output/$Model/firmware/L1TSC4NGJetModel_test
+    - cd output/$Model/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../..
   artifacts:
     paths:
-      - output/$Model/firmware/L1TSC4NGJetModel_test
+      - output/$Model/firmware/L1TSC4NGJetModel
     expire_in: 1 day
 
 emulation-evaluate:

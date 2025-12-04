@@ -20,6 +20,10 @@ from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.common import initialise_tensorflow
 
+from da4ml.converter.hgq2.parser import trace_model
+from da4ml.trace import comb_trace, HWConfig
+from da4ml.codegen import VHDLModel
+
 @JetModelFactory.register('JEDILinearHGQ2')
 class JEDILinearHGQ2(JetTagModel):
 
@@ -146,42 +150,28 @@ class JEDILinearHGQ2(JetTagModel):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
+            removed_softmax_model = keras.Model(self.jet_model.input, [self.jet_model.get_layer('q_einsum_dense_batchnorm_7').output,self.jet_model.get_layer('pT_output').output])
+            #qsoftmax = QSoftmax(name='jet_id_output')
 
             # Remove the old directory if it exists
-            hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
-            os.system(f'rm -rf {hls4ml_outdir}')
-
-            # Create default config
-            config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"] = "distributed_arithmetic"
-            config["Model"]["ReuseFactor"]=1
-            config['IOType'] = 'io_parallel'
-            config['namespace']=self.firmware_config['project_name']+'_emu_v2'
-            config['write_weights_txt']=False
-            config['write_emulation_constants']=True
-           
-
-            # Configuration for conv1d layers
-            # hls4ml automatically figures out the paralellization factor
-            # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-            # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
-
-            # Additional config
+            hdl_outdir = firmware_dir + '/' + self.firmware_config['project_name']
+            os.system(f'rm -rf {hdl_outdir}')
             
-
-            # Write HLS
-            self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
-                self.jet_model,
-                backend='Vitis',
-                project_name=self.firmware_config['project_name'],
-                clock_period=self.firmware_config['clock_period'],
-                hls_config=config,
-                output_dir=f'{hls4ml_outdir}',
-                part= self.firmware_config['fpga_part'],
-            )
+            inp, out = trace_model(removed_softmax_model, solver_options={"hard_dc": 2}, hwconf=HWConfig(1, -1, -1) )
+            solution = comb_trace(inp, out)
+            solution.save_binary("/tmp/emulator.bin")  # <- This file
+            self.vhdl_model = VHDLModel(
+                    solution,
+                    prj_name=self.firmware_config['project_name'],
+                    path=hdl_outdir,
+                    part_name="xcvu13p-flga2577-2-e",
+                    clock_period=self.firmware_config['clock_period'],
+                    clock_uncertainty=0.0,
+                    latency_cutoff=2,
+                )
 
             # Compile the project
-            self.hls_jet_model.compile()
+            self.vhdl_model.compile(nproc=8)
 
             # Save config  as json file
             print("Saving default config as config.json ...")

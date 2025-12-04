@@ -17,12 +17,11 @@ import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.TorchDeepSetModel import JetTagDataset, TorchDeepSetNetwork,TorchDeepSetModel
 #from tagger.model.QKerasModel import QKerasModel
 from tagger.model.common import initialise_tensorflow
 
 @JetModelFactory.register('DeepSetModelHGQ2')
-class DeepSetModelHGQ2(TorchDeepSetModel):
+class DeepSetModelHGQ2(JetTagModel):
 
     schema = Schema(
             {
@@ -119,8 +118,10 @@ class DeepSetModelHGQ2(TorchDeepSetModel):
             config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
+            config['namespace']=self.firmware_config['project_name']+'_emu_v2'
+            config['write_weights_txt']=False
+            config['write_emulation_constants']=True
            
-
             # Configuration for conv1d layers
             # hls4ml automatically figures out the paralellization factor
             # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8

@@ -137,6 +137,9 @@ class MLPmixerHGQ2(JetTagModel):
             config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
+            config['namespace']=self.firmware_config['project_name']+'_emu_v2'
+            config['write_weights_txt']=False
+            config['write_emulation_constants']=True
            
 
             # Configuration for conv1d layers

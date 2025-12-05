@@ -139,6 +139,7 @@ def train(model, out_dir, percent):
     pt_mask = mask[:, :, 0]
     constituents_pt = X_train[:, :, 0]
     inverse_jet_pt = (1.0 / (reco_pt_train + 1e-6)).reshape(-1, 1)
+    jet_features = np.stack((reco_pt_train, reco_eta_train), axis=1)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test, reco_eta_test = to_ML(data_test, class_labels)
@@ -162,7 +163,8 @@ def train(model, out_dir, percent):
 
     # Get input shape
     ratio_factor = np.zeros([X_train.shape[1], 1])
-    input_shape = [X_train.shape[1:], mask.shape[1:], pt_mask.shape[1:], constituents_pt.shape[1:], inverse_jet_pt.shape[1:]]  # First dimension is batch size
+    input_shape = [X_train.shape[1:], mask.shape[1:], pt_mask.shape[1:], constituents_pt.shape[1:],
+        inverse_jet_pt.shape[1:], jet_features.shape[1:]]  # First dimension is batch size
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shape, output_shape)
@@ -173,15 +175,15 @@ def train(model, out_dir, percent):
     for l in model.jet_model.layers:
         if "pt_offsets" in l.name:
             l.trainable = False
-    old_weights = model.jet_model.get_layer("pt_offsets_unmasked").get_weights()
-    model.jet_model.get_layer("pt_offsets_unmasked").set_weights(
+    old_weights = model.jet_model.get_layer("Dense_pt_offsets_output").get_weights()
+    model.jet_model.get_layer("Dense_pt_offsets_output").set_weights(
         [
             np.zeros(old_weights[0].shape),
             np.zeros(old_weights[1].shape),
         ]
     )
-    model.compile_model(num_samples)
-    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.compile_model(num_samples, [1, 1])
+    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     # Now unfreeze and train only the pt offsets, freeze the rest
     for l in model.jet_model.layers:
@@ -190,23 +192,23 @@ def train(model, out_dir, percent):
         else:
             l.trainable = False
 
-    model.jet_model.get_layer("prune_low_magnitude_pt_offsets_unmasked").set_weights(
+    model.jet_model.get_layer("prune_low_magnitude_Dense_pt_offsets_output").set_weights(
         [
             old_weights[0],
             old_weights[1],
         ]
     )
-    model.compile_model(num_samples)
-    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.compile_model(num_samples, [0, 1])
+    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     for l in model.jet_model.layers:
-        if "pt_weights" or "pt_offsets" in l.name:
+        if ("pt_weights" in l.name) or ("pt_offsets" in l.name):
             l.trainable = True
         else:
             l.trainable = False
-    model.compile_model(num_samples)
+    model.compile_model(num_samples, [0, 1])
     model.jet_model.optimizer.learning_rate.assign(0.0002)
-    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     # Finished training, save model
     model.save()

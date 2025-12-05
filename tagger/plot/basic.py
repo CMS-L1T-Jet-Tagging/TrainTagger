@@ -924,14 +924,15 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
+    reco_eta_test = np.load(f"{model.output_directory}/testing_data/reco_eta_test.npy")
 
     constituents_pt = X_test[:, :, 0]
     mask = constituents_mask(X_test, 10)
     pt_mask = mask[:, :, 0]
     inverse_reco_pt_test = (1.0 / reco_pt_test).reshape(-1, 1)
+    jet_features = np.stack((reco_pt_test, reco_eta_test), axis=1)
 
-    model_outputs = model.jet_model.predict([X_test, mask, pt_mask, constituents_pt, inverse_reco_pt_test])
-
+    model_outputs = model.jet_model.predict([X_test, mask, pt_mask, constituents_pt, inverse_reco_pt_test, jet_features])
 
     # Get classification outputs
     y_pred = model_outputs[0]
@@ -948,41 +949,41 @@ def basic(model, signal_dirs):
                 class_pairs.append(class_pair)
 
     # Make ROC binaries for complete test set and each signal process
-    for i in range(-1, len(signal_dirs), 1):
-        sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
-        if i == -1:
-            y_p, y_t = y_pred, y_test
-            process_label = None
-        else:
-            signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
-            sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_inverse_reco_pt = (1.0 / np.concatenate((sample_train[-1], sample_test[-1]), axis=0)).reshape(-1, 1)
-            sample_constituents_pt = sample_data[:, :, 0]
-            sample_mask = constituents_mask(sample_data, 10)
-            sample_pt_mask = sample_mask[:, :, 0]
-            sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt, sample_inverse_reco_pt])[0]
-            y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
-            process_label = process_labels(signal_dirs[i])
-            os.makedirs(binary_dir, exist_ok=True)
+    # for i in range(-1, len(signal_dirs), 1):
+    #     sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
+    #     if i == -1:
+    #         y_p, y_t = y_pred, y_test
+    #         process_label = None
+    #     else:
+    #         signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
+    #         sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
+    #         sample_inverse_reco_pt = (1.0 / np.concatenate((sample_train[-1], sample_test[-1]), axis=0)).reshape(-1, 1)
+    #         sample_constituents_pt = sample_data[:, :, 0]
+    #         sample_mask = constituents_mask(sample_data, 10)
+    #         sample_pt_mask = sample_mask[:, :, 0]
+    #         sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
+    #         sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt, sample_inverse_reco_pt])[0]
+    #         y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
+    #         process_label = process_labels(signal_dirs[i])
+    #         os.makedirs(binary_dir, exist_ok=True)
 
-        # Plot the binary ROCs for each class pair
-        for class_pair in class_pairs:
-            binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
-            if i != -1:
-                binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
+    #     # Plot the binary ROCs for each class pair
+    #     for class_pair in class_pairs:
+    #         binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
+    #         ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
+    #         if i != -1:
+    #             binary_dir = os.path.join(sample_plot_dir, "full_sample")
+    #             ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
 
-        # Add light vs b/charm/gluon combined plot
-        binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
-        ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
-        ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+    #     # Add light vs b/charm/gluon combined plot
+    #     binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
+    #     ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+    #     ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
 
-        if i != -1:
-            binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-            ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
-            ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+    #     if i != -1:
+    #         binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
+    #         ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+    #         ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
@@ -991,16 +992,17 @@ def basic(model, signal_dirs):
     confusion(y_pred, y_test, model.class_labels, plot_dir)
 
     # Plot inclusive response and individual flavor
+    from IPython import embed; embed()
     response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     # Plot the rms of the residuals vs pt
     rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     # Plot input distributions
-    plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, plot_dir)
+    # plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, plot_dir)
 
     # Plot pt corrections
-    pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
+    # pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     # Plot the shaply feature importance
     # plot_shaply(model, X_test, model.class_labels, model.input_vars, plot_dir)

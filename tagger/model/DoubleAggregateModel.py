@@ -18,6 +18,7 @@ from qkeras.qlayers import QActivation, QDense
 from qkeras.quantizers import quantized_bits, quantized_relu
 from tensorflow.keras.layers import Activation, BatchNormalization, GlobalAveragePooling1D
 from tagger.model.DeepSetModel import DeepSetModel
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('DoubleAggregateModel')
@@ -77,9 +78,11 @@ class DoubleAggregateModel(DeepSetModel):
         pt_mask = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_mask_input')
         pt = tf.keras.layers.Input(shape=inputs_shape[3], name='pt_input')
         inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape[4], name='inverse_jet_pt_input')
+        jet_features = tf.keras.layers.Input(shape=inputs_shape[5], name='jet_features_input')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
+        jet_features_norm = BatchNormalization(name='norm_jet_features')(jet_features)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -89,6 +92,11 @@ class DoubleAggregateModel(DeepSetModel):
             )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
+        main_regression = QConv1D(filters=10, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
+        main_regression = QActivation(
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_regression'
+        )(main_regression)
+
         # Apply the constituents mask
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
@@ -97,8 +105,13 @@ class DoubleAggregateModel(DeepSetModel):
         main_jet_id = tf.keras.layers.GlobalAveragePooling1D(name='global_avg_pool_classification')(main)
 
         # Weighted Pt Response branch
-        main_regression = tf.keras.layers.Permute((2,1), name='pt_response_permute')(main)
+        main_regression = QActivation(activation='quantized_bits(18,8)', name='act_pool_regression')(main_regression)
+        main_regression = tf.keras.layers.Permute((2,1), name='pt_response_permute')(main_regression)
         main_regression = GlobalAveragePooling1D(name='global_avg_pool_regression')(main_regression)
+
+        # Conact jet level features for regression task and jet Id
+        main_regression = tf.keras.layers.Concatenate(name='regression_concat')([main_regression, jet_features_norm])
+        main_jet_id = tf.keras.layers.Concatenate(name='classification_concat')([main_jet_id, jet_features_norm])
 
         # Now split into jet ID and pt regression
         # Make fully connected dense layers for classification task
@@ -123,7 +136,7 @@ class DoubleAggregateModel(DeepSetModel):
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 2),
             name='pt_weights_output')(pt_weights)
 
-        pt_offsets = QDense(16, name='pt_offsets_unmasked', **self.common_args)(main_regression)
+        pt_offsets = QDense(16, name='Dense_pt_offsets_output', **self.common_args)(main_regression)
 
         weighted_pt = tf.keras.layers.Multiply(name='pt_weights_multiply')([pt_weights, pt])
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])
@@ -137,13 +150,13 @@ class DoubleAggregateModel(DeepSetModel):
         pt_output = tf.keras.layers.Multiply(name='pT_output')([summed_pt, inverse_jet_pt])
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt, inverse_jet_pt], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt, inverse_jet_pt, jet_features], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
@@ -159,9 +172,10 @@ class DoubleAggregateModel(DeepSetModel):
 
         # Train the model using hyperparameters in yaml config
         # Train the model using hyperparameters in yaml config
-        inputs, mask, pt_mask, pt, inverse_jet_pt = X_train
+        inputs, mask, pt_mask, pt, inverse_jet_pt, jet_features = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt, 'inverse_jet_pt_input': inverse_jet_pt},
+            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt,
+            'inverse_jet_pt_input': inverse_jet_pt, 'jet_features_input': jet_features},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
                 'prune_low_magnitude_jet_id_output': sample_weight[0],
@@ -192,8 +206,10 @@ class DoubleAggregateModel(DeepSetModel):
         config['IOType'] = 'io_parallel'
         config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['masking_input']['Precision']['result'] = self.firmware_config['mask_precision']
+        config['LayerName']['pt_mask_input']['Precision']['result'] = self.firmware_config['mask_precision']
         config['LayerName']['pt_input']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['inverse_jet_pt_input']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['jet_features_input']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor
@@ -241,6 +257,45 @@ class DoubleAggregateModel(DeepSetModel):
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
+
+    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0]):
+        """compile the model generating callbacks and loss function
+        Args:
+            num_samples (int): Number of samples in the training set used for scheduling
+        """
+
+        # Define the callbacks using hyperparameters in the config
+        self.callbacks = [
+            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], restore_best_weights=True),
+            ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=self.training_config['ReduceLROnPlateau_factor'],
+                patience=self.training_config['ReduceLROnPlateau_patience'],
+                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
+            ),
+        ]
+
+        # Define the pruning
+        if 'initial_sparsity' in self.training_config:
+            self._prune_model(num_samples)
+
+        # compile the tensorflow model setting the loss and metrics
+        self.jet_model.compile(
+            optimizer='adam',
+            loss={
+                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
+            },
+            loss_weights=loss_weights,
+            metrics={
+                self.loss_name + self.output_id_name: 'categorical_accuracy',
+                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
+            },
+            weighted_metrics={
+                self.loss_name + self.output_id_name: 'categorical_accuracy',
+                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
+            },
+        )
 
     # Override load to allow node edge projection to also be loaded
     @JetTagModel.load_decorator

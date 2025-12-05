@@ -40,32 +40,32 @@ include:
 #     RUN_EMULATION: 'True'
 #     RUN_SYNTHESIS: 'True'
 
-WeightedAverage:weightedAverage_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: weightedAverage_5param_extended_trk
-    Model: weightedAverage
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
+# WeightedAverage:weightedAverage_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: weightedAverage_5param_extended_trk
+#     Model: weightedAverage
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
 
-WeightedAverageOffset:weightedAverageOffset_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: weightedAverageOffset_5param_extended_trk
-    Model: weightedAverageOffset
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
+# WeightedAverageOffset:weightedAverageOffset_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: weightedAverageOffset_5param_extended_trk
+#     Model: weightedAverageOffset
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
 
-WeightedAverageConv:weightedAverageConv_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: weightedAverageConv_5param_extended_trk
-    Model: weightedAverageConv
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
+# WeightedAverageConv:weightedAverageConv_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: weightedAverageConv_5param_extended_trk
+#     Model: weightedAverageConv
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
 
 DoubleAggregate:doubleAggregate_5param_extended_trk:
   extends: .ml_pipeline

@@ -9,6 +9,7 @@ from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePoo
 from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
+from hgq.constraints import MinMax
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule
 # Qkeras
 
@@ -61,40 +62,56 @@ class DeepSetModelHGQ2(JetTagModel):
 
         initialise_tensorflow(self.run_config['num_threads'])
         
-        scope0 = QuantizerConfigScope(place='all', k0=1, b0=3, i0=0, default_q_type='kbi',homogeneous_axis=(), overflow_mode='sat_sym')
+        scope0 = QuantizerConfigScope(default_q_type='kbi',
+                                      b0=7,
+                                      overflow_mode='wrap',
+                                      i0=0,
+                                      fr=MonoL1(1.e-8),
+                                      ir=MonoL1(1.e-8),
+                                    )
 
-        scope1 = QuantizerConfigScope(place='datalane', k0=0, default_q_type='kif',homogeneous_axis=(0,1),overflow_mode='wrap', f0=3, i0=3)
+        scope1 = QuantizerConfigScope(default_q_type='kif',
+                                      place='datalane',
+                                      overflow_mode='wrap',
+                                      f0=7,
+                                      fr=MonoL1(1.e-8),
+                                      ic=MinMax(0, 12),
+                                    )
         heterogeneous_axis = None
+
         scope2 = LayerConfigScope(enable_ebops=True, heterogeneous_axis=heterogeneous_axis,beta0=1e-8)
         
-
         with scope0, scope1, scope2:
                 
                 L, C = (16,20)
                 inputs = Input(shape=(16,20), name='model_input')
                 main = QBatchNormalization(name='norm_input')(inputs)
                 main = QConv1D(filters=30, parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_1')(main) #1.1e-7
-                main = QConv1D(filters=15,  parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_2')(main)#1.1e-7
-                main = QConv1D(filters=10,  parallelization_factor=8,kernel_size=1,activation='relu',name='Conv1D_3')(main)#1.1e-7
+                main = QConv1D(filters=30, parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_2')(main) #1.1e-7
+                main = QConv1D(filters=15,  parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_3')(main)#1.1e-7
+                main = QConv1D(filters=10,  parallelization_factor=8,kernel_size=1,activation='relu',name='Conv1D_4')(main)#1.1e-7
                 main = GlobalAveragePooling1D(name='avgpool')(main)
              
                 
                 #jetID branch, 3 layer MLP
-                jet_id = QDense(32, parallelization_factor=32,activation='relu',name='Dense_1_jetID')(main)
-                jet_id = QDense(16, parallelization_factor=8,activation='relu',name='Dense_2_jetID')(jet_id)
-                jet_id = QDense(8, name='dense_3')(jet_id)
+                jet_id = QDense(64, parallelization_factor=16,activation='relu',name='Dense_1_jetID')(main)
+                jet_id = QDense(32, parallelization_factor=32,activation='relu',name='Dense_2_jetID')(main)
+                jet_id = QDense(16, parallelization_factor=16,activation='relu',name='Dense_3_jetID')(jet_id)
+                jet_id = QDense(16, parallelization_factor=16,activation='relu',name='Dense_4_jetID')(jet_id)
+                jet_id = QDense(8, parallelization_factor=8, name='Dense_5_jetID')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
                 #pT regression branch
-                pt_regress = QDense(16,parallelization_factor=16,activation='relu', name='Dense_1_pT')(main)
-                pt_regress = QDense(8,parallelization_factor=8,activation='relu', name='Dense_2_pT')(main)
-                pt_regress = QDense(4,parallelization_factor=4,activation='relu', name='Dense_3_pT')(main)
+                pt_regress = QDense(32,parallelization_factor=16,activation='relu', name='Dense_1_pT')(main)
+                pt_regress = QDense(16,parallelization_factor=16,activation='relu', name='Dense_2_pT')(main)
+                pt_regress = QDense(8,parallelization_factor=8,activation='relu', name='Dense_3_pT')(main)
+                pt_regress = QDense(4,parallelization_factor=10,activation='relu', name='Dense_4_pT')(main)
                 pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
     
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
-        # Define the model using both branches
+                # Define the model using both branches
 
 
                 print(self.jet_model.summary())
@@ -206,19 +223,18 @@ class DeepSetModelHGQ2(JetTagModel):
         beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
+            #EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
             ReduceLROnPlateau(
                 monitor='val_loss',
                 factor=self.training_config['ReduceLROnPlateau_factor'],
                 patience=self.training_config['ReduceLROnPlateau_patience'],
                 min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
             ),
-            terminate_on_nan,
             FreeEBOPs(),
+            scheduler,
             beta_scheduler
 
         ]
-
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(

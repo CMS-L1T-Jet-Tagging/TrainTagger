@@ -186,6 +186,38 @@ class JEDILinearHGQ2(JetTagModel):
             print("Saving default config as config.json ...")
             with open(hls4ml_outdir + '/config.json', 'w') as fp:
                 json.dump(config, fp)
+                
+                
+            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
+            new_text = """for (int ii = 0; ii < N_LAYER_12_D1 * N_LAYER_12_D2; ii++) {
+                    auto layer13_index = ii % N_LAYER_12_D2;
+                    layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
+                }"""
+
+            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
+                content = f.read()
+
+            content = content.replace(old_text, new_text)
+
+            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
+                f.write(content)
+
+            print("cpp replacement complete")
+            
+            old_text = 'void einsum_dense('
+            new_text = """void einsum_dense(
+                            #pragma HLS inline recursive
+                        """
+            
+            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
+                content = f.read()
+            
+            content = content.replace(old_text, new_text)
+
+            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
+                f.write(content)
+
+            print("einsum dense replacement complete.")
 
             if build:
                 # build the project
@@ -230,7 +262,7 @@ class JEDILinearHGQ2(JetTagModel):
         beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
+            #EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
             scheduler,
             terminate_on_nan,
             FreeEBOPs(),

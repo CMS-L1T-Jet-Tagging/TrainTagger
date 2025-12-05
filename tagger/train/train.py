@@ -175,40 +175,48 @@ def train(model, out_dir, percent):
     for l in model.jet_model.layers:
         if "pt_offsets" in l.name:
             l.trainable = False
-    old_weights = model.jet_model.get_layer("Dense_pt_offsets_output").get_weights()
-    model.jet_model.get_layer("Dense_pt_offsets_output").set_weights(
-        [
-            np.zeros(old_weights[0].shape),
-            np.zeros(old_weights[1].shape),
-        ]
-    )
+    if model.__class__.__name__ == "WeightedAverageModel":
+        print("No pt offsets layers for WeightedAverageModel")
+    else:
+        old_weights = model.jet_model.get_layer("Dense_pt_offsets_output").get_weights()
+        model.jet_model.get_layer("Dense_pt_offsets_output").set_weights(
+            [
+                np.zeros(old_weights[0].shape),
+                np.zeros(old_weights[1].shape),
+            ]
+        )
     model.compile_model(num_samples, [1, 1])
     model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
-    # Now unfreeze and train only the pt offsets, freeze the rest
-    for l in model.jet_model.layers:
-        if "pt_offsets" in l.name:
-            l.trainable = True
-        else:
-            l.trainable = False
-
-    model.jet_model.get_layer("prune_low_magnitude_Dense_pt_offsets_output").set_weights(
+    if model.__class__.__name__ == "WeightedAverageModel":
+        print("No pt offsets layers for WeightedAverageModel.")
+    else:
+        # Now unfreeze and train only the pt part, set jet id loss weight to 0
+        model.jet_model.get_layer("prune_low_magnitude_Dense_pt_offsets_output").set_weights(
         [
             old_weights[0],
             old_weights[1],
         ]
-    )
-    model.compile_model(num_samples, [0, 1])
-    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+        )
 
+    # Unfreeze pt weights layer only
     for l in model.jet_model.layers:
         if ("pt_weights" in l.name) or ("pt_offsets" in l.name):
             l.trainable = True
         else:
             l.trainable = False
+
     model.compile_model(num_samples, [0, 1])
-    model.jet_model.optimizer.learning_rate.assign(0.0002)
     model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+
+    # for l in model.jet_model.layers:
+    #     if ("pt_weights" in l.name) or ("pt_offsets" in l.name):
+    #         l.trainable = True
+    #     else:
+    #         l.trainable = False
+    # model.compile_model(num_samples, [0, 1])
+    # model.jet_model.optimizer.learning_rate.assign(0.0002)
+    # model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     # Finished training, save model
     model.save()

@@ -18,6 +18,7 @@ from qkeras.qlayers import QActivation, QDense
 from qkeras.quantizers import quantized_bits, quantized_relu, quantized_linear
 from tensorflow.keras.layers import Activation, BatchNormalization
 from tagger.model.DeepSetModel import DeepSetModel
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('WeightedAverageModel')
@@ -77,9 +78,11 @@ class WeightedAverageModel(DeepSetModel):
         pt_mask = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_mask_input')
         pt = tf.keras.layers.Input(shape=inputs_shape[3], name='pt_input')
         inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape[4], name='inverse_jet_pt_input')
+        jet_features = tf.keras.layers.Input(shape=inputs_shape[5], name='jet_features_input')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
+        jet_features_norm = BatchNormalization(name='norm_jet_features')(jet_features)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -97,15 +100,13 @@ class WeightedAverageModel(DeepSetModel):
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
-        # pt_correction = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_correction', **self.common_args)(main)
-        # pt_correction = tf.keras.layers.Flatten(name='Conv1D_pt_correction_flat')(pt_correction)  # shape: (batch, timesteps)
-        # pt_correction = tf.keras.layers.Multiply(name='apply_pt_mask_corrections')([pt_correction, pt_mask])
 
         # Weighted Global Average Pooling
         weights = tf.keras.layers.Reshape((16, 1), name='reshape_pt_weights')(pt_weights)
         weighted_inputs = tf.keras.layers.Multiply(name='weighted_main')([main, weights])
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
         main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(weighted_inputs)
+        main = tf.keras.layers.Concatenate(name='concat_jet_features')([main, jet_features_norm])
 
         # Now split into jet ID and pt regression
         # Make fully connected dense layers for classification task
@@ -124,6 +125,9 @@ class WeightedAverageModel(DeepSetModel):
         jet_id = QDense(outputs_shape[0], name='Dense_' + str(iclass + 2) + '_jetID', **self.common_args)(jet_id)
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
+        # concat jet features to pt weights
+        pt_weights = tf.keras.layers.Concatenate(name='concat_jet_features_pt_weights')([pt_weights, jet_features_norm])
+
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_1', **self.common_args)(pt_weights)
         pt_weights = QActivation(
@@ -140,13 +144,13 @@ class WeightedAverageModel(DeepSetModel):
         pt_output = tf.keras.layers.Multiply(name='pT_output')([corrected_jet_pt, inverse_jet_pt])
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt, inverse_jet_pt], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt, inverse_jet_pt, jet_features], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
@@ -161,9 +165,10 @@ class WeightedAverageModel(DeepSetModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        inputs, mask, pt_mask, pt, inverse_jet_pt = X_train
+        inputs, mask, pt_mask, pt, inverse_jet_pt, jet_features = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt, 'inverse_jet_pt_input': inverse_jet_pt},
+            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt,
+            'inverse_jet_pt_input': inverse_jet_pt, 'jet_features_input': jet_features},
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
                 'prune_low_magnitude_jet_id_output': sample_weight[0],
@@ -197,6 +202,7 @@ class WeightedAverageModel(DeepSetModel):
         config['LayerName']['pt_mask_input']['Precision']['result'] = self.firmware_config['mask_precision']
         config['LayerName']['pt_input']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['inverse_jet_pt_input']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['jet_features_input']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor
@@ -244,6 +250,45 @@ class WeightedAverageModel(DeepSetModel):
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
+
+    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0]):
+        """compile the model generating callbacks and loss function
+        Args:
+            num_samples (int): Number of samples in the training set used for scheduling
+        """
+
+        # Define the callbacks using hyperparameters in the config
+        self.callbacks = [
+            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], restore_best_weights=True, verbose=2),
+            ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=self.training_config['ReduceLROnPlateau_factor'],
+                patience=self.training_config['ReduceLROnPlateau_patience'],
+                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
+            ),
+        ]
+
+        # Define the pruning
+        if 'initial_sparsity' in self.training_config:
+            self._prune_model(num_samples)
+
+        # compile the tensorflow model setting the loss and metrics
+        self.jet_model.compile(
+            optimizer='adam',
+            loss={
+                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
+            },
+            loss_weights=loss_weights,
+            metrics={
+                self.loss_name + self.output_id_name: 'categorical_accuracy',
+                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
+            },
+            weighted_metrics={
+                self.loss_name + self.output_id_name: 'categorical_accuracy',
+                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
+            },
+        )
 
     # Override load to allow node edge projection to also be loaded
     @JetTagModel.load_decorator

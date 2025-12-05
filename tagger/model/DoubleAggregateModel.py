@@ -79,6 +79,7 @@ class DoubleAggregateModel(DeepSetModel):
         pt = tf.keras.layers.Input(shape=inputs_shape[3], name='pt_input')
         inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape[4], name='inverse_jet_pt_input')
         jet_features = tf.keras.layers.Input(shape=inputs_shape[5], name='jet_features_input')
+        jet_eta, jet_pt = jet_features[:, 0], jet_features[:, 1]
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
@@ -266,7 +267,7 @@ class DoubleAggregateModel(DeepSetModel):
 
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], restore_best_weights=True),
+            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], restore_best_weights=True, verbose=2),
             ReduceLROnPlateau(
                 monitor='val_loss',
                 factor=self.training_config['ReduceLROnPlateau_factor'],

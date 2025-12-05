@@ -197,7 +197,7 @@ class MLPmixerHGQ2(JetTagModel):
                             #pragma HLS inline recursive
                         """
             
-            with open(hls4ml_outdir+'firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
+            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
                 content = f.read()
             
             content = content.replace(old_text, new_text)

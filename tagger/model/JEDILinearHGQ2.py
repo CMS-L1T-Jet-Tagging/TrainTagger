@@ -6,8 +6,8 @@ from math import log2
 import numpy.typing as npt
 import keras
 import numpy as np
-from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten
-from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd,QSum
+from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten,Rescaling
+from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd,QSum, QMultiply
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
@@ -22,7 +22,7 @@ from tagger.model.common import initialise_tensorflow
 
 from da4ml.converter.hgq2.parser import trace_model
 from da4ml.trace import comb_trace, HWConfig
-from da4ml.codegen import HLSModel
+from da4ml.codegen import HLSModel, VHDLModel
 
 @JetModelFactory.register('JEDILinearHGQ2')
 class JEDILinearHGQ2(JetTagModel):
@@ -102,7 +102,11 @@ class JEDILinearHGQ2(JetTagModel):
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n_inputs), bias_axes='C', activation='relu'  )(inp_b)
                 s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n_inputs), bias_axes='C', activation='relu', )(x)
                 
-                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, n_inputs), bias_axes='C', activation='relu')(QSum(axes=1, scale=pool_scale, keepdims=True)(x))
+                s2 = AveragePooling1D(16)(x)
+                #s2 = Rescaling(pool_scale)(s2)
+                
+                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, n_inputs), bias_axes='C', activation='relu')(s2)
+                
                 x = QAdd()([s, d])
 
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC',
@@ -110,8 +114,11 @@ class JEDILinearHGQ2(JetTagModel):
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
-                x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
-                
+                #x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
+                x = AveragePooling1D(16)(x)
+                x = Flatten()(x)
+                #x = Rescaling(1/16)(x)
+
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',n_inputs, bias_axes='C', activation='relu', )(x)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(jet_id)
@@ -150,37 +157,40 @@ class JEDILinearHGQ2(JetTagModel):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
-            removed_softmax_model = keras.Model(self.jet_model.input, [self.jet_model.get_layer('q_einsum_dense_batchnorm_7').output,self.jet_model.get_layer('pT_output').output])
-            #qsoftmax = QSoftmax(name='jet_id_output')
 
             # Remove the old directory if it exists
-            hdl_outdir = firmware_dir + '/' + self.firmware_config['project_name']
-            os.system(f'rm -rf {hdl_outdir}')
-            
-            inp, out = trace_model(removed_softmax_model, solver_options={"hard_dc": 2}, hwconf=HWConfig(1, -1, -1) )
-            solution = comb_trace(inp, out)
-            solution.save_binary("/tmp/emulator.bin")  # <- This file
-            self.hls_model = HLSModel(
-                    solution,
-                    prj_name=self.firmware_config['project_name'],
-                    path=hdl_outdir,
-                    part_name="xcvu13p-flga2577-2-e",
-                    clock_period=self.firmware_config['clock_period'],
-                    clock_uncertainty=0.0,
-                )
+            hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
+            os.system(f'rm -rf {hls4ml_outdir}')
+
+            # Create default config
+            config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
+            config["Model"]["Strategy"]="distributed_arithmetic"
+            config["Model"]["ReuseFactor"]=1
+            config['IOType'] = 'io_parallel'
+
+            # Write HLS
+            self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
+                self.jet_model,
+                backend='Vitis',
+                project_name=self.firmware_config['project_name'],
+                clock_period=self.firmware_config['clock_period'],
+                hls_config=config,
+                output_dir=f'{hls4ml_outdir}',
+                part= self.firmware_config['fpga_part'],
+            )
 
             # Compile the project
-            self.hls_model.compile()
-            
+            self.hls_jet_model.compile()
 
-            # # Save config  as json file
-            # print("Saving default config as config.json ...")
-            # with open(hls4ml_outdir + '/config.json', 'w') as fp:
-            #     json.dump(config, fp)
+            # Save config  as json file
+            print("Saving default config as config.json ...")
+            with open(hls4ml_outdir + '/config.json', 'w') as fp:
+                json.dump(config, fp)
 
             if build:
                 # build the project
                 self.hls_jet_model.build(csim=False, reset=True)
+
     
     
     def compile_model(self, num_samples: int):

@@ -168,6 +168,9 @@ synth:
   image: registry.cern.ch/ci4fpga/vivado:2024.2
   stage: synth
   needs : [hls4ml]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 128Gi
+    KUBERNETES_CPU_REQUEST: 32
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:

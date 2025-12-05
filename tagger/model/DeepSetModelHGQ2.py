@@ -73,21 +73,23 @@ class DeepSetModelHGQ2(JetTagModel):
                 L, C = (16,20)
                 inputs = Input(shape=(16,20), name='model_input')
                 main = QBatchNormalization(name='norm_input')(inputs)
-                main = QConv1D(filters=10, parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_1')(main) #1.1e-7
-                main = QConv1D(filters=10,  parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_2')(main)#1.1e-7
-
+                main = QConv1D(filters=30, parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_1')(main) #1.1e-7
+                main = QConv1D(filters=15,  parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_2')(main)#1.1e-7
+                main = QConv1D(filters=10,  parallelization_factor=8,kernel_size=1,activation='relu',name='Conv1D_3')(main)#1.1e-7
                 main = GlobalAveragePooling1D(name='avgpool')(main)
              
                 
                 #jetID branch, 3 layer MLP
-                jet_id = QDense(32,parallelization_factor=32, activation='relu',name='Dense_1_jetID')(main)
-                jet_id = QDense(16,parallelization_factor=16, activation='relu',name='Dense_2_jetID')(jet_id)
-                jet_id = QDense(8, parallelization_factor=8,name='dense_3')(jet_id)
+                jet_id = QDense(32, parallelization_factor=32,activation='relu',name='Dense_1_jetID')(main)
+                jet_id = QDense(16, parallelization_factor=8,activation='relu',name='Dense_2_jetID')(jet_id)
+                jet_id = QDense(8, name='dense_3')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
                 #pT regression branch
-                pt_regress = QDense(10,parallelization_factor=10,activation='relu', name='Dense_1_pT')(main)
-                pt_regress = QDense(1,parallelization_factor=1,name='pT_output')(pt_regress)#1.1e-7
+                pt_regress = QDense(16,parallelization_factor=16,activation='relu', name='Dense_1_pT')(main)
+                pt_regress = QDense(8,parallelization_factor=8,activation='relu', name='Dense_2_pT')(main)
+                pt_regress = QDense(4,parallelization_factor=4,activation='relu', name='Dense_3_pT')(main)
+                pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
     
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])

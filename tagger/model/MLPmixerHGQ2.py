@@ -96,7 +96,7 @@ class MLPmixerHGQ2(JetTagModel):
                 x = QAdd(iq_confs=(iq_conf, iq_default))([inp_b, x2])
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n), bias_axes='C', activation='relu', )(x)
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n), bias_axes='C', activation='relu', )(x)
-                x = QEinsumDense('bnc,n->bc', 20)(x)
+                x = QEinsumDense('bnc,n->bc', n)(x)
                     
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(x)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 20, bias_axes='C', activation='relu', )(jet_id)

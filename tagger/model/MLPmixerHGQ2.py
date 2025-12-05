@@ -176,7 +176,7 @@ class MLPmixerHGQ2(JetTagModel):
             with open(hls4ml_outdir + '/config.json', 'w') as fp:
                 json.dump(config, fp)
                 
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
+            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config12>(layer10_out, layer11_out, layer12_out); // q_add'
             new_text = """for (int ii = 0; ii < N_LAYER_10_D1 * N_LAYER_10_D2; ii++) {
                     auto layer131index = ii % N_LAYER_10_D2;
                     layer12_out[ii] = layer10_out[ii] + layer11_out[layer11_index];

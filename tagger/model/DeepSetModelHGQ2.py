@@ -31,8 +31,11 @@ class DeepSetModelHGQ2(JetTagModel):
                 "run_config" : JetTagModel.run_schema,
                 "model_config" : {"name" : str,
                                   "conv1d_layers" : list,
+                                  "conv1d_parallelisation_factor" : list,
                                   "classification_layers" : list,
+                                  "classification_parallelisation_factor" : list,
                                   "regression_layers" : list,
+                                  "regression_parallelisation_factor" : list,
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
 
@@ -86,26 +89,28 @@ class DeepSetModelHGQ2(JetTagModel):
                 L, C = (16,20)
                 inputs = Input(shape=(16,20), name='model_input')
                 main = QBatchNormalization(name='norm_input')(inputs)
-                main = QConv1D(filters=30, parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_1')(main) #1.1e-7
-                main = QConv1D(filters=30, parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_2')(main) #1.1e-7
-                main = QConv1D(filters=15,  parallelization_factor=16,kernel_size=1,activation='relu',name='Conv1D_3')(main)#1.1e-7
-                main = QConv1D(filters=10,  parallelization_factor=8,kernel_size=1,activation='relu',name='Conv1D_4')(main)#1.1e-7
+                
+                for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
+                    main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(main)                
                 main = GlobalAveragePooling1D(name='avgpool')(main)
              
                 
                 #jetID branch, 3 layer MLP
-                jet_id = QDense(64, parallelization_factor=16,activation='relu',name='Dense_1_jetID')(main)
-                jet_id = QDense(32, parallelization_factor=32,activation='relu',name='Dense_2_jetID')(main)
-                jet_id = QDense(16, parallelization_factor=16,activation='relu',name='Dense_3_jetID')(jet_id)
-                jet_id = QDense(16, parallelization_factor=16,activation='relu',name='Dense_4_jetID')(jet_id)
+                
+                for iclass, depthclass in enumerate(self.model_config['classification_layers']):
+                    if iclass == 0:
+                        jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(main)
+                    else:
+                        jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(8, parallelization_factor=8, name='Dense_5_jetID')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
                 #pT regression branch
-                pt_regress = QDense(32,parallelization_factor=16,activation='relu', name='Dense_1_pT')(main)
-                pt_regress = QDense(16,parallelization_factor=16,activation='relu', name='Dense_2_pT')(main)
-                pt_regress = QDense(8,parallelization_factor=8,activation='relu', name='Dense_3_pT')(main)
-                pt_regress = QDense(4,parallelization_factor=10,activation='relu', name='Dense_4_pT')(main)
+                for ireg, depthreg in enumerate(self.model_config['regression_layers']):
+                    if ireg == 0:
+                        pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(main)
+                    else:
+                        pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(pt_regress)      
                 pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
     
                 #Define the model using both branches
@@ -210,7 +215,7 @@ class DeepSetModelHGQ2(JetTagModel):
                 n_cycle += 1
 
             cycle_t = min(cycle_step / (cycle_len - 10), 1)
-            lr = 1.e-6 + 0.5 * (0.001 - 1.e-6) * (
+            lr = 1.e-6 + 0.5 * (0.0003 - 1.e-6) * (
                 1 + cos(pi * cycle_t)
             ) * 1 ** max(n_cycle - 1, 0)
             return lr

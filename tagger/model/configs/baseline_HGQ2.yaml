@@ -7,8 +7,11 @@ run_config :
 model_config :
   name : baseline_HGQ2
   conv1d_layers : [10,10]
+  conv1d_parallelisation_factor : [16,16]
   classification_layers : [32,16]
+  classification_parallelisation_factor : [32,16]
   regression_layers : [10]
+  regression_parallelisation_factor : [10]
   beta: 1.1e-7
 
 quantization_config:
@@ -16,7 +19,7 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  epochs : 100
+  epochs : 60
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1

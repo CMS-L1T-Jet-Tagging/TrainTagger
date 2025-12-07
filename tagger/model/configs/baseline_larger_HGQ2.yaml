@@ -1,14 +1,17 @@
-model: JEDILinearHGQ2
+model: DeepSetModelHGQ2
 run_config :
   verbose : 2
   debug : True
   num_threads : 24
 
 model_config :
-  name : JEDILinear_HGQ2
-  conv1d_layers : [10,10]
-  classification_layers : [32,16]
-  regression_layers : [10]
+  name : baseline_larger_HGQ2
+  conv1d_layers : [32,32,16,8]
+  conv1d_parallelisation_factor : [32,32,16,8]
+  classification_layers : [64,32,16,16]
+  classification_parallelisation_factor : [64,32,16,16]
+  regression_layers : [32,16,8]
+  regression_parallelisation_factor : [32,16,8]
   beta: 1.1e-7
 
 quantization_config:
@@ -39,3 +42,5 @@ firmware_config:
   fpga_part : 'xcvu13p-flga2577-2-e'
 
   project_name: 'L1TSC4NGJetModel'
+
+

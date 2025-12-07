@@ -189,8 +189,8 @@ class JEDILinearHGQ2(JetTagModel):
                 
                 
             old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
-            new_text = """for (int ii = 0; ii < N_LAYER_12_D1 * N_LAYER_12_D2; ii++) {
-                    auto layer13_index = ii % N_LAYER_12_D2;
+            new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
+                    auto layer13_index = ii % 20;
                     layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
                 }"""
 
@@ -204,9 +204,9 @@ class JEDILinearHGQ2(JetTagModel):
 
             print("cpp replacement complete")
             
-            old_text = 'void einsum_dense('
-            new_text = """void einsum_dense(
-                            #pragma HLS inline recursive
+            old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
+            new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
+                          #pragma HLS inline recursive
                         """
             
             with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
@@ -249,7 +249,7 @@ class JEDILinearHGQ2(JetTagModel):
                 n_cycle += 1
 
             cycle_t = min(cycle_step / (cycle_len - 10), 1)
-            lr = 1.e-6 + 0.5 * (3.e-3 - 1.e-6) * (
+            lr = 1.e-6 + 0.5 * (1.e-3 - 1.e-6) * (
                 1 + cos(pi * cycle_t)
             ) * 1 ** max(n_cycle - 1, 0)
             return lr

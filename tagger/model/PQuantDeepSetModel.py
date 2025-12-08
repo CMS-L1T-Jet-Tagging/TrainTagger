@@ -100,7 +100,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         if torch.cuda.is_available():
             print("Running training on GPU")
             self.device = "cuda"
-            self.n_workers = 46
+            self.n_workers = 8
             self.pin_memory= True
             print(torch.backends.cudnn.version())
             print(torch.backends.cudnn.enabled)

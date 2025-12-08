@@ -203,6 +203,9 @@ class DeepSetModel(QKerasModel):
             hls_config=config,
             output_dir=f'{hls4ml_outdir}',
             part= self.firmware_config['fpga_part'],
+            #namespace='hls4ml_'+self.firmware_config['project_name'],
+            #write_weights_txt=False,
+            #write_emulation_constants=True,
         )
 
         # Compile the project

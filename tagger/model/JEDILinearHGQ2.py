@@ -177,6 +177,9 @@ class JEDILinearHGQ2(JetTagModel):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
+                #namespace='hls4ml_'+self.firmware_config['project_name'],
+                #write_weights_txt=False,
+                #write_emulation_constants=True,
             )
 
             # Compile the project
@@ -249,7 +252,7 @@ class JEDILinearHGQ2(JetTagModel):
                 n_cycle += 1
 
             cycle_t = min(cycle_step / (cycle_len - 10), 1)
-            lr = 1.e-6 + 0.5 * (1.e-3 - 1.e-6) * (
+            lr = 1.e-6 + 0.5 * (1.e-4 - 1.e-6) * (
                 1 + cos(pi * cycle_t)
             ) * 1 ** max(n_cycle - 1, 0)
             return lr
@@ -262,7 +265,7 @@ class JEDILinearHGQ2(JetTagModel):
         beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            #EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
+            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
             scheduler,
             terminate_on_nan,
             FreeEBOPs(),

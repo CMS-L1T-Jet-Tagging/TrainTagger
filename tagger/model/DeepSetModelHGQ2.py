@@ -153,9 +153,6 @@ class DeepSetModelHGQ2(JetTagModel):
             config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
-            config['namespace']=self.firmware_config['project_name']+'_emu_v2'
-            config['write_weights_txt']=False
-            config['write_emulation_constants']=True
            
             # Configuration for conv1d layers
             # hls4ml automatically figures out the paralellization factor
@@ -174,6 +171,9 @@ class DeepSetModelHGQ2(JetTagModel):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
+                #namespace='hls4ml_'+self.firmware_config['project_name'],
+                #write_weights_txt=False,
+                #write_emulation_constants=True,
             )
 
             # Compile the project
@@ -215,7 +215,7 @@ class DeepSetModelHGQ2(JetTagModel):
                 n_cycle += 1
 
             cycle_t = min(cycle_step / (cycle_len - 10), 1)
-            lr = 1.e-6 + 0.5 * (0.0003 - 1.e-6) * (
+            lr = 1.e-6 + 0.5 * (0.0001 - 1.e-6) * (
                 1 + cos(pi * cycle_t)
             ) * 1 ** max(n_cycle - 1, 0)
             return lr
@@ -228,13 +228,13 @@ class DeepSetModelHGQ2(JetTagModel):
         beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            #EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
+            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
+            # ReduceLROnPlateau(
+            #     monitor='val_loss',
+            #     factor=self.training_config['ReduceLROnPlateau_factor'],
+            #     patience=self.training_config['ReduceLROnPlateau_patience'],
+            #     min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
+            # ),
             FreeEBOPs(),
             scheduler,
             beta_scheduler

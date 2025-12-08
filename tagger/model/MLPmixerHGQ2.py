@@ -144,9 +144,6 @@ class MLPmixerHGQ2(JetTagModel):
             config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
-            config['namespace']=self.firmware_config['project_name']+'_emu_v2'
-            config['write_weights_txt']=False
-            config['write_emulation_constants']=True
            
 
             # Configuration for conv1d layers
@@ -166,6 +163,9 @@ class MLPmixerHGQ2(JetTagModel):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
+                #namespace='hls4ml_'+self.firmware_config['project_name'],
+                #write_weights_txt=False,
+                #write_emulation_constants=True,
             )
 
             # Compile the project
@@ -192,9 +192,9 @@ class MLPmixerHGQ2(JetTagModel):
 
             print("cpp replacement complete")
             
-            old_text = 'void einsum_dense('
-            new_text = """void einsum_dense(
-                            #pragma HLS inline recursive
+            old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
+            new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
+                          #pragma HLS inline recursive
                         """
             
             with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
@@ -237,7 +237,7 @@ class MLPmixerHGQ2(JetTagModel):
                 n_cycle += 1
 
             cycle_t = min(cycle_step / (cycle_len - 10), 1)
-            lr = 1.e-6 + 0.5 * (3.e-3 - 1.e-6) * (
+            lr = 1.e-6 + 0.5 * (1.e-3 - 1.e-6) * (
                 1 + cos(pi * cycle_t)
             ) * 1 ** max(n_cycle - 1, 0)
             return lr
@@ -250,7 +250,7 @@ class MLPmixerHGQ2(JetTagModel):
         beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            #EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
+            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
             scheduler,
             terminate_on_nan,
             FreeEBOPs(),

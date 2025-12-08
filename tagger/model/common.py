@@ -16,6 +16,16 @@ from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D, 
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
+class OffsetScaling(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
+    def call(self, offsets, scale):
+        input_shape = tf.shape(offsets)
+        scaling = tf.fill(input_shape, tf.cast(scale, tf.float32))
+        scaled_offset = tf.keras.layers.Multiply()([offsets, scaling])
+        return scaled_offset
+
+    def get_prunable_weights(self):
+        return []
+
 class AAtt(tf.keras.layers.Layer, tfmot.sparsity.keras.PrunableLayer):
     """Attention Layer class
 

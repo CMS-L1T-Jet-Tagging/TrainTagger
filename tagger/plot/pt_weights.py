@@ -62,40 +62,42 @@ def get_pt_weights(model, jet_nn_inputs, jet_pt, jet_features, layer_name):
 
     return pt_weights
 
-def plot_1D_histogram(pt_weights, pt, pt_correction, binning, save_path):
+def plot_1D_histogram(pt_weights, pt, eta, pt_correction, binning, save_path):
     # show distribution of pt weights
     pt_bins = [0, 0, 5, 15, 30, 80, np.inf]
+    eta_bins = [0, 0, 0.5, 1, 1.5, 2, 2.5]
     colors = ['purple', 'blue', 'cyan', 'green', 'gold', 'red']
     pt_weights = np.clip(pt_weights, -np.inf, 200)
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-    for i, (l, u) in enumerate(zip(pt_bins[:-1], pt_bins[1:])):
-        mask = (pt >= l) & (pt < u) if i>0 else pt < np.inf
-        label = f"{l} < pT < {u}" if u != np.inf else f"pT > {l}"
-        h = ax.hist(
-            pt_weights[mask],
-            bins=binning,
-            histtype='step',
-            label=label,
-            color=colors[i],
-            density=True,
-            linewidth=2.5,
-            range=(pt_weights.min(), pt_weights.max()),
-        )
-        ax.set_ylabel("Entries")
-        hep.cms.label(
-            llabel=style.CMSHEADER_LEFT,
-            rlabel=style.CMSHEADER_RIGHT,
-            ax=ax,
-            fontsize=style.MEDIUM_SIZE,
-        )
-    plt.yscale('log')
-    plt.xlabel(rf"$p_T$ {pt_correction}")
-    plt.legend()
-    plt.tight_layout()
+    for var_bins, var, var_name in zip([pt_bins, eta_bins], [pt, np.abs(eta)], ['pT', 'eta']):
+        for i, (l, u) in enumerate(zip(var_bins[:-1], var_bins[1:])):
+            mask = (var >= l) & (var < u) if i>0 else var < np.inf
+            label = f"{l} < {var_name} < {u}" if i==0 else "full distribution"
+            h = ax.hist(
+                pt_weights[mask],
+                bins=binning,
+                histtype='step',
+                label=label,
+                color=colors[i],
+                density=True,
+                linewidth=2.5,
+                range=(pt_weights.min(), pt_weights.max()),
+            )
+            ax.set_ylabel("Entries")
+            hep.cms.label(
+                llabel=style.CMSHEADER_LEFT,
+                rlabel=style.CMSHEADER_RIGHT,
+                ax=ax,
+                fontsize=style.MEDIUM_SIZE,
+            )
+        plt.yscale('log')
+        plt.xlabel(f"{var_name} {pt_correction}")
+        plt.legend()
+        plt.tight_layout()
 
-    plot_path = os.path.join(save_path, f"pt_{pt_correction}_distribution_pT_binned")
-    plt.savefig(plot_path + ".png")
-    plt.savefig(plot_path + ".pdf")
+        plot_path = os.path.join(save_path, f"{var_name}_{pt_correction}_distribution_pT_binned")
+        plt.savefig(plot_path + ".png")
+        plt.savefig(plot_path + ".pdf")
     return
 
 def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_params, save_path):
@@ -165,6 +167,7 @@ def pt_weights_plotting(model, inputs, layer_name, plot_path):
     plot_1D_histogram(
         pt_weights.flatten()[mask],
         X_test[:, :, 0].flatten()[mask],
+        abs(X_test[:, :, 3].flatten())[mask] * 720 / np.pi,
         pt_correction_type,
         20,
         plot_path,

@@ -8,7 +8,7 @@ import tensorflow as tf
 from schema import Schema, And, Use, Optional
 import tensorflow_model_optimization as tfmot
 
-from tagger.model.common import choose_aggregator, initialise_tensorflow
+from tagger.model.common import choose_aggregator, initialise_tensorflow, OffsetScaling
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
@@ -141,11 +141,7 @@ class DoubleAggregateModel(DeepSetModel):
         pt_offsets = QActivation(
             activation=quantized_tanh(self.quantization_config['quantizer_bits'], 0),
             name='pt_offsets_tanh')(pt_offsets)
-        pt_scaling = tf.keras.layers.Lambda(
-            lambda x: tf.fill(tf.shape(x), tf.constant(5.0, dtype=tf.float32)),
-            name="pt_scaling"
-        )(pt_offsets)
-        pt_offsets = tf.keras.layers.Multiply(name='pt_offset_scaling')([pt_offsets, pt_scaling])
+        pt_offsets = OffsetScaling(name='pt_scaling')(pt_offsets, 5)
 
         weighted_pt = tf.keras.layers.Multiply(name='pt_weights_multiply')([pt_weights, pt])
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])
@@ -317,6 +313,7 @@ class DoubleAggregateModel(DeepSetModel):
 
         # Additional custom objects for attention layers
         custom_objects_ = {
+            "OffsetScaling": OffsetScaling,
         }
 
         # Load the model

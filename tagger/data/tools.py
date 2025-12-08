@@ -298,11 +298,18 @@ def extract_nn_inputs(data, input_vars, n_parts=16, n_entries=None):
 
     return inputs
 
+def sort_arrays(sorting_val, *arrays):
+    sort_index = ak.argsort(sorting_val, ascending=False)
+    arrays_sorted = [arr[sort_index] for arr in arrays]
 
-def group_id_values(event_id, *arrays, num_elements=2):
+    return arrays_sorted
+
+
+def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
     '''
     Group values according to event id.
     Filter out events that has less than num_elements
+    Sort according to ordering_var if it is provided
     '''
 
     # Use ak.argsort to sort based on event_id
@@ -315,6 +322,13 @@ def group_id_values(event_id, *arrays, num_elements=2):
     # Use ak.unflatten to group the arrays by counts
     grouped_id = ak.unflatten(sorted_event_id, counts)
     grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
+
+    if(ordering_var is not None):
+        #Sort by ordering variable
+        ordering_score = ak.unflatten(ordering_var[sorted_indices],counts)
+        sort_index = ak.argsort(ordering_score, ascending=False)
+        grouped_arrays = [arr[sort_index] for arr in grouped_arrays]
+
 
     # Filter out groups that don't have at least num_elements elements
     mask = ak.num(grouped_id) >= num_elements

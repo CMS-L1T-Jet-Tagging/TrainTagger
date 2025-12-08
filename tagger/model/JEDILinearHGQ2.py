@@ -18,7 +18,7 @@ import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.common import initialise_tensorflow
+from tagger.model.common import initialise_tensorflow,cosine_decay_restarts
 
 from da4ml.converter.hgq2.parser import trace_model
 from da4ml.trace import comb_trace, HWConfig
@@ -47,10 +47,7 @@ class JEDILinearHGQ2(JetTagModel):
                                          "batch_size" : And(int, lambda s: s >= 1),
                                          "learning_rate": And(float, lambda s: s > 0.0),
                                          "loss_weights" : And(list, lambda s: len(s) == 2),
-                                         "EarlyStopping_patience" : And(int, lambda s: s > 0),
-                                         "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
-                                         "ReduceLROnPlateau_patience" : int,
-                                         "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)},
+                                        },
                 
                 "firmware_config" : {"input_precision" : str,
                                     "class_precision" : str,
@@ -88,46 +85,45 @@ class JEDILinearHGQ2(JetTagModel):
 
             iq_conf = QuantizerConfig(place='datalane', round_mode='RND')
 
-            N = 16
-            n_inputs = 20
-            #n = 3 if conf.pt_eta_phi else 16
+            N_constituents = inputs_shape[0]
+            n_features = inputs_shape[1]
         
             with (
                 QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT_SYM'),
                 QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
-                inp_b = keras.layers.Input((N, n_inputs),name='model_input')
+                inp_b = keras.layers.Input((N_constituents, n_features),name='model_input')
                 #inp_b = QBatchNormalization()(inp)
-                pool_scale = 2.**-round(log2(N))
+                pool_scale = 2.**-round(log2(N_constituents))
                 
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n_inputs), bias_axes='C', activation='relu'  )(inp_b)
-                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N, n_inputs), bias_axes='C', activation='relu', )(x)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu'  )(inp_b)
+                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
                 
-                s2 = AveragePooling1D(16)(x)
+                s2 = AveragePooling1D(N_constituents)(x)
                 #s2 = Rescaling(pool_scale)(s2)
                 
-                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, n_inputs), bias_axes='C', activation='relu')(s2)
+                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, n_features), bias_axes='C', activation='relu')(s2)
                 
                 x = QAdd()([s, d])
 
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC',
-                                          (N, n_inputs),
+                                          (N_constituents, n_features),
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
                 #x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
-                x = AveragePooling1D(16)(x)
+                x = AveragePooling1D(N_constituents)(x)
                 x = Flatten()(x)
                 #x = Rescaling(1/16)(x)
 
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',n_inputs, bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C')(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',n_features, bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape, bias_axes='C')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(x)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_inputs, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C' )(pt_regress)
 
                 #Define the model using both branches
@@ -147,7 +143,6 @@ class JEDILinearHGQ2(JetTagModel):
     @JetTagModel.load_decorator
     def load(self, out_dir=None):
         # Load model
-
         self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
@@ -234,45 +229,20 @@ class JEDILinearHGQ2(JetTagModel):
         Args:
             num_samples (int): Number of samples in the training set used for scheduling
         """
-        def log_beta_schedule(epoch, max_epochs=100):
-            log_beta_start = np.log10(1e-7)
-            log_beta_end = np.log10(1e-4)
-            log_beta = log_beta_start + (log_beta_end - log_beta_start) * (epoch / max_epochs)
-            return 10 ** log_beta
-        
-        def cosine_decay_restarts(global_step):
-            from math import cos, pi
 
-            n_cycle = 1
-            cycle_step = global_step
-            cycle_len = 100
-            while cycle_step >= cycle_len:
-                cycle_step -= cycle_len
-                cycle_len *= 1
-                n_cycle += 1
-
-            cycle_t = min(cycle_step / (cycle_len - 10), 1)
-            lr = 1.e-6 + 0.5 * (1.e-4 - 1.e-6) * (
-                1 + cos(pi * cycle_t)
-            ) * 1 ** max(n_cycle - 1, 0)
-            return lr
-
-        scheduler = keras.callbacks.LearningRateScheduler(cosine_decay_restarts)
+        scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch, 
+                                                                                                          initial_learning_rate=self.training_config['learning_rate'],
+                                                                                                          max_epochs=self.training_config['epochs']))
         terminate_on_nan = keras.callbacks.TerminateOnNaN()
 
-    
-        #beta_scheduler = BetaScheduler(beta_fn=lambda epoch: log_beta_schedule(epoch, max_epochs=100))
         beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
             scheduler,
             terminate_on_nan,
             FreeEBOPs(),
             beta_scheduler
-
         ]
-
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(

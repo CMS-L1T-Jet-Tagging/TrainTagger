@@ -39,14 +39,14 @@ firmware_config:
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 
-  project_name: 'L1TSC4NGJetModel_test'
+  project_name: 'L1TSC4NGJetModel'
 
 pquant_config :
   pruning_parameters: {disable_pruning_for_layers: [norm_input,avgpool,flatten_dim],
                        enable_pruning: True, 
                        epsilon: 0.04, 
                        pruning_method: 'pdp', 
-                       sparsity: 0.1, 
+                       sparsity: 0.3, 
                        temperature: 0.00005, 
                        threshold_decay: 0.0, 
                        structured_pruning: False} 
@@ -55,100 +55,100 @@ pquant_config :
                             enable_quantization: True, 
                             hgq_gamma: 0.0003, 
                             hgq_heterogeneous: True, 
-                            layer_specific: {
-                                conv1d_layers.0: {
-                                  weight: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  },
-                                  bias: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  }
-                                  },
-                                conv1d_layers.1: {
-                                  integer_bits: 2,
-                                  fractional_bits: 9
-                                },
-                                conv1d_layers.2: {
-                                  weight: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  },
-                                  bias: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  }
-                                },
-                                conv1d_layers.3: {
-                                  integer_bits: 2,
-                                  fractional_bits: 9
-                                },
-                                avgpool: {
-                                  integer_bits: 2,
-                                  fractional_bits: 9
-                                },
-                                jet_id_head.0: {
-                                  weight: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  },
-                                  bias: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  }
-                                },
-                                jet_id_head.1: {
-                                  integer_bits: 2,
-                                  fractional_bits: 9
-                                },
-                                jet_id_head.2: {
-                                  weight: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  },
-                                  bias: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                  }
-                                },
-                                jet_id_head.3: {
-                                  integer_bits: 2,
-                                  fractional_bits: 9
-                                },
-                                jet_id_head.4: {
-                                  weight: {
-                                    integer_bits: 24,
-                                    fractional_bits: 12
-                                    },
-                                  bias: {
-                                    integer_bits: 24,
-                                    fractional_bits: 12
-                                    }
-                                },
-                                pt_head.0: {
-                                  weight: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                    },
-                                  bias: {
-                                    integer_bits: 2,
-                                    fractional_bits: 9
-                                    }
-                                },
-                                pt_head.1: {
-                                  integer_bits: 2,
-                                  fractional_bits: 9
-                                  },
-                                pt_head.2: {
-                                  weight: {
-                                    integer_bits: 6,
-                                    fractional_bits: 16
-                                    },
-                                  bias: {
-                                    integer_bits: 6,
-                                    fractional_bits: 16}}},
-                            use_high_granularity_quantization: False, 
+                             layer_specific: {},
+                            #     conv1d_layers.0: {
+                            #       weight: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       },
+                            #       bias: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       }
+                            #       },
+                            #     conv1d_layers.1: {
+                            #       integer_bits: 2,
+                            #       fractional_bits: 9
+                            #     },
+                            #     conv1d_layers.2: {
+                            #       weight: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       },
+                            #       bias: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       }
+                            #     },
+                            #     conv1d_layers.3: {
+                            #       integer_bits: 2,
+                            #       fractional_bits: 9
+                            #     },
+                            #     avgpool: {
+                            #       integer_bits: 2,
+                            #       fractional_bits: 9
+                            #     },
+                            #     jet_id_head.0: {
+                            #       weight: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       },
+                            #       bias: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       }
+                            #     },
+                            #     jet_id_head.1: {
+                            #       integer_bits: 2,
+                            #       fractional_bits: 9
+                            #     },
+                            #     jet_id_head.2: {
+                            #       weight: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       },
+                            #       bias: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #       }
+                            #     },
+                            #     jet_id_head.3: {
+                            #       integer_bits: 2,
+                            #       fractional_bits: 9
+                            #     },
+                            #     jet_id_head.4: {
+                            #       weight: {
+                            #         integer_bits: 24,
+                            #         fractional_bits: 12
+                            #         },
+                            #       bias: {
+                            #         integer_bits: 24,
+                            #         fractional_bits: 12
+                            #         }
+                            #     },
+                            #     pt_head.0: {
+                            #       weight: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #         },
+                            #       bias: {
+                            #         integer_bits: 2,
+                            #         fractional_bits: 9
+                            #         }
+                            #     },
+                            #     pt_head.1: {
+                            #       integer_bits: 2,
+                            #       fractional_bits: 9
+                            #       },
+                            #     pt_head.2: {
+                            #       weight: {
+                            #         integer_bits: 6,
+                            #         fractional_bits: 16
+                            #         },
+                            #       bias: {
+                            #         integer_bits: 6,
+                            #         fractional_bits: 16}}},
+                            use_high_granularity_quantization: True, 
                             use_real_tanh: False, 
                             use_relu_multiplier: True, 
                             use_symmetric_quantization: False} 

@@ -72,15 +72,15 @@ DeepSet:HGQ2_5param_extended_trk:
     RUN_SYNTHESIS: 'True'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
-DeepSet:HGQ2_larger_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: DeepSetHGQ2_larger_5param_extended_trk
-    Model: baseline_larger_HGQ2
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+# DeepSet:HGQ2_larger_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: DeepSetHGQ2_larger_5param_extended_trk
+#     Model: baseline_larger_HGQ2
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 
 # DeepSet:torch_5param_extended_trk:
@@ -103,15 +103,15 @@ DeepSet:HGQ2_larger_5param_extended_trk:
 #     RUN_SYNTHESIS: 'False'
 #     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
-# DeepSet:pquant_5param_extended_trk:
-#   extends: .ml_pipeline
-#   variables:
-#     Name: pquant_5param_extended_trk
-#     Model: pquant_baseline
-#     RERUN_ON_TAG: 'False'
-#     RUN_EMULATION: 'False'
-#     RUN_SYNTHESIS: 'False'
-#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+DeepSet:pquant_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: pquant_5param_extended_trk
+    Model: pquant_baseline
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:

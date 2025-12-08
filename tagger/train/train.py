@@ -1,4 +1,5 @@
 import os
+os.environ["KERAS_BACKEND"] = "torch" 
 from argparse import ArgumentParser
 
 # Third parties

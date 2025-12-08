@@ -17,18 +17,11 @@ quantization_config:
 training_config :
   weight_method: "onlyclass"
   epochs : 60
-  batch_size : 1024
-  learning_rate : 0.001
+  batch_size : 512
+  learning_rate : 0.003
   validation_split : 0.1
 
   loss_weights : [1,1]
-
-
-  EarlyStopping_patience : 10
-
-  ReduceLROnPlateau_factor : 0.5
-  ReduceLROnPlateau_patience : 5
-  ReduceLROnPlateau_min_lr : 0.00005
 
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'

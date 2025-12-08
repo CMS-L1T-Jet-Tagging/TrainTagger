@@ -93,6 +93,17 @@ class PQuantDeepSetModel(TorchDeepSetModel):
     def __init__(self, out_dir):
         super().__init__(out_dir)            
         self.quantizer = get_fixed_quantizer(overflow_mode="SAT")
+        os.environ["KERAS_BACKEND"] = "torch" 
+        self.device = "cpu"
+        self.n_workers = 8
+        self.pin_memory = False
+        if torch.cuda.is_available():
+            print("Running training on GPU")
+            self.device = "cuda"
+            self.n_workers = 46
+            self.pin_memory= True
+            print(torch.backends.cudnn.version())
+            print(torch.backends.cudnn.enabled)
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer

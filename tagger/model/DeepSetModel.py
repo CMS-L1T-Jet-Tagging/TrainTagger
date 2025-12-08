@@ -172,8 +172,8 @@ class DeepSetModel(QKerasModel):
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor
-        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
+        config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
+        config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
 
         # Additional config
         for layer in self.jet_model.layers:

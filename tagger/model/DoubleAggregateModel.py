@@ -15,7 +15,7 @@ from tagger.model.QKerasModel import QKerasModel
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 from qkeras.qlayers import QActivation, QDense
-from qkeras.quantizers import quantized_bits, quantized_relu
+from qkeras.quantizers import quantized_bits, quantized_relu, quantized_tanh
 from tensorflow.keras.layers import Activation, BatchNormalization, GlobalAveragePooling1D
 from tagger.model.DeepSetModel import DeepSetModel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
@@ -134,10 +134,18 @@ class DoubleAggregateModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(main_regression)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 2),
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 3),
             name='pt_weights_output')(pt_weights)
 
         pt_offsets = QDense(16, name='Dense_pt_offsets_output', **self.common_args)(main_regression)
+        pt_offsets = QActivation(
+            activation=quantized_tanh(self.quantization_config['quantizer_bits'], 0),
+            name='pt_offsets_tanh')(pt_offsets)
+        pt_scaling = tf.keras.layers.Lambda(
+            lambda x: tf.fill(tf.shape(x), tf.constant(5.0, dtype=tf.float32)),
+            name="pt_scaling"
+        )(pt_offsets)
+        pt_offsets = tf.keras.layers.Multiply(name='pt_offset_scaling')([pt_offsets, pt_scaling])
 
         weighted_pt = tf.keras.layers.Multiply(name='pt_weights_multiply')([pt_weights, pt])
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])

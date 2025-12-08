@@ -40,6 +40,7 @@ baseline_hardware_inputs:
   - pt
   - pt_rel
   - pt_log
+  - eta
   - deta
   - dphi
   - mass

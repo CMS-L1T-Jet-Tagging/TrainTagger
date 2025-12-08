@@ -100,7 +100,7 @@ class DeepSetModelHGQ2(JetTagModel):
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(main)
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
-                jet_id = QDense(outputs_shape, parallelization_factor=outputs_shape, name='Dense_'+str(iclass+2)+'_jetID')(jet_id)
+                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], name='Dense_'+str(iclass+2)+'_jetID')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
                 #pT regression branch

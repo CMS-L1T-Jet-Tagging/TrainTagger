@@ -1,5 +1,8 @@
 import os
-os.environ["KERAS_BACKEND"] = "torch" 
+if os.environ['Model']=='pquant_baseline':
+    os.environ["KERAS_BACKEND"] = "torch" 
+else:
+    os.environ["KERAS_BACKEND"] = "tf" 
 from argparse import ArgumentParser
 
 # Third parties

@@ -118,7 +118,7 @@ class JEDILinearHGQ2(JetTagModel):
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',n_features, bias_axes='C', activation='relu', )(x)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape, bias_axes='C')(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)

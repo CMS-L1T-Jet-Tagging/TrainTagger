@@ -24,6 +24,7 @@ binning_dict = {
     'pt': [0, 100, 20],
     'pt_rel': [0, 1, 10],
     'pt_log': [0, 6, 20],
+    'eta': [-2.5, 2.5, 10],
     'deta': [-0.5, 0.5, 10],
     'dphi': [-0.5, 0.5, 10],
     'mass': [0, 50, 20],
@@ -68,11 +69,11 @@ def plot_1D_histogram(pt_weights, pt, eta, pt_correction, binning, save_path):
     eta_bins = [0, 0, 0.5, 1, 1.5, 2, 2.5]
     colors = ['purple', 'blue', 'cyan', 'green', 'gold', 'red']
     pt_weights = np.clip(pt_weights, -np.inf, 200)
-    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     for var_bins, var, var_name in zip([pt_bins, eta_bins], [pt, np.abs(eta)], ['pT', 'eta']):
+        fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         for i, (l, u) in enumerate(zip(var_bins[:-1], var_bins[1:])):
             mask = (var >= l) & (var < u) if i>0 else var < np.inf
-            label = f"{l} < {var_name} < {u}" if i==0 else "full distribution"
+            label = f"{l} < {var_name} < {u}" if i!=0 else "full distribution"
             h = ax.hist(
                 pt_weights[mask],
                 bins=binning,
@@ -167,7 +168,7 @@ def pt_weights_plotting(model, inputs, layer_name, plot_path):
     plot_1D_histogram(
         pt_weights.flatten()[mask],
         X_test[:, :, 0].flatten()[mask],
-        abs(X_test[:, :, 3].flatten())[mask] * 720 / np.pi,
+        abs(X_test[:, :, 3].flatten())[mask] * np.pi / 720,
         pt_correction_type,
         20,
         plot_path,

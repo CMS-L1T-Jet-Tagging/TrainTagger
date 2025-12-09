@@ -45,8 +45,7 @@ git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
 git checkout emulator_test
 
-cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-mv firmware L1TSC4NGJetModel
+cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware L1TSC4NGJetModel/
 ./setup.sh
 
 make

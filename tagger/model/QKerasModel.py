@@ -35,6 +35,7 @@ class QKerasModel(JetTagModel):
 
     training_config_schema =    {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                  "validation_split" : And(float, lambda s: s > 0.0),
+                                 "offsets" : bool,
                                  "epochs" : And(int, lambda s: s >= 1),
                                  "batch_size" : And(int, lambda s: s >= 1),
                                  "learning_rate" : And(float, lambda s: s > 0.0),

@@ -101,7 +101,7 @@ class DoubleAggregateModel(DeepSetModel):
         # Apply the constituents mask
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
-        # Weighted Global Average Pooling
+        # Global Average Pooling
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
         main_jet_id = tf.keras.layers.GlobalAveragePooling1D(name='global_avg_pool_classification')(main)
 

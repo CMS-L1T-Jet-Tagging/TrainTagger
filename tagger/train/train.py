@@ -188,7 +188,7 @@ def train(model, out_dir, percent):
 
     model.compile_model(num_samples, [1, 1])
     model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
-
+    model.save()
     if model.training_config['offsets']:
         # Now unfreeze and train only the pt part, set jet id loss weight to 0
         model.jet_model.get_layer("prune_low_magnitude_Dense_pt_offsets_output").set_weights(
@@ -199,8 +199,11 @@ def train(model, out_dir, percent):
         )
     else:
         print("Skipping re-training of pt offsets for this model type. Instead unfreeze weights only.")
+        model.save()
+        model.plot_loss()
+        return
 
-    # Unfreeze pt weights layer only
+    # Unfreeze pt weights and offsets layers only
     for l in model.jet_model.layers:
         if ("pt_weights" in l.name) or ("pt_offsets" in l.name):
             l.trainable = True

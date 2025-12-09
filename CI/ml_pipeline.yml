@@ -254,6 +254,8 @@ upload_new_model:
       optional: false
     - job: emulation-evaluate
       optional: true
+    - job: emulate
+      optional: true
     - job: hls4ml
       optional: true
     - job: profile

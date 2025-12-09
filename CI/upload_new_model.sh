@@ -26,6 +26,8 @@ fi
 
 if [[ "$RUN_EMULATION" == "True" ]]; then
     mv output/$Model/plots/emulation $Name/plots
+    eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator/
+    cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator
 fi
 
 cd ..

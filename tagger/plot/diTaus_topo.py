@@ -397,7 +397,7 @@ def plot_2D_ratio(ratio, pt_edges, plot_dir, figname="VBF_eff_CMSSW"):
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
 
-def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_entries=100000):
+def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', tag='vbf', n_entries=100000):
 
     #Load the signal data
     signal = uproot.open(tau_eff_filepath)[tree]
@@ -593,8 +593,8 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
     cbar = fig.colorbar(im1, ax=axes.ravel().tolist())
 
     # Save and show the plot
-    fig.savefig(f'{plot_dir}/topo_vbf_eff.pdf', bbox_inches='tight')
-    fig.savefig(f'{plot_dir}/topo_vbf_eff.png', bbox_inches='tight')
+    fig.savefig(f'{plot_dir}/topo_{tag}_eff.pdf', bbox_inches='tight')
+    fig.savefig(f'{plot_dir}/topo_{tag}_eff.png', bbox_inches='tight')
 
     # Ratio plot model vs CMSSW
     fig_height = style.FIGURE_SIZE[1] * 1.1
@@ -637,8 +637,8 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
     # Add colorbar
     ax_bar = fig.add_subplot(gs[1, 1])
     fig.colorbar(im, cax=ax_bar, aspect=10)
-    fig.savefig(f'{plot_dir}/topo_vbf_eff_model_cmssw_ratio.pdf', bbox_inches='tight')
-    fig.savefig(f'{plot_dir}/topo_vbf_eff_model_cmssw_ratio.png', bbox_inches='tight')
+    fig.savefig(f'{plot_dir}/topo_{tag}_eff_model_cmssw_ratio.pdf', bbox_inches='tight')
+    fig.savefig(f'{plot_dir}/topo_{tag}_eff_model_cmssw_ratio.png', bbox_inches='tight')
 
     return
 
@@ -653,6 +653,7 @@ if __name__ == "__main__":
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
     parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus')
     parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('--tag', default='vbf' , help = 'Tag for plot label')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')
@@ -672,4 +673,4 @@ if __name__ == "__main__":
     elif args.BkgRate:
         plot_bkg_rate_ditau_topo(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
-        topo_eff(model, args.vbf_sample, n_entries=args.n_entries, tree=args.tree)
+        topo_eff(model, args.vbf_sample, n_entries=args.n_entries, tree=args.tree, tag=args.tag)

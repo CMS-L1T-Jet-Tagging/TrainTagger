@@ -21,7 +21,7 @@ training_config :
   weight_method: "onlyclass"
   epochs : 60
   batch_size : 1024
-  learning_rate : 0.001
+  learning_rate : 0.0003
   validation_split : 0.1
 
   loss_weights : [1,1]

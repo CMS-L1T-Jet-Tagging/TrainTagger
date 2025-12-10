@@ -8,6 +8,7 @@ import keras
 import numpy as np
 from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten,Rescaling
 from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd,QSum, QMultiply
+from hgq.layers.activation import QUnaryFunctionLUT
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
@@ -83,7 +84,9 @@ class JEDILinearHGQ2(JetTagModel):
         
         with scope0, scope1, scope2:
 
-            iq_conf = QuantizerConfig(place='datalane', round_mode='RND')
+            iq_conf = QuantizerConfig(k0=1, i0=11, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+            oq_conf_jetid = QuantizerConfig(k0=0, i0=12, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+            oq_conf_pt = QuantizerConfig(k0=1, i0=9, f0=6, trainable=False,round_mode='RND',overflow_mode='SAT')
 
             N_constituents = inputs_shape[0]
             n_features = inputs_shape[1]
@@ -95,7 +98,7 @@ class JEDILinearHGQ2(JetTagModel):
                 #inp_b = QBatchNormalization()(inp)
                 pool_scale = 2.**-round(log2(N_constituents))
                 
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu'  )(inp_b)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu',iq_conf=iq_conf )(inp_b)
                 s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
                 
                 s2 = AveragePooling1D(N_constituents)(x)
@@ -114,17 +117,16 @@ class JEDILinearHGQ2(JetTagModel):
                 x = AveragePooling1D(N_constituents)(x)
                 x = Flatten()(x)
                 #x = Rescaling(1/16)(x)
-
+                
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',n_features, bias_axes='C', activation='relu', )(x)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C', oq_conf=oq_conf_jetid, iq_conf=oq_conf_jetid,enable_oq=True,name='jet_id_output')(jet_id)
 
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C' )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C', enable_oq=True,oq_conf=oq_conf_pt,iq_conf=oq_conf_pt)(pt_regress)
 
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
@@ -159,9 +161,14 @@ class JEDILinearHGQ2(JetTagModel):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"]="distributed_arithmetic"
+            #config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
+            
+            # config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']            
+            # config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
+            # config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
+
 
             # Write HLS
             self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
@@ -172,9 +179,9 @@ class JEDILinearHGQ2(JetTagModel):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                #namespace='hls4ml_'+self.firmware_config['project_name'],
-                #write_weights_txt=False,
-                #write_emulation_constants=True,
+                # namespace='hls4ml_'+self.firmware_config['project_name'],
+                # write_weights_txt=False,
+                # write_emulation_constants=True,
             )
 
             # Compile the project
@@ -248,7 +255,7 @@ class JEDILinearHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer='adam',
             loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

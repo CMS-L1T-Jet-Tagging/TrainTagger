@@ -83,11 +83,15 @@ class DeepSetModelHGQ2(JetTagModel):
         
         with scope0, scope1, scope2:
             
+                iq_conf = QuantizerConfig(k0=1, i0=11, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+                oq_conf_jetid = QuantizerConfig(k0=0, i0=12, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+                oq_conf_pt = QuantizerConfig(k0=1, i0=9, f0=6, trainable=False,round_mode='RND',overflow_mode='SAT')
+
                 N_constituents = inputs_shape[0]
                 n_features = inputs_shape[1]
             
                 inputs = Input(shape=(N_constituents,n_features), name='model_input')
-                main = QBatchNormalization(name='norm_input')(inputs)
+                main = QBatchNormalization(name='norm_input',iq_conf=iq_conf)(inputs)
                 
                 for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
                     main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(main)                
@@ -100,8 +104,7 @@ class DeepSetModelHGQ2(JetTagModel):
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(main)
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
-                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], name='Dense_'+str(iclass+2)+'_jetID')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], oq_conf=oq_conf_jetid,enable_oq=True,name='jet_id_output')(jet_id)
 
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
@@ -109,7 +112,7 @@ class DeepSetModelHGQ2(JetTagModel):
                         pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(main)
                     else:
                         pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(pt_regress)      
-                pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
+                pt_regress = QDense(1,name='pT_output',oq_conf=oq_conf_pt,enable_oq=True)(pt_regress)#1.1e-7
     
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
@@ -147,7 +150,7 @@ class DeepSetModelHGQ2(JetTagModel):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"]="resource"
+            config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
            
@@ -155,6 +158,10 @@ class DeepSetModelHGQ2(JetTagModel):
             # hls4ml automatically figures out the paralellization factor
             config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
             config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
+            
+            #config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']            
+            #config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
+            #config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
 
             # Additional config
 
@@ -167,9 +174,9 @@ class DeepSetModelHGQ2(JetTagModel):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                namespace='hls4ml_'+self.firmware_config['project_name'],
-                write_weights_txt=False,
-                write_emulation_constants=True,
+                # namespace='hls4ml_'+self.firmware_config['project_name'],
+                # write_weights_txt=False,
+                # write_emulation_constants=True,
             )
 
             # Compile the project
@@ -207,7 +214,7 @@ class DeepSetModelHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer='adam',
             loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

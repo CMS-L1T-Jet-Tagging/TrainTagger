@@ -77,8 +77,11 @@ class MLPmixerHGQ2(JetTagModel):
         scope2 = LayerConfigScope(enable_ebops=True, heterogeneous_axis=heterogeneous_axis,beta0=1e-8)
         
         with scope0, scope1, scope2:
+            
+            iq_conf_inputs = QuantizerConfig(k0=1, i0=11, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+            oq_conf_jetid = QuantizerConfig(k0=0, i0=12, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+            oq_conf_pt = QuantizerConfig(k0=1, i0=9, f0=6, trainable=False,round_mode='RND',overflow_mode='SAT')
 
-            iq_conf = QuantizerConfig(place='datalane', round_mode='RND')
             iq_default = QuantizerConfig(place='datalane')
             N_constituents = inputs_shape[0]
             n_features = inputs_shape[1]
@@ -87,10 +90,10 @@ class MLPmixerHGQ2(JetTagModel):
                 inp_b = keras.layers.Input((N_constituents, n_features),name='model_input')
                 #inp_b = QBatchNormalization()(inp)
                     
-                x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu',iq_conf=iq_conf)(inp_b)
+                x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu',iq_conf=iq_conf_inputs)(inp_b)
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x1)
                 x2 = QEinsumDenseBatchnorm('bnc,nN->bNc', (N_constituents, n_features), bias_axes='N')(x1)
-                x = QAdd(iq_confs=(iq_conf, iq_default))([inp_b, x2])
+                x = QAdd(iq_confs=(iq_conf_inputs, iq_default))([inp_b, x2])
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
                 x = QEinsumDense('bnc,n->bc', n_features)(x)
@@ -98,13 +101,12 @@ class MLPmixerHGQ2(JetTagModel):
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C',oq_conf=oq_conf_jetid,name='jet_id_output')(jet_id)
                 
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C' )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C',oq_conf=oq_conf_pt)(pt_regress)
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
                 print(self.jet_model.summary())
@@ -161,9 +163,9 @@ class MLPmixerHGQ2(JetTagModel):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                #namespace='hls4ml_'+self.firmware_config['project_name'],
-                #write_weights_txt=False,
-                #write_emulation_constants=True,
+                # namespace='hls4ml_'+self.firmware_config['project_name'],
+                # write_weights_txt=False,
+                # write_emulation_constants=True,
             )
 
             # Compile the project
@@ -237,7 +239,7 @@ class MLPmixerHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer='adam',
             loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

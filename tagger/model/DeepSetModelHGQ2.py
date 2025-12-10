@@ -1,6 +1,7 @@
 import json
 import os
 from schema import Schema, And, Use, Optional
+import scipy
 
 import keras
 import numpy as np
@@ -18,7 +19,6 @@ import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-#from tagger.model.QKerasModel import QKerasModel
 from tagger.model.common import initialise_tensorflow,log_beta_schedule,cosine_decay_restarts
 
 @JetModelFactory.register('DeepSetModelHGQ2')
@@ -104,15 +104,15 @@ class DeepSetModelHGQ2(JetTagModel):
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(main)
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
-                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], oq_conf=oq_conf_jetid,enable_oq=True,name='jet_id_output')(jet_id)
-
+                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
+                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
                         pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(main)
                     else:
                         pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(pt_regress)      
-                pt_regress = QDense(1,name='pT_output',oq_conf=oq_conf_pt,enable_oq=True)(pt_regress)#1.1e-7
+                pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
     
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
@@ -135,6 +135,12 @@ class DeepSetModelHGQ2(JetTagModel):
     def load(self, out_dir=None):
         # Load model
         self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
+    
+    def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
+        model_outputs = self.jet_model.predict(X_test)
+        class_predictions = scipy.special.softmax(model_outputs[0],axis=1)
+        pt_ratio_predictions = model_outputs[1].flatten()
+        return (class_predictions, pt_ratio_predictions)
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
             """Run the hls4ml model conversion
@@ -214,7 +220,7 @@ class DeepSetModelHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer='adam',
             loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
+                self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

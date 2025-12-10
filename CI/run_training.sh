@@ -2,7 +2,6 @@
 # $1 RERUN_ON_TAG; if false triggers full retraining of the model, if true just run basic plotting on the tagged model
 
 if [[ "$1" == "False" ]]; then
-    sleep 1m
     python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model
     eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
     tar -xf signal_process_data.tgz

@@ -130,6 +130,7 @@ evaluate:
   - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$BBTT --tag HH_bbtt -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - echo "bbbb performance"
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE -m output/$Model

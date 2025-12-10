@@ -59,15 +59,16 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
         event_mask = np.ones(len(jet_pt), dtype=bool)
     return event_mask
 
-def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
+def nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, class_labels, n_jets=4):
     #Btag input list for first 4 jets
     nn_outputs = [model.predict([
         np.asarray(jet_nn_inputs[:, i]),
-        constituents_mask(np.asarray(jet_nn_inputs[:, i]), 10),
-        constituents_mask(np.asarray(jet_nn_inputs[:, i]), 10)[:, :, 0],
+        constituents_mask(jet_nn_inputs[:, i], 10),
+        constituents_mask(jet_nn_inputs[:, i], 10)[:, :, 0],
         np.asarray(jet_nn_inputs[:, i])[:, :, 0],
-        np.sum(jet_nn_inputs[:, :, 0], axis=1).reshape(-1,1)])[0]
-        for i in range(0,n_jets)]
+        1 / ak.to_numpy(jet_pt[:, i]).reshape(-1,1),
+        np.stack((ak.to_numpy(jet_pt[:, i]), ak.to_numpy(jet_eta[:, i])), axis=1)
+        ])[0] for i in range(0,n_jets)]
 
     #Calculate the output sum
     b_idx = class_labels['b']
@@ -196,7 +197,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
 
-    bscore_sums, bscore_idxs = nn_score_sums(model, jet_nn_inputs, model.class_labels)
+    bscore_sums, bscore_idxs = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, model.class_labels)
     def_sels = [default_selection(jet_pt, jet_eta, bscore_idxs[0], apply_sel),
                default_selection(jet_pt, jet_eta, bscore_idxs[1], apply_sel)]
 
@@ -305,7 +306,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
 
     # Result from the baseline selection, multiclass tagger and ht only working point
     baseline_selection, _ = bbtt_seed(jet_pt, tau_pt)
-    model_bscore_sums, bscore_indices = nn_score_sums(model, jet_nn_inputs, model.class_labels)
+    model_bscore_sums, bscore_indices = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, model.class_labels)
 
     # use either raw or vs light scores
     if score_type == 'raw':
@@ -401,8 +402,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--signal', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/GluGluHHTo2B2Tau_PU200.root' , help = 'Signal sample for HH->bbtt')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-s', '--signal', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/GluGluHHTo2B2Tau_PU200.root' , help = 'Signal sample for HH->bbtt')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
     parser.add_argument('--deriveRate', action='store_true', help='derive the rate for the bbtt seed')
 
     #Different modes

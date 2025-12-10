@@ -171,56 +171,8 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    # Freeze the pt offset layer and set to zeros, train weights only
-    for l in model.jet_model.layers:
-        if "pt_offsets" in l.name:
-            l.trainable = False
-    if model.training_config['offsets']:
-        old_weights = model.jet_model.get_layer("Dense_pt_offsets_output").get_weights()
-        model.jet_model.get_layer("Dense_pt_offsets_output").set_weights(
-            [
-                np.zeros(old_weights[0].shape),
-                np.zeros(old_weights[1].shape),
-            ]
-        )
-    else:
-        print("No pt offsets layers for this model type")
-
     model.compile_model(num_samples, [1, 1])
     model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
-    model.save()
-    if model.training_config['offsets']:
-        # Now unfreeze and train only the pt part, set jet id loss weight to 0
-        model.jet_model.get_layer("prune_low_magnitude_Dense_pt_offsets_output").set_weights(
-        [
-            old_weights[0],
-            old_weights[1],
-        ]
-        )
-    else:
-        print("Skipping re-training of pt offsets for this model type. Instead unfreeze weights only.")
-        model.save()
-        model.plot_loss()
-        return
-
-    # Unfreeze pt weights and offsets layers only
-    for l in model.jet_model.layers:
-        if ("pt_weights" in l.name) or ("pt_offsets" in l.name):
-            l.trainable = True
-        else:
-            l.trainable = False
-
-    model.compile_model(num_samples, [0, 1])
-    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
-
-    # for l in model.jet_model.layers:
-    #     if ("pt_weights" in l.name) or ("pt_offsets" in l.name):
-    #         l.trainable = True
-    #     else:
-    #         l.trainable = False
-    # model.compile_model(num_samples, [0, 1])
-    # model.jet_model.optimizer.learning_rate.assign(0.0002)
-    # model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     # Finished training, save model
     model.save()

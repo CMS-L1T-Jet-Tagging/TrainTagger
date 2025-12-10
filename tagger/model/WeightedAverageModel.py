@@ -302,6 +302,6 @@ class WeightedAverageModel(DeepSetModel):
         }
 
         # Load the model
-        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model_1.keras", custom_objects=custom_objects_)
+        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
 
 

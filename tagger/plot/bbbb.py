@@ -48,9 +48,10 @@ def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labe
         nn_input,
         constituents_mask(nn_input, 10),
         constituents_mask(nn_input, 10)[:, :, 0],
-        nn_input[:, :, 0]])[0],
-        np.sum(nn_input[:, :, 0], axis=1).reshape(-1,1)]
-        for nn_input in btag_inputs]
+        nn_input[:, :, 0],
+        1 / ak.to_numpy(jet_pt[:, i]).reshape(-1, 1),
+        np.stack((ak.to_numpy(jet_pt[:, i]), ak.to_numpy(jet_eta[:, i])), axis=1)])[0]
+        for i, nn_input in enumerate(btag_inputs)]
 
     #Sum them together
     bscore_sum = sum(
@@ -165,10 +166,10 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
-    jet_nn_inputs = jet_nn_inputs[default_selection(jet_pt, jet_eta, apply_sel)]
+    selection_mask = default_selection(jet_pt, jet_eta, apply_sel)
+    jet_nn_inputs, jet_pt_selected, jet_eta_selected = jet_nn_inputs[selection_mask], jet_pt[selection_mask], jet_eta[selection_mask]
 
-
-    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, model.class_labels)
+    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt_selected, jet_eta_selected, apply_light, model.class_labels)
 
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]
     jet_ht = ak.sum(jet_pt, axis=1)
@@ -584,8 +585,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')

@@ -141,7 +141,7 @@ class DoubleAggregateModel(DeepSetModel):
         pt_offsets = QActivation(
             activation=quantized_tanh(self.quantization_config['quantizer_bits'], 0),
             name='pt_offsets_tanh')(pt_offsets)
-        pt_offsets = OffsetScaling(name='pt_scaling')(pt_offsets, 5)
+        pt_offsets = OffsetScaling(name='pt_scaling')(pt_offsets, 10)
 
         weighted_pt = tf.keras.layers.Multiply(name='pt_weights_multiply')([pt_weights, pt])
         pt_offsets = tf.keras.layers.Multiply(name='pt_offsets_output')([pt_offsets, pt_mask])

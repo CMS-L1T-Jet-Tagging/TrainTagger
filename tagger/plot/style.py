@@ -58,6 +58,7 @@ INPUT_FEATURE_STYLE = {
     'pt': '$p_T$',
     'pt_rel': 'relative $p_T$',
     'pt_log': '$log(p_T)$',
+    'eta': '$\\eta$',
     'deta': '$\\Delta\\eta$',
     'dphi': '$\\Delta\\phi$',
     'mass': 'mass',
@@ -76,7 +77,6 @@ INPUT_FEATURE_STYLE = {
     'quality': 'Track Quality',
     'emid': 'ElectroMagnetic ID',
 }
-
 
 def set_style():
     # Setup plotting to CMS style

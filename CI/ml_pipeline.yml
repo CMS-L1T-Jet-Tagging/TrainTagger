@@ -176,13 +176,13 @@ synth:
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:
-    - cd output/$Model/firmware/L1TSC4NGJetModel_test
+    - cd output/$Model/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../..
   artifacts:
     paths:
-      - output/$Model/firmware/L1TSC4NGJetModel_test
+      - output/$Model/firmware/L1TSC4NGJetModel
     expire_in: 1 day
 
 emulation-evaluate:
@@ -253,6 +253,8 @@ upload_new_model:
     - job: evaluate
       optional: false
     - job: emulation-evaluate
+      optional: true
+    - job: emulate
       optional: true
     - job: hls4ml
       optional: true

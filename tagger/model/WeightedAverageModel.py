@@ -103,7 +103,7 @@ class WeightedAverageModel(DeepSetModel):
 
         # Weighted Global Average Pooling
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-        main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(weighted_inputs)
+        main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(main)
         main = tf.keras.layers.Concatenate(name='concat_jet_features')([main, jet_features_norm])
 
         # Now split into jet ID and pt regression
@@ -302,6 +302,6 @@ class WeightedAverageModel(DeepSetModel):
         }
 
         # Load the model
-        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
+        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model_1.keras", custom_objects=custom_objects_)
 
 

@@ -135,21 +135,26 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
 
     #Get inputs and pts for processing
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
+    eta1_cuts, eta2_cuts = np.asarray(jet_eta[:, 0][cuts]), np.asarray(jet_eta[:,1][cuts])
     input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
 
     #Get the NN predictions
     pred_score1, ratio1 = model.predict([
         input1,
         constituents_mask(input1, 10),
-        constituents_mask(input1, 10)[:, :, 0],
-        input1[:, :, 0],
-        np.sum(input1[:, :, 0], axis=1).reshape(-1,1)])
+        constituents_mask(input1, 10)[:,:,0],
+        input1[:,:,0],
+        1.0 / pt1_uncorrected.reshape(-1,1),
+        np.stack((pt1_uncorrected, eta1_cuts), axis=1),
+        ])
     pred_score2, ratio2 = model.predict([
         input2,
         constituents_mask(input2, 10),
-        constituents_mask(input2, 10)[:, :, 0],
-        input2[:, :, 0],
-        np.sum(input2[:, :, 0], axis=1).reshape(-1,1)])
+        constituents_mask(input2, 10)[:,:,0],
+        input2[:,:,0],
+        1.0 / pt2_uncorrected.reshape(-1,1),
+        np.stack((pt2_uncorrected, eta2_cuts), axis=1),
+        ])
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())
@@ -208,20 +213,23 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
 
     #Impose eta cuts
     jet_eta =  extract_array(minbias, 'jet_eta_phys', n_entries)
+    jet_pt =  extract_array(minbias, 'jet_pt_phys', n_entries)
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
     nn_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
 
     #Get the NN predictions
-    eta_selected_inputs = nn_inputs[eta_selection]
+    selected_nn_inputs = nn_inputs[eta_selection]
+    selected_jet_pt, selected_jet_eta = jet_pt[eta_selection], jet_eta[eta_selection]
     pred_score, ratio = model.predict([
-        eta_selected_inputs,
-        constituents_mask(eta_selected_inputs, 10),
-        constituents_mask(eta_selected_inputs, 10)[:, :, 0],
-        eta_selected_inputs[:, :, 0],
-        np.sum(eta_selected_inputs[:, :, 0], axis=1).reshape(-1,1)]
-        )
+        selected_nn_inputs,
+        constituents_mask(selected_nn_inputs, 10),
+        constituents_mask(selected_nn_inputs, 10)[:,:,0],
+        selected_nn_inputs[:,:,0],
+        1.0 / selected_jet_pt.reshape(-1,1),
+        np.stack((selected_jet_pt, selected_jet_eta), axis=1),
+        ])
     model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score
@@ -350,6 +358,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     gen_dr_raw = extract_array(signal, 'jet_genmatch_dR', n_entries)
 
     l1_pt_raw = extract_array(signal, 'jet_pt', n_entries)
+    l1_eta_raw = extract_array(signal, 'jet_eta_phys', n_entries)
     jet_taupt_raw= extract_array(signal, 'jet_taupt', n_entries)
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
@@ -358,11 +367,13 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     pred_score, ratio = model.predict([
         nn_inputs,
         constituents_mask(nn_inputs, 10),
-        constituents_mask(nn_inputs, 10)[:, :, 0],
-        nn_inputs[:, :, 0],
-        np.sum(nn_inputs[:, :, 0], axis=1).reshape(-1,1)])
+        constituents_mask(nn_inputs, 10)[:,:,0],
+        nn_inputs[:,:,0],
+        1.0 / l1_pt_raw.reshape(-1,1),
+        np.stack((l1_pt_raw, l1_eta_raw), axis=1),
+        ])
 
-    nn_tauscore_raw = tau_score(pred_score, model.class_labels )
+    nn_tauscore_raw = tau_score(pred_score, model.class_labels)
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     #selecting the eta region

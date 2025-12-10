@@ -145,7 +145,9 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
         constituents_mask(raw_inputs, 10),
         constituents_mask(raw_inputs, 10)[:, :, 0],
         raw_inputs[:, :, 0],
-        np.sum(raw_inputs[:, :, 0], axis=1).reshape(-1,1)])
+        1.0 / raw_jet_pt.reshape(-1,1),
+        np.stack((raw_jet_pt, raw_jet_eta), axis=1)
+        ])
 
     apply_light = True
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
@@ -311,7 +313,9 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
         constituents_mask(raw_inputs, 10),
         constituents_mask(raw_inputs, 10)[:, :, 0],
         raw_inputs[:, :, 0],
-        np.sum(raw_inputs[:, :, 0], axis=1).reshape(-1,1)])
+        1.0 / raw_jet_pt.reshape(-1,1),
+        np.stack((raw_jet_pt, raw_jet_eta), axis=1)
+        ])
 
     apply_light = True
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
@@ -449,7 +453,9 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
         constituents_mask(raw_inputs, 10),
         constituents_mask(raw_inputs, 10)[:, :, 0],
         raw_inputs[:, :, 0],
-        np.sum(raw_inputs[:, :, 0], axis=1).reshape(-1,1)])
+        1.0 / raw_jet_pt.reshape(-1,1),
+        np.stack((raw_jet_pt, raw_jet_eta), axis=1)
+        ])
 
     #Check if the working point have been derived
     WP_path = os.path.join(model.output_directory, "plots/physics/tautau_topo/working_point.json")

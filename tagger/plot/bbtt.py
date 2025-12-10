@@ -85,12 +85,9 @@ def ditau_seed(tau_pts, tau_scores, tau_etas):
     eta_mask = (np.abs(tau_etas[:, 0]) < eta_cut ) & (np.abs(tau_etas[:, 1]) < eta_cut)
     score_mask = (tau_scores[:, 0] > score_thresh ) & (tau_scores[:, 1] > score_thresh)
 
-
     mask = pt_mask & score_mask & eta_mask
 
     return mask
-
-
 
 def default_selection(jet_pt, jet_eta, indices, apply_sel):
     if apply_sel == "tau":

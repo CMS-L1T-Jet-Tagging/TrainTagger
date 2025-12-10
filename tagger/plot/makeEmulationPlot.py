@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import auc, roc_curve
 
-from tagger.data.tools import load_data, make_data, to_ML, constituents_mask
+from tagger.data.tools import load_data, make_data, to_ML
 from tagger.model.common import fromFolder
 
 # Import from other modules
@@ -43,7 +43,9 @@ def doPlots(model, outputdir, inputdir):
     modelsAndNames = {"model": model}
 
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)  # Last thing was reconstructed pt
+    X_test, Y_test, pt_target, truth_pt, jet_pt, jet_eta = to_ML(data, class_labels)  # Last thing was reconstructed pt
+    jet_pt_phys = np.array(data['jet_pt_phys'])
+    jet_eta_phys = np.array(data['jet_eta_phys'])
 
     labels = list(class_labels.keys())
     model.firmware_convert("temp", build=False)
@@ -53,16 +55,17 @@ def doPlots(model, outputdir, inputdir):
         np.ascontiguousarray(constituents_mask(X_test, 10)),
         np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
         np.ascontiguousarray(X_test[:, :, 0]),
-        np.ascontiguousarray(np.sum(X_test[:, :, 0], axis=1).reshape(-1,1))]
-        )
-    y_class, y_ptreg = model.jet_model.predict([
+        np.ascontiguousarray(1 / jet_pt.reshape(-1,1)),
+        np.ascontiguousarray(np.stack((jet_pt_phys, jet_eta_phys), axis=1)),
+        ])
+    y_class, y_ptreg = model.hls_jet_model.predict([
         np.ascontiguousarray(X_test),
         np.ascontiguousarray(constituents_mask(X_test, 10)),
         np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
         np.ascontiguousarray(X_test[:, :, 0]),
-        np.ascontiguousarray(np.sum(X_test[:, :, 0], axis=1).reshape(-1,1))]
-        )
-    jet_pt_phys = np.array(data['jet_pt_phys'])
+        np.ascontiguousarray(1 / jet_pt.reshape(-1,1)),
+        np.ascontiguousarray(np.stack((jet_pt_phys, jet_eta_phys), axis=1)),
+        ])
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg
@@ -280,3 +283,4 @@ if __name__ == "__main__":
         make_data(infile=args.input, outdir="emulation_data/", extras='extra_emulation_fields', tree="outnano/Jets")
 
     doPlots(model, args.outpath, "emulation_data/")
+

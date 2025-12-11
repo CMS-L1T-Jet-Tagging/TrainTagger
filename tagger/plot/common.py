@@ -46,7 +46,7 @@ def eta_region_selection(eta_array, eta_region):
     elif eta_region == 'endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.5)
     #additional eta restriction on taus
     #slide 7 here https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdfa
-    elif eta_region == 'tau-endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.172)
+    elif eta_region == 'tau-endcap' or eta_region =='tau_endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.172)
     else: return np.abs(eta_array) > 0.0 #Select everything
 
 def delta_r(eta1, phi1, eta2, phi2):
@@ -106,24 +106,35 @@ def plot_2d(variable_one, variable_two, range_one, range_two, name_one, name_two
     return fig
 
 
-def plot_histo(variable, name, title, xlabel, ylabel, range=(0, 1)):
+def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1), bins = 50):
     plt.clf()
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+    ## If we are histogramming by class and so want class colours
+    if len(variable) > len(style.colours):
+        colours = style.color_cycle
+        linestyle = ['-' for i in range(len(variable))]
+    else:
+        colours = style.colours
+        linestyle = style.LINESTYLES
+    colour_list = []
     for i, histo in enumerate(variable):
+        colour_list.append(colours[i])
 
-        ax.hist(
-            histo,
-            bins=50,
-            range=range,
+    ax.hist(
+            variable,
+            bins=bins,
+            range=x_range,
             histtype="step",
-            color=style.colours[i],
-            label=name[i],
+            stacked=False,
+            color=[colours[i] for i in range(len(variable))],
+            label=name,
             linewidth=style.LINEWIDTH - 1.5,
-            linestyle=style.LINESTYLES[i],
+            linestyle=linestyle,
             density=True,
         )
     ax.grid(True)
+    ax.set_yscale(log)
     ax.set_xlabel(xlabel, ha="right", x=1)
     ax.set_ylabel(ylabel, ha="right", y=1)
     ax.legend(loc='upper right')

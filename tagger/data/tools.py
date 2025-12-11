@@ -20,7 +20,6 @@ gc.set_threshold(0)
 
 # >>>>>>>>>>>>>>>>>>>PRIVATE FUNCTIONS<<<<<<<<<<<<<<<<<<<<<<
 
-
 def _add_response_vars(data):
     data['jet_ptUncorr_div_ptGen'] = ak.nan_to_num(
         data['jet_pt_phys'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
@@ -31,7 +30,6 @@ def _add_response_vars(data):
     data['jet_ptRaw_div_ptGen'] = ak.nan_to_num(
         data['jet_pt_raw'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
     )
-
 
 def _split_flavor(data):
     """
@@ -155,20 +153,19 @@ def _split_flavor(data):
 
     return data[jet_ptmin_gen], class_labels
 
-
-def _get_pfcand_fields(tag):
+def _get_puppicand_fields(tag):
 
     # Get the directory of the current file (tools.py)
     current_dir = os.path.dirname(__file__)
 
-    # Construct the path to pfcand_fields.yml relative to tools.py
-    pfcand_fields_path = os.path.join(current_dir, "pfcand_fields.yml")
+    # Construct the path to puppicand_fields.yml relative to tools.py
+    puppicand_fields_path = os.path.join(current_dir, "puppicand_fields.yml")
 
     # Load the YAML file as a dictionary
-    with open(pfcand_fields_path, "r") as file:
-        pfcand_fields = yaml.safe_load(file)
+    with open(puppicand_fields_path, "r") as file:
+        puppicand_fields = yaml.safe_load(file)
 
-    return pfcand_fields[tag]
+    return puppicand_fields[tag]
 
 
 def _pad_fill(array, target):
@@ -177,11 +174,9 @@ def _pad_fill(array, target):
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
-
 def _make_nn_inputs(data_split, tag, n_parts):
 
-    features = _get_pfcand_fields(tag)
-
+    features = _get_puppicand_fields(tag)
     # Concatenate all the inputs
     inputs_list = []
 
@@ -189,7 +184,7 @@ def _make_nn_inputs(data_split, tag, n_parts):
     # https://awkward-array.org/doc/main/user-guide/how-to-restructure-concatenate.html
     # Also pad and fill them with 0 to the number of constituents we are using (nconstit)
     for field in features:
-        field_array = data_split["jet_pfcand"][field]
+        field_array = data_split["jet_puppicand"][field]
 
         padded_filled_array = _pad_fill(field_array, n_parts)
         inputs_list.append(padded_filled_array[:, :, np.newaxis])
@@ -227,8 +222,8 @@ def _save_dataset_metadata(outdir, class_labels, tag, extras):
 
     metadata = {
         "outputs": class_labels,
-        "inputs": _get_pfcand_fields(tag),
-        "extras": _get_pfcand_fields(extras),
+        "inputs": _get_puppicand_fields(tag),
+        "extras": _get_puppicand_fields(extras),
     }
 
     with open(dataset_metadata_file, "w") as f:
@@ -244,7 +239,7 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
 
     # Create the NN inputs
     _make_nn_inputs(data_split, tag, n_parts)
-    extra_features = _get_pfcand_fields(extras)
+    extra_features = _get_puppicand_fields(extras)
 
     # Save them to a root file
     save_fields = ['nn_inputs', 'class_label', 'target_pt', 'target_pt_phys'] + extra_features
@@ -288,7 +283,7 @@ def extract_nn_inputs(data, input_vars, n_parts=16, n_entries=None):
 
     for field in input_vars:
 
-        field_array = extract_array(data, f"jet_pfcand_{field}", n_entries)
+        field_array = extract_array(data, f"jet_puppicand_{field}", n_entries)
 
         padded_filled_array = _pad_fill(field_array, n_parts)
         inputs_list.append(padded_filled_array[:, :, np.newaxis])
@@ -298,11 +293,18 @@ def extract_nn_inputs(data, input_vars, n_parts=16, n_entries=None):
 
     return inputs
 
+def sort_arrays(sorting_val, *arrays):
+    sort_index = ak.argsort(sorting_val, ascending=False)
+    arrays_sorted = [arr[sort_index] for arr in arrays]
 
-def group_id_values(event_id, *arrays, num_elements=2):
+    return arrays_sorted
+
+
+def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
     '''
     Group values according to event id.
     Filter out events that has less than num_elements
+    Sort according to ordering_var if it is provided
     '''
 
     # Use ak.argsort to sort based on event_id
@@ -315,6 +317,13 @@ def group_id_values(event_id, *arrays, num_elements=2):
     # Use ak.unflatten to group the arrays by counts
     grouped_id = ak.unflatten(sorted_event_id, counts)
     grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
+
+    if(ordering_var is not None):
+        #Sort by ordering variable
+        ordering_score = ak.unflatten(ordering_var[sorted_indices],counts)
+        sort_index = ak.argsort(ordering_score, ascending=False)
+        grouped_arrays = [arr[sort_index] for arr in grouped_arrays]
+
 
     # Filter out groups that don't have at least num_elements elements
     mask = ak.num(grouped_id) >= num_elements
@@ -412,8 +421,8 @@ def make_data(
     Parameters:
         infile (str): The input file path.
         outdir (str): The output directory.
-        tag (str): Input tags to use from pfcands, defined in pfcand_fields.yml.
-        extras (str): Extra fields to store for plotting, defined in pfcand_fields.yml
+        tag (str): Input tags to use from puppicands, defined in puppicand_fields.yml.
+        extras (str): Extra fields to store for plotting, defined in puppicand_fields.yml
         n_parts (int): Number of constituent particles to use for tagging.
         fraction (float) : fraction from (0-1) of data to process for training/testing
         step_size (str): Step size for uproot iteration.

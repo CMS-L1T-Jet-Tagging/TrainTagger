@@ -21,7 +21,7 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, sort_arrays
 from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
 
@@ -56,7 +56,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model, target_rate = 28, Ra
     ax.set_ylabel(r"Min L1 $p_T$ [GeV]")
     ax.set_xlabel(r"Min Tau NN ($\tau^{+} + \tau^{-}$) Score")
 
-    ax.set_xlim([0,0.4])
+    ax.set_xlim([0,1.0])
     ax.set_ylim([10,100])
 
     #Find the target rate points, plot them and print out some info as well
@@ -65,6 +65,7 @@ def pick_and_plot_ditau(rate_list, pt_list, nn_list, model, target_rate = 28, Ra
     #Get the coordinates
     target_rate_NN = [nn_list[i] for i in target_rate_idx] # NN cut dimension
     target_rate_PT = [pt_list[i] for i in target_rate_idx] # HT cut dimension
+
 
     # Create an interpolation function
     interp_func = interp1d(target_rate_PT, target_rate_NN, kind='linear', fill_value='extrapolate')
@@ -109,61 +110,38 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
+    raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
 
+    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_tau_score = tau_score(raw_pred_score, model.class_labels)
+    raw_corrected_jet_pt = raw_jet_pt * raw_pt_correction.flatten()
+
+    #Group these attributes by event id, and filter out groups that don't have at least 2 elements
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_tau_score, raw_corrected_jet_pt, num_elements=2)
+
+    # Extract the grouped arrays
+    # Jet pt is already sorted in the producer, no need to do it here
+    jet_pt, jet_eta, jet_phi, jet_tau_score, jet_pt_corr = grouped_arrays
 
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
-    #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, num_elements=2)
 
-    # Extract the grouped arrays
-    # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_phi, jet_nn_inputs = grouped_arrays
 
-    #calculate delta_r
-    eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
-    phi1, phi2 = jet_phi[:, 0], jet_phi[:, 1]
-    delta_r_values = delta_r(eta1, phi1, eta2, phi2)
 
     # Additional cuts recommended here:
     # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
-    # Slide 7
-    cuts = (np.abs(eta1) < 2.172) & (np.abs(eta2) < 2.172) & (delta_r_values > 0.5)
-
-    #Get inputs and pts for processing
-    pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
-    input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
-
-    #Get the NN predictions
-    pred_score1, ratio1 = model.predict(input1)
-    pred_score2, ratio2 = model.predict(input2)
-
-    #Correct the pT and add the score
-    pt1 = pt1_uncorrected*(ratio1.flatten())
-    pt2 = pt2_uncorrected*(ratio2.flatten())
-
-    tau_score1 = tau_score(pred_score1, model.class_labels)
-    tau_score2 = tau_score(pred_score2, model.class_labels)
-
-    #Put them together
-    NN_score = np.vstack([tau_score1, tau_score2]).transpose()
-    NN_score_min = np.min(NN_score, axis=1)
-
-    pt = np.vstack([pt1, pt2]).transpose()
-    pt_min = np.min(pt, axis=1)
+    eta_cut = 2.172
+    eta_pass = np.abs(jet_eta) < eta_cut
 
     #Define the histograms (pT edge and NN Score edge)
-    pT_edges = list(np.arange(0,100,2)) + [1500] #Make sure to capture everything
-    NN_edges = list([round(i,2) for i in np.arange(0, 1.01, 0.01)])
+    pT_edges = list(np.arange(20,100,2)) + [1500] #Make sure to capture everything
+    NN_edges = list([round(i,3) for i in np.arange(0, 1.01, 0.005)])
 
     RateHist = Hist(hist.axis.Variable(pT_edges, name="pt", label="pt"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
-
-    RateHist.fill(pt = pt_min, nn = NN_score_min)
 
     #Derive the rate
     rate_list = []
@@ -172,6 +150,33 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
 
     #Loop through the edges and integrate
     for pt in pT_edges[:-1]:
+
+        #zero out tau score for jets below pt thresh or outside eta region so we don't pick them
+        jet_tau_score = ak.where((jet_pt_corr < pt) | (~eta_pass), 0., jet_tau_score)
+
+        #sort jets by tau score
+        jet_tau_sorted, jet_pt_sorted, jet_eta_sorted, jet_phi_sorted = sort_arrays(jet_tau_score, jet_tau_score, jet_pt_corr, jet_eta, jet_phi)
+
+        #calculate delta_r
+        eta1, eta2 = jet_eta_sorted[:, 0], jet_eta_sorted[:, 1]
+        phi1, phi2 = jet_phi_sorted[:, 0], jet_phi_sorted[:, 1]
+        delta_r_values = delta_r(eta1, phi1, eta2, phi2)
+
+        #apply cuts
+        cuts = (np.abs(eta1) < eta_cut) & (np.abs(eta2) < eta_cut) & (delta_r_values > 0.5)
+
+        #min pt of two tau cands
+        pt1, pt2 = np.asarray(jet_pt_sorted[:,0][cuts]), np.asarray(jet_pt_sorted[:,1][cuts])
+        pt_stack = np.vstack([pt1, pt2]).transpose()
+        pt_min = np.min(pt_stack, axis=1)
+
+        #min NN score of two tau cands
+        score1, score2 = np.asarray(jet_tau_sorted[:,0][cuts]), np.asarray(jet_tau_sorted[:,1][cuts])
+        score_stack = np.vstack([score1, score2]).transpose()
+        score_min = np.min(score_stack, axis=1)
+
+        RateHist.fill(pt = pt_min, nn = score_min)
+
         for NN in NN_edges[:-1]:
 
             #Calculate the rate
@@ -367,9 +372,6 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
         outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
 
 
-
-
-
     #Get the needed attributes
     #Basically we want to bin the selected truth pt and divide it by the overall count
     gen_pt = gen_pt_raw[tau_deno]
@@ -406,7 +408,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
 
     # Set the eta label if needed
-    eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
+    eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.172)'
     if eta_region != 'none':
         # Add an invisible plot to include the eta label in the legend
         ax.plot([], [], 'none', label=eta_label)
@@ -457,7 +459,7 @@ if __name__ == "__main__":
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
-    parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
 
     args = parser.parse_args()
 
@@ -469,4 +471,4 @@ if __name__ == "__main__":
         plot_bkg_rate_ditau(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
-        eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
+        eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='tau_endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)

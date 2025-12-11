@@ -322,6 +322,7 @@ def to_ML(data, class_labels):
 
 def constituents_mask(x, features_dim):
     # Step 1: check each row for zeros
+    x = ak.to_numpy(x)  # convert to numpy array if it's an awkward array
     all_zero = tf.reduce_all(tf.equal(x, 0), axis=-1, keepdims=True)  # shape: (batch, particles, 1)
 
     # Step 2: create mask: 1 if not all-zero, 0 if all-zero

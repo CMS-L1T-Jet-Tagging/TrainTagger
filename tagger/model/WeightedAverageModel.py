@@ -92,11 +92,16 @@ class WeightedAverageModel(DeepSetModel):
             )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
+        main_regression = QConv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_regression', **self.common_args)(main)
+        main_regression = QActivation(
+            activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_regression'
+        )(main_regression)
+
         # Apply the constituents mask
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
         # Make the pT weights and corrections
-        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
+        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main_regression)
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 3), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])

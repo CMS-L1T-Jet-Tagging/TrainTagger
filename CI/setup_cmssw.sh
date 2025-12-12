@@ -45,9 +45,8 @@ git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
 git checkout emulator_test
 
-cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel_test/firmware .
-mv firmware L1TSC4NGJetModel
-./setup.sh
+cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
+./setup.sh v1
 
 make
 make install
@@ -74,6 +73,6 @@ sed -i -e 's/trktype = "extended"/trktype = "'${TRACK_ALGO}'"/g' runJetNtuple.py
 sed -i -e 's/nparam = 5/nparam = '${N_PARAMS}'/g' runJetNtuple.py
 echo "Temporary workaround to get the input files"
 echo $'\nprocess.source.fileNames = ["file:/eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_151X/v1/TT_PU200/inputs151X_10.root"]' >> runJetNtuple.py
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test")' >> runJetNtuple.py
+echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_v1")' >> runJetNtuple.py
 cat runJetNtuple.py
 cmsRun runJetNtuple.py --tm18 2>&1 | tee cmsRun.log

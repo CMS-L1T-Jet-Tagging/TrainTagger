@@ -44,4 +44,4 @@ firmware_config:
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 
-  project_name: 'L1TSC4NGJetModel_test'
+  project_name: 'L1TSC4NGJetModel'

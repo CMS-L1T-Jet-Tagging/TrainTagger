@@ -562,23 +562,6 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', tag
     model_ratio = ratio_2D(model_pt, all_genpt)
     model_vs_cmssw_ratio = ratio_2D(model_pt, cmssw_pt)
 
-
-
-    #write out total eff to text file
-    total_eff_model = np.mean(model_selection)
-    total_eff_cmssw = np.mean(cmssw_selection)
-
-    outname = plot_dir + "/TotalEff.txt"
-    with open(outname, "w") as outfile:
-        outfile.write("Total diTau Eff \n")
-        outfile.write("Multiclass NN %.4f \n" % total_eff_model)
-        outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
-
-    print("Total diTau Eff")
-    print("Multiclass NN %.4f" % total_eff_model)
-    print("CMSSW  %.4f" % total_eff_cmssw)
-
-
     #Plot them side by side
     fig_width = 2.5 * style.FIGURE_SIZE[0]
     fig_height = style.FIGURE_SIZE[1]

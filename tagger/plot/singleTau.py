@@ -554,9 +554,9 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
 
 
-        tau_nume_seedcone = denom & (jet_pts > pt_cut)
-        tau_nume_model = denom  & (model_pts > pt_cut) & (model_scores > model_cut)
-        tau_nume_cmssw = denom  & (cmssw_pts > pt_cut) & (cmssw_scores > cmssw_cut)
+        tau_nume_seedcone = denom & (jet_pts > pt_WP)
+        tau_nume_model = denom  & (model_pts > pt_WP) & (model_scores > model_cut)
+        tau_nume_cmssw = denom  & (cmssw_pts > pt_WP) & (cmssw_scores > cmssw_cut)
 
         ##write out total eff to text file
         total_eff_model = np.sum(tau_nume_model) / np.sum(denom)

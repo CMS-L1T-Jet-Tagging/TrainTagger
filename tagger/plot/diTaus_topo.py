@@ -131,7 +131,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     else:
         base_tau_score = (tau_plus + tau_minus)
 
-    corrected_jet_pt = jet_pt * jet_pt_correction 
+    corrected_jet_pt = jet_pt * jet_pt_correction
 
     eta_cut = 2.172
     eta_pass = np.abs(jet_eta) < eta_cut
@@ -149,7 +149,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     nn_list = []
 
     #Loop through the edges and integrate
-    #For each pt thresh pick two highest tau-score jets to compute the topo score 
+    #For each pt thresh pick two highest tau-score jets to compute the topo score
     for pt in pT_edges[:-1]:
 
         #zero out tau score for jets below pt thresh so we don't pick them
@@ -446,7 +446,7 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', tag
     if(apply_light): raw_tau_score = raw_tau_score_sum / (raw_bkg + raw_tau_score_sum)
     else: raw_tau_score = raw_tau_score_sum
 
-    corrected_jet_pt = raw_jet_pt * raw_pt_correction 
+    corrected_jet_pt = raw_jet_pt * raw_pt_correction
 
     #zero out tau score for jets below pt thresh so we don't accidentally pick them
     raw_tau_score = ak.where(corrected_jet_pt < model_PT_WP, 0., raw_tau_score)

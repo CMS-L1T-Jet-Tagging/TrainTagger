@@ -203,7 +203,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
     nn_list = []
 
     #Loop through the edges and integrate
-    #For each pt thresh, zero out tau cands with lower pt, then pick highest tau score 
+    #For each pt thresh, zero out tau cands with lower pt, then pick highest tau score
     for pt in pT_edges[:-1]:
 
         #set scores with pt below thresh to zero

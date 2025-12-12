@@ -474,4 +474,3 @@ if __name__ == "__main__":
     elif args.eff:
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='tau_endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
-

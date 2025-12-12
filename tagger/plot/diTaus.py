@@ -123,7 +123,6 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_eta, jet_phi, jet_tau_score, jet_pt_corr = grouped_arrays
 
-
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
@@ -134,7 +133,8 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     # Additional cuts recommended here:
     # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
     eta_cut = 2.172
-    eta_pass = np.abs(jet_eta) < eta_cut
+    eta_fail = np.abs(jet_eta) > eta_cut
+    jet_tau_score  = ak.where(eta_fail, 0., jet_tau_score)
 
     #Define the histograms (pT edge and NN Score edge)
     pT_edges = list(np.arange(20,100,2)) + [1500] #Make sure to capture everything
@@ -152,7 +152,7 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     for pt in pT_edges[:-1]:
 
         #zero out tau score for jets below pt thresh or outside eta region so we don't pick them
-        jet_tau_score = ak.where((jet_pt_corr < pt) | (~eta_pass), 0., jet_tau_score)
+        jet_tau_score = ak.where((jet_pt_corr < pt), 0., jet_tau_score)
 
         #sort jets by tau score
         jet_tau_sorted, jet_pt_sorted, jet_eta_sorted, jet_phi_sorted = sort_arrays(jet_tau_score, jet_tau_score, jet_pt_corr, jet_eta, jet_phi)
@@ -175,6 +175,8 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
         score_stack = np.vstack([score1, score2]).transpose()
         score_min = np.min(score_stack, axis=1)
 
+        #fill hist for these tau choices
+        RateHist.reset()
         RateHist.fill(pt = pt_min, nn = score_min)
 
         for NN in NN_edges[:-1]:
@@ -472,3 +474,4 @@ if __name__ == "__main__":
     elif args.eff:
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='tau_endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
+

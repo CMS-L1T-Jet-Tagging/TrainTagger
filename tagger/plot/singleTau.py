@@ -550,8 +550,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         #Pick a single pt WP for comparison
         pt_WP = 75.
 
-        #denom = (gen_pt > pt_WP) & gen_eta_selection
-        denom = (gen_pt > pt_WP)
+        denom = (gen_pt > pt_WP) & gen_eta_selection
 
         model_cut = model_WP_interp(pt_WP)
         cmssw_cut = cmssw_WP_interp(pt_WP)

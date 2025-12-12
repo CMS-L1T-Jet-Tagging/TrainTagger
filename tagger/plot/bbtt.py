@@ -167,13 +167,13 @@ def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
     e_idx = class_labels['electron']
     l_idx = class_labels['light']
     g_idx = class_labels['gluon']
-    u_idx = class_labels['pileup']
+    p_idx = class_labels['pileup']
 
     # vs light preds
-    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx] + pred_score[:,e_idx], pred_score[:, g_idx] + pred_score[:, u_idx]) for pred_score in nn_outputs])
-    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx] + pred_score[:,e_idx], pred_score[:, g_idx] + pred_score[:, u_idx]) for pred_score in nn_outputs])
+    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx] + pred_score[:,e_idx], pred_score[:, l_idx] + pred_score[:, g_idx] + pred_score[:, p_idx]) for pred_score in nn_outputs])
+    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx] + pred_score[:,e_idx], pred_score[:, l_idx] + pred_score[:, g_idx] + pred_score[:, p_idx]) for pred_score in nn_outputs])
 
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, u_idx]) for pred_score in nn_outputs])
+    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx] + pred_score[:, p_idx]) for pred_score in nn_outputs])
 
     # raw preds
     taup_preds = np.transpose([pred_score[:, tp_idx] for pred_score in nn_outputs])

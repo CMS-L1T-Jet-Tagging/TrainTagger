@@ -26,10 +26,10 @@ from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
 
 def tau_score(preds, class_labels):
-    tau_index = [class_labels['taup'], class_labels['taum']]
+    tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']]
 
     tau = sum([preds[:,idx] for idx in tau_index] )
-    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']] + preds[:,class_labels['pileup']]
 
     return x_vs_y(tau, bkg)
 

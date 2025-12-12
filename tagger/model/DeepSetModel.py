@@ -171,9 +171,9 @@ class DeepSetModel(QKerasModel):
         config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
-        # hls4ml automatically figures out the paralellization factor
-        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
+        # hls4ml does not !!! automatically figure out the paralellization factor, this leads to csim, hdl sim errors
+        config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
+        config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
 
         # Additional config
         for layer in self.jet_model.layers:

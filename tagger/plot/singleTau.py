@@ -190,7 +190,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
 
 
     #Define the histograms (pT edge and NN Score edge)
-    pT_edges = list(np.arange(30,150,2)) + [1500] #Make sure to capture everything
+    pT_edges = list(np.arange(30,80,1)) + list(np.arange(80,150,2))+ [1500] #Make sure to capture everything
     NN_edges = list([round(i,4) for i in np.arange(0, 0.5, 0.002)]) + list([round(i,4) for i in np.arange(0.5, 1.01, 0.005)])
 
     RateHist = Hist(hist.axis.Variable(pT_edges, name="pt", label="pt"),
@@ -429,7 +429,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     model_scores[~cuts] = 0.
     cmssw_scores[~cuts] = 0.
 
-    debug_plots = False
+    debug_plots = True
 
     if(debug_plots):
         cut = model_pts> 30.
@@ -469,6 +469,9 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         model_cut = max(model_WP_interp(pt_cut), min_NN_cut)
         cmssw_cut = max(cmssw_WP_interp(pt_cut), min_NN_cut)
 
+
+
+
         tau_deno = (gen_pt > pt_cut)
         denom = np.sum(tau_deno)
         denoms.append(denom)
@@ -486,8 +489,6 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
             seeded_cone_effs.append(np.sum(tau_nume_seedcone))
             model_effs.append(np.sum(tau_nume_model))
             cmssw_effs.append(np.sum(tau_nume_cmssw))
-
-            #print(pt_cut, np.sum(tau_deno), np.sum(cmssw_cut), np.sum(model_cut))
 
 
     denoms = np.array(denoms)
@@ -539,6 +540,8 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     fig.savefig(f'{plot_dir}/{figname}.png', bbox_inches='tight')
     fig.savefig(f'{plot_dir}/{figname}.pdf', bbox_inches='tight')
 
+    print("diff")
+
 
     for eta_region in ['barrel', 'tau_endcap']:
         #selecting the eta region
@@ -547,21 +550,22 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         #Pick a single pt WP for comparison
         pt_WP = 75.
 
-        denom = (gen_pt > pt_WP) & gen_eta_selection
+        #denom = (gen_pt > pt_WP) & gen_eta_selection
+        denom = (gen_pt > pt_WP)
 
         model_cut = model_WP_interp(pt_WP)
         cmssw_cut = cmssw_WP_interp(pt_WP)
 
 
-
-        tau_nume_seedcone = denom & (jet_pts > pt_cut)
-        tau_nume_model = denom  & (model_pts > pt_cut) & (model_scores > model_cut)
-        tau_nume_cmssw = denom  & (cmssw_pts > pt_cut) & (cmssw_scores > cmssw_cut)
+        tau_nume_seedcone = denom & (jet_pts > pt_WP)
+        tau_nume_model = denom  & (model_pts > pt_WP) & (model_scores > model_cut)
+        tau_nume_cmssw = denom  & (cmssw_pts > pt_WP) & (cmssw_scores > cmssw_cut)
 
         ##write out total eff to text file
         total_eff_model = np.sum(tau_nume_model) / np.sum(denom)
         total_eff_seedcone = np.sum(tau_nume_seedcone) / np.sum(denom)
         total_eff_cmssw = np.sum(tau_nume_cmssw) / np.sum(denom)
+
 
         outname = plot_dir + "/TotalEff_%s.txt" % eta_region
         with open(outname, "w") as outfile:

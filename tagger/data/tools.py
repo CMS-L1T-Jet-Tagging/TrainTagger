@@ -111,10 +111,8 @@ def _split_flavor(data):
     # Initialize the new array in data for numeric labels with default for pileup entries
     data['class_label'] = ak.full_like(data['jet_genmatch_pt'], pileup_idx)
 
-    tot = 0.
     # Assign numeric values based on conditions using awkward's where function
     for label, condition in conditions.items():
-        tot += ak.mean(condition)
         data['class_label'] = ak.where(condition, class_labels[label], data['class_label'])
 
     # Set pt regression target
@@ -148,8 +146,6 @@ def _split_flavor(data):
             do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
 
-    #merge pileup class 
-    data['class_label'] = ak.where(data['class_label'] == temp_pileup_idx, final_pileup_idx, data['class_label'])
 
     return data[jet_ptmin_gen], class_labels
 

@@ -118,13 +118,11 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     return sample_weights
 
 
-def train(model, out_dir, percent, merge_pu_class=False):
+def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
 
-    if(merge_pu_class and 'pileup' in class_labels):
-        class_labels["pileup"] = class_labels['gluon']
 
     model.set_labels(
         input_vars,
@@ -179,7 +177,6 @@ if __name__ == "__main__":
     parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
     )
-    parser.add_argument('--merge-pu-class', action='store_true', help='Merge pileup class into gluons')
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
@@ -196,4 +193,4 @@ if __name__ == "__main__":
 
     else:
         model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.percent, merge_pu_class=args.merge_pu_class)
+        train(model, args.output, args.percent)

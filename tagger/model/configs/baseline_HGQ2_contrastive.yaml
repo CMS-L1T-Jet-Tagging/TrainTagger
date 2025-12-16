@@ -1,4 +1,4 @@
-model: DeepSetModelHGQ2
+model: DeepSetHGQ2EmbeddingModel
 run_config :
   verbose : 2
   debug : True
@@ -11,17 +11,19 @@ model_config :
   classification_layers : [32,16]
   classification_parallelisation_factor : [32,16]
   regression_layers : [10]
+  projection_dims : 8
   regression_parallelisation_factor : [10]
-  beta: 1.1e-7
 
 quantization_config:
   pt_output_quantization : [16,6]
 
 training_config :
   weight_method: "onlyclass"
-  epochs : 100
+  embedding_epochs : 40
+  finetuning_epochs : 100
   batch_size : 1024
-  learning_rate : 0.0001
+  learning_rate : 0.01
+  embeddding_lr : 0.01
   validation_split : 0.1
 
   loss_weights : [1,1]

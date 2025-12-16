@@ -11,7 +11,7 @@ import numpy as np
 import numpy.typing as npt
 from schema import Schema, And, Use, Optional
 
-from tagger.model.common import initialise_tensorflow
+from tagger.model.common_tensorflow import initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
 import keras

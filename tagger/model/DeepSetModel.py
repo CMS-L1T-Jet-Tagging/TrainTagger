@@ -12,7 +12,9 @@ import numpy.typing as npt
 import tensorflow as tf
 from schema import Schema, And, Use, Optional
 
-from tagger.model.common import initialise_tensorflow
+from tagger.model.common import AAtt, AttentionPooling, choose_aggregator,L2NormalizeLayer, contrastive_loss, SimCLRPreprocessing
+from tagger.model.common_tensorflow import initialise_tensorflow
+
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel, AAtt, AttentionPooling, choose_aggregator
 
@@ -219,3 +221,342 @@ class DeepSetModel(QKerasModel):
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
+
+# Register the model in the factory with the string name corresponding to what is in the yaml config
+@JetModelFactory.register('DeepSetEmbeddingModel')
+class DeepSetEmbeddingModel(DeepSetModel):
+    """DeepSetEmbeddingModel class
+
+    Args:
+        DeepSetModel (_type_): Base class of a DeepSetModel
+    """
+    
+    schema = Schema(
+            {
+                "model": str,
+                ## generic run config coniguration
+                "run_config" : JetTagModel.run_schema,
+                "model_config" : {"name" : str,
+                                  "conv1d_layers" : list,
+                                  "classification_layers" : list,
+                                  "regression_layers" : list,
+                                  "kernel_initializer" : str,
+                                  "projection_dims": And(int, lambda s: s >= 1),
+                                  "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])},
+                "quantization_config" : QKerasModel.quantization_schema,
+                "training_config" : {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
+                                     "validation_split" : And(float, lambda s: s > 0.0),
+                                     "epochs" : And(int, lambda s: s >= 1),
+                                     "finetuning_epochs" : And(int, lambda s: s >= 1),
+                                     "batch_size" : And(int, lambda s: s >= 1),
+                                     "learning_rate" : And(float, lambda s: s > 0.0),
+                                     "embeddding_lr" : And(float, lambda s: s > 0.0),
+                                     "loss_weights" : And(list, lambda s: len(s) == 2),
+                                     "EarlyStopping_patience" : And(int, lambda s: s > 0),
+                                     "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                     "ReduceLROnPlateau_patience" : int,
+                                     "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)},
+                ## generic hls4ml configuration
+                "firmware_config" : DeepSetModel.firmware_config,
+            }
+    )
+    
+    def __init__(self,output_dir):
+        super().__init__(output_dir)
+        self.backbone_model = None
+        self.embedding_model = None
+        
+
+    def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
+        """build model override, makes the model layer by layer
+
+        Args:
+            inputs_shape (tuple): Shape of the input
+            outputs_shape (tuple): Shape of the output
+
+        Additional hyperparameters in the config
+            conv1d_layers: List of number of nodes for each layer of the conv1d layers.
+            classifier_layers: List of number of nodes for each layer of the classifier MLP.
+            regression_layers: List of number of nodes for each layer of the regression MLP
+            aggregator: String that specifies the type of aggregator to use after the conv1D net.
+        """
+        initialise_tensorflow(self.run_config['num_threads'])
+        # Define some common arguments, taken from the yaml config
+        common_args = {
+            'kernel_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'bias_quantizer': quantized_bits(
+                self.quantization_config['quantizer_bits'],
+                self.quantization_config['quantizer_bits_int'],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'kernel_initializer': self.model_config['kernel_initializer'],
+        }
+
+        # Initialize inputs
+        inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+
+        # Main branch
+        main = BatchNormalization(name='norm_input')(inputs)
+
+        # Make Conv1D layers
+        for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
+            main = QConv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_' + str(iconv1d + 1), **common_args)(main)
+            main = QActivation(
+                activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='relu_' + str(iconv1d + 1)
+            )(main)
+            # ToDo: fix the bits_int part later, ie use the default not 0
+
+        # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
+        main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
+        agg = choose_aggregator(choice=self.model_config['aggregator'], name="pool")
+        main = agg(main)
+        
+        self.backbone_model = tf.keras.Model(inputs=inputs, outputs=main)
+
+        # Now split into jet ID and pt regression
+        # Make fully connected dense layers for classification task
+        for iclass, depthclass in enumerate(self.model_config['classification_layers']):
+            if iclass == 0:
+                jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(main)
+            else:
+                jet_id = QDense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(jet_id)
+            jet_id = QActivation(
+                activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
+                name='relu_' + str(iclass + 1) + '_jetID',
+            )(jet_id)
+            # ToDo: fix the bits_int part later, ie use the default not 0
+
+        # Make output layer for classification task
+        jet_id = QDense(outputs_shape[0], name='Dense_' + str(iclass + 2) + '_jetID', **common_args)(jet_id)
+        jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+
+        # Make fully connected dense layers for pt regression task
+        for ireg, depthreg in enumerate(self.model_config['regression_layers']):
+            if ireg == 0:
+                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', **common_args)(main)
+            else:
+                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', **common_args)(pt_regress)
+            pt_regress = QActivation(
+                activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
+                name='relu_' + str(ireg + 1) + '_pT',
+            )(pt_regress)
+
+        pt_regress = QDense(
+            1,
+            name='pT_output',
+            kernel_quantizer=quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            bias_quantizer=quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            kernel_initializer='lecun_uniform',
+        )(pt_regress)
+
+
+        self.create_encoder(inputs_shape,self.model_config['projection_dims'])
+                
+        self.jet_model = tf.keras.Model(inputs, [jet_id,pt_regress])
+                
+        print(self.embedding_model.summary())
+        
+        print(self.jet_model.summary())
+        
+    def create_encoder(self,inputs_shape, projection_dim):
+
+        inputs = tf.keras.Input(inputs_shape)
+        features = self.backbone_model(inputs)
+
+        # Projection head, the z's remember?
+        outputs = tf.keras.Sequential([
+            Dense(10, activation='relu'),
+            Dense(projection_dim)
+        ])(features)
+        # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
+        outputs = L2NormalizeLayer()(outputs)
+        self.embedding_model = tf.keras.Model(inputs, outputs)
+
+    def _prune_model(self, num_samples: int):
+        """Pruning setup for the model, internal model function called by compile
+
+        Args:
+            num_samples (int): number of samples in the training set used for scheduling
+        """
+
+        print("Begin pruning the model...")
+
+        # Calculate the ending step for pruning
+        embedding_end_step = (
+            np.ceil(num_samples / self.training_config['batch_size']).astype(np.int32) * self.training_config['embedding_epochs']
+        )
+        
+        fine_tuning_end_step = (
+            np.ceil(num_samples / self.training_config['batch_size']).astype(np.int32) * self.training_config['finetuning_epochs']
+        )
+
+        # Define the pruned model
+        embedding_prune_params = {
+            'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
+                initial_sparsity=self.training_config['initial_sparsity'],
+                final_sparsity=self.training_config['final_sparsity'],
+                begin_step=0,
+                end_step=embedding_end_step,
+            )
+        }
+        
+        fine_tune_prune_params = {
+            'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
+                initial_sparsity=self.training_config['initial_sparsity'],
+                final_sparsity=self.training_config['final_sparsity'],
+                begin_step=0,
+                end_step=fine_tuning_end_step,
+            )
+        }
+        
+        self.embedding_model = tfmot.sparsity.keras.prune_low_magnitude(self.embedding_model, **embedding_prune_params)
+        self.jet_model = tfmot.sparsity.keras.prune_low_magnitude(self.jet_model, **fine_tune_prune_params)
+
+        # Add preface to loss name
+        self.loss_name = 'prune_low_magnitude_'
+
+        # Add pruning callback
+        self.callbacks.append(tfmot.sparsity.keras.UpdatePruningStep())
+
+    def compile_model(self, num_samples: int):
+        """compile the model generating callbacks and loss function
+        Args:
+            num_samples (int): Number of samples in the training set used for scheduling
+        """
+        # Define the callbacks using hyperparameters in the config
+        self.fine_tune_callbacks = [
+            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
+            ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=self.training_config['ReduceLROnPlateau_factor'],
+                patience=self.training_config['ReduceLROnPlateau_patience'],
+                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
+            ),
+        ]
+
+        # Define the pruning
+        self._prune_model(num_samples)
+        
+        self.constrastive_optimizer = tf.keras.optimizers.Adam()
+        self.embedding_model.optimizer = self.constrastive_optimizer  
+        # compile the tensorflow model setting the loss and metrics
+        self.jet_model.compile(
+            optimizer='adam',
+            loss={
+                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
+            },
+            loss_weights=self.training_config['loss_weights'],
+            metrics={
+                self.loss_name + self.output_id_name: 'categorical_accuracy',
+                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
+            },
+            weighted_metrics={
+                self.loss_name + self.output_id_name: 'categorical_accuracy',
+                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
+            },
+        )
+
+    def fit(
+        self,
+        X_train: npt.NDArray[np.float64],
+        y_train: npt.NDArray[np.float64],
+        pt_target_train: npt.NDArray[np.float64],
+        sample_weight: npt.NDArray[np.float64],
+    ):
+        """Fit the model to the training dataset (embedding + finetune, optimized for speed)
+
+        Args:
+            X_train (npt.NDArray[np.float64]): X train dataset
+            y_train (npt.NDArray[np.float64]): y train classification targets
+            pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
+            sample_weight (npt.NDArray[np.float64]): sample weighting
+        """
+        # Ensure backbone and embedding model are built
+        input_shape = X_train.shape[1:]
+        output_shape = (y_train.shape[-1],) if len(y_train.shape) > 1 else (1,)
+        if self.backbone_model is None or self.jet_model is None:
+            self.build_model(input_shape, output_shape)
+        # --- Embedding (SimCLR) training (FAST) ---
+        x_train = X_train[..., tf.newaxis].astype("float32")
+        augment = SimCLRPreprocessing()
+        train_ds = (
+            tf.data.Dataset.from_tensor_slices(x_train)
+            .shuffle(self.training_config['batch_size'])
+            .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
+            .batch(self.training_config['batch_size'])
+            .prefetch(tf.data.AUTOTUNE)
+        )
+
+        optimizer = self.constrastive_optimizer
+        embedding_model = self.embedding_model
+        callbacks = tf.keras.callbacks.CallbackList(self.callbacks, add_history=True, model=embedding_model)
+        logs = {}
+        callbacks.on_train_begin(logs=logs)
+
+        @tf.function
+        def train_step(x1, x2):
+            # Record operations for automatic differentiation
+            with tf.GradientTape() as tape:
+                # Forward pass: compute embeddings for both augmented views
+                z1 = self.embedding_model(x1, training=True)
+                z2 = self.embedding_model(x2, training=True)
+                # Compute SimCLR contrastive loss between the two views
+                loss = contrastive_loss(z1, z2)
+            # Compute gradients of loss w.r.t. model trainable weights
+            grads = tape.gradient(loss, self.embedding_model.trainable_weights)
+            # Apply gradients to update model weights using optimizer
+            optimizer.apply_gradients(zip(grads, self.embedding_model.trainable_weights))
+            # Return the computed loss for logging
+            return loss
+
+        for epoch in range(self.training_config['embedding_epochs']):
+            callbacks.on_epoch_begin(epoch, logs=logs)
+            losses = []
+            ibatch = 0
+            for x1, x2 in train_ds:
+                ibatch += 1
+                callbacks.on_train_batch_begin(ibatch, logs=logs)
+                loss = train_step(x1, x2)
+                losses.append(loss.numpy())
+                callbacks.on_train_batch_end(ibatch, logs=logs)
+            logs['loss'] = np.mean(losses)
+            print(f"Epoch {epoch+1}: Loss = {logs['loss']:.4f}")
+            callbacks.on_epoch_end(epoch, logs=logs)
+        callbacks.on_train_end(logs=logs)
+
+        # --- Finetuning (jet model) training ---
+        # Convert to float32 for TensorFlow
+        X_train = X_train.astype("float32")
+        y_train = y_train.astype("float32")
+        pt_target_train = pt_target_train.astype("float32")
+        sample_weight = sample_weight.astype("float32")
+
+        # Freeze layers 
+        for i, layer in enumerate(self.jet_model.layers):
+            if i in [0,1,2,3,4,5,6,7]:
+                self.jet_model.get_layer(layer.name).trainable = False
+        
+        self.history = self.jet_model.fit(
+            {'model_input': X_train},
+            {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
+            sample_weight=sample_weight,
+            epochs=self.training_config['finetuning_epochs'],
+            batch_size=self.training_config['batch_size'],
+            verbose=self.run_config['verbose'],
+            validation_split=self.training_config['validation_split'],
+            callbacks=self.callbacks + self.fine_tune_callbacks,
+            shuffle=True,
+        )

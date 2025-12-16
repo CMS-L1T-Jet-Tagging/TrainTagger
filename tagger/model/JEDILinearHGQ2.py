@@ -19,11 +19,9 @@ import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.common import initialise_tensorflow,cosine_decay_restarts
+from tagger.model.common import cosine_decay_restarts
+from tagger.model.common_tensorflow import initialise_tensorflow
 
-from da4ml.converter.hgq2.parser import trace_model
-from da4ml.trace import comb_trace, HWConfig
-from da4ml.codegen import HLSModel, VHDLModel
 
 @JetModelFactory.register('JEDILinearHGQ2')
 class JEDILinearHGQ2(JetTagModel):

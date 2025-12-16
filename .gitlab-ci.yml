@@ -32,45 +32,75 @@ include:
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 # IMAGE = Which docker image to run the pipelines in. mamba_jettagger:latest for qkeras, mamba_jettagger:latest-gpu for keras v3
 
-DeepSet:baseline_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: baseline_5param_extended_trk
-    Model: baseline
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+# DeepSet:baseline:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: baseline
+#     Model: baseline
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
-JEDILinear:HGQ2_5param_extended_trk:
+DeepSet:HGQ2_embedding:
   extends: .ml_pipeline
   variables:
-    Name: JEDILinearHGQ2_5param_extended_trk
-    Model: JEDIlinear_HGQ2
+    Name: baseline_HGQ2_contrastive
+    Model: baseline_HGQ2_contrastive
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+    RUN_SYNTHESIS: 'False'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
-MLPmixer:HGQ2_5param_extended_trk:
+Transformer:
   extends: .ml_pipeline
   variables:
-    Name: MLPmixerHGQ2_5param_extended_trk
-    Model: MLPmixer_HGQ2
+    Name: transformer
+    Model: transformer
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+    RUN_SYNTHESIS: 'False'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
-DeepSet:HGQ2_5param_extended_trk:
+Transformer:Embedding:
   extends: .ml_pipeline
   variables:
-    Name: DeepSetHGQ2_5param_extended_trk
-    Model: baseline_HGQ2
+    Name: transformer_contrastive
+    Model: transformer_contrastive
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+    RUN_SYNTHESIS: 'False'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+# JEDILinear:HGQ2_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: JEDILinearHGQ2_5param_extended_trk
+#     Model: JEDIlinear_HGQ2
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+# MLPmixer:HGQ2_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: MLPmixerHGQ2_5param_extended_trk
+#     Model: MLPmixer_HGQ2
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+# DeepSet:HGQ2_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: DeepSetHGQ2_5param_extended_trk
+#     Model: baseline_HGQ2
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 # DeepSet:HGQ2_larger_5param_extended_trk:
 #   extends: .ml_pipeline

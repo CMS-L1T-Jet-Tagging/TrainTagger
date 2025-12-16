@@ -10,24 +10,8 @@ import shutil
 import yaml
 import numpy as np
 from math import cos, pi
-
-
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
-def initialise_tensorflow(num_threads):
-    import tensorflow as tf
-    os.environ["KERAS_BACKEND"] = "tf" 
-    
-    print("Using ")
-    print(tf.config.list_physical_devices('GPU'))
-    print("for training")
-
-    # Set some tensorflow constants
-    os.environ["OMP_NUM_THREADS"] = str(num_threads)
-    os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
-    os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
-
-    tf.keras.utils.set_random_seed(46)  # not a special number
     
 def log_beta_schedule(epoch, max_epochs=100):
     log_beta_start = np.log10(1e-7)

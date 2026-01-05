@@ -40,6 +40,7 @@ class JetTagModel(ABC):
         self.quantization_config = {}
         self.training_config = {}
         self.firmware_config = {}
+        self.inputs = {}
 
         self.output_id_name = 'jet_id_output'
         self.output_pt_name = 'pT_output'
@@ -68,6 +69,7 @@ class JetTagModel(ABC):
         self.model_config = yaml_dict['model_config']
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
+        self.inputs = yaml_dict['inputs']
         if "firmware_config" in yaml_dict:
             self.firmware_config = yaml_dict['firmware_config']
 

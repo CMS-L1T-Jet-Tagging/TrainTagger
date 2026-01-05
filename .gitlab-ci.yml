@@ -67,6 +67,15 @@ DoubleAggregate:doubleAggregate_5param_extended_trk:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 
+WeightedAverageConvOffset:weightedAverageConvOffset_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: weightedAverageConvOffset_5param_extended_trk
+    Model: weightedAverageConvOffset
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+
 # WeightedAverageOffset:weightedAverageOffset_5param_extended_trk:
 #   extends: .ml_pipeline
 #   variables:

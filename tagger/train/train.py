@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 # Third parties
 import numpy as np
 import tensorflow as tf
+import json
 
 # Import from other modules
 from tagger.data.tools import load_data, to_ML, constituents_mask
@@ -11,17 +12,16 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, reco_eta_test):
+def save_test_data(out_dir, y_test, truth_pt_test, reco_pt, reco_eta):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
 
-    np.save(os.path.join(out_dir, "testing_data/X_test.npy"), X_test)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
-    np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
-    np.save(os.path.join(out_dir, "testing_data/reco_eta_test.npy"), reco_eta_test)
+    np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt)
+    np.save(os.path.join(out_dir, "testing_data/reco_eta_test.npy"), reco_eta)
 
-    print(f"Test data saved to {out_dir}")
+    print(f"Test labels saved to {out_dir}")
 
 
 def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, low_pt=False):
@@ -143,7 +143,18 @@ def train(model, out_dir, percent):
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test, reco_eta_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test, reco_eta_test)
+    save_test_data(out_dir, y_test, truth_pt_test, reco_pt_test, reco_eta_test)
+
+    # collect all possible train and test inputs
+    batch_dict = {
+        'basic_input': [X_train, X_test],
+        'basic_mask': [mask, constituents_mask(X_test, 10)],
+        'pt_mask': [pt_mask, constituents_mask(X_test, 10)[:, :, 0]],
+        'constituent_pt': [constituents_pt, X_test[:, :, 0]],
+        'inverse_jet_pt': [inverse_jet_pt, 1.0 / (reco_pt_test + 1e-6).reshape(-1, 1)],
+        'jet_pt': [reco_pt_train, reco_pt_test],
+        'jet_eta': [reco_eta_train, reco_eta_test],
+    }
 
     # Calculate the sample weights for training
     sample_weight_class = train_weights(
@@ -161,18 +172,17 @@ def train(model, out_dir, percent):
         debug=model.run_config['debug'],
     )
 
-    # Get input shape
-    ratio_factor = np.zeros([X_train.shape[1], 1])
-    input_shape = [X_train.shape[1:], mask.shape[1:], pt_mask.shape[1:], constituents_pt.shape[1:],
-        inverse_jet_pt.shape[1:], jet_features.shape[1:]]  # First dimension is batch size
+    # Get input shape and inputs dict
+    train_dict, input_shapes = model.prepare_inputs(batch_dict, out_dir)
     output_shape = y_train.shape[1:]
 
-    model.build_model(input_shape, output_shape)
+    model.build_model(input_shapes, output_shape)
+
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    model.compile_model(num_samples, [1, 1])
-    model.fit([X_train, mask, pt_mask, constituents_pt, inverse_jet_pt, jet_features], y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.compile_model(num_samples)
+    model.fit(train_dict, y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     # Finished training, save model
     model.save()

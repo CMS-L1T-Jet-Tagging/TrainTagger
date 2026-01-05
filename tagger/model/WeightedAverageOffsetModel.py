@@ -73,12 +73,12 @@ class WeightedAverageOffsetModel(DeepSetModel):
         }
 
         # Initialize inputs
-        inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
-        mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
-        pt_mask = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_mask_input')
-        pt = tf.keras.layers.Input(shape=inputs_shape[3], name='pt_input')
-        inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape[4], name='inverse_jet_pt_input')
-        jet_features = tf.keras.layers.Input(shape=inputs_shape[5], name='jet_features_input')
+        inputs = tf.keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
+        mask = tf.keras.layers.Input(shape=inputs_shape['basic_mask'], name='basic_mask')
+        pt_mask = tf.keras.layers.Input(shape=inputs_shape['pt_mask'], name='pt_mask')
+        pt = tf.keras.layers.Input(shape=inputs_shape['constituent_pt'], name='constituent_pt')
+        inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape['inverse_jet_pt'], name='inverse_jet_pt')
+        jet_features = tf.keras.layers.Input(shape=inputs_shape['jet_features'], name='jet_features')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
@@ -165,7 +165,7 @@ class WeightedAverageOffsetModel(DeepSetModel):
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: dict,
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
@@ -180,10 +180,8 @@ class WeightedAverageOffsetModel(DeepSetModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        inputs, mask, pt_mask, pt, inverse_jet_pt, jet_features = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt,
-            'inverse_jet_pt_input': inverse_jet_pt, 'jet_features_input': jet_features},
+            X_train,
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
                 'prune_low_magnitude_jet_id_output': sample_weight[0],

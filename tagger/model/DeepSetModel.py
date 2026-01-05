@@ -51,11 +51,14 @@ class DeepSetModel(QKerasModel):
                                     "reg_precision": str,
                                     "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                     "fpga_part" : str,
-                                    "project_name" : str}
+                                    "project_name" : str},
+                "inputs" : {  # <-- add this
+                    "basic_features": list,
+                    "custom_features": list}
             }
     )
 
-    def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
+    def build_model(self, inputs_shape: dict, outputs_shape: tuple):
         """build model override, makes the model layer by layer
 
         Args:
@@ -86,7 +89,7 @@ class DeepSetModel(QKerasModel):
         }
 
         # Initialize inputs
-        inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
+        inputs = tf.keras.layers.Input(shape=inputs_shape['model_input'], name='model_input')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)

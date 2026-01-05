@@ -5,6 +5,7 @@ from tagger.model.WeightedAverageModel import WeightedAverageModel
 from tagger.model.WeightedAverageAggregateModel import WeightedAverageAggregateModel
 from tagger.model.WeightedAverageOffsetModel import WeightedAverageOffsetModel
 from tagger.model.WeightedAverageConvModel import WeightedAverageConvModel
+from tagger.model.WeightedAverageConvOffsetsModel import WeightedAverageConvOffsetsModel
 from tagger.model.DoubleAggregateModel import DoubleAggregateModel
 from tagger.model.DeepSetFeaturesModel import DeepSetFeaturesModel
 from tagger.model.DeepSetModelHGQ import DeepSetModelHGQ

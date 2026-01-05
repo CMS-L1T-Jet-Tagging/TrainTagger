@@ -73,13 +73,12 @@ class DoubleAggregateModel(DeepSetModel):
         }
 
         # Initialize inputs
-        inputs = tf.keras.layers.Input(shape=inputs_shape[0], name='model_input')
-        mask = tf.keras.layers.Input(shape=inputs_shape[1], name='masking_input')
-        pt_mask = tf.keras.layers.Input(shape=inputs_shape[2], name='pt_mask_input')
-        pt = tf.keras.layers.Input(shape=inputs_shape[3], name='pt_input')
-        inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape[4], name='inverse_jet_pt_input')
-        jet_features = tf.keras.layers.Input(shape=inputs_shape[5], name='jet_features_input')
-        jet_eta, jet_pt = jet_features[:, 0], jet_features[:, 1]
+        inputs = tf.keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
+        mask = tf.keras.layers.Input(shape=inputs_shape['basic_mask'], name='basic_mask')
+        pt_mask = tf.keras.layers.Input(shape=inputs_shape['pt_mask'], name='pt_mask')
+        pt = tf.keras.layers.Input(shape=inputs_shape['constituent_pt'], name='constituent_pt')
+        inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape['inverse_jet_pt'], name='inverse_jet_pt')
+        jet_features = tf.keras.layers.Input(shape=inputs_shape['jet_features'], name='jet_features')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)

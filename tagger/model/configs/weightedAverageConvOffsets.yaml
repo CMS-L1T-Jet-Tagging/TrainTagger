@@ -1,14 +1,14 @@
-model: DeepSetModel
+model: WeightedAverageConvOffsetsModel
 run_config :
   verbose : 2
   debug : True
   num_threads : 64
 
 model_config :
-  name : baseline
+  name : weightedAverageConvOffsets
   conv1d_layers : [10,10]
   classification_layers : [32,16]
-  regression_layers : [10]
+  regression_layers : [16]
   kernel_initializer : 'lecun_uniform'
   aggregator : 'mean'
 
@@ -19,11 +19,11 @@ quantization_config:
   pt_output_quantization : [16,6]
 
 inputs:
-  basic_features: ['basic_input']
+  basic_features: ['basic_input', 'basic_mask', 'constituent_pt', 'pt_mask', 'inverse_jet_pt']
   custom_features: [] # will later be concatenated into one jet features input
 
 training_config :
-  weight_method: "onlyclass"
+  weight_method: "ptref"
   epochs : 100
   batch_size : 1024
   learning_rate : 0.001
@@ -43,8 +43,8 @@ training_config :
 
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
-  class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   mask_precision: 'ap_ufixed<1,1>'
+  class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
 
   clock_period : 2.5

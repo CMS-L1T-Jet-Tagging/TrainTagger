@@ -6,7 +6,10 @@ import awkward as ak
 import matplotlib
 import matplotlib.pyplot as plt
 import mplhep as hep
+import math
+import json
 from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Cropping1D, Reshape, Permute
 
 # Third parties
 import pandas
@@ -691,11 +694,11 @@ def shapPlot(shap_values, feature_names, class_names):
     plt.tight_layout()
 
 
-def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
+def plot_shaply(wrapper_model, X_test, class_labels, input_vars, plot_dir):
 
     labels = list(class_labels.keys())
-    model2 = tf.keras.Model(model.jet_model.input, model.jet_model.output[0])
-    model3 = tf.keras.Model(model.jet_model.input, model.jet_model.output[1])
+    model2 = tf.keras.Model(wrapper_model[0].input, wrapper_model[0].output)
+    model3 = tf.keras.Model(wrapper_model[1].input, wrapper_model[1].output)
 
     for explainer, name in [
         (shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"),
@@ -724,6 +727,46 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
         plt.savefig(plot_dir + "/shap_summary_reg.pdf", bbox_inches='tight')
         plt.savefig(plot_dir + "/shap_summary_reg.png", bbox_inches='tight')
 
+def shap_wrapper(model, shapes):
+
+    # flatten the input shapes
+    flat_shapes = {k: math.prod(v) for k, v in shapes.items()}
+    total_shape = np.sum(list(flat_shapes.values()))
+
+    # Create a wrapper model for shap
+    # Single flat input
+    flat = Input(shape=(1, total_shape), name="flat_input")
+    flat_permute = Permute((2,1), name="permute_flat")(flat)
+
+    # --- cropping and reshaping layers ---
+    crops = {}
+    reshapes = {}
+    layer_order = shapes.keys()
+    start = 0
+    for name in layer_order:
+        start_crop = start
+        end_crop = total_shape - start - flat_shapes[name]
+
+        crops[name] = Cropping1D(cropping=(start_crop, end_crop), name=f"crop_{name}")(flat_permute)
+        reshapes[name] = Reshape(shapes[name], name=f"reshape_{name}")(crops[name])
+        start += flat_shapes[name]
+
+    inputs_list = [reshapes[k] for k in layer_order]
+
+    # --- call original model ---
+    jet_id, pt_output = model.jet_model(inputs_list)
+
+    # Wrapper model with one input and one output
+    jetId_wrapper = Model(
+        inputs=flat,
+        outputs=jet_id,
+        name="jetId_wrapper_model")
+    pt_wrapper = Model(
+        inputs=flat,
+        outputs=pt_output,
+        name="pt_wrapper_model")
+
+    return jetId_wrapper, pt_wrapper
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
@@ -920,73 +963,67 @@ def basic(model, signal_dirs):
     ROC_dict = {class_label: 0 for class_label in model.class_labels}
 
     # Load the testing data
-    X_test = np.load(f"{model.output_directory}/testing_data/X_test.npy")
+    test_dict = np.load(f"{model.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
+    test_dict = {k: test_dict[k] for k in test_dict.files}
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-    reco_eta_test = np.load(f"{model.output_directory}/testing_data/reco_eta_test.npy")
 
-    constituents_pt = X_test[:, :, 0]
-    mask = constituents_mask(X_test, 10)
-    pt_mask = mask[:, :, 0]
-    inverse_reco_pt_test = (1.0 / reco_pt_test).reshape(-1, 1)
-    jet_features = np.stack((reco_pt_test, reco_eta_test), axis=1)
-
-    model_outputs = model.jet_model.predict([X_test, mask, pt_mask, constituents_pt, inverse_reco_pt_test, jet_features])
+    model_outputs = model.jet_model.predict(test_dict)
 
     # Get classification outputs
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1][:, 0]
 
     # Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
-    class_pairs = []
+    # ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
+    # class_pairs = []
     # Generate all possible pairs of classes
-    for i in model.class_labels.keys():
-        for j in model.class_labels.keys():
-            if i != j:
-                class_pair = [i, j]
-                class_pairs.append(class_pair)
+    # for i in model.class_labels.keys():
+    #     for j in model.class_labels.keys():
+    #         if i != j:
+    #             class_pair = [i, j]
+    #             class_pairs.append(class_pair)
 
-    # Make ROC binaries for complete test set and each signal process
-    for i in range(-1, len(signal_dirs), 1):
-        sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
-        if i == -1:
-            y_p, y_t = y_pred, y_test
-            process_label = None
-        else:
-            signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
-            sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_reco_pt = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)
-            sample_reco_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
-            sample_jet_features = np.stack((sample_reco_pt, sample_reco_eta), axis=1)
-            sample_inverse_reco_pt = (1.0 / sample_reco_pt).reshape(-1, 1)
-            sample_constituents_pt = sample_data[:, :, 0]
-            sample_mask = constituents_mask(sample_data, 10)
-            sample_pt_mask = sample_mask[:, :, 0]
-            sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt, sample_inverse_reco_pt, sample_jet_features])[0]
-            y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
-            process_label = process_labels(signal_dirs[i])
-            os.makedirs(binary_dir, exist_ok=True)
+    # # Make ROC binaries for complete test set and each signal process
+    # for i in range(-1, len(signal_dirs), 1):
+    #     sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
+    #     if i == -1:
+    #         y_p, y_t = y_pred, y_test
+    #         process_label = None
+    #     else:
+    #         signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
+    #         sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
+    #         sample_reco_pt = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)
+    #         sample_reco_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
+    #         sample_jet_features = np.stack((sample_reco_pt, sample_reco_eta), axis=1)
+    #         sample_inverse_reco_pt = (1.0 / sample_reco_pt).reshape(-1, 1)
+    #         sample_constituents_pt = sample_data[:, :, 0]
+    #         sample_mask = constituents_mask(sample_data, 10)
+    #         sample_pt_mask = sample_mask[:, :, 0]
+    #         sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
+    #         sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt, sample_inverse_reco_pt, sample_jet_features])[0]
+    #         y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
+    #         process_label = process_labels(signal_dirs[i])
+    #         os.makedirs(binary_dir, exist_ok=True)
 
-        # Plot the binary ROCs for each class pair
-        for class_pair in class_pairs:
-            binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
-            if i != -1:
-                binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
+    #     # Plot the binary ROCs for each class pair
+    #     for class_pair in class_pairs:
+    #         binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
+    #         ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
+    #         if i != -1:
+    #             binary_dir = os.path.join(sample_plot_dir, "full_sample")
+    #             ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
 
-        # Add light vs b/charm/gluon combined plot
-        binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
-        ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
-        ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+    #     # Add light vs b/charm/gluon combined plot
+    #     binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
+    #     ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+    #     ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
 
-        if i != -1:
-            binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-            ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
-            ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+    #     if i != -1:
+    #         binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
+    #         ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+    #         ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
@@ -1001,12 +1038,19 @@ def basic(model, signal_dirs):
     rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     # Plot input distributions
-    plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, plot_dir)
+    plot_input_vars(test_dict['basic_input'], y_test, model.input_vars, model.class_labels, plot_dir)
 
     # Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     # Plot the shaply feature importance
-    # plot_shaply(model, X_test, model.class_labels, model.input_vars, plot_dir)
+    # work in progress
+    # X_test_combined = np.concatenate(
+    #     [inp.reshape(inp.shape[0], 1, -1) for inp in test_dict.values()], axis=2
+    # )
+
+    # input_shapes = {k: v.shape[1:] for k, v in test_dict.items()}
+    # wrapper_model = shap_wrapper(model, input_shapes)
+    # plot_shaply(wrapper_model, X_test_combined, model.class_labels, model.input_vars, plot_dir)
 
     return ROC_dict

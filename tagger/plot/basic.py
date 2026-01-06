@@ -693,18 +693,57 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.set_xlabel("mean (Shapley value) - (average impact on model output magnitude)", fontsize=30)
     plt.tight_layout()
 
+import tensorflow as tf
 
-def plot_shaply(wrapper_model, X_test, class_labels, input_vars, plot_dir):
+def get_branch_inputs(output_tensor):
+    """
+    Return only keras Input tensors that ACTUALLY feed into output_tensor.
+    """
+    visited = set()
+    inputs = {}
 
+    def traverse(t):
+        key = t.ref()
+        if key in visited:
+            return
+        visited.add(key)
+
+        kh = t._keras_history
+        layer = kh.layer
+        node_index = kh.node_index
+
+        # If this tensor comes from an InputLayer
+        if isinstance(layer, tf.keras.layers.InputLayer):
+            inputs[layer.name] = layer.output
+            return
+
+        # Follow ONLY the node that produced this tensor
+        node = layer._inbound_nodes[node_index]
+        inbound_tensors = tf.nest.flatten(node.input_tensors)
+
+        for it in inbound_tensors:
+            traverse(it)
+
+    traverse(output_tensor)
+    return list(inputs.values())
+
+
+def plot_shaply(model, test_dict, class_labels, input_vars, plot_dir):
+    njets = 1000
     labels = list(class_labels.keys())
-    model2 = tf.keras.Model(wrapper_model[0].input, wrapper_model[0].output)
-    model3 = tf.keras.Model(wrapper_model[1].input, wrapper_model[1].output)
-
+    input_layers_class = get_branch_inputs(model.output[0])
+    input_layers_reg = get_branch_inputs(model.output[1])
+    layer_order_class = [layer.name for layer in input_layers_class]
+    layer_order_reg = [layer.name for layer in input_layers_reg]
+    list_inp_class = [test_dict[k][:njets] for k in layer_order_class]
+    list_inp_reg = [test_dict[k][:njets] for k in layer_order_reg]
+    model_class = tf.keras.Model(input_layers_class, model.output[0])
+    model_reg = tf.keras.Model(input_layers_reg, model.output[1])
     for explainer, name in [
-        (shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"),
+        (shap.GradientExplainer(model_class, list_inp_class), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(X_test[:1000])
+        shap_values = explainer.shap_values(list_inp_class)[0]
         new = np.sum(shap_values, axis=1)
         print("... shap summary_plot classification")
         plt.clf()
@@ -714,10 +753,10 @@ def plot_shaply(wrapper_model, X_test, class_labels, input_vars, plot_dir):
         plt.savefig(plot_dir + "/shap_summary_class.png", bbox_inches='tight')
 
     for explainer, name in [
-        (shap.GradientExplainer(model3, X_test[:1000]), "GradientExplainer"),
+        (shap.GradientExplainer(model_reg, list_inp_reg), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(X_test[:1000])
+        shap_values = explainer.shap_values(list_inp_reg)[0]
         new = np.sum(shap_values, axis=1)
         print("... shap summary_plot regression")
         plt.clf()
@@ -1044,13 +1083,6 @@ def basic(model, signal_dirs):
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     # Plot the shaply feature importance
-    # work in progress
-    # X_test_combined = np.concatenate(
-    #     [inp.reshape(inp.shape[0], 1, -1) for inp in test_dict.values()], axis=2
-    # )
-
-    # input_shapes = {k: v.shape[1:] for k, v in test_dict.items()}
-    # wrapper_model = shap_wrapper(model, input_shapes)
-    # plot_shaply(wrapper_model, X_test_combined, model.class_labels, model.input_vars, plot_dir)
+    plot_shaply(model.jet_model, test_dict, model.class_labels, model.input_vars, plot_dir)
 
     return ROC_dict

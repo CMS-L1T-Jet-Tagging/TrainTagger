@@ -20,9 +20,9 @@ from tensorflow.keras.layers import Activation, BatchNormalization
 from tagger.model.DeepSetModel import DeepSetModel
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
-@JetModelFactory.register('WeightedAverageConvOffsetsModel')
-class WeightedAverageConvOffsetsModel(DeepSetModel):
-    """WeightedAverageConvOffsetsModel class
+@JetModelFactory.register('WeightedAverageConvOffsetModel')
+class WeightedAverageConvOffsetModel(DeepSetModel):
+    """WeightedAverageConvOffsetModel class
 
     Args:
         JetTagModel (_type_): Base class of a JetTagModel

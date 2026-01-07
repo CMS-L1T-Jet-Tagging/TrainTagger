@@ -728,84 +728,56 @@ def get_branch_inputs(output_tensor):
     return list(inputs.values())
 
 
-def plot_shaply(model, test_dict, class_labels, input_vars, plot_dir):
-    njets = 1000
-    labels = list(class_labels.keys())
-    input_layers_class = get_branch_inputs(model.output[0])
-    input_layers_reg = get_branch_inputs(model.output[1])
+def plot_shaply(model, test_dict, class_labels, plot_dir):
+    njets = 10
+    input_layers_class = get_branch_inputs(model.jet_model.output[0])
+    input_layers_reg = get_branch_inputs(model.jet_model.output[1])
     layer_order_class = [layer.name for layer in input_layers_class]
     layer_order_reg = [layer.name for layer in input_layers_reg]
     list_inp_class = [test_dict[k][:njets] for k in layer_order_class]
     list_inp_reg = [test_dict[k][:njets] for k in layer_order_reg]
-    model_class = tf.keras.Model(input_layers_class, model.output[0])
-    model_reg = tf.keras.Model(input_layers_reg, model.output[1])
+    model_class = tf.keras.Model(input_layers_class, model.jet_model.output[0])
+    model_reg = tf.keras.Model(input_layers_reg, model.jet_model.output[1])
     for explainer, name in [
         (shap.GradientExplainer(model_class, list_inp_class), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(list_inp_class)[0]
-        new = np.sum(shap_values, axis=1)
+        shap_values_basic = explainer.shap_values(list_inp_class)[layer_order_class.index('basic_input')]
+        shap_values_basic = np.sum(shap_values_basic, axis=1)
+        if 'jet_features' in layer_order_class:
+            shap_values_jet = explainer.shap_values(list_inp_class)[layer_order_class.index('jet_features')]
+            shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
+            feature_names = model.input_vars + model.inputs['custom_features']
+        else:
+            shap_values = shap_values_basic
+            feature_names = input_vars
         print("... shap summary_plot classification")
         plt.clf()
-        new = np.transpose(new, (2, 0, 1))
-        shapPlot(new, input_vars, labels)
+        labels = list(class_labels.keys())
+        new = np.transpose(shap_values, (2, 0, 1))
+        shapPlot(new, feature_names, labels)
         plt.savefig(plot_dir + "/shap_summary_class.pdf", bbox_inches='tight')
         plt.savefig(plot_dir + "/shap_summary_class.png", bbox_inches='tight')
-
     for explainer, name in [
         (shap.GradientExplainer(model_reg, list_inp_reg), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(list_inp_reg)[0]
-        new = np.sum(shap_values, axis=1)
+        shap_values_basic = explainer.shap_values(list_inp_reg)[layer_order_reg.index('basic_input')]
+        shap_values_basic = np.sum(shap_values_basic, axis=1)
+        if 'jet_features' in layer_order_reg:
+            shap_values_jet = explainer.shap_values(list_inp_reg)[layer_order_reg.index('jet_features')]
+            shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
+            feature_names = model.input_vars + model.inputs['custom_features']
+        else:
+            shap_values = shap_values_basic
+            feature_names = input_vars
         print("... shap summary_plot regression")
         plt.clf()
         labels = ["Regression"]
-        new = np.transpose(new, (2, 0, 1))
-        shapPlot(new, input_vars, labels)
+        new = np.transpose(shap_values, (2, 0, 1))
+        shapPlot(new, feature_names, labels)
         plt.savefig(plot_dir + "/shap_summary_reg.pdf", bbox_inches='tight')
         plt.savefig(plot_dir + "/shap_summary_reg.png", bbox_inches='tight')
-
-def shap_wrapper(model, shapes):
-
-    # flatten the input shapes
-    flat_shapes = {k: math.prod(v) for k, v in shapes.items()}
-    total_shape = np.sum(list(flat_shapes.values()))
-
-    # Create a wrapper model for shap
-    # Single flat input
-    flat = Input(shape=(1, total_shape), name="flat_input")
-    flat_permute = Permute((2,1), name="permute_flat")(flat)
-
-    # --- cropping and reshaping layers ---
-    crops = {}
-    reshapes = {}
-    layer_order = shapes.keys()
-    start = 0
-    for name in layer_order:
-        start_crop = start
-        end_crop = total_shape - start - flat_shapes[name]
-
-        crops[name] = Cropping1D(cropping=(start_crop, end_crop), name=f"crop_{name}")(flat_permute)
-        reshapes[name] = Reshape(shapes[name], name=f"reshape_{name}")(crops[name])
-        start += flat_shapes[name]
-
-    inputs_list = [reshapes[k] for k in layer_order]
-
-    # --- call original model ---
-    jet_id, pt_output = model.jet_model(inputs_list)
-
-    # Wrapper model with one input and one output
-    jetId_wrapper = Model(
-        inputs=flat,
-        outputs=jet_id,
-        name="jetId_wrapper_model")
-    pt_wrapper = Model(
-        inputs=flat,
-        outputs=pt_output,
-        name="pt_wrapper_model")
-
-    return jetId_wrapper, pt_wrapper
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
@@ -1082,7 +1054,6 @@ def basic(model, signal_dirs):
     # Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
-    # Plot the shaply feature importance
-    plot_shaply(model.jet_model, test_dict, model.class_labels, model.input_vars, plot_dir)
+    plot_shaply(model, test_dict, model.class_labels, plot_dir)
 
     return ROC_dict

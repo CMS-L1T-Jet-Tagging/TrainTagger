@@ -156,11 +156,13 @@ class QKerasModel(JetTagModel):
         """
 
         train_dict = {k: batch[k][0] for k in self.inputs['basic_features']}
-        jet_features_train = np.stack([batch[k][0] for k in self.inputs['custom_features']], axis=1)
         test_dict = {k: batch[k][1] for k in self.inputs['basic_features']}
-        jet_features_test = np.stack([batch[k][1] for k in self.inputs['custom_features']], axis=1)
-        train_dict['jet_features'] = jet_features_train
-        test_dict['jet_features'] = jet_features_test
+        if len(self.inputs['custom_features']) > 0:
+            jet_features_train = np.stack([batch[k][0] for k in self.inputs['custom_features']], axis=1)
+            print(f"Jet features train shape: {jet_features_train.shape}")
+            jet_features_test = np.stack([batch[k][1] for k in self.inputs['custom_features']], axis=1)
+            train_dict['jet_features'] = jet_features_train
+            test_dict['jet_features'] = jet_features_test
         input_shapes = {k: v.shape[1:] for k, v in train_dict.items()}
         np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
         return train_dict, input_shapes

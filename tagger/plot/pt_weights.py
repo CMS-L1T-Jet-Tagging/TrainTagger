@@ -67,13 +67,13 @@ def plot_1D_histogram(pt_weights, pt, eta, pt_correction, binning, save_path):
     # show distribution of pt weights
     pt_bins = [0, 0, 5, 15, 30, 80, np.inf]
     eta_bins = [0, 0, 0.5, 1, 1.5, 2, 2.5]
-    colors = ['purple', 'blue', 'cyan', 'green', 'gold', 'red']
+    colors = ['#5790fc', '#f89c20', '#e42536', '#964a8b', '#9c9ca1', '#7a21dd']
     pt_weights = np.clip(pt_weights, -np.inf, 200)
     for var_bins, var, var_name in zip([pt_bins, eta_bins], [pt, np.abs(eta)], ['pT', 'eta']):
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         for i, (l, u) in enumerate(zip(var_bins[:-1], var_bins[1:])):
             mask = (var >= l) & (var < u) if i>0 else var < np.inf
-            label = f"{l} < {var_name} < {u}" if i!=0 else "full distribution"
+            label = f"{l} < {style.INPUT_FEATURE_STYLE[var_name]} < {u}" if i!=0 else "full distribution"
             h = ax.hist(
                 pt_weights[mask],
                 bins=binning,
@@ -92,7 +92,7 @@ def plot_1D_histogram(pt_weights, pt, eta, pt_correction, binning, save_path):
                 fontsize=style.MEDIUM_SIZE,
             )
         plt.yscale('log')
-        plt.xlabel(f"{var_name} {pt_correction}")
+        plt.xlabel(f"$p_T$ {pt_correction}")
         plt.legend()
         plt.tight_layout()
 

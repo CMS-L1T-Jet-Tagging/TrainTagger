@@ -12,10 +12,10 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, y_test, truth_pt_test, reco_pt, reco_eta):
+def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt, reco_eta):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
-
+    np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt)
@@ -121,7 +121,6 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         return None
     return sample_weights
 
-
 def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
@@ -143,18 +142,21 @@ def train(model, out_dir, percent):
 
     # Save X_test, y_test, and truth_pt_test for plotting later
     X_test, y_test, _, truth_pt_test, reco_pt_test, reco_eta_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, y_test, truth_pt_test, reco_pt_test, reco_eta_test)
 
     # collect all possible train and test inputs
-    batch_dict = {
-        'basic_input': [X_train, X_test],
-        'basic_mask': [mask, constituents_mask(X_test, 10)],
-        'pt_mask': [pt_mask, constituents_mask(X_test, 10)[:, :, 0]],
-        'constituent_pt': [constituents_pt, X_test[:, :, 0]],
-        'inverse_jet_pt': [inverse_jet_pt, 1.0 / (reco_pt_test + 1e-6).reshape(-1, 1)],
-        'jet_pt': [reco_pt_train, reco_pt_test],
-        'jet_eta': [reco_eta_train, reco_eta_test],
+    raw_inputs_train = {
+        'basic_input': X_train,
+        'jet_pt': reco_pt_train,
+        'jet_eta': reco_eta_train,
     }
+
+    raw_inputs_test = {
+        'basic_input': X_test,
+        'jet_pt': reco_pt_test,
+        'jet_eta': reco_eta_test,
+    }
+    test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys
+    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test, reco_eta_test)
 
     # Calculate the sample weights for training
     sample_weight_class = train_weights(
@@ -173,7 +175,7 @@ def train(model, out_dir, percent):
     )
 
     # Get input shape and inputs dict
-    train_dict, input_shapes = model.prepare_inputs(batch_dict, out_dir)
+    train_dict, input_shapes = model.prepare_inputs(raw_inputs_train)
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shapes, output_shape)

@@ -60,20 +60,22 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
     return event_mask
 
 def nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, class_labels, n_jets=4):
-    #Btag input list for first 4 jets
-    nn_outputs = [model.predict([
-        np.asarray(jet_nn_inputs[:, i]),
-        constituents_mask(jet_nn_inputs[:, i], 10),
-        constituents_mask(jet_nn_inputs[:, i], 10)[:, :, 0],
-        np.asarray(jet_nn_inputs[:, i])[:, :, 0],
-        1 / ak.to_numpy(jet_pt[:, i]).reshape(-1,1),
-        np.stack((ak.to_numpy(jet_pt[:, i]), ak.to_numpy(jet_eta[:, i])), axis=1)
-        ])[0] for i in range(0,n_jets)]
-
     #Calculate the output sum
     b_idx = class_labels['b']
     l_idx = class_labels['light']
     g_idx = class_labels['gluon']
+
+    # Get the inputs for the first n_jets
+    btag_inputs = [{
+        'basic_input': np.asarray(basic_inputs[:, i]),
+        'jet_pt': np.asarray(jet_pt[:, i]),
+        'jet_eta': np.asarray(jet_eta[:, i]),
+        }
+        for i in range(0, n_jets)]
+
+    #Get the nn outputs
+    nn_outputs = [model.predict(model.prepare_inputs(nn_input)[0])[0]
+        for i, nn_input in enumerate(btag_inputs)]
 
     # get sums of 2 leading b scores
     rows = np.arange(len(nn_outputs[0])).reshape((-1, 1))

@@ -19,7 +19,7 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, constituents_mask
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
 
@@ -34,23 +34,21 @@ def default_selection(jet_pt, jet_eta, apply_sel):
 
     return event_mask
 
-def nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, class_labels, n_jets=4):
-
+def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta, apply_light, class_labels, n_jets=4):
     b_index=class_labels['b']
     l_index=class_labels['light']
     g_index=class_labels['gluon']
 
     #Get the inputs for the first n_jets
-    btag_inputs = [np.asarray(jet_nn_inputs[:, i]) for i in range(0, n_jets)]
+    btag_inputs = [{
+        'basic_input': np.asarray(basic_inputs[:, i]),
+        'jet_pt': np.asarray(jet_pt[:, i]),
+        'jet_eta': np.asarray(jet_eta[:, i]),
+        }
+        for i in range(0, n_jets)]
 
     #Get the nn outputs
-    nn_outputs = [model.predict([
-        nn_input,
-        constituents_mask(nn_input, 10),
-        constituents_mask(nn_input, 10)[:, :, 0],
-        nn_input[:, :, 0],
-        1 / ak.to_numpy(jet_pt[:, i]).reshape(-1, 1),
-        np.stack((ak.to_numpy(jet_pt[:, i]), ak.to_numpy(jet_eta[:, i])), axis=1)])[0]
+    nn_outputs = [model.predict(model.prepare_inputs(nn_input)[0])[0]
         for i, nn_input in enumerate(btag_inputs)]
 
     #Sum them together
@@ -168,7 +166,6 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
     selection_mask = default_selection(jet_pt, jet_eta, apply_sel)
     jet_nn_inputs, jet_pt_selected, jet_eta_selected = jet_nn_inputs[selection_mask], jet_pt[selection_mask], jet_eta[selection_mask]
-
     bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt_selected, jet_eta_selected, apply_light, model.class_labels)
 
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]

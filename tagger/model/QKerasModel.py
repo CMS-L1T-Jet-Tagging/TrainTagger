@@ -20,6 +20,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+from tagger.data.tools import constituents_mask
 
 class QKerasModel(JetTagModel):
     """QKerasModel class
@@ -145,27 +146,36 @@ class QKerasModel(JetTagModel):
             shuffle=True,
         )
 
-    def prepare_inputs(self, batch: dict, out_dir) -> dict:
+    def prepare_inputs(self, raw_inputs: dict) -> dict:
         """Prepare the input dictionary for the model from a list of arrays
 
         Args:
-            batch dict: Dictionary of all possible input arrays
+            raw_inputs: Dictionary of all possible input arrays (currently requires basic_input, jet_pt and jet_eta)
 
         Returns:
             dict: Dictionary of required input arrays
         """
+        input_dict = {
+            'basic_input': raw_inputs['basic_input'],
+            'basic_mask': constituents_mask(raw_inputs['basic_input'], 10),
+            'pt_mask': constituents_mask(raw_inputs['basic_input'], 10)[:, :, 0],
+            'constituent_pt': raw_inputs['basic_input'][:, :, 0],
+            'inverse_jet_pt': 1 / raw_inputs['jet_pt'].reshape(-1, 1),
+        }
 
-        train_dict = {k: batch[k][0] for k in self.inputs['basic_features']}
-        test_dict = {k: batch[k][1] for k in self.inputs['basic_features']}
+        for key in input_dict.keys():
+            if key not in self.inputs['basic_features']:
+                del input_dict[key]
+
         if len(self.inputs['custom_features']) > 0:
-            jet_features_train = np.stack([batch[k][0] for k in self.inputs['custom_features']], axis=1)
-            print(f"Jet features train shape: {jet_features_train.shape}")
-            jet_features_test = np.stack([batch[k][1] for k in self.inputs['custom_features']], axis=1)
-            train_dict['jet_features'] = jet_features_train
-            test_dict['jet_features'] = jet_features_test
-        input_shapes = {k: v.shape[1:] for k, v in train_dict.items()}
-        np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
-        return train_dict, input_shapes
+            jet_features = np.empty((raw_inputs['basic_input'].shape[0], len(self.inputs['custom_features'])))
+            for i, k in enumerate(self.inputs['custom_features']):
+                jet_features[:, i] = raw_inputs[k]
+            input_dict['jet_features'] = jet_features
+
+        input_shapes = {k: v.shape[1:] for k, v in input_dict.items()}
+
+        return input_dict, input_shapes
 
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator

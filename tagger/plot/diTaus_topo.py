@@ -25,7 +25,7 @@ from scipy.interpolate import interp1d
 
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, constituents_mask
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y, build_dict
 from tagger.model.common import fromFolder
 
 def calculate_topo_score(tau_plus, tau_minus, bkg, apply_light=False):
@@ -140,14 +140,12 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict([
-        raw_inputs,
-        constituents_mask(raw_inputs, 10),
-        constituents_mask(raw_inputs, 10)[:, :, 0],
-        raw_inputs[:, :, 0],
-        1.0 / raw_jet_pt.reshape(-1,1),
-        np.stack((raw_jet_pt, raw_jet_eta), axis=1)
-        ])
+    raw_inputs_dict = {
+        'basic_input': raw_inputs,
+        'jet_pt': raw_jet_pt,
+        'jet_eta': raw_jet_eta,
+    }
+    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict))
 
     apply_light = True
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
@@ -308,14 +306,12 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
 
     raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict([
-        raw_inputs,
-        constituents_mask(raw_inputs, 10),
-        constituents_mask(raw_inputs, 10)[:, :, 0],
-        raw_inputs[:, :, 0],
-        1.0 / raw_jet_pt.reshape(-1,1),
-        np.stack((raw_jet_pt, raw_jet_eta), axis=1)
-        ])
+    raw_inputs_dict = {
+        'basic_input': raw_inputs,
+        'jet_pt': raw_jet_pt,
+        'jet_eta': raw_jet_eta,
+    }
+    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict))
 
     apply_light = True
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
@@ -448,14 +444,12 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
 
     #NN related
     raw_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))[pt_mask]
-    raw_pred_score, raw_pt_correction = model.predict([
-        raw_inputs,
-        constituents_mask(raw_inputs, 10),
-        constituents_mask(raw_inputs, 10)[:, :, 0],
-        raw_inputs[:, :, 0],
-        1.0 / raw_jet_pt.reshape(-1,1),
-        np.stack((raw_jet_pt, raw_jet_eta), axis=1)
-        ])
+    raw_inputs_dict = {
+        'basic_input': raw_inputs,
+        'jet_pt': raw_jet_pt,
+        'jet_eta': raw_jet_eta,
+    }
+    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict))
 
     #Check if the working point have been derived
     WP_path = os.path.join(model.output_directory, "plots/physics/tautau_topo/working_point.json")

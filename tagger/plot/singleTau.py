@@ -177,14 +177,12 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
 
     else: #scores from new model
         selected_jet_inputs = jet_inputs[cuts]
-        pred_scores, pt_ratios = model.predict([
-            selected_jet_inputs,
-            constituents_mask(selected_jet_inputs, 10),
-            constituents_mask(selected_jet_inputs, 10)[:,:,0],
-            selected_jet_inputs[:,:,0],
-            (1.0 / jet_pts[cuts]).reshape(-1,1),
-            np.stack((jet_pts[cuts], jet_etas[cuts]), axis=1)
-        ])
+        raw_inputs_dict = {
+            'basic_input': selected_jet_inputs,
+            'jet_pt': jet_pts[cuts],
+            'jet_eta': jet_etas[cuts],
+        }
+        pred_scores, pt_ratios = model.predict(model.prepare_inputs(raw_inputs_dict))
         all_scores[cuts] = tau_score(pred_scores, model.class_labels)
         all_corr_pts[cuts] = pt_ratios.flatten() * jet_pts[cuts]
 
@@ -256,14 +254,12 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
     #Get the NN predictions
     selected_eta_inputs = nn_inputs[eta_selection]
     selected_jet_pt, selected_jet_eta = jet_pt[eta_selection], jet_eta[eta_selection]
-    pred_score, ratio = model.predict([
-        selected_eta_inputs,
-        constituents_mask(selected_eta_inputs, 10),
-        constituents_mask(selected_eta_inputs, 10)[:,:,0],
-        selected_eta_inputs[:,:,0],
-        (1.0 / selected_jet_pt).reshape(-1,1),
-        np.stack((selected_jet_pt, selected_jet_eta), axis=1),
-    ])
+    raw_inputs_dict = {
+        'basic_input': selected_eta_inputs,
+        'jet_pt': selected_jet_pt,
+        'jet_eta': selected_jet_eta,
+    }
+    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict))
     model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score
@@ -392,14 +388,12 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
     #Get the model prediction
     nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
-    pred_score, ratio = model.predict([
-        nn_inputs,
-        constituents_mask(nn_inputs, 10),
-        constituents_mask(nn_inputs, 10)[:,:,0],
-        nn_inputs[:,:,0],
-        (1.0 / l1_pt_raw).reshape(-1,1),
-        np.stack((l1_pt_raw, l1_eta_raw), axis=1),
-    ])
+    raw_inputs_dict = {
+        'basic_input': nn_inputs,
+        'jet_pt': l1_pt_raw,
+        'jet_eta': l1_eta_raw,
+    }
+    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict))
 
     nn_tauscore_raw = tau_score(pred_score, model.class_labels )
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())

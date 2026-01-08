@@ -83,13 +83,11 @@ def plot_ratio(all_events, selected_events, plot=False):
 
     return eff
 
-
 def get_bar_patch_data(artists):
     x_data = [artists.bar.patches[i].get_x() for i in range(len(artists.bar.patches))]
     y_data = [artists.bar.patches[i].get_y() for i in range(len(artists.bar.patches))]
     err_data = [artists.bar.patches[i].get_height() for i in range(len(artists.bar.patches))]
     return x_data, y_data, err_data
-
 
 def plot_2d(variable_one, variable_two, range_one, range_two, name_one, name_two, title):
     fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0] + 2, style.FIGURE_SIZE[1]))

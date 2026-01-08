@@ -50,22 +50,14 @@ def doPlots(model, outputdir, inputdir):
     labels = list(class_labels.keys())
     model.firmware_convert("temp", build=False)
 
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict([
-        np.ascontiguousarray(X_test),
-        np.ascontiguousarray(constituents_mask(X_test, 10)),
-        np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
-        np.ascontiguousarray(X_test[:, :, 0]),
-        np.ascontiguousarray(1 / jet_pt.reshape(-1,1)),
-        np.ascontiguousarray(np.stack((jet_pt_phys, jet_eta_phys), axis=1)),
-        ])
-    y_class, y_ptreg = model.hls_jet_model.predict([
-        np.ascontiguousarray(X_test),
-        np.ascontiguousarray(constituents_mask(X_test, 10)),
-        np.ascontiguousarray(constituents_mask(X_test, 10)[:, :, 0]),
-        np.ascontiguousarray(X_test[:, :, 0]),
-        np.ascontiguousarray(1 / jet_pt.reshape(-1,1)),
-        np.ascontiguousarray(np.stack((jet_pt_phys, jet_eta_phys), axis=1)),
-        ])
+    raw_inputs_dict = {
+        "basic_inputs": np.ascontiguousarray(X_test),
+        "jet_pt": np.ascontiguousarray(jet_pt),
+        "jet_eta": np.ascontiguousarray(jet_eta),
+    }
+
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict(model.prepare_inputs(raw_inputs_dict))
+    y_class, y_ptreg = model.hls_jet_model.predict(model.prepare_inputs(raw_inputs_dict))
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg

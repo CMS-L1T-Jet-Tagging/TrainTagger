@@ -274,7 +274,6 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     """
     Plot the histograms of truth pt, reconstructed (uncorrected) pt, and corrected pt
     """
-
     plot_histo(
         [truth_pt_test, reco_pt_test, np.multiply(reco_pt_test, pt_ratio)],
         ['Truth', 'Reconstructed', 'NN Predicted'],
@@ -329,7 +328,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
             style.INPUT_FEATURE_STYLE[input_vars[i]],
             'a.u',
             log = 'log',
-            x_range=(np.min(X_test[:, :, i]), np.max(X_test[:, :, i])),
+            x_range=style.INPUT_FEATURE_RANGES[input_vars[i]],
         )
         save_path = os.path.join(save_dir, input_vars[i])
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
@@ -987,54 +986,57 @@ def basic(model, signal_dirs):
     pt_ratio = model_outputs[1][:, 0]
 
     # Plot ROC curves
-    # ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
-    # class_pairs = []
+    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
+    class_pairs = []
     # Generate all possible pairs of classes
-    # for i in model.class_labels.keys():
-    #     for j in model.class_labels.keys():
-    #         if i != j:
-    #             class_pair = [i, j]
-    #             class_pairs.append(class_pair)
+    for i in model.class_labels.keys():
+        for j in model.class_labels.keys():
+            if i != j:
+                class_pair = [i, j]
+                class_pairs.append(class_pair)
 
-    # # Make ROC binaries for complete test set and each signal process
-    # for i in range(-1, len(signal_dirs), 1):
-    #     sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
-    #     if i == -1:
-    #         y_p, y_t = y_pred, y_test
-    #         process_label = None
-    #     else:
-    #         signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
-    #         sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-    #         sample_reco_pt = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)
-    #         sample_reco_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
-    #         sample_jet_features = np.stack((sample_reco_pt, sample_reco_eta), axis=1)
-    #         sample_inverse_reco_pt = (1.0 / sample_reco_pt).reshape(-1, 1)
-    #         sample_constituents_pt = sample_data[:, :, 0]
-    #         sample_mask = constituents_mask(sample_data, 10)
-    #         sample_pt_mask = sample_mask[:, :, 0]
-    #         sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-    #         sample_preds = model.jet_model.predict([sample_data, sample_mask, sample_pt_mask, sample_constituents_pt, sample_inverse_reco_pt, sample_jet_features])[0]
-    #         y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
-    #         process_label = process_labels(signal_dirs[i])
-    #         os.makedirs(binary_dir, exist_ok=True)
+    # Make ROC binaries for complete test set and each signal process
+    for i in range(-1, len(signal_dirs), 1):
+        sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
+        if i == -1:
+            y_p, y_t = y_pred, y_test
+            process_label = None
+        else:
+            signal_indices, sample_train, sample_test = filter_process(test_dict['basic_input'], signal_dirs[i])
+            sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
+            sample_reco_pt = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)
+            sample_reco_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
+            sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
+            sample_raw_inputs = {
+                'basic_input': sample_data,
+                'jet_pt': sample_reco_pt,
+                'jet_eta': sample_reco_eta,
+            }
+            sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs))[0]
+            y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
+            process_label = process_labels(signal_dirs[i])
+            os.makedirs(binary_dir, exist_ok=True)
 
-    #     # Plot the binary ROCs for each class pair
-    #     for class_pair in class_pairs:
-    #         binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-    #         ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
-    #         if i != -1:
-    #             binary_dir = os.path.join(sample_plot_dir, "full_sample")
-    #             ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
+        # Plot the binary ROCs for each class pair
+        for class_pair in class_pairs:
+            binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
+            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
+            if i != -1:
+                binary_dir = os.path.join(sample_plot_dir, "full_sample")
+                ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
 
-    #     # Add light vs b/charm/gluon combined plot
-    #     binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
-    #     ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
-    #     ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+        # Add light vs b/charm/gluon combined plot
+        binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
+        ROC_jets(y_p, y_t, model.class_labels, binary_dir_test, process_label)
+        ROC_taus(y_p, y_t, model.class_labels, binary_dir_test, process_label)
 
-    #     if i != -1:
-    #         binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-    #         ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
-    #         ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+        if i != -1:
+            binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
+            ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+            ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+
+    # Plot input distributions
+    plot_input_vars(test_dict['basic_input'], y_test, model.input_vars, model.class_labels, plot_dir)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
@@ -1047,9 +1049,6 @@ def basic(model, signal_dirs):
 
     # Plot the rms of the residuals vs pt
     rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-
-    # Plot input distributions
-    plot_input_vars(test_dict['basic_input'], y_test, model.input_vars, model.class_labels, plot_dir)
 
     # Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)

@@ -109,6 +109,7 @@ def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
     ## If we are histogramming by class and so want class colours
+
     if len(variable) > len(style.colours):
         colours = style.color_cycle
         linestyle = ['-' for i in range(len(variable))]
@@ -128,7 +129,7 @@ def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1
             color=[colours[i] for i in range(len(variable))],
             label=name,
             linewidth=style.LINEWIDTH - 1.5,
-            linestyle=linestyle,
+            linestyle=[linestyle[i] for i in range(len(variable))],
             density=True,
         )
     ax.grid(True)

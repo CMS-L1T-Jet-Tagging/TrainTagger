@@ -19,7 +19,7 @@ style.set_style()
 def getReports(indir):
     data_ = {}
 
-    report_csynth = Path('{}/L1TSC4NGJetModel_test_prj/solution1/syn/report/L1TSC4NGJetModel_test_csynth.rpt'.format(indir))
+    report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.rpt'.format(indir))
 
     if report_csynth.is_file():
         print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))

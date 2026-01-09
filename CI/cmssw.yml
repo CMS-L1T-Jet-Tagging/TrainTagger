@@ -18,5 +18,6 @@ emulate:
     when: always
     paths:
       - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root
+      - ${CMSSW_VERSION}/src/L1TSC4NGJetModel
       - ${CMSSW_VERSION}/cmsRun.log
       - ${CMSSW_VERSION}/compilation.log

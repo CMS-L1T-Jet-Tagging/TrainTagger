@@ -29,6 +29,12 @@ def initialise_tensorflow(num_threads):
 
     tf.keras.utils.set_random_seed(46)  # not a special number
     
+    
+def initialise_jax():
+    import jax
+    os.environ['KERAS_BACKEND'] = 'jax'
+    os.environ['JAX_PLATFORMS'] = 'cuda'
+    
 def log_beta_schedule(epoch, max_epochs=100):
     log_beta_start = np.log10(1e-7)
     log_beta_end = np.log10(1e-4)

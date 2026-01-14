@@ -21,9 +21,9 @@ from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.common import initialise_tensorflow,cosine_decay_restarts
 
-from da4ml.converter.hgq2.parser import trace_model
-from da4ml.trace import comb_trace, HWConfig
-from da4ml.codegen import HLSModel, VHDLModel
+#from da4ml.converter.hgq2.parser import trace_model
+#from da4ml.trace import comb_trace, HWConfig
+#from da4ml.codegen import HLSModel, VHDLModel
 
 @JetModelFactory.register('JEDILinearHGQ2')
 class JEDILinearHGQ2(JetTagModel):
@@ -64,7 +64,8 @@ class JEDILinearHGQ2(JetTagModel):
         initialise_tensorflow(self.run_config['num_threads'])
 
         scope0 = QuantizerConfigScope(default_q_type='kbi',
-                                      b0=7,
+                                      k0=1,
+                                      b0=8,
                                       overflow_mode='wrap',
                                       i0=0,
                                       fr=MonoL1(1.e-8),

@@ -52,15 +52,25 @@ JEDILinear:HGQ2_5param_extended_trk:
     RUN_SYNTHESIS: 'True'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
-MLPmixer:HGQ2_5param_extended_trk:
+Linformer:HGQ2_5param_extended_trk:
   extends: .ml_pipeline
   variables:
-    Name: MLPmixerHGQ2_5param_extended_trk
-    Model: MLPmixer_HGQ2
+    Name: Linformer_5param_extended_trk
+    Model: linformer_HGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+    RUN_SYNTHESIS: 'False'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+# MLPmixer:HGQ2_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: MLPmixerHGQ2_5param_extended_trk
+#     Model: MLPmixer_HGQ2
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'False'
+#     RUN_SYNTHESIS: 'True'
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 DeepSet:HGQ2_5param_extended_trk:
   extends: .ml_pipeline

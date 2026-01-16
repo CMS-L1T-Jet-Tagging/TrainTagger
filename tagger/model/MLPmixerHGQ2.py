@@ -12,7 +12,7 @@ from hgq.layers import QConv1D, QDense,QEinsumDense, QMeanPow2,QBatchNormalizati
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
-from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
 
 from keras.models import load_model
 import hls4ml
@@ -44,6 +44,7 @@ class MLPmixerHGQ2(JetTagModel):
                                          "batch_size" : And(int, lambda s: s >= 1),
                                          "learning_rate": And(float, lambda s: s > 0.0),
                                          "loss_weights" : And(list, lambda s: len(s) == 2),
+                                         "target_ebops" : int
                                         },
                 
                 "firmware_config" : {"input_precision" : str,
@@ -103,7 +104,8 @@ class MLPmixerHGQ2(JetTagModel):
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C',activation='relu')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+                #jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+                jet_id = QSoftmax(name='jet_id_output')(jet_id)
                 
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
@@ -231,23 +233,39 @@ class MLPmixerHGQ2(JetTagModel):
         scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch, 
                                                                                                  initial_learning_rate=self.training_config['learning_rate'],
                                                                                                  max_epochs=self.training_config['epochs']))        
+        es = EarlyStoppingWithEbopsThres(monitor="val_loss",
+                                         patience=150,
+                                         verbose=1,
+                                         mode="min",
+                                         restore_best_weights=True,
+                                         start_from_epoch=75,
+                                         ebops_threshold=self.training_config['target_ebops'] + 100000
+                                        )
+        
         terminate_on_nan = keras.callbacks.TerminateOnNaN()
 
-    
-        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
+        ebops_tracker = FreeEBOPs()
+        ebops_scheduler = BetaPID(
+            p=1, i=0.1, d=0,
+            target_ebops=self.training_config['target_ebops'],
+            init_beta=1e-10, warmup=10,
+            max_beta=5e-6, damp_beta_on_target=0.5
+        )
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
             scheduler,
+            ebops_tracker,
             terminate_on_nan,
-            FreeEBOPs(),
-            beta_scheduler
+            ebops_scheduler,
+            es
+
         ]
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
             optimizer='adam',
             loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

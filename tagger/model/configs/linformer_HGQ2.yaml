@@ -20,14 +20,14 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  epochs : 60
+  epochs : 100
   batch_size : 1024
-  learning_rate : 0.01
+  learning_rate : 0.003
   validation_split : 0.1
 
   loss_weights : [1,1]
 
-  target_ebops : 350000
+  target_ebops : 150000
 
 
 firmware_config:

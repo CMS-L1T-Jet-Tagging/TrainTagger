@@ -23,6 +23,8 @@ training_config :
 
   loss_weights : [1,1]
 
+  target_ebops : 150000
+
 
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'

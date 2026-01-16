@@ -11,7 +11,7 @@ from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
-from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
 # Qkeras
 
 from keras.models import load_model
@@ -47,6 +47,7 @@ class DeepSetModelHGQ2(JetTagModel):
                                          "batch_size" : And(int, lambda s: s >= 1),
                                          "learning_rate": And(float, lambda s: s > 0.0),
                                          "loss_weights" : And(list, lambda s: len(s) == 2),
+                                         "target_ebops" : int
                                         },
                 
                 "firmware_config" : {"input_precision" : str,
@@ -101,7 +102,8 @@ class DeepSetModelHGQ2(JetTagModel):
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
-                jet_id = keras.layers.Softmax( name='jet_id_output')(jet_id)
+                #jet_id = keras.layers.Softmax( name='jet_id_output')(jet_id)
+                jet_id = QSoftmax(name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
@@ -204,19 +206,37 @@ class DeepSetModelHGQ2(JetTagModel):
                                                                                                           initial_learning_rate=self.training_config['learning_rate'],
                                                                                                           max_epochs=self.training_config['epochs']))
 
-        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (self.training_config['epochs']/3, 3e-7, 'log'), (self.training_config['epochs'], 3e-6, 'constant')] ))
+        es = EarlyStoppingWithEbopsThres(monitor="val_loss",
+                                         patience=150,
+                                         verbose=1,
+                                         mode="min",
+                                         restore_best_weights=True,
+                                         start_from_epoch=75,
+                                         ebops_threshold=self.training_config['target_ebops'] + 100000
+                                        )
+        terminate_on_nan = keras.callbacks.TerminateOnNaN()
+
+        ebops_tracker = FreeEBOPs()
+        ebops_scheduler = BetaPID(
+            p=1, i=0.1, d=0,
+            target_ebops=self.training_config['target_ebops'],
+            init_beta=1e-10, warmup=10,
+            max_beta=5e-6, damp_beta_on_target=0.5
+        )
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            FreeEBOPs(),
             scheduler,
-            beta_scheduler
+            ebops_tracker,
+            terminate_on_nan,
+            ebops_scheduler,
+            es
 
         ]
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
             optimizer=keras.optimizers.Adam(learning_rate=self.training_config['learning_rate']),
             loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(),
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

@@ -60,8 +60,8 @@ class DeepSetModelHGQ2(JetTagModel):
 
     def build_model(self, inputs_shape, outputs_shape):
 
-        #initialise_tensorflow(self.run_config['num_threads'])
-        initialise_jax()
+        initialise_tensorflow(self.run_config['num_threads'])
+        #initialise_jax()
         scope0 = QuantizerConfigScope(default_q_type='kbi',
                                       b0=7,
                                       overflow_mode='wrap',
@@ -82,16 +82,12 @@ class DeepSetModelHGQ2(JetTagModel):
         scope2 = LayerConfigScope(enable_ebops=True, heterogeneous_axis=heterogeneous_axis,beta0=1e-8)
         
         with scope0, scope1, scope2:
-            
-                iq_conf = QuantizerConfig(k0=1, i0=11, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
-                oq_conf_jetid = QuantizerConfig(k0=0, i0=12, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
-                oq_conf_pt = QuantizerConfig(k0=1, i0=9, f0=6, trainable=False,round_mode='RND',overflow_mode='SAT')
 
                 N_constituents = inputs_shape[0]
                 n_features = inputs_shape[1]
             
                 inputs = Input(shape=(N_constituents,n_features), name='model_input')
-                main = QBatchNormalization(name='norm_input',iq_conf=iq_conf)(inputs)
+                main = QBatchNormalization(name='norm_input')(inputs)
                 
                 for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
                     main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(main)                
@@ -105,14 +101,14 @@ class DeepSetModelHGQ2(JetTagModel):
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
-                jet_id = QSoftmax( name='jet_id_output',enable_oq=True,oq_conf=oq_conf_jetid,iq_conf=oq_conf_jetid)(jet_id)
+                jet_id = keras.layers.Softmax( name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
                         pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(main)
                     else:
                         pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(pt_regress)      
-                pt_regress = QDense(1,name='pT_output', enable_oq=True,oq_conf=oq_conf_pt,iq_conf=oq_conf_pt)(pt_regress)#1.1e-7
+                pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
     
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
@@ -208,7 +204,7 @@ class DeepSetModelHGQ2(JetTagModel):
                                                                                                           initial_learning_rate=self.training_config['learning_rate'],
                                                                                                           max_epochs=self.training_config['epochs']))
 
-        beta_scheduler = BetaScheduler(beta_fn=lambda epoch: log_beta_schedule(epoch, max_epochs=self.training_config['epochs']))
+        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (self.training_config['epochs']/3, 3e-7, 'log'), (self.training_config['epochs'], 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
             FreeEBOPs(),
@@ -218,9 +214,9 @@ class DeepSetModelHGQ2(JetTagModel):
         ]
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
-            optimizer=keras.optimizers.AdamW(learning_rate=self.training_config['learning_rate']),
+            optimizer=keras.optimizers.Adam(learning_rate=self.training_config['learning_rate']),
             loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],
@@ -231,9 +227,7 @@ class DeepSetModelHGQ2(JetTagModel):
             weighted_metrics={
                 self.loss_name + self.output_id_name: 'categorical_accuracy',
                 self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-            steps_per_execution=4,
-            jit_compile=True,
+            }
         )
     def fit(
         self,

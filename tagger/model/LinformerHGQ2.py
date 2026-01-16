@@ -12,7 +12,7 @@ from hgq.layers.activation import QUnaryFunctionLUT
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
-from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
 
 from keras.models import load_model
 import hls4ml
@@ -46,6 +46,7 @@ class LinformerHGQ2(JetTagModel):
 
                 "training_config" :     {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                          "validation_split" : And(float, lambda s: s > 0.0),
+                                         "target_ebops" : int,
                                          "epochs" : And(int, lambda s: s >= 1),
                                          "batch_size" : And(int, lambda s: s >= 1),
                                          "learning_rate": And(float, lambda s: s > 0.0),
@@ -88,6 +89,7 @@ class LinformerHGQ2(JetTagModel):
         
         with betascope, scope0, scope1:
                 qkv = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='model_input')
+                emb = QBatchNormalization(name='norm_input')(qkv)
                 emb = QDense(FF_DIM, activation='relu')(qkv)
                 emb = QDense(FF_DIM, activation='relu')(emb)
 
@@ -189,20 +191,20 @@ class LinformerHGQ2(JetTagModel):
                 json.dump(config, fp)
 
             
-            # old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
-            # new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
-            #               #pragma HLS inline recursive
-            #             """
+            old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
+            new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
+                          #pragma HLS inline recursive
+                        """
             
-            # with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
-            #     content = f.read()
+            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
+                content = f.read()
             
-            # content = content.replace(old_text, new_text)
+            content = content.replace(old_text, new_text)
 
-            # with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
-            #     f.write(content)
+            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
+                f.write(content)
 
-            # print("einsum dense replacement complete.")
+            print("einsum dense replacement complete.")
 
             if build:
                 # build the project
@@ -217,23 +219,34 @@ class LinformerHGQ2(JetTagModel):
             num_samples (int): Number of samples in the training set used for scheduling
         """
 
-        scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch, 
-                                                                                                          initial_learning_rate=self.training_config['learning_rate'],
-                                                                                                          max_epochs=self.training_config['epochs']))
+        reduce_lr = ReduceLROnPlateau(
+                                        monitor='val_loss', factor=0.8, patience=50,
+                                        min_lr=1e-5, cooldown=200, min_delta=0.05
+                                    )
+        
+        es = EarlyStoppingWithEbopsThres(monitor="val_loss",
+                                         patience=150,
+                                         verbose=1,
+                                         mode="min",
+                                         restore_best_weights=True,
+                                         start_from_epoch=75,
+                                         ebops_threshold=self.training_config['target_ebops'] + 100000
+                                        )
         terminate_on_nan = keras.callbacks.TerminateOnNaN()
 
-        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
-        # Define the callbacks using hyperparameters in the config
-        self.callbacks = [
-            scheduler,
-            terminate_on_nan,
-            FreeEBOPs(),
-            beta_scheduler
-        ]
+        ebops_tracker = FreeEBOPs()
+        ebops_scheduler = BetaPID(
+            p=1, i=0.1, d=0,
+            target_ebops=self.training_config['target_ebops'],
+            init_beta=1e-10, warmup=10,
+            max_beta=5e-6, damp_beta_on_target=0.5
+        )
+        # Define the callbacks using hyperparameters in the config        
+        self.callbacks = [ebops_tracker, terminate_on_nan, ebops_scheduler, reduce_lr, es]
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
-            optimizer='adam',
+            optimizer=keras.optimizers.AdamW(learning_rate=self.training_config['learning_rate']),
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),

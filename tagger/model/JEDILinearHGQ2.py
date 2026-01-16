@@ -85,10 +85,6 @@ class JEDILinearHGQ2(JetTagModel):
         
         with scope0, scope1, scope2:
 
-            iq_conf = QuantizerConfig(k0=1, i0=11, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
-            oq_conf_jetid = QuantizerConfig(k0=0, i0=12, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
-            oq_conf_pt = QuantizerConfig(k0=1, i0=9, f0=6, trainable=False,round_mode='RND',overflow_mode='SAT')
-
             N_constituents = inputs_shape[0]
             n_features = inputs_shape[1]
         
@@ -99,7 +95,7 @@ class JEDILinearHGQ2(JetTagModel):
                 #inp_b = QBatchNormalization()(inp)
                 pool_scale = 2.**-round(log2(N_constituents))
                 
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu',iq_conf=iq_conf )(inp_b)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu')(inp_b)
                 s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
                 
                 s2 = AveragePooling1D(N_constituents)(x)
@@ -128,7 +124,7 @@ class JEDILinearHGQ2(JetTagModel):
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C', enable_oq=True,oq_conf=oq_conf_pt,iq_conf=oq_conf_pt)(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C')(pt_regress)
 
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
@@ -244,7 +240,8 @@ class JEDILinearHGQ2(JetTagModel):
                                                                                                           max_epochs=self.training_config['epochs']))
         terminate_on_nan = keras.callbacks.TerminateOnNaN()
 
-        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (20, 3e-7, 'log'), (100, 3e-6, 'constant')] ))
+        beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (self.training_config['epochs']/3, 3e-7, 'log'), (self.training_config['epochs'], 3e-6, 'constant')] ))
+
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
             scheduler,

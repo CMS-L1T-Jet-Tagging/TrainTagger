@@ -21,6 +21,7 @@ from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.common import initialise_tensorflow,cosine_decay_restarts
 
+from hgq.utils import trace_minmax
 
 @JetModelFactory.register('LinformerHGQ2')
 class LinformerHGQ2(JetTagModel):
@@ -68,6 +69,10 @@ class LinformerHGQ2(JetTagModel):
 
         scope1 = QuantizerConfigScope(place='datalane', k0=1, f0=6, fr=MonoL1(1e-8), ir=MonoL1(1e-8))
         betascope = LayerConfigScope(beta0=self.model_config['beta'])
+        
+        iq_conf = QuantizerConfig(k0=1, i0=11, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+        oq_conf_jetid = QuantizerConfig(k0=0, i0=12, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+        oq_conf_pt = QuantizerConfig(k0=1, i0=9, f0=6, trainable=False,round_mode='RND',overflow_mode='SAT')
 
         # Linformer Attention Config
         mhaconfig = QuantizerConfigScope(
@@ -82,7 +87,7 @@ class LinformerHGQ2(JetTagModel):
         numheads = self.model_config['num_heads']
         
         with betascope, scope0, scope1:
-                qkv = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES))
+                qkv = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='model_input')
                 emb = QDense(FF_DIM, activation='relu')(qkv)
                 emb = QDense(FF_DIM, activation='relu')(emb)
 
@@ -120,7 +125,7 @@ class LinformerHGQ2(JetTagModel):
 
 
                 #Define the model using both branches
-                self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
+                self.jet_model = keras.Model(inputs = qkv, outputs = [jet_id, pt_regress])
                 print(self.jet_model.summary())
 
     # Redefine save and load for HGQ due to needing h5 format
@@ -182,38 +187,22 @@ class LinformerHGQ2(JetTagModel):
             print("Saving default config as config.json ...")
             with open(hls4ml_outdir + '/config.json', 'w') as fp:
                 json.dump(config, fp)
-                
-                
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
-            new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
-                    auto layer13_index = ii % 20;
-                    layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
-                }"""
 
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
-
-            content = content.replace(old_text, new_text)
-
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
-                f.write(content)
-
-            print("cpp replacement complete")
             
-            old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
-            new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
-                          #pragma HLS inline recursive
-                        """
+            # old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
+            # new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
+            #               #pragma HLS inline recursive
+            #             """
             
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
-                content = f.read()
+            # with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
+            #     content = f.read()
             
-            content = content.replace(old_text, new_text)
+            # content = content.replace(old_text, new_text)
 
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
-                f.write(content)
+            # with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
+            #     f.write(content)
 
-            print("einsum dense replacement complete.")
+            # print("einsum dense replacement complete.")
 
             if build:
                 # build the project

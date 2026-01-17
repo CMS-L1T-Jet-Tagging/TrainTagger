@@ -102,8 +102,7 @@ class DeepSetModelHGQ2(JetTagModel):
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
-                #jet_id = keras.layers.Softmax( name='jet_id_output')(jet_id)
-                jet_id = QSoftmax(name='jet_id_output')(jet_id)
+                jet_id = keras.layers.Softmax( name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
@@ -236,7 +235,7 @@ class DeepSetModelHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer=keras.optimizers.Adam(learning_rate=self.training_config['learning_rate']),
             loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
+                self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

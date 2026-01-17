@@ -116,8 +116,7 @@ class LinformerHGQ2(JetTagModel):
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
-                #jet_id = Activation('softmax', name='jet_id_output')(jet_id)
-                jet_id = QSoftmax(name='jet_id_output')(jet_id)
+                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
@@ -190,7 +189,39 @@ class LinformerHGQ2(JetTagModel):
             print("Saving default config as config.json ...")
             with open(hls4ml_outdir + '/config.json', 'w') as fp:
                 json.dump(config, fp)
+                
+            
+            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
+                content = f.read()
+                
+            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config30>(layer28_out, layer29_out, layer30_out); // q_add'
+            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
+                    auto layer29_index = ii % 16;
+                    layer30_out[ii] = layer28_out[ii] + layer29_out[layer29_index];
+                }"""
 
+            content = content.replace(old_text, new_text)
+            
+            old_text = 'nnet::add<quantizer_2_t, quantizer_3_t, q_add_1_t, config39>(layer37_out, layer38_out, layer39_out); // q_add_1'
+            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
+                    auto layer38_index = ii % 16;
+                    layer39_out[ii] = layer37_out[ii] + layer38_out[layer38_index];
+                }"""
+
+            content = content.replace(old_text, new_text)
+            
+            old_text = 'nnet::add<quantizer_4_t, quantizer_5_t, q_add_2_t, config48>(layer46_out, layer47_out, layer48_out); // q_add_2'
+            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
+                    auto layer47_index = ii % 16;
+                    layer48_out[ii] = layer46_out[ii] + layer47_out[layer47_index];
+                }"""
+
+            content = content.replace(old_text, new_text)
+            
+            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
+                f.write(content)
+
+            print("cpp replacement complete")
             
             old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
             new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
@@ -249,7 +280,7 @@ class LinformerHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer=keras.optimizers.AdamW(learning_rate=self.training_config['learning_rate']),
             loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
+                self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

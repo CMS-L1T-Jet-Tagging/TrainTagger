@@ -247,8 +247,8 @@ reports:
   variables:
     KUBERNETES_MEMORY_REQUEST: 128Gi
     KUBERNETES_CPU_REQUEST: 32
-  needs: [synth]
-  dependencies: [synth]
+  needs: [train,synth]
+  dependencies: [train,synth]
   rules:
     - if: ($RUN_SYNTHESIS == "True")
   script:

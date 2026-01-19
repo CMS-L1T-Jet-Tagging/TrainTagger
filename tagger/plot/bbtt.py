@@ -302,35 +302,38 @@ def pick_and_plot(rate_list, signal_eff, ht_list, bb_list, tt_list, ht, score_ty
 
     #make plots
     #2D proj of ditau vs bb score
-    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbtt')
-    os.makedirs(plot_dir, exist_ok=True)
+    try:
+        plot_dir = os.path.join(model.output_directory, 'plots/physics/bbtt')
+        os.makedirs(plot_dir, exist_ok=True)
 
 
-    fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
-    im = ax.scatter(bb_list, tt_list, c=rate_list, s=500, marker='s',
-                    cmap='Spectral_r',
-                    linewidths=0,
-                    norm=matplotlib.colors.LogNorm())
+        fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE-2)
+        im = ax.scatter(bb_list, tt_list, c=rate_list, s=500, marker='s',
+                        cmap='Spectral_r',
+                        linewidths=0,
+                        norm=matplotlib.colors.LogNorm())
 
-    cbar = plt.colorbar(im, ax=ax)
-    cbar.set_label(r'Rate [kHZ]')
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label(r'Rate [kHZ]')
 
-    ax.set_ylabel(r"$\tau\tau$ score")
-    ax.set_xlabel(r"bb score")
+        ax.set_ylabel(r"$\tau\tau$ score")
+        ax.set_xlabel(r"bb score")
 
-    ax.set_xlim([0, 1.3])
-    ax.set_ylim([0, 1.3])
+        ax.set_xlim([0, 1.3])
+        ax.set_ylim([0, 1.3])
 
-    ax.plot(target_bb, target_tt,
-                linewidth=5,
-                color ='firebrick',
-                label = r"${} \pm {}$ kHz".format(rate, RateRange))
+        ax.plot(target_bb, target_tt,
+                    linewidth=5,
+                    color ='firebrick',
+                    label = r"${} \pm {}$ kHz".format(rate, RateRange))
 
 
-    ax.legend(loc='upper right')
-    plt.savefig(f"{plot_dir}/bbtt_rate_{score_type}_{apply_sel}_{rate}.pdf", bbox_inches='tight')
-    plt.savefig(f"{plot_dir}/bbtt_rate_{score_type}_{apply_sel}_{rate}.png", bbox_inches='tight')
+        ax.legend(loc='upper right')
+        plt.savefig(f"{plot_dir}/bbtt_rate_{score_type}_{apply_sel}_{rate}.pdf", bbox_inches='tight')
+        plt.savefig(f"{plot_dir}/bbtt_rate_{score_type}_{apply_sel}_{rate}.png", bbox_inches='tight')
+    except ValueError:
+        print("Couldn't find a working point")
 
 
 def make_predictions(data_path, model, n_entries, tree='outnano/Jets', njets=4):

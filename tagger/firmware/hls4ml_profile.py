@@ -1,6 +1,7 @@
 import os
 from argparse import ArgumentParser
 from pathlib import Path
+import re
 
 import hls4ml
 import matplotlib.pyplot as plt
@@ -13,38 +14,146 @@ from tagger.model.common import fromFolder
 from tagger.plot import style
 from tagger.plot.common import plot_2d
 
+import xml.etree.ElementTree as ET
+
 style.set_style()
 
+def read_hls_report(filename: str) -> dict:
+  '''
+  Extract estimated performance metrics from HLS C Synthesis such as:
+    latency (min, max), interval (min, max), resources
+  Parameters
+  ----------
+  filename : string
+    Name of XML HLS report file
+  Returns
+  ----------
+  dictionary of extracted report contents
+  '''
+  
+  if os.path.exists(filename):
+    report = {}
+    xml = ET.parse(filename)
+    PE = xml.find('PerformanceEstimates')
+    if PE is not None:
+      SoOL = PE.find('SummaryOfOverallLatency')
+      if SoOL is not None:
+        report['latency_best'] = SoOL.find('Best-caseLatency')
+        report['latency_worst'] = SoOL.find('Worst-caseLatency')
+        report['interval_best'] = SoOL.find('Interval-min')
+        report['interval_worst'] = SoOL.find('Interval-max')
+    AE = xml.find('AreaEstimates')
+    if AE is not None:
+      R = AE.find('Resources')
+      if R is not None:
+        report['lut'] = R.find('LUT')
+        report['ff'] = R.find('FF')
+        report['dsp'] = R.find('DSP')
+        report['bram18'] = R.find('BRAM_18K')
+
+    for key in report.keys():
+      if key is not None:
+        report[key] = int(report[key].text)
+    return report
+  else:
+    return None
+
+def read_vsynth_report(filename):
+  section = 0
+  if os.path.exists(filename):
+    report = {}
+    f = open(filename, 'r')
+    for line in f.readlines():
+      # track which report section the line is in for filtering
+      if '1. CLB Logic' in line:
+        section = 1
+      elif '1.1 Summary of Registers by Type' in line:
+        section = 1.1
+      elif '2. BLOCKRAM' in line:
+        section = 2
+      elif '3. ARITHMETIC' in line:
+        section = 3
+      elif '4. I/O' in line:
+        section = 4
+
+      # extract the value from the tables in each section
+      if section == 1 and 'CLB LUTs*' in line:
+        report['lut'] = int(line.split('|')[2])
+      elif section == 1 and 'CLB Registers' in line:
+        report['ff'] = int(line.split('|')[2])
+      elif section == 2 and 'RAMB18' in line and 'Note' not in line:
+        report['bram18'] = int(line.split('|')[2])
+      elif section == 3 and 'DSPs' in line:
+        report['dsp'] = int(line.split('|')[2])
+    return report
+  else:
+    return None
+
+
+def read_hls_log(filename: str) -> dict:
+  '''
+  Extract build metrics from HLS C Synthesis log such as:
+    synthesis time, synthesis memory usage
+  Parameters
+  ----------
+  filename : string
+    Name of HLS log file
+  Returns
+  ----------
+  dictionary of extracted log contents
+  '''
+  if os.path.exists(filename):
+    report = {}
+    f = open(filename, 'r')
+    for line in f.readlines():
+      if 'HLS 200-112' in line: # build summary line
+        search = 'Total elapsed time: ([0-9]+)\.*([0-9]*) seconds'
+        m = re.search(search, line)
+        if m is not None:
+          report['time_seconds'] = float(m.group(1))
+          if m.group(2) != '':
+            report['time_seconds'] += float(m.group(2))/100
+        else:
+          report['time_seconds'] = None
+        search = 'peak allocated memory: ([0-9]+)\.*([0-9]*) ([k,M,G])B'
+        m = re.search(search, line)
+        if m is not None:
+          mem = float(m.group(1))
+          if m.group(2) != '':
+            mem += float(m.group(2))/1000
+          div = 1
+          if m.group(3) == 'G':
+            div = 1
+          elif m.group(3) == 'M':
+            div=1e3
+          elif m.group(3) == 'k':
+            div=1e6
+          report['memory_GB'] = mem / div
+        else:
+          report['memory_GB'] = None
+          report['time_seconds'] = None
+          
+      if 'Estimated Fmax' in line:
+        search = '([0-9]+)\.*([0-9]*) MHz'
+        f = re.search(search, line)
+        if f is not None:
+          report['FMax'] = float(f.group(1))
+    return report
+  else:
+    return None
 
 def getReports(indir):
+        
     data_ = {}
 
-    report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.rpt'.format(indir))
-
-    if report_csynth.is_file():
-        print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
-
-        with report_csynth.open() as report:
-            lines = np.array(report.readlines())
-            lat_line = lines[np.argwhere(np.array(['Latency (cycles)' in line for line in lines])).flatten()[0] + 3]
-            data_['latency_clks'] = int(lat_line.split('|')[2])
-            data_['latency_ii'] = int(lat_line.split('|')[6])
-
-            resource_line = lines[np.argwhere(np.array(['|Utilization (%)' in line for line in lines])).flatten()[0]]
-            try:
-                data_['bram_rel'] = int(resource_line.split('|')[2])
-            except ValueError:
-                data_['bram_rel'] = 0
-            data_['dsp_rel'] = int(resource_line.split('|')[3])
-            data_['ff_rel'] = int(resource_line.split('|')[4])
-            data_['lut_rel'] = int(resource_line.split('|')[5])
-
-            total_line = lines[np.argwhere(np.array(['|Total ' in line for line in lines])).flatten()[0]]
-            data_['bram'] = int(total_line.split('|')[2])
-            data_['dsp'] = int(total_line.split('|')[3])
-            data_['ff'] = int(total_line.split('|')[4])
-            data_['lut'] = int(total_line.split('|')[5])
-
+    report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.xml'.format(indir))
+    report_vsynth = Path('{}/vivado_synth.rpt'.format(indir))
+    log = Path('{}/vitis_hls.log'.format(indir))
+    
+    data_['hls_report'] = read_hls_report(report_csynth)
+    data_['vsynth_report'] = read_vsynth_report(report_csynth)
+    data_['hls_log'] = read_hls_log(log)
+    
     return data_
 
 
@@ -130,6 +239,7 @@ if __name__ == "__main__":
     )
     parser.add_argument('-i', '--input', default='data/jetTuple_extended_5.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
+    parser.add_argument('-p', '--doplots', default=False, help='Run profiling plots ')
     parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
 
     args = parser.parse_args()
@@ -139,7 +249,8 @@ if __name__ == "__main__":
     if args.remake:
         make_data(infile=args.input, outdir="profiling_data/", extras='extra_emulation_fields', tree="outnano/Jets")
 
-    doPlots(model, args.outpath, "profiling_data/")
+    if args.doplots:
+        doPlots(model, args.outpath, "profiling_data/")
 
     report = getReports(args.outpath_firmware + '/' + model.firmware_config['project_name'])
 
@@ -147,12 +258,25 @@ if __name__ == "__main__":
     print('Input Precision : ', model.firmware_config['input_precision'])
     print('Class Precision : ', model.firmware_config['class_precision'])
     print('Regression Precision : ', model.firmware_config['reg_precision'])
-    print(" Resource Usage of a VU13P")
-    print('Flip Flops : ', report['ff_rel'], ' %')
-    print('Look Up Tables : ', report['lut_rel'], ' %')
-    print('Block RAM : ', report['bram_rel'], ' %')
-    print('Digital Signal Processors : ', report['dsp_rel'], ' %')
-    print('Latency : ', report['latency_clks'], ' clock cycles')
-    print('Latency : ', report['latency_clks'] * model.firmware_config['clock_period'] * 1e-3, ' mus')
-    print('Initiation Interval : ', report['latency_ii'], ' clock cycles')
+    print(" Resource Usage of a VU13P from CSynth")
+    print(report['hls_report'])
+    print('Flip Flops : ', report['hls_report']['ff'])
+    print('Look Up Tables : ', report['hls_report']['lut'])
+    print('Block RAM : ', report['hls_report']['bram18'])
+    print('Digital Signal Processors : ', report['hls_report']['dsp'])
+    print('Latency : ', report['hls_report']['latency_best'], 'clock cycles')
+    print('Latency : ', report['hls_report']['latency_best'] * model.firmware_config['clock_period'] * 1e-3, 'mus')
+    print('Initiation Interval : ', report['hls_report']['interval_best'], 'clock cycles')
+    print('Estimated FMax :',  report['hls_log']['FMax'], 'MHz' )
+    
+    if bool(report['vsynth_report']):
+        print("===================")
+        print("Resource Usage of a VU13P from VSynth")
+        print('Flip Flops : ', report['vsynth_report']['ff'])
+        print('Look Up Tables : ', report['vsynth_report']['lut'])
+        print('Block RAM : ', report['vsynth_report']['bram18'])
+        print('Digital Signal Processors : ', report['vsynth_report']['dsp'])
+        
+    print('Memory Usage :',  report['hls_log']['memory_GB'], 'GB' )
+    print('Synth time :',  report['hls_log']['time_seconds'], 's' )
     print("===================")

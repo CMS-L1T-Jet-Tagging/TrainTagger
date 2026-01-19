@@ -11,6 +11,7 @@ stages:
   - emulate
   - emulation-evaluate
   - profile
+  - reports
   - upload
   - test
 
@@ -231,7 +232,28 @@ profile:
   - cd hls4ml
   - pip install .[profiling]
   - cd ..
-  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
+  - python tagger/firmware/hls4ml_profile.py -p True  -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
+  artifacts:
+    paths:
+      - output/$Model
+    expire_in: 1 day
+
+
+reports:
+  extends:
+    - .template
+  stage: reports
+  tags: [cern-nextgen-highmem]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 128Gi
+    KUBERNETES_CPU_REQUEST: 32
+  needs: [synth]
+  dependencies: [synth]
+  rules:
+    - if: ($RUN_SYNTHESIS == "True")
+  script:
+  - source activate tagger
+  - python tagger/firmware/hls4ml_profile.py -m output/$Model -of output/$Model/firmware 
   artifacts:
     paths:
       - output/$Model

@@ -23,7 +23,7 @@ training_config :
 
   loss_weights : [1,1]
 
-  target_ebops : 500000
+  target_ebops : 300000
 
 
 firmware_config:

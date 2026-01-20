@@ -1012,7 +1012,7 @@ def basic(model, signal_dirs):
                 'jet_pt': sample_reco_pt,
                 'jet_eta': sample_reco_eta,
             }
-            sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs))[0]
+            sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = process_labels(signal_dirs[i])
             os.makedirs(binary_dir, exist_ok=True)

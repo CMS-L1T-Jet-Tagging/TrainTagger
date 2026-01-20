@@ -150,8 +150,8 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
         'jet_eta': eta2_cuts,
     }
     #Get the NN predictions
-    pred_score1, ratio1 = model.predict(model.prepare_inputs(raw_inputs1_dict))
-    pred_score2, ratio2 = model.predict(model.prepare_inputs(raw_inputs2_dict))
+    pred_score1, ratio1 = model.predict(model.prepare_inputs(raw_inputs1_dict)[0])
+    pred_score2, ratio2 = model.predict(model.prepare_inputs(raw_inputs2_dict)[0])
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())
@@ -224,7 +224,7 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
         'jet_pt': selected_jet_pt,
         'jet_eta': selected_jet_eta,
     }
-    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict))
+    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
     model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score
@@ -364,7 +364,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
         'jet_pt': l1_pt_raw,
         'jet_eta': l1_eta_raw,
     }
-    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict))
+    pred_score, ratio = model.predict([model.prepare_inputs(raw_inputs_dict)[0]])
 
     nn_tauscore_raw = tau_score(pred_score, model.class_labels)
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())

@@ -51,7 +51,7 @@ variables:
     - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-h100,cern-nextgen-h100-.5]
   # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
   #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
   #      when: on_success
@@ -146,6 +146,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
+  tags: [k8s-eos]
   extends:
     - .template
   rules:
@@ -189,10 +190,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 128Gi
-    KUBERNETES_CPU_REQUEST: 32
+  tags: [k8s-eos]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -213,10 +211,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 128Gi
-    KUBERNETES_CPU_REQUEST: 32
+  tags: [k8s-eos]
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:
@@ -243,10 +238,7 @@ reports:
   extends:
     - .template
   stage: reports
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 128Gi
-    KUBERNETES_CPU_REQUEST: 32
+  tags: [k8s-eos]
   needs: [train,synth]
   dependencies: [train,synth]
   rules:
@@ -262,10 +254,7 @@ reports:
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 128Gi
-    KUBERNETES_CPU_REQUEST: 32
+  tags: [k8s-eos]
   rules:
     - if: $RERUN_ON_TAG == "False"
   needs:
@@ -295,10 +284,7 @@ upload_new_model:
 upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 128Gi
-    KUBERNETES_CPU_REQUEST: 32
+  tags: [k8s-eos]
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
   rules:

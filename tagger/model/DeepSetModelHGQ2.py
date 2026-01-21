@@ -153,7 +153,7 @@ class DeepSetModelHGQ2(JetTagModel):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"]="distributed_arithmetic"
+            #ßconfig["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
            

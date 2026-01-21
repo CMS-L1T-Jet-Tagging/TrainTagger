@@ -109,7 +109,8 @@ class MLPmixerHGQ2(JetTagModel):
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1,name='pT_output', bias_axes='C')(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C')(pt_regress)
+                pt_regress = Activation('linear', name='pT_output')(pt_regress)
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
                 print(self.jet_model.summary())

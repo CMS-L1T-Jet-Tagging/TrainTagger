@@ -213,22 +213,15 @@ profile:
     - .template
   stage: profile
   tags: [k8s-eos]
-  needs: [emulate,synth,train]
-  dependencies: [emulate,synth,train]
+  needs: [synth,train]
+  dependencies: [synth,train]
   rules:
-    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
+    - if: ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
-  - mkdir data
-  - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
-  - cd ..
-  - pip uninstall hls4ml -y
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
-  - cd hls4ml
-  - pip install .[profiling]
-  - cd ..
-  - python tagger/firmware/hls4ml_profile.py -p True  -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
+  - tar -xf signal_process_data.tgz
+  - python tagger/firmware/hls4ml_profile.py -p True -d signal_process_data/TT_PU200  -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
   artifacts:
     paths:
       - output/$Model

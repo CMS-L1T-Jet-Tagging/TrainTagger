@@ -76,7 +76,7 @@ DeepSet:HGQ2_5param_extended_trk:
   extends: .ml_pipeline
   variables:
     Name: DeepSetHGQ2_5param_extended_trk
-    Model: baseline_HGQ2
+    Model: baseline_larger_HGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'True'

@@ -14,6 +14,8 @@ from tagger.model.common import fromFolder
 from tagger.plot import style
 from tagger.plot.common import plot_2d
 
+import sklearn
+
 import xml.etree.ElementTree as ET
 
 style.set_style()
@@ -148,7 +150,6 @@ def getReports(indir):
 
     report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.xml'.format(indir))
     report_vsynth = Path('{}/vivado_synth.rpt'.format(indir))
-    print(report_vsynth)
     log = Path('{}/vitis_hls.log'.format(indir))
     
     data_['hls_report'] = read_hls_report(report_csynth)
@@ -158,10 +159,10 @@ def getReports(indir):
     return data_
 
 
-def doPlots(model, outputdir, inputdir):
+def doPlots(model, outputdir, inputdir, trace=False):
     os.makedirs(outputdir, exist_ok=True)
 
-    data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
+    data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=1, test_ratio=0.0)
     X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)
 
     labels = list(class_labels.keys())
@@ -169,6 +170,15 @@ def doPlots(model, outputdir, inputdir):
     model.firmware_convert("temp", build=False)
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(np.ascontiguousarray(X_test))
     y_class, y_ptreg = model.jet_model.predict(np.ascontiguousarray(X_test))
+    
+    bit_accurate = np.count_nonzero(
+        (y_ptreg_hls - y_ptreg)
+    )
+    print(
+        "MSE between keras and hls4ml for regression is",
+        sklearn.metrics.mean_squared_error(y_ptreg,y_ptreg_hls)
+    )
+    
 
     for i, label in enumerate(labels):
         plt.clf()
@@ -185,6 +195,11 @@ def doPlots(model, outputdir, inputdir):
         )
         figure.savefig("%s/%s_score_2D.png" % (outputdir, label), bbox_inches='tight')
         figure.savefig("%s/%s_score_2D.pdf" % (outputdir, label), bbox_inches='tight')
+        
+        print(
+            "MSE between keras and hls4ml for " + label + " classification is",
+            sklearn.metrics.mean_squared_error(np.array(y_class[:, i]),np.array(y_hls[:, i]))
+        )
 
     plt.clf()
     figure = plot_2d(
@@ -199,33 +214,35 @@ def doPlots(model, outputdir, inputdir):
     figure.savefig("%s/%s_score_2D.png" % (outputdir, "Regression"), bbox_inches='tight')
     figure.savefig("%s/%s_score_2D.pdf" % (outputdir, "Regression"), bbox_inches='tight')
     plt.close()
+    
+    if trace==True:
 
-    wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)
-    ap.savefig(outputdir + "/model_activations_profile.png")
-    wp.savefig(outputdir + "/model_weights_profile.png")
-    aph.savefig(outputdir + "/model_activations_profile_opt.png")
-    wph.savefig(outputdir + "/model_weights_profile_opt.png")
+      wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)
+      ap.savefig(outputdir + "/model_activations_profile.png")
+      wp.savefig(outputdir + "/model_weights_profile.png")
+      aph.savefig(outputdir + "/model_activations_profile_opt.png")
+      wph.savefig(outputdir + "/model_weights_profile_opt.png")
 
-    y_hls, hls4ml_trace = model.hls_jet_model.trace(np.ascontiguousarray(X_test))
-    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model.jet_model, X_test)
+      y_hls, hls4ml_trace = model.hls_jet_model.trace(np.ascontiguousarray(X_test))
+      keras_trace = hls4ml.model.profiling.get_ymodel_keras(model.jet_model, X_test)
 
-    for layer in hls4ml_trace.keys():
-        print("Doing profiling 2d for layer", layer)
-        min_x = min(np.amin(hls4ml_trace[layer]), np.amin(keras_trace[layer]))
-        max_x = max(np.amax(hls4ml_trace[layer]), np.amax(keras_trace[layer]))
-        plot_2d(
-            hls4ml_trace[layer].flatten(),
-            keras_trace[layer].flatten(),
-            (min_x, max_x),
-            (min_x, max_x),
-            "hls4ml {}".format(layer),
-            "Tensorflow  {}".format(layer),
-            layer + " agreement",
-        )
-        plt.plot([min_x, max_x], [min_x, max_x], c="gray")
-        plt.savefig(f"{outputdir}/profile_2d_{layer}.png", bbox_inches='tight')
-        plt.savefig(f"{outputdir}/profile_2d_{layer}.pdf", bbox_inches='tight')
-        plt.close()
+      for layer in hls4ml_trace.keys():
+          print("Doing profiling 2d for layer", layer)
+          min_x = min(np.amin(hls4ml_trace[layer]), np.amin(keras_trace[layer]))
+          max_x = max(np.amax(hls4ml_trace[layer]), np.amax(keras_trace[layer]))
+          plot_2d(
+              hls4ml_trace[layer].flatten(),
+              keras_trace[layer].flatten(),
+              (min_x, max_x),
+              (min_x, max_x),
+              "hls4ml {}".format(layer),
+              "Tensorflow  {}".format(layer),
+              layer + " agreement",
+          )
+          plt.plot([min_x, max_x], [min_x, max_x], c="gray")
+          plt.savefig(f"{outputdir}/profile_2d_{layer}.png", bbox_inches='tight')
+          plt.savefig(f"{outputdir}/profile_2d_{layer}.pdf", bbox_inches='tight')
+          plt.close()
 
     return
 
@@ -241,17 +258,19 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', default='data/jetTuple_extended_5.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
     parser.add_argument('-p', '--doplots', default=False, help='Run profiling plots ')
+    parser.add_argument('-d', '--data', default='training_data_baseline', help='What data to use for profiling ')
     parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
 
     args = parser.parse_args()
 
     model = fromFolder(args.model_path)
-
+    data_dir = args.data
     if args.remake:
         make_data(infile=args.input, outdir="profiling_data/", extras='extra_emulation_fields', tree="outnano/Jets")
-
+        data_dir = "profiling_data/"
+    
     if args.doplots:
-        doPlots(model, args.outpath, "profiling_data/")
+        doPlots(model, args.outpath, data_dir)
 
     report = getReports(args.outpath_firmware + '/' + model.firmware_config['project_name'])
 

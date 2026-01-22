@@ -728,7 +728,7 @@ def get_branch_inputs(output_tensor):
 
 
 def plot_shaply(model, test_dict, class_labels, plot_dir):
-    njets = 1000
+    njets = 100
     input_layers_class = get_branch_inputs(model.jet_model.output[0])
     input_layers_reg = get_branch_inputs(model.jet_model.output[1])
     layer_order_class = [layer.name for layer in input_layers_class]
@@ -749,7 +749,7 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
             feature_names = model.input_vars + model.inputs['custom_features']
         else:
             shap_values = shap_values_basic
-            feature_names = input_vars
+            feature_names = model.input_vars
         print("... shap summary_plot classification")
         plt.clf()
         labels = list(class_labels.keys())
@@ -769,7 +769,7 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
             feature_names = model.input_vars + model.inputs['custom_features']
         else:
             shap_values = shap_values_basic
-            feature_names = input_vars
+            feature_names = model.input_vars
         print("... shap summary_plot regression")
         plt.clf()
         labels = ["Regression"]
@@ -985,6 +985,9 @@ def basic(model, signal_dirs):
     y_pred = model_outputs[0]
     pt_ratio = model_outputs[1][:, 0]
 
+    # Plot SHAP values
+    plot_shaply(model, test_dict, model.class_labels, plot_dir)
+
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
     class_pairs = []
@@ -1052,7 +1055,5 @@ def basic(model, signal_dirs):
 
     # Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
-
-    plot_shaply(model, test_dict, model.class_labels, plot_dir)
 
     return ROC_dict

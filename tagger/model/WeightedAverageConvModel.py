@@ -190,11 +190,11 @@ class WeightedAverageConvModel(DeepSetModel):
         # Create default config
         config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
         config['IOType'] = 'io_parallel'
-        config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['masking_input']['Precision']['result'] = self.firmware_config['mask_precision']
-        config['LayerName']['pt_mask_input']['Precision']['result'] = self.firmware_config['mask_precision']
-        config['LayerName']['pt_input']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['inverse_jet_pt_input']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['basic_mask']['Precision']['result'] = self.firmware_config['mask_precision']
+        config['LayerName']['pt_mask']['Precision']['result'] = self.firmware_config['mask_precision']
+        config['LayerName']['constituent_pt']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['inverse_jet_pt']['Precision']['result'] = self.firmware_config['input_precision']
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor

@@ -4,6 +4,7 @@ from tagger.model.DeepSetMaskingModel import DeepSetMaskingModel
 from tagger.model.WeightedAverageModel import WeightedAverageModel
 from tagger.model.WeightedAverageAggregateModel import WeightedAverageAggregateModel
 from tagger.model.WeightedAverageOffsetModel import WeightedAverageOffsetModel
+from tagger.model.WeightedAverageOffsetDependModel import WeightedAverageOffsetDependModel
 from tagger.model.WeightedAverageConvModel import WeightedAverageConvModel
 from tagger.model.WeightedAverageConvOffsetModel import WeightedAverageConvOffsetModel
 from tagger.model.DoubleAggregateModel import DoubleAggregateModel

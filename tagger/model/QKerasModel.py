@@ -5,6 +5,7 @@ Written 29/09/2025 cebrown@cern.ch
 
 import json
 import os
+import re
 
 import hls4ml
 import numpy as np
@@ -170,7 +171,11 @@ class QKerasModel(JetTagModel):
         if len(self.inputs['custom_features']) > 0:
             jet_features = np.empty((raw_inputs['basic_input'].shape[0], len(self.inputs['custom_features'])))
             for i, k in enumerate(self.inputs['custom_features']):
-                jet_features[:, i] = raw_inputs[k]
+                if 'log' in k:
+                    k_raw = re.sub(r'_?log_?', '_', k).strip('_')
+                    jet_features[:, i] = np.log(raw_inputs[k_raw])
+                else:
+                    jet_features[:, i] = raw_inputs[k]
             input_dict['jet_features'] = jet_features
 
         input_shapes = {k: v.shape[1:] for k, v in input_dict.items()}

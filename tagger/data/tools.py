@@ -314,10 +314,11 @@ def to_ML(data, class_labels):
     y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
-    reco_pt = np.asarray(data['jet_pt_phys'])
-    reco_eta = np.asarray(data['jet_eta_phys'])
+    jet_pt_phys = np.asarray(data['jet_pt_phys'])
+    jet_pt_hw = np.asarray(data['jet_pt'])
+    jet_eta_hw = np.asarray(data['jet_eta'])
 
-    return X, y, pt_target, truth_pt, reco_pt, reco_eta
+    return X, y, pt_target, truth_pt, jet_pt_phys, jet_pt_hw, jet_eta_hw
 
 
 def constituents_mask(x, features_dim):

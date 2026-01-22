@@ -12,14 +12,15 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt, reco_eta):
+def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt, jet_pt_hw, jet_eta_hw):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
     np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt)
-    np.save(os.path.join(out_dir, "testing_data/reco_eta_test.npy"), reco_eta)
+    np.save(os.path.join(out_dir, "testing_data/reco_pt_hw_test.npy"), jet_pt_hw)
+    np.save(os.path.join(out_dir, "testing_data/reco_eta_test.npy"), jet_eta_hw)
 
     print(f"Test labels saved to {out_dir}")
 
@@ -132,31 +133,25 @@ def train(model, out_dir, percent):
     )
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, reco_eta_train = to_ML(data_train, class_labels)
-
-    mask = constituents_mask(X_train, 10)
-    pt_mask = mask[:, :, 0]
-    constituents_pt = X_train[:, :, 0]
-    inverse_jet_pt = (1.0 / (reco_pt_train + 1e-6)).reshape(-1, 1)
-    jet_features = np.stack((reco_pt_train, reco_eta_train), axis=1)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, jet_pt_hw_train, jet_eta_hw_train = to_ML(data_train, class_labels)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test, reco_eta_test = to_ML(data_test, class_labels)
+    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test = to_ML(data_test, class_labels)
 
     # collect all possible train and test inputs
     raw_inputs_train = {
         'basic_input': X_train,
-        'jet_pt': reco_pt_train,
-        'jet_eta': reco_eta_train,
+        'jet_pt': jet_pt_hw_train,
+        'jet_eta': jet_eta_hw_train,
     }
 
     raw_inputs_test = {
         'basic_input': X_test,
-        'jet_pt': reco_pt_test,
-        'jet_eta': reco_eta_test,
+        'jet_pt': jet_pt_hw_test,
+        'jet_eta': jet_eta_hw_test,
     }
     test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys
-    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test, reco_eta_test)
+    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test)
 
     # Calculate the sample weights for training
     sample_weight_class = train_weights(

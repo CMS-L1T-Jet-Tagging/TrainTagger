@@ -43,17 +43,15 @@ def doPlots(model, outputdir, inputdir):
     modelsAndNames = {"model": model}
 
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, jet_pt, jet_eta = to_ML(data, class_labels)  # Last thing was reconstructed pt
-    jet_pt_phys = np.array(data['jet_pt_phys'])
-    jet_eta_phys = np.array(data['jet_eta_phys'])
+    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_pt_hw, jet_eta_hw = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
     model.firmware_convert("temp", build=False)
 
     raw_inputs_dict = {
         "basic_inputs": np.ascontiguousarray(X_test),
-        "jet_pt": np.ascontiguousarray(jet_pt),
-        "jet_eta": np.ascontiguousarray(jet_eta),
+        "jet_pt": np.ascontiguousarray(jet_pt_hw),
+        "jet_eta": np.ascontiguousarray(jet_eta_hw),
     }
 
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(model.prepare_inputs(raw_inputs_dict))

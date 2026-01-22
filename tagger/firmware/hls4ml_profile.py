@@ -52,13 +52,19 @@ def doPlots(model, outputdir, inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)
+    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_pt_hw, jet_eta_hw = to_ML(data, class_labels)
 
     labels = list(class_labels.keys())
 
+    raw_inputs_dict = {
+        "basic_inputs": np.ascontiguousarray(X_test),
+        "jet_pt": np.ascontiguousarray(jet_pt_hw),
+        "jet_eta": np.ascontiguousarray(jet_eta_hw),
+    }
+
     model.firmware_convert("temp", build=False)
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict(np.ascontiguousarray(X_test))
-    y_class, y_ptreg = model.jet_model.predict(np.ascontiguousarray(X_test))
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict(model.prepare_inputs(raw_inputs_dict))
+    y_class, y_ptreg = model.jet_model.predict(model.prepare_inputs(raw_inputs_dict))
 
     for i, label in enumerate(labels):
         plt.clf()

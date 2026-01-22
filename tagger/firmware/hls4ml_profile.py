@@ -170,13 +170,10 @@ def doPlots(model, outputdir, inputdir, trace=False):
     model.firmware_convert("temp", build=False)
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(np.ascontiguousarray(X_test))
     y_class, y_ptreg = model.jet_model.predict(np.ascontiguousarray(X_test))
-    
-    bit_accurate = np.count_nonzero(
-        (y_ptreg_hls - y_ptreg)
-    )
+
     print(
         "MSE between keras and hls4ml for regression is",
-        sklearn.metrics.mean_squared_error(y_ptreg,y_ptreg_hls)
+        sklearn.metrics.mean_absolute_error(y_ptreg[:, 0],y_ptreg_hls[:, 0])
     )
     
 
@@ -189,7 +186,7 @@ def doPlots(model, outputdir, inputdir, trace=False):
             np.array(y_hls[:, i]),
             (min_x, max_x),
             (min_x, max_x),
-            "Tensorflow",
+            "Keras",
             "hls4ml",
             style.CLASS_LABEL_STYLE[label] + " score",
         )
@@ -198,7 +195,7 @@ def doPlots(model, outputdir, inputdir, trace=False):
         
         print(
             "MSE between keras and hls4ml for " + label + " classification is",
-            sklearn.metrics.mean_squared_error(np.array(y_class[:, i]),np.array(y_hls[:, i]))
+            sklearn.metrics.mean_absolute_error(np.array(y_class[:, i]),np.array(y_hls[:, i]))
         )
 
     plt.clf()
@@ -207,7 +204,7 @@ def doPlots(model, outputdir, inputdir, trace=False):
         y_ptreg_hls[:, 0],
         (min(np.amin(y_ptreg_hls), np.amin(y_ptreg)), max(np.amax(y_ptreg_hls), np.amax(y_ptreg))),
         (min(np.amin(y_ptreg_hls), np.amin(y_ptreg)), max(np.amax(y_ptreg_hls), np.amax(y_ptreg))),
-        "Tensorflow",
+        "Keras",
         "hls4ml",
         "Regression score",
     )
@@ -236,7 +233,7 @@ def doPlots(model, outputdir, inputdir, trace=False):
               (min_x, max_x),
               (min_x, max_x),
               "hls4ml {}".format(layer),
-              "Tensorflow  {}".format(layer),
+              "Keras  {}".format(layer),
               layer + " agreement",
           )
           plt.plot([min_x, max_x], [min_x, max_x], c="gray")

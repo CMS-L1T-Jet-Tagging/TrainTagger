@@ -28,13 +28,6 @@ training_config :
 
   target_ebops : 300000
 
-
-  EarlyStopping_patience : 10
-
-  ReduceLROnPlateau_factor : 0.5
-  ReduceLROnPlateau_patience : 5
-  ReduceLROnPlateau_min_lr : 0.00005
-
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'

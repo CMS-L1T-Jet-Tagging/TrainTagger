@@ -212,7 +212,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [k8s-eos]
+  tags: [cern-nextgen-highmem]
   needs: [synth,train]
   dependencies: [synth,train]
   rules:
@@ -222,24 +222,6 @@ profile:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
   - tar -xf signal_process_data.tgz
   - python tagger/firmware/hls4ml_profile.py -p True -d signal_process_data/TT_PU200  -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 1 day
-
-
-reports:
-  extends:
-    - .template
-  stage: reports
-  tags: [k8s-eos]
-  needs: [train,synth]
-  dependencies: [train,synth]
-  rules:
-    - if: ($RUN_SYNTHESIS == "True")
-  script:
-  - source activate tagger
-  - python tagger/firmware/hls4ml_profile.py -m output/$Model -of output/$Model/firmware 
   artifacts:
     paths:
       - output/$Model

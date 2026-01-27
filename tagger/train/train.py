@@ -142,12 +142,14 @@ def train(model, out_dir, percent):
     raw_inputs_train = {
         'basic_input': X_train,
         'jet_pt': jet_pt_hw_train,
+        'jet_pt_log': np.log(jet_pt_hw_train),
         'jet_eta': jet_eta_hw_train,
     }
 
     raw_inputs_test = {
         'basic_input': X_test,
         'jet_pt': jet_pt_hw_test,
+        'jet_pt_log': np.log(jet_pt_hw_test),
         'jet_eta': jet_eta_hw_test,
     }
     test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys

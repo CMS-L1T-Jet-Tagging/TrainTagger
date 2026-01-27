@@ -332,7 +332,7 @@ def constituents_mask(x, features_dim):
 
     # Step 3: broadcast to features
     mask = tf.broadcast_to(mask, (mask.shape[0], mask.shape[1], features_dim))  # still fixed shape
-    return mask
+    return mask.numpy()
 
 
 def load_data(outdir, percentage, test_ratio=0.1, fields=None):

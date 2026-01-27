@@ -44,17 +44,10 @@ binning_dict = {
     'emid': [-0.1, 1.1, 5],
 }
 
-def get_pt_weights(model, jet_nn_inputs, jet_pt, jet_eta, layer_name):
+def get_pt_weights(model, layer_name):
     pt_weights_model = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer(layer_name).output)
 
-    #Get the pt weights from the model
-    raw_inputs = {
-        'basic_input': jet_nn_inputs,
-        'jet_pt': jet_pt,
-        'jet_eta': jet_eta,
-        }
-
-    pt_weights = pt_weights_model.predict(model.prepare_inputs(raw_inputs)[0])
+    pt_weights = pt_weights_model.predict(inputs)
 
     return pt_weights
 
@@ -152,9 +145,9 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
 def pt_weights_plotting(model, inputs, layer_name, plot_path):
 
     # Unpack inputs
-    X_test, y_test, reco_pt_test, reco_eta_test = inputs
+    X_test = inputs['basic_input']
     pt_correction_type = layer_name.split("_")[1] # 'weights' or 'offsets'
-    pt_weights = get_pt_weights(model, X_test, reco_pt_test, reco_eta_test, layer_name)
+    pt_weights = get_pt_weights(model, inputs, layer_name)
 
     plot_path = os.path.join(plot_path, f"pt_weights")
     os.makedirs(plot_path, exist_ok=True)
@@ -209,6 +202,12 @@ if __name__ == "__main__":
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
     reco_eta_test = np.load(f"{model.output_directory}/testing_data/reco_eta_test.npy")
     jet_features = np.stack((reco_pt_test, reco_eta_test), axis=1)
+
+    test_dict = np.load(f"{model.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
+    test_dict = {k: test_dict[k] for k in test_dict.files}
+    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
+    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
+    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
     inputs = (X_test, y_test, reco_pt_test, reco_eta_test)
 

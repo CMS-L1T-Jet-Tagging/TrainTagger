@@ -43,6 +43,7 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta, apply_light, class_label
     btag_inputs = [{
         'basic_input': np.asarray(basic_inputs[:, i]),
         'jet_pt': np.asarray(jet_pt[:, i]),
+        'jet_pt_log': np.log(np.asarray(jet_pt[:, i])),
         'jet_eta': np.asarray(jet_eta[:, i]),
         }
         for i in range(0, n_jets)]

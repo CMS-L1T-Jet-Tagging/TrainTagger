@@ -158,6 +158,7 @@ def nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, class_labels, n_jets=4)
     btag_inputs = [{
         'basic_input': np.asarray(basic_inputs[:, i]),
         'jet_pt': np.asarray(jet_pt[:, i]),
+        'jet_pt_log': np.asarray(np.log(jet_pt[:, i] + 1e-3)),
         'jet_eta': np.asarray(jet_eta[:, i]),
         }
         for i in range(0, n_jets)]

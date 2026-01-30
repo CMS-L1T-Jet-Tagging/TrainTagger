@@ -44,7 +44,7 @@ binning_dict = {
     'emid': [-0.1, 1.1, 5],
 }
 
-def get_pt_weights(model, layer_name):
+def get_pt_weights(model, inputs, layer_name):
     pt_weights_model = Model(inputs=model.jet_model.input, outputs=model.jet_model.get_layer(layer_name).output)
 
     pt_weights = pt_weights_model.predict(inputs)
@@ -197,26 +197,18 @@ if __name__ == "__main__":
     model = model = fromFolder(args.model_dir)
 
     # Load testing data
-    X_test = np.load(f"{model.output_directory}/testing_data/X_test.npy")
-    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
-    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-    reco_eta_test = np.load(f"{model.output_directory}/testing_data/reco_eta_test.npy")
-    jet_features = np.stack((reco_pt_test, reco_eta_test), axis=1)
-
     test_dict = np.load(f"{model.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
     test_dict = {k: test_dict[k] for k in test_dict.files}
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
 
-    inputs = (X_test, y_test, reco_pt_test, reco_eta_test)
-
     output_dir = os.path.join(model.output_directory, "plots/training")
 
     # Plot pt weights
-    pt_weights_plotting(model, inputs, 'pt_weights_output', output_dir)
+    pt_weights_plotting(model, test_dict, 'pt_weights_output', output_dir)
     try:
-        pt_weights_plotting(model, inputs, 'pt_offsets_output', output_dir)
+        pt_weights_plotting(model, test_dict, 'pt_offsets_output', output_dir)
     except:
         print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
 

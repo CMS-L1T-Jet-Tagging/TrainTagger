@@ -180,6 +180,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
         raw_inputs_dict = {
             'basic_input': selected_jet_inputs,
             'jet_pt': jet_pts[cuts],
+            'jet_pt_log': np.log(jet_pts[cuts]),
             'jet_eta': jet_etas[cuts],
         }
         pred_scores, pt_ratios = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
@@ -257,6 +258,7 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
     raw_inputs_dict = {
         'basic_input': selected_eta_inputs,
         'jet_pt': selected_jet_pt,
+        'jet_pt_log': np.log(selected_jet_pt),
         'jet_eta': selected_jet_eta,
     }
     pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
@@ -391,6 +393,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     raw_inputs_dict = {
         'basic_input': nn_inputs,
         'jet_pt': l1_pt_raw,
+        'jet_pt_log': np.log(l1_pt_raw),
         'jet_eta': l1_eta_raw,
     }
     pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])

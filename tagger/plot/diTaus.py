@@ -141,12 +141,14 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     raw_inputs1_dict = {
         'basic_input': input1,
         'jet_pt': pt1_uncorrected,
+        'jet_pt_log': np.log(pt1_uncorrected),
         'jet_eta': eta1_cuts,
     }
 
     raw_inputs2_dict = {
         'basic_input': input2,
         'jet_pt': pt2_uncorrected,
+        'jet_pt_log': np.log(pt2_uncorrected),
         'jet_eta': eta2_cuts,
     }
     #Get the NN predictions
@@ -222,6 +224,7 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
     raw_inputs_dict = {
         'basic_input': selected_nn_inputs,
         'jet_pt': selected_jet_pt,
+        'jet_pt_log': np.log(selected_jet_pt),
         'jet_eta': selected_jet_eta,
     }
     pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
@@ -362,6 +365,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     raw_inputs_dict = {
         'basic_input': nn_inputs,
         'jet_pt': l1_pt_raw,
+        'jet_pt_log': np.log(l1_pt_raw),
         'jet_eta': l1_eta_raw,
     }
     pred_score, ratio = model.predict([model.prepare_inputs(raw_inputs_dict)[0]])

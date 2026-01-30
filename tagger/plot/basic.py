@@ -1013,6 +1013,7 @@ def basic(model, signal_dirs):
             sample_raw_inputs = {
                 'basic_input': sample_data,
                 'jet_pt': sample_reco_pt,
+                'jet_pt_log': np.log(sample_reco_pt),
                 'jet_eta': sample_reco_eta,
             }
             sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]

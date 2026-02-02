@@ -2,6 +2,7 @@
 from tagger.model.DeepSetModel import DeepSetModel
 from tagger.model.DeepSetMaskingModel import DeepSetMaskingModel
 from tagger.model.WeightedAverageModel import WeightedAverageModel
+from tagger.model.WeightedAverageSimpleModel import WeightedAverageSimpleModel
 from tagger.model.WeightedAverageAggregateModel import WeightedAverageAggregateModel
 from tagger.model.WeightedAverageOffsetModel import WeightedAverageOffsetModel
 from tagger.model.WeightedAverageOffsetDependModel import WeightedAverageOffsetDependModel

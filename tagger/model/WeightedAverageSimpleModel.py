@@ -21,9 +21,9 @@ from tagger.model.DeepSetModel import DeepSetModel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
-@JetModelFactory.register('WeightedAverageModel')
-class WeightedAverageModel(DeepSetModel):
-    """WeightedAverageModel class
+@JetModelFactory.register('WeightedAverageSimpleModel')
+class WeightedAverageSimpleModel(DeepSetModel):
+    """WeightedAverageSimpleModel class
 
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
@@ -74,8 +74,6 @@ class WeightedAverageModel(DeepSetModel):
 
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
-        mask = tf.keras.layers.Input(shape=inputs_shape['basic_mask'], name='basic_mask')
-        pt_mask = tf.keras.layers.Input(shape=inputs_shape['pt_mask'], name='pt_mask')
         pt = tf.keras.layers.Input(shape=inputs_shape['constituent_pt'], name='constituent_pt')
         inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape['inverse_jet_pt'], name='inverse_jet_pt')
         jet_features = tf.keras.layers.Input(shape=inputs_shape['jet_features'], name='jet_features')
@@ -92,14 +90,10 @@ class WeightedAverageModel(DeepSetModel):
             )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
-        # Apply the constituents mask
-        main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
-
         # Make the pT weights and corrections
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 3), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
-        pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
 
         # Weighted Global Average Pooling
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
@@ -142,7 +136,7 @@ class WeightedAverageModel(DeepSetModel):
         pt_output = tf.keras.layers.Multiply(name='pT_output')([corrected_jet_pt, inverse_jet_pt])
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, mask, pt_mask, pt, inverse_jet_pt, jet_features], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, pt, inverse_jet_pt, jet_features], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
@@ -195,8 +189,6 @@ class WeightedAverageModel(DeepSetModel):
         config['IOType'] = 'io_parallel'
         print("Default hls4ml config created:", config)
         config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['basic_mask']['Precision']['result'] = self.firmware_config['mask_precision']
-        config['LayerName']['pt_mask']['Precision']['result'] = self.firmware_config['mask_precision']
         config['LayerName']['constituent_pt']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['inverse_jet_pt']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['jet_features']['Precision']['result'] = self.firmware_config['input_precision']

@@ -30,7 +30,7 @@ class QKerasModel(JetTagModel):
         JetTagModel (_type_): Base class of a JetTagModel
     """
 
-    quantization_schema = {'quantizer_bits' : And(int, lambda s: 32 >= s >= 0),
+    quantization_schema = {'quantizer_bits' : And(int, lambda s: 64 >= s >= 0),
                            'quantizer_bits_int' : And(int, lambda s: 32 >= s >= 0),
                            'quantizer_alpha_val' : And(float, lambda s: 1.0 >= s >= 0.0),
                            'pt_output_quantization' : list}
@@ -164,7 +164,7 @@ class QKerasModel(JetTagModel):
             'inverse_jet_pt': 1 / raw_inputs['jet_pt'].reshape(-1, 1),
         }
 
-        for key in input_dict.keys():
+        for key in list(input_dict.keys()):
             if key not in self.inputs['basic_features']:
                 del input_dict[key]
 

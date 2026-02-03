@@ -161,6 +161,7 @@ class QKerasModel(JetTagModel):
             'basic_mask': constituents_mask(raw_inputs['basic_input'], 10),
             'pt_mask': constituents_mask(raw_inputs['basic_input'], 10)[:, :, 0],
             'constituent_pt': raw_inputs['basic_input'][:, :, 0],
+            'constituent_fraction': raw_inputs['basic_input'][:, :, 0] / np.sum(raw_inputs['basic_input'][:, :, 0], axis=-1, keepdims=True),
             'inverse_jet_pt': 1 / raw_inputs['jet_pt'].reshape(-1, 1),
         }
 

@@ -156,7 +156,7 @@ class DoubleAggregateModel(DeepSetModel):
 
     def fit(
         self,
-        X_train: tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
+        X_train: dict,
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
@@ -171,11 +171,8 @@ class DoubleAggregateModel(DeepSetModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        # Train the model using hyperparameters in yaml config
-        inputs, mask, pt_mask, pt, inverse_jet_pt, jet_features = X_train
         self.history = self.jet_model.fit(
-            {'model_input': inputs, 'masking_input': mask, 'pt_mask_input': pt_mask, 'pt_input': pt,
-            'inverse_jet_pt_input': inverse_jet_pt, 'jet_features_input': jet_features},
+            X_train,
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
                 'prune_low_magnitude_jet_id_output': sample_weight[0],

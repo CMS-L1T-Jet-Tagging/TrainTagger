@@ -74,8 +74,7 @@ class WeightedAverageSimpleModel(DeepSetModel):
 
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
-        pt = tf.keras.layers.Input(shape=inputs_shape['constituent_pt'], name='constituent_pt')
-        inverse_jet_pt = tf.keras.layers.Input(shape=inputs_shape['inverse_jet_pt'], name='inverse_jet_pt')
+        pt = tf.keras.layers.Input(shape=inputs_shape['constituent_fraction'], name='constituent_fraction')
         jet_features = tf.keras.layers.Input(shape=inputs_shape['jet_features'], name='jet_features')
 
         # Main branch
@@ -127,16 +126,14 @@ class WeightedAverageSimpleModel(DeepSetModel):
             name='pt_weights_output')(pt_weights)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
-        corrected_jet_pt = QDense(1, name='weighted_pt',
+        pt_output = QDense(1, name='pT_output',
             kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
             use_bias = False,
             trainable=False,
             **self.pt_args)(weighted_pt) # fix weights at 1 to perform sum, not updated during training
 
-        pt_output = tf.keras.layers.Multiply(name='pT_output')([corrected_jet_pt, inverse_jet_pt])
-
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, pt, inverse_jet_pt, jet_features], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, pt, jet_features], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
@@ -189,8 +186,7 @@ class WeightedAverageSimpleModel(DeepSetModel):
         config['IOType'] = 'io_parallel'
         print("Default hls4ml config created:", config)
         config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['constituent_pt']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['inverse_jet_pt']['Precision']['result'] = self.firmware_config['input_precision']
+        config['LayerName']['constituent_fraction']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['jet_features']['Precision']['result'] = self.firmware_config['input_precision']
         print('mask precision:', self.firmware_config['mask_precision'])
         print("Updated input precisions in hls4ml config:", config)

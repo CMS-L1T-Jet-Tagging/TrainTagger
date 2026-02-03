@@ -1,4 +1,3 @@
-
 model: TransformerEmbeddingModel
 run_config :
   verbose : 2
@@ -18,7 +17,7 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  embedding_epochs : 40
+  embedding_epochs : 10
   finetuning_epochs : 100
   batch_size : 1024
   learning_rate : 0.01
@@ -26,10 +25,9 @@ training_config :
 
   validation_split : 0.1
   loss_weights : [1,1]
-
-  EarlyStopping_patience : 10
+  EarlyStopping_patience : 20
   ReduceLROnPlateau_factor : 0.5
-  ReduceLROnPlateau_patience : 5
+  ReduceLROnPlateau_patience : 10
   ReduceLROnPlateau_min_lr : 0.00001
 
 firmware_config:

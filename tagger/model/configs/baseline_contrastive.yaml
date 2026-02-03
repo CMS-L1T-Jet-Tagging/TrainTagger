@@ -20,8 +20,8 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  embedding_epochs : 40
-  finetuning_epochs : 100
+  embedding_epochs : 50
+  finetuning_epochs : 200
   batch_size : 1024
   learning_rate : 0.01
   embeddding_lr : 0.01

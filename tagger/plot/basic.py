@@ -18,6 +18,7 @@ import histbook
 import numpy as np
 import shap
 from sklearn.metrics import auc, roc_curve
+from sklearn.manifold import TSNE
 
 from tagger.data.tools import load_data, to_ML
 from tagger.plot import style

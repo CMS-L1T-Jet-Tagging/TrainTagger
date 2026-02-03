@@ -535,8 +535,9 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
         sample_weight = sample_weight.astype("float32")
 
         # Freeze layers 
+        fine_tune_layers = ['Dense_1_jetID', 'Dense_2_jetID', 'q_dense','Dense_1_pT', 'jet_id_output','pT_output']
         for i, layer in enumerate(self.jet_model.layers):
-            if i in [0,1,2,3,4]:
+            if layer.name not in fine_tune_layers:
                 print(layer.name)
                 self.jet_model.get_layer(layer.name).trainable = False
         

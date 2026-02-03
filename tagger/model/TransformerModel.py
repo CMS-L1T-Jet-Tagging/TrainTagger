@@ -255,18 +255,18 @@ class TransformerEmbeddingModel(TransformerModel):
 
         # Define some common arguments, taken from the yaml config
         common_args = {
-            'kernel_initializer': self.model_config['kernel_initializer'],
+            #'kernel_initializer': self.model_config['kernel_initializer'],
         }
 
         # Initialize inputs
-        inputs = keras.layers.Input(shape=inputs_shape, name='model_input')
+        inputs = tf.keras.layers.Input(shape=inputs_shape, name='model_input')
 
         # Main branch
         main = BatchNormalization(name='norm_input')(inputs)
 
         # Embedding
         for i, nodes in enumerate(self.model_config['emb_layers']):
-            main = Dense(nodes, activation='relu', name='emb_'+str(i+1), **common_args)(main)
+            main = Dense(nodes, activation=tf.keras.activations.relu, name='emb_'+str(i+1), **common_args)(main)
 
         # Transformer blocks
         for i, (num_heads, mha_hidden_dim, num_dense_layers, dim_dense_layers) in enumerate(self.model_config['transformer_layers']):
@@ -275,41 +275,41 @@ class TransformerEmbeddingModel(TransformerModel):
             main = LayerNormalization()(mha+main)
             for j in range(num_dense_layers):
                 if j == 0:
-                    feedforward = Dense(dim_dense_layers, activation='relu', name='dense_'+str(i+1)+'_'+str(j+1), **common_args)(main)
+                    feedforward = Dense(dim_dense_layers, activation=tf.keras.activations.relu, name='dense_'+str(i+1)+'_'+str(j+1), **common_args)(main)
                 else:
-                    feedforward = Dense(dim_dense_layers, activation='relu', name='dense_'+str(i+1)+'_'+str(j+1), **common_args)(feedforward)
+                    feedforward = Dense(dim_dense_layers, activation=tf.keras.activations.relu, name='dense_'+str(i+1)+'_'+str(j+1), **common_args)(feedforward)
             # Layer norm and residual connection
             main = LayerNormalization()(main+feedforward)
 
         # Global average pooling
         main = GlobalAveragePooling1D(data_format='channels_last',name="pool")(main)
-        self.backbone_model = keras.Model(inputs=inputs, outputs=main)
+        self.backbone_model = tf.keras.Model(inputs=inputs, outputs=main)
 
         # Now split into jet ID and pt regression
 
         # Make fully connected dense layers for classification task
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             if iclass == 0:
-                jet_id = Dense(depthclass, activation='relu', name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(main)
+                jet_id = Dense(depthclass, activation=tf.keras.activations.relu, name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(main)
             else:
-                jet_id = Dense(depthclass, activation='relu', name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(jet_id)
+                jet_id = Dense(depthclass, activation=tf.keras.activations.relu, name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(jet_id)
 
         # Make output layer for classification task
-        jet_id = Dense(outputs_shape[0], activation='softmax', name='jet_id_output', **common_args)(jet_id)
+        jet_id = Dense(outputs_shape[0], activation=tf.keras.activations.softmax, name='jet_id_output', **common_args)(jet_id)
 
         # Make fully connected dense layers for pt regression task
         for ireg, depthreg in enumerate(self.model_config['regression_layers']):
             if ireg == 0:
-                pt_regress = Dense(depthreg, activation='relu', name='Dense_' + str(ireg + 1) + '_pT', **common_args)(main)
+                pt_regress = Dense(depthreg, activation=tf.keras.activations.relu, name='Dense_' + str(ireg + 1) + '_pT', **common_args)(main)
             else:
-                pt_regress = Dense(depthreg, activation='relu', name='Dense_' + str(ireg + 1) + '_pT', **common_args)(pt_regress)
+                pt_regress = Dense(depthreg, activation=tf.keras.activations.relu, name='Dense_' + str(ireg + 1) + '_pT', **common_args)(pt_regress)
 
         pt_regress = Dense(1, name='pT_output',kernel_initializer='lecun_uniform')(pt_regress)
 
 
         self.create_encoder(inputs_shape,self.model_config['projection_dims'])
                 
-        self.jet_model = keras.Model(inputs, [jet_id,pt_regress])
+        self.jet_model = tf.keras.Model(inputs, [jet_id,pt_regress])
                 
         print(self.embedding_model.summary())
         
@@ -317,17 +317,18 @@ class TransformerEmbeddingModel(TransformerModel):
         
     def create_encoder(self,inputs_shape, projection_dim):
 
-        inputs = keras.Input(inputs_shape)
+        inputs = tf.keras.Input(inputs_shape)
+        #inputs = tf.keras.Input(shape=(28, 28, 1))
         features = self.backbone_model(inputs)
 
         # Projection head, the z's remember?
-        outputs = keras.Sequential([
+        outputs = tf.keras.Sequential([
             Dense(10, activation='relu'),
             Dense(projection_dim)
         ])(features)
         # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
         outputs = L2NormalizeLayer()(outputs)
-        self.embedding_model = keras.Model(inputs, outputs)
+        self.embedding_model = tf.keras.Model(inputs, outputs)
 
     def compile_model(self, num_samples: int):
         """compile the model generating callbacks and loss function
@@ -346,14 +347,14 @@ class TransformerEmbeddingModel(TransformerModel):
         ]
 
         
-        self.constrastive_optimizer = keras.optimizers.Adam()
-        self.embedding_model.optimizer = self.constrastive_optimizer  
+        self.fine_tuning_optimizer = tf.keras.optimizers.Adam(lr=self.training_config['learning_rate'])
+        self.embedding_model.optimizer = tf.keras.optimizers.Adam(lr=self.training_config['embeddding_lr'])
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
-            optimizer='adam',
+            optimizer=self.fine_tuning_optimizer,
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
-                self.loss_name + self.output_pt_name: keras.losses.Huber(),
+                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],
             metrics={
@@ -399,7 +400,7 @@ class TransformerEmbeddingModel(TransformerModel):
 
         optimizer = self.constrastive_optimizer
         embedding_model = self.embedding_model
-        callbacks = keras.callbacks.CallbackList(self.callbacks, add_history=True, model=embedding_model)
+        callbacks = tf.keras.callbacks.CallbackList(self.callbacks, add_history=True, model=embedding_model)
         logs = {}
         callbacks.on_train_begin(logs=logs)
 
@@ -436,10 +437,15 @@ class TransformerEmbeddingModel(TransformerModel):
 
         # --- Finetuning (jet model) training ---
 
-        # Freeze layers 
+        print(self.jet_model.get_layer('Dense_1_jetID').get_weights())
+        
+        #Freeze layers 
+        fine_tune_layers = ['Dense_1_jetID', 'Dense_2_jetID', 'Dense_1_pT', 'jet_id_output','pT_output']
         for i, layer in enumerate(self.jet_model.layers):
-            if i in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]:
+            if layer.name not in fine_tune_layers:
+                print(layer.name)
                 self.jet_model.get_layer(layer.name).trainable = False
+        
         
         keras.config.disable_traceback_filtering()
         sample_weight_dict = {
@@ -458,4 +464,9 @@ class TransformerEmbeddingModel(TransformerModel):
             shuffle=True,
         )
         
+        print(self.jet_model.get_layer('Dense_1_jetID').get_weights())
+        
         self.history = history.history
+
+        
+        

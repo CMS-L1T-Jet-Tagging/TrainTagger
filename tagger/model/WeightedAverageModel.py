@@ -131,6 +131,8 @@ class WeightedAverageModel(DeepSetModel):
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 3),
             name='pt_weights_output')(pt_weights)
+        print('PRECISION', self.quantization_config['quantizer_bits'])
+        print(self.pt_args)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
         corrected_jet_pt = QDense(1, name='weighted_pt',

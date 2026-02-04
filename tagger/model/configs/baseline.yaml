@@ -23,7 +23,7 @@ inputs:
   custom_features: [] # will later be concatenated into one jet features input
 
 training_config :
-  weight_method: "onlyclass"
+  weight_method: "ptref"
   epochs : 100
   batch_size : 1024
   learning_rate : 0.001
@@ -44,8 +44,8 @@ training_config :
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
-  mask_precision: 'ap_ufixed<1,1>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
+  mask_precision: 'ap_ufixed<1,1>'
 
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'

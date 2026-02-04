@@ -124,6 +124,8 @@ class WeightedAverageSimpleModel(DeepSetModel):
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 3),
             name='pt_weights_output')(pt_weights)
+        print('PRECISION', self.quantization_config['quantizer_bits'])
+        print(self.pt_args)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
         pt_output = QDense(1, name='pT_output',
@@ -188,26 +190,24 @@ class WeightedAverageSimpleModel(DeepSetModel):
         config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['constituent_fraction']['Precision']['result'] = self.firmware_config['input_precision']
         config['LayerName']['jet_features']['Precision']['result'] = self.firmware_config['input_precision']
-        print('mask precision:', self.firmware_config['mask_precision'])
-        print("Updated input precisions in hls4ml config:", config)
+
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor
         config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
         config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
+        self.firmware_config['constituent_fraction'] = 'ap_ufixed<12,1,AP_RND,AP_SAT>'
+
         # Additional config
         for layer in self.jet_model.layers:
             layer_name = layer.__class__.__name__
 
             if layer_name in ["BatchNormalization", "InputLayer"]:
-                if 'mask' in layer.name:
-                    config["LayerName"][layer.name]["Precision"] = self.firmware_config['mask_precision']
-                    config["LayerName"][layer.name]["result"] = self.firmware_config['mask_precision']
-                else:
-                    config["LayerName"][layer.name]["Precision"] = self.firmware_config['input_precision']
-                    config["LayerName"][layer.name]["result"] = self.firmware_config['input_precision']
-                    config["LayerName"][layer.name]["Trace"] = not build
+                precision = self.firmware_config[layer.name] if layer.name in self.firmware_config.keys() else self.firmware_config['input_precision']
+                config["LayerName"][layer.name]["Precision"] = precision
+                config["LayerName"][layer.name]["result"] = precision
+                config["LayerName"][layer.name]["Trace"] = not build
 
             elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:
                 print("Skipping trace for:", layer.name)
@@ -218,6 +218,8 @@ class WeightedAverageSimpleModel(DeepSetModel):
         config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
         config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
+
+        print("Default hls4ml config created:", config)
 
         # Write HLS
         self.hls_jet_model = hls4ml.converters.convert_from_keras_model(

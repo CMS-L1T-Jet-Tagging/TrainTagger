@@ -66,9 +66,7 @@ def doPlots(model, outputdir, inputdir):
         "jet_pt_log": np.ascontiguousarray(np.log(jet_pt_hw)),
         "jet_eta": np.ascontiguousarray(jet_eta_hw),
     }
-    print(jet_pt_hw)
 
-    from IPython import embed; embed()
     model_dict, _ = model.prepare_inputs(raw_inputs_dict)
     model_dict = {k: np.ascontiguousarray(v, dtype=np.float64) for k, v in model_dict.items()}
     model_dict = replace_dict_entries(zero_entries=[],
@@ -77,9 +75,9 @@ def doPlots(model, outputdir, inputdir):
                                       input_dict=model_dict)
     hls_model_input_list = [i for i in model_dict.values()]
     hls_model_input = [np.ascontiguousarray(i, dtype=np.float64) for i in hls_model_input_list]
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_model_input[0])
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_model_input)
     y_class, y_ptreg = model.jet_model.predict(model_dict)
-    print(y_hls)
+    from IPython import embed; embed()
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg
@@ -90,7 +88,6 @@ def doPlots(model, outputdir, inputdir):
     print('cmssw to keras:', np.max(abs(cmssw_preds - y_class), axis=1), np.max(abs(cmssw_preds - y_class)))
     print('cmssw to hls:', np.max(abs(cmssw_preds - y_quant_hls), axis=1), np.max(abs(cmssw_preds - y_quant_hls)))
     print('hls to keras:', np.max(abs(y_quant_hls - y_class), axis=1), np.max(abs(y_quant_hls - y_class)))
-    from IPython import embed; embed()
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):

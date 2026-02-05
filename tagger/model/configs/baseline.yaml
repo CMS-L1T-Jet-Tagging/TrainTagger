@@ -42,7 +42,7 @@ training_config :
   ReduceLROnPlateau_min_lr : 0.00001
 
 firmware_config:
-  input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
+  input_precision: {'basic_input': 'ap_fixed<24,12,AP_RND,AP_SAT>'}
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
   mask_precision: 'ap_ufixed<1,1>'

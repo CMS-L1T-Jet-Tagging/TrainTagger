@@ -194,8 +194,8 @@ class WeightedAverageSimpleModel(DeepSetModel):
 
         # Configuration for conv1d layers
         # hls4ml automatically figures out the paralellization factor
-        config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-        config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
+        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
+        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
         self.firmware_config['constituent_fraction'] = 'ap_ufixed<12,1,AP_RND,AP_SAT>'
 
@@ -215,7 +215,7 @@ class WeightedAverageSimpleModel(DeepSetModel):
                 config["LayerName"][layer.name]["Trace"] = not build
 
         config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-        config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
+        config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
         config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
 

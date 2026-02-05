@@ -45,7 +45,7 @@ class DeepSetModel(QKerasModel):
                 "quantization_config" : QKerasModel.quantization_schema,
                 "training_config" : QKerasModel.training_config_schema,
                 ## generic hls4ml configuration
-                "firmware_config" : {"input_precision" : str,
+                "firmware_config" : {"input_precision" : dict,
                                     "class_precision" : str,
                                     "mask_precision" : str,
                                     "reg_precision": str,
@@ -176,8 +176,8 @@ class DeepSetModel(QKerasModel):
 
         # Configuration for conv1d layers
         # hls4ml does not !!! automatically figure out the paralellization factor, this leads to csim, hdl sim errors
-        config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
-        config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
+        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
+        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
 
         # Additional config
         for layer in self.jet_model.layers:
@@ -194,7 +194,7 @@ class DeepSetModel(QKerasModel):
                 config["LayerName"][layer.name]["Trace"] = not build
 
         config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-        config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
+        config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
         config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
 

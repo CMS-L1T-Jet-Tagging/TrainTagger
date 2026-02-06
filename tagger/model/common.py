@@ -34,6 +34,32 @@ def cosine_decay_restarts(global_step,initial_learning_rate, max_epochs):
             ) * 1 ** max(n_cycle - 1, 0)
     return lr
 
+
+def fromDict(config_dict: dict, folder: str, recreate: bool = True) -> JetTagModel:
+    """Create a model directly from a dictionary 
+
+    Args:
+        config dict (dict): Config dictionary
+        folder (str): Output saving folder for model
+        recreate (bool, optional): Rewrite the output directory?. Defaults to True.
+
+    Returns:
+        JetTagModel: The model
+    """
+
+    # Create a model based on what is specified in the yaml 'model' field
+    # Model must be registered for this to function
+    model = JetModelFactory.create_JetTagModel(config_dict['model'], folder, config_dict)
+
+    if recreate:
+        # Remove output dir if exists
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+            print(f"Re-created existing directory: {folder}.")
+            # Create dir to save results
+        os.makedirs(folder)
+    return model
+
 def fromYaml(yaml_path: str, folder: str, recreate: bool = True) -> JetTagModel:
     """Create a model directly from a yaml input file
 
@@ -51,7 +77,7 @@ def fromYaml(yaml_path: str, folder: str, recreate: bool = True) -> JetTagModel:
 
     # Create a model based on what is specified in the yaml 'model' field
     # Model must be registered for this to function
-    model = JetModelFactory.create_JetTagModel(yaml_dict['model'], folder)
+    model = JetModelFactory.create_JetTagModel(yaml_dict['model'], folder, yaml_dict)
     # Validate yaml dict before loading
     model.schema.validate(yaml_dict)
     model.load_yaml(yaml_path)

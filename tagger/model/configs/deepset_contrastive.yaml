@@ -1,19 +1,17 @@
-model: DeepSetHGQ2EmbeddingModel
+model: FloatingDeepSetEmbeddingModel
 run_config :
   verbose : 2
   debug : True
-  num_threads : 24
+  num_threads : 46
 
 model_config :
-  name : baseline_HGQ2
+  name : baseline
   conv1d_layers : [10,10]
-  conv1d_parallelisation_factor : [16,16]
   classification_layers : [32,16]
-  classification_parallelisation_factor : [32,16]
   regression_layers : [10]
-  projection_dims : 8
-  regression_parallelisation_factor : [10]
-  projection_blocks : 5
+  kernel_initializer : 'lecun_uniform'
+  aggregator : 'mean'
+  projection_dims: 10
 
 quantization_config:
   pt_output_quantization : [16,6]
@@ -22,19 +20,18 @@ training_config :
   weight_method: "onlyclass"
   embedding_epochs : 40
   finetuning_epochs : 200
-  batch_size : 1024
-  learning_rate : 0.011585881732365359
-  embedding_lr : 0.02224002777017712
-  masking_probability : 0.19352447006728993
-  loss_temperature :  0.4911345114327149
-
+  batch_size : 2048
+  learning_rate : 0.01
+  embedding_lr : 0.01
   validation_split : 0.1
-  loss_weights : [1,4]
-  EarlyStopping_patience : 20
-  ReduceLROnPlateau_factor : 0.5
-  ReduceLROnPlateau_patience : 10
-  ReduceLROnPlateau_min_lr : 0.00001
 
+  loss_weights : [1,1]
+
+  EarlyStopping_patience : 10
+
+  ReduceLROnPlateau_factor : 0.5
+  ReduceLROnPlateau_patience : 5
+  ReduceLROnPlateau_min_lr : 0.00001
 
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
@@ -44,6 +41,4 @@ firmware_config:
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 
-  project_name: 'L1TSC4NGJetModel'
-
-
+  project_name: 'L1TSC4NGJetModel_test'

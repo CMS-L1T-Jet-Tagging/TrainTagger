@@ -11,14 +11,17 @@ import numpy as np
 import numpy.typing as npt
 from schema import Schema, And, Use, Optional
 
-from tagger.model.common_tensorflow import initialise_tensorflow
+from tagger.model.common_tensorflow import *
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+from tagger.model.common import cosine_decay_restarts
 
 import keras
 from keras.models import load_model
-from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D,AveragePooling1D, Dense, Conv1D, Flatten
+from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D,AveragePooling1D, Dense, Conv1D, Flatten, ReLU
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
+
+import tensorflow as tf
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('FloatingDeepSetModel')
 class FloatingDeepSetModel(JetTagModel):
@@ -92,8 +95,9 @@ class FloatingDeepSetModel(JetTagModel):
             main = Conv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_' + str(iconv1d + 1), activation='relu',**self.common_args)(main)
 
         # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-        main = AveragePooling1D(L,name='avgpool')(main)
-        main = Flatten()(main)
+        #main = AveragePooling1D(L,name='pool')(main)
+        main = GlobalAveragePooling1D(data_format='channels_last',name="pool")(main)
+        #main = Flatten()(main)
 
         #Now split into jet ID and pt regression
         
@@ -317,7 +321,7 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
                                      "finetuning_epochs" : And(int, lambda s: s >= 1),
                                      "batch_size" : And(int, lambda s: s >= 1),
                                      "learning_rate" : And(float, lambda s: s > 0.0),
-                                     "embeddding_lr" : And(float, lambda s: s > 0.0),
+                                     "embedding_lr" : And(float, lambda s: s > 0.0),
                                      "loss_weights" : And(list, lambda s: len(s) == 2),
                                      "EarlyStopping_patience" : And(int, lambda s: s > 0),
                                      "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
@@ -364,21 +368,25 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
             main = Conv1D(filters=depthconv1d, kernel_size=1, name='Conv1D_' + str(iconv1d + 1), activation='relu',**self.common_args)(main)
 
         # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
-        main = AveragePooling1D(L,name='avgpool')(main)
-        main = Flatten()(main)
+        #main = AveragePooling1D(L,name='avgpool')(main)
+        #main = Flatten()(main)
+        
+        main = GlobalAveragePooling1D(data_format='channels_last',name="pool")(main)
+
         
         self.backbone_model = keras.Model(inputs=inputs, outputs=main)
 
+        initializer = self.model_config['kernel_initializer']#keras.initializers.RandomNormal(mean=0.0, stddev=0.001)
         #Now split into jet ID and pt regression
-        
+        bn_main = BatchNormalization(name='norm_embedding')(main)
         # Make fully connected dense layers for classification task
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             if iclass == 0:
-                jet_id = Dense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', **self.common_args)(main)
+                jet_id = Dense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', kernel_initializer=initializer)(bn_main)
             else:
-                jet_id = Dense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', activation='relu', **self.common_args)(jet_id)
+                jet_id = Dense(depthclass, name='Dense_' + str(iclass + 1) + '_jetID', activation='relu', kernel_initializer=initializer)(jet_id)
 
-        jet_id = Dense(outputs_shape[0], name='Dense_3_jetID',activation='linear',kernel_initializer='lecun_uniform')(jet_id)
+        jet_id = Dense(outputs_shape[0], name='Dense_3_jetID',activation='linear',kernel_initializer=initializer)(jet_id)
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
         #pT regression branch
@@ -386,12 +394,12 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         # Make fully connected dense layers for pt regression task
         for ireg, depthreg in enumerate(self.model_config['regression_layers']):
             if ireg == 0:
-                pt_regress = Dense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', **self.common_args)(main)
+                pt_regress = Dense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', kernel_initializer=initializer)(bn_main)
             else:
-                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', activation='relu',**self.common_args)(pt_regress)
+                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', activation='relu',kernel_initializer=initializer)(pt_regress)
 
         pt_regress = Dense(1, name='pT_output',
-                            kernel_initializer='lecun_uniform')(pt_regress)
+                            kernel_initializer=initializer)(pt_regress)
 
         #Define the model using both branches
         self.create_encoder(inputs_shape,self.model_config['projection_dims'])
@@ -402,20 +410,31 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         
         print(self.jet_model.summary())
         
-    def create_encoder(self,inputs_shape, projection_dim):
+    def create_encoder(self,inputs_shape, projection_dim,projection_blocks=4):
 
-        inputs = tf.keras.Input(inputs_shape)
+        inputs  = keras.Input(inputs_shape)
         #inputs = tf.keras.Input(shape=(28, 28, 1))
         features = self.backbone_model(inputs)
 
         # Projection head, the z's remember?
-        outputs = tf.keras.Sequential([
-            Dense(10, activation='relu'),
-            Dense(projection_dim)
+        outputs = keras.Sequential([
+            Dense(projection_dim,activation='linear'),
+            BatchNormalization(),
+            ReLU(),
+            Dense(projection_dim,activation='linear'),
+            BatchNormalization(),
+            ReLU(),
+            Dense(projection_dim,activation='linear'),
+            BatchNormalization(),
+            ReLU(),
+            Dense(projection_dim,activation='linear'),
+            BatchNormalization(),
+            ReLU(),
         ])(features)
         # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
+        outputs = Dense(projection_dim, use_bias=False,activation='linear')(outputs)
         outputs = L2NormalizeLayer()(outputs)
-        self.embedding_model = tf.keras.Model(inputs, outputs)
+        self.embedding_model = keras.Model(inputs, outputs)
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
         """Run the hls4ml model conversion
@@ -488,6 +507,19 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         """
 
         # Define the callbacks using hyperparameters in the config
+
+        steps = self.training_config['embedding_epochs'] * (num_samples // self.training_config['batch_size'])
+        scheduler = keras.optimizers.schedules.CosineDecay(
+            initial_learning_rate=self.training_config['embedding_lr'], decay_steps=steps
+        )
+
+        # Create an early stopping callback.
+        early_stopping = keras.callbacks.EarlyStopping(
+            monitor="loss", patience=5, restore_best_weights=True
+        )
+        
+        self.embedding_callbacks = [early_stopping]
+        
         self.fine_tune_callbacks = [
             EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
             ReduceLROnPlateau(
@@ -498,8 +530,8 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
             ),
         ]
         
-        self.fine_tuning_optimizer= tf.keras.optimizers.Adam(lr=self.training_config['learning_rate'])
-        self.embedding_model.optimizer = tf.keras.optimizers.Adam(lr=self.training_config['embedding_lr']) 
+        self.fine_tuning_optimizer = tf.keras.optimizers.Adam(learning_rate=self.training_config['learning_rate'])
+        self.constrastive_optimizer = tf.keras.optimizers.Adam(scheduler)
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
@@ -522,11 +554,11 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
     def fit(
         self,
         X_train: npt.NDArray[np.float64],
-        y_train: npt.NDArray[np.float64],
+        Y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: npt.NDArray[np.float64],
     ):
-        """Fit the model to the training dataset
+        """Fit the model to the training dataset (embedding + finetune, optimized for speed)
 
         Args:
             X_train (npt.NDArray[np.float64]): X train dataset
@@ -534,26 +566,97 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
             pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
+        
+        
+        # Ensure backbone and embedding model are built
+        input_shape = X_train.shape[1:]
+        output_shape = (Y_train.shape[-1],) if len(Y_train.shape) > 1 else (1,)
+        if self.backbone_model is None or self.jet_model is None:
+            self.build_model(input_shape, output_shape)
+        # --- Embedding (SimCLR) training (FAST) ---
+        x_train = X_train[..., tf.newaxis].astype("float32")
+        y_train = Y_train[..., tf.newaxis].astype("float32")
+        augment = SimCLRPreprocessing()
+        train_ds = (
+            tf.data.Dataset.from_tensor_slices((x_train,y_train,sample_weight))
+            .shuffle(self.training_config['batch_size'])
+            .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
+            .batch(self.training_config['batch_size'])
+            .prefetch(tf.data.AUTOTUNE)
+        )
+
+        optimizer = self.constrastive_optimizer
+        embedding_model = self.embedding_model
+        self.embedding_model.optimizer = optimizer
+        self.embedding_model.loss = SimCLRLoss()
+        callbacks = keras.callbacks.CallbackList(self.embedding_callbacks, add_history=True, model=embedding_model)
+        logs = {}
+        callbacks.on_train_begin(logs=logs)
+
+        @tf.function
+        def train_step(x1, x2, y, w):
+            # Record operations for automatic differentiation
+            with tf.GradientTape() as tape:
+                # Forward pass: compute embeddings for both augmented views
+                z1 = self.embedding_model(x1, training=True)
+                z2 = self.embedding_model(x2, training=True)
+                zs = tf.stack([z1,z2])
+                # Compute SimCLR contrastive loss between the two views
+                loss = self.embedding_model.loss(features=zs,labels=y,weights=w)
+            # Compute gradients of loss w.r.t. model trainable weights
+            grads = tape.gradient(loss, self.embedding_model.trainable_weights)
+            # Apply gradients to update model weights using optimizer
+            optimizer.apply_gradients(zip(grads, self.embedding_model.trainable_weights))
+            # Return the computed loss for logging
+            return loss
+
+        for epoch in range(self.training_config['embedding_epochs']):
+            callbacks.on_epoch_begin(epoch, logs=logs)
+            losses = []
+            ibatch = 0
+            for x1, x2, y, w in train_ds:
+                ibatch += 1
+                callbacks.on_train_batch_begin(ibatch, logs=logs)
+                loss = train_step(x1, x2, y, w)
+                losses.append(loss.numpy())
+                callbacks.on_train_batch_end(ibatch, logs=logs)
+            logs['loss'] = np.mean(losses)
+            print(f"Epoch {epoch+1}: Loss = {logs['loss']:.4f}")
+            callbacks.on_epoch_end(epoch, logs=logs)
+        callbacks.on_train_end(logs=logs)
+
+        # --- Finetuning (jet model) training ---
+        
+        print(self.jet_model.get_layer('Dense_1_jetID').get_weights())
+        
+        #Freeze layers 
+        fine_tune_layers = ['norm_embedding','Dense_1_jetID', 'Dense_2_jetID', 'Dense_3_jetID','Dense_1_pT', 'jet_id_output','pT_output']
+        for i, layer in enumerate(self.jet_model.layers):
+            if layer.name not in fine_tune_layers:
+                print(layer.name)
+                self.jet_model.get_layer(layer.name).trainable = False
+        
+        
         keras.config.disable_traceback_filtering()
         sample_weight_dict = {
                             "jet_id_output": sample_weight,
                             "pT_output": sample_weight,
         }
-        # Train the model using hyperparameters in yaml config
         history = self.jet_model.fit(
             {'model_input': X_train},
-            [y_train,pt_target_train],
+            [Y_train,pt_target_train],
             sample_weight = [sample_weight, sample_weight],
-            epochs=self.training_config['epochs'],
+            epochs=self.training_config['finetuning_epochs'],
             batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],
             validation_split=self.training_config['validation_split'],
-            callbacks=self.callbacks,
+            callbacks=self.fine_tune_callbacks,
             shuffle=True,
         )
         
+        print(self.jet_model.get_layer('Dense_1_jetID').get_weights())
+        
         self.history = history.history
-
 
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator

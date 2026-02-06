@@ -62,14 +62,24 @@ class JetTagModel(ABC):
         """
 
         with open(yaml_path, 'r') as stream:
-            self.yaml_dict = yaml.safe_load(stream)
+            yaml_dict = yaml.safe_load(stream)
+            
+        self.load_config(yaml_dict)
+            
+    def load_config(self, config_dict: dict):
+        """Load config dictionaries
 
-        self.run_config = self.yaml_dict['run_config']
-        self.model_config = self.yaml_dict['model_config']
-        self.quantization_config = self.yaml_dict['quantization_config']
-        self.training_config = self.yaml_dict['training_config']
-        if "firmware_config" in self.yaml_dict:
-            self.firmware_config = self.yaml_dict['firmware_config']
+        Args:
+            config_dict (dict): The config
+        """
+
+        self.run_config = config_dict['run_config']
+        self.model_config = config_dict['model_config']
+        if "quantization_config" in config_dict:
+            self.quantization_config = config_dict['quantization_config']
+        self.training_config = config_dict['training_config']
+        if "firmware_config" in config_dict:
+            self.firmware_config = config_dict['firmware_config']
 
     @abstractmethod
     def build_model(self, **kwargs):
@@ -217,10 +227,11 @@ class JetModelFactory:
         return inner_wrapper
 
     @classmethod
-    def create_JetTagModel(cls, name: str, folder: str, **kwargs) -> 'JetTagModel':
+    def create_JetTagModel(cls, name: str, folder: str, config: dict, **kwargs) -> 'JetTagModel':
         """Factory command to create the Jet Tag Model"""
 
         jettag_class = cls.registry[name]
         model = jettag_class(folder, **kwargs)
+        model.load_config(config)
 
         return model

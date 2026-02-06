@@ -12,9 +12,10 @@ from schema import Schema, And, Use, Optional
 
 import keras
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from keras.layers import GlobalAveragePooling1D, BatchNormalization, LayerNormalization, MultiHeadAttention, Dense
+from keras.layers import GlobalAveragePooling1D, BatchNormalization, LayerNormalization, MultiHeadAttention, Dense,ReLU
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+from tagger.model.common import cosine_decay_restarts
 
 import tensorflow as tf
 from tagger.model.common_tensorflow import *
@@ -60,7 +61,7 @@ class TransformerModel(JetTagModel):
             inputs_shape (tuple): Shape of the input
             outputs_shape (tuple): Shape of the output
         """
-
+        initialise_tensorflow(self.run_config['num_threads'])
         # Define some common arguments, taken from the yaml config
         common_args = {
             'kernel_initializer': self.model_config['kernel_initializer'],
@@ -221,7 +222,8 @@ class TransformerEmbeddingModel(TransformerModel):
                                   "classification_layers" : list,
                                   "regression_layers" : list,
                                   "kernel_initializer" : str,
-                                  "projection_dims" : And(int, lambda s: s >= 1),},
+                                  "projection_dims" : And(int, lambda s: s >= 1),
+                                  "projection_blocks" : And(int, lambda s: s >= 1) },
                 "quantization_config" : None,
                 "training_config" : {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                      "validation_split" : And(float, lambda s: s > 0.0),
@@ -229,8 +231,10 @@ class TransformerEmbeddingModel(TransformerModel):
                                      "finetuning_epochs" : And(int, lambda s: s >= 1),
                                      "batch_size" : And(int, lambda s: s >= 1),
                                      "learning_rate" : And(float, lambda s: s > 0.0),
-                                     "embeddding_lr" : And(float, lambda s: s > 0.0),
+                                     "embedding_lr" : And(float, lambda s: s > 0.0),
                                      "loss_weights" : And(list, lambda s: len(s) == 2),
+                                     "loss_temperature" : And(float, lambda s: s > 0.0),
+                                     "masking_probability" : And(float, lambda s: 1.0 >= s >= 0.0),
                                      "EarlyStopping_patience" : And(int, lambda s: s > 0),
                                      "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
                                      "ReduceLROnPlateau_patience" : int,
@@ -244,6 +248,9 @@ class TransformerEmbeddingModel(TransformerModel):
         self.backbone_model = None
         self.embedding_model = None
         
+        gpus = tf.config.list_physical_devices('GPU')
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
@@ -255,7 +262,7 @@ class TransformerEmbeddingModel(TransformerModel):
 
         # Define some common arguments, taken from the yaml config
         common_args = {
-            #'kernel_initializer': self.model_config['kernel_initializer'],
+            'kernel_initializer': self.model_config['kernel_initializer'],
         }
 
         # Initialize inputs
@@ -286,11 +293,11 @@ class TransformerEmbeddingModel(TransformerModel):
         self.backbone_model = tf.keras.Model(inputs=inputs, outputs=main)
 
         # Now split into jet ID and pt regression
-
+        bn_main = BatchNormalization(name='norm_embedding')(main)
         # Make fully connected dense layers for classification task
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             if iclass == 0:
-                jet_id = Dense(depthclass, activation=tf.keras.activations.relu, name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(main)
+                jet_id = Dense(depthclass, activation=tf.keras.activations.relu, name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(bn_main)
             else:
                 jet_id = Dense(depthclass, activation=tf.keras.activations.relu, name='Dense_' + str(iclass + 1) + '_jetID', **common_args)(jet_id)
 
@@ -300,7 +307,7 @@ class TransformerEmbeddingModel(TransformerModel):
         # Make fully connected dense layers for pt regression task
         for ireg, depthreg in enumerate(self.model_config['regression_layers']):
             if ireg == 0:
-                pt_regress = Dense(depthreg, activation=tf.keras.activations.relu, name='Dense_' + str(ireg + 1) + '_pT', **common_args)(main)
+                pt_regress = Dense(depthreg, activation=tf.keras.activations.relu, name='Dense_' + str(ireg + 1) + '_pT', **common_args)(bn_main)
             else:
                 pt_regress = Dense(depthreg, activation=tf.keras.activations.relu, name='Dense_' + str(ireg + 1) + '_pT', **common_args)(pt_regress)
 
@@ -322,11 +329,14 @@ class TransformerEmbeddingModel(TransformerModel):
         features = self.backbone_model(inputs)
 
         # Projection head, the z's remember?
-        outputs = tf.keras.Sequential([
-            Dense(10, activation='relu'),
-            Dense(projection_dim)
-        ])(features)
+        layer_list = []
+        for i in range(self.model_config['projection_blocks']):
+            layer_list.append(Dense(projection_dim,activation='linear'))
+            layer_list.append(BatchNormalization())
+            layer_list.append(ReLU())
+        outputs = keras.Sequential(layer_list)(features)
         # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
+        outputs = Dense(projection_dim, use_bias=False,activation='linear')(outputs)
         outputs = L2NormalizeLayer()(outputs)
         self.embedding_model = tf.keras.Model(inputs, outputs)
 
@@ -336,6 +346,19 @@ class TransformerEmbeddingModel(TransformerModel):
             num_samples (int): Number of samples in the training set used for scheduling
         """
         # Define the callbacks using hyperparameters in the config
+
+        steps = self.training_config['embedding_epochs'] * (num_samples // self.training_config['batch_size'])
+        scheduler = keras.optimizers.schedules.CosineDecay(
+            initial_learning_rate=self.training_config['embedding_lr'], decay_steps=steps
+        )
+
+        # Create an early stopping callback.
+        early_stopping = keras.callbacks.EarlyStopping(
+            monitor="loss", patience=5, restore_best_weights=True
+        )
+        
+        self.embedding_callbacks = [early_stopping]
+        
         self.fine_tune_callbacks = [
             EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
             ReduceLROnPlateau(
@@ -345,10 +368,9 @@ class TransformerEmbeddingModel(TransformerModel):
                 min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
             ),
         ]
-
         
-        self.fine_tuning_optimizer = tf.keras.optimizers.Adam(lr=self.training_config['learning_rate'])
-        self.embedding_model.optimizer = tf.keras.optimizers.Adam(lr=self.training_config['embeddding_lr'])
+        self.fine_tuning_optimizer = tf.keras.optimizers.Adam(learning_rate=self.training_config['learning_rate'])
+        self.constrastive_optimizer = tf.keras.optimizers.Adam(scheduler)
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
             optimizer=self.fine_tuning_optimizer,
@@ -370,7 +392,7 @@ class TransformerEmbeddingModel(TransformerModel):
     def fit(
         self,
         X_train: npt.NDArray[np.float64],
-        y_train: npt.NDArray[np.float64],
+        Y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: npt.NDArray[np.float64],
     ):
@@ -384,14 +406,15 @@ class TransformerEmbeddingModel(TransformerModel):
         """
         # Ensure backbone and embedding model are built
         input_shape = X_train.shape[1:]
-        output_shape = (y_train.shape[-1],) if len(y_train.shape) > 1 else (1,)
+        output_shape = (Y_train.shape[-1],) if len(Y_train.shape) > 1 else (1,)
         if self.backbone_model is None or self.jet_model is None:
             self.build_model(input_shape, output_shape)
         # --- Embedding (SimCLR) training (FAST) ---
         x_train = X_train[..., tf.newaxis].astype("float32")
-        augment = SimCLRPreprocessing()
+        y_train = Y_train[..., tf.newaxis].astype("float32")
+        augment = SimCLRPreprocessing(self.training_config['masking_probability'])
         train_ds = (
-            tf.data.Dataset.from_tensor_slices(x_train)
+            tf.data.Dataset.from_tensor_slices((x_train,y_train,sample_weight))
             .shuffle(self.training_config['batch_size'])
             .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
             .batch(self.training_config['batch_size'])
@@ -399,20 +422,23 @@ class TransformerEmbeddingModel(TransformerModel):
         )
 
         optimizer = self.constrastive_optimizer
-        embedding_model = self.embedding_model
-        callbacks = tf.keras.callbacks.CallbackList(self.callbacks, add_history=True, model=embedding_model)
+        self.embedding_model.optimizer = optimizer
+        self.embedding_model.loss = SimCLRLoss(self.training_config['loss_temperature'])
+        callbacks = tf.keras.callbacks.CallbackList(self.embedding_callbacks, add_history=True, model=self.embedding_model)
         logs = {}
         callbacks.on_train_begin(logs=logs)
 
         @tf.function
-        def train_step(x1, x2):
+        def train_step(x1, x2, y, w):
             # Record operations for automatic differentiation
             with tf.GradientTape() as tape:
                 # Forward pass: compute embeddings for both augmented views
                 z1 = self.embedding_model(x1, training=True)
                 z2 = self.embedding_model(x2, training=True)
                 # Compute SimCLR contrastive loss between the two views
-                loss = contrastive_loss(z1, z2)
+                zs = tf.stack([z1,z2])
+                # Compute SimCLR contrastive loss between the two views
+                loss = self.embedding_model.loss(features=zs,labels=y,weights=w)
             # Compute gradients of loss w.r.t. model trainable weights
             grads = tape.gradient(loss, self.embedding_model.trainable_weights)
             # Apply gradients to update model weights using optimizer
@@ -424,10 +450,10 @@ class TransformerEmbeddingModel(TransformerModel):
             callbacks.on_epoch_begin(epoch, logs=logs)
             losses = []
             ibatch = 0
-            for x1, x2 in train_ds:
+            for x1, x2,y, w in train_ds:
                 ibatch += 1
                 callbacks.on_train_batch_begin(ibatch, logs=logs)
-                loss = train_step(x1, x2)
+                loss = train_step(x1, x2, y, w)
                 losses.append(loss.numpy())
                 callbacks.on_train_batch_end(ibatch, logs=logs)
             logs['loss'] = np.mean(losses)
@@ -436,11 +462,9 @@ class TransformerEmbeddingModel(TransformerModel):
         callbacks.on_train_end(logs=logs)
 
         # --- Finetuning (jet model) training ---
-
-        print(self.jet_model.get_layer('Dense_1_jetID').get_weights())
         
         #Freeze layers 
-        fine_tune_layers = ['Dense_1_jetID', 'Dense_2_jetID', 'Dense_1_pT', 'jet_id_output','pT_output']
+        fine_tune_layers = ['norm_embedding','Dense_1_jetID', 'Dense_2_jetID','Dense_3_jetID', 'Dense_1_pT', 'jet_id_output','pT_output']
         for i, layer in enumerate(self.jet_model.layers):
             if layer.name not in fine_tune_layers:
                 print(layer.name)
@@ -454,19 +478,14 @@ class TransformerEmbeddingModel(TransformerModel):
         }
         history = self.jet_model.fit(
             {'model_input': X_train},
-            [y_train,pt_target_train],
+            [Y_train,pt_target_train],
             sample_weight = [sample_weight, sample_weight],
             epochs=self.training_config['finetuning_epochs'],
             batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],
             validation_split=self.training_config['validation_split'],
-            callbacks=self.callbacks + self.fine_tune_callbacks,
+            callbacks=self.fine_tune_callbacks,
             shuffle=True,
         )
         
-        print(self.jet_model.get_layer('Dense_1_jetID').get_weights())
-        
         self.history = history.history
-
-        
-        

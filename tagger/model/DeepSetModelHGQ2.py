@@ -6,7 +6,7 @@ import scipy
 import keras
 import numpy as np
 import numpy.typing as npt
-from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten
+from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten, Dense, ReLU
 from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
@@ -290,7 +290,8 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
                                   "classification_parallelisation_factor" : list,
                                   "regression_layers" : list,
                                   "regression_parallelisation_factor" : list,
-                                  "projection_dims": And(int, lambda s: s >= 1)},
+                                  "projection_dims": And(int, lambda s: s >= 1),
+                                  "projection_blocks" : And(int, lambda s: s >= 1) },
                 "quantization_config" : {'pt_output_quantization' : list},
                 "training_config" : {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                      "validation_split" : And(float, lambda s: s > 0.0),
@@ -298,8 +299,14 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
                                      "finetuning_epochs" : And(int, lambda s: s >= 1),
                                      "batch_size" : And(int, lambda s: s >= 1),
                                      "learning_rate" : And(float, lambda s: s > 0.0),
-                                     "embeddding_lr" : And(float, lambda s: s > 0.0),
-                                     "loss_weights" : And(list, lambda s: len(s) == 2)},
+                                     "embedding_lr" : And(float, lambda s: s > 0.0),
+                                     "loss_weights" : And(list, lambda s: len(s) == 2),
+                                     "loss_temperature" : And(float, lambda s: s > 0.0),
+                                     "masking_probability" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                     "EarlyStopping_patience" : And(int, lambda s: s > 0),
+                                     "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                     "ReduceLROnPlateau_patience" : int,
+                                     "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)},
                 ## generic hls4ml configuration
                 "firmware_config" : {"input_precision" : str,
                                     "class_precision" : str,
@@ -314,6 +321,7 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
         super().__init__(output_dir)
         self.backbone_model = None
         self.embedding_model = None
+        set_gpus()
         
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
@@ -330,9 +338,7 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
             regression_layers: List of number of nodes for each layer of the regression MLP
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
-        
         initialise_tensorflow(self.run_config['num_threads'])
-        
         scope0 = QuantizerConfigScope(default_q_type='kbi',
                                       b0=7,
                                       overflow_mode='wrap',
@@ -366,9 +372,11 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
                 self.backbone_model = keras.Model(inputs=inputs, outputs=main)
                 #jetID branch, 3 layer MLP
                 
+                bn_main = QBatchNormalization(name='embedding_input')(main)
+                
                 for iclass, depthclass in enumerate(self.model_config['classification_layers']):
                     if iclass == 0:
-                        jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(main)
+                        jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(bn_main)
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
@@ -376,7 +384,7 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
-                        pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(main)
+                        pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(bn_main)
                     else:
                         pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(pt_regress)      
                 pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
@@ -391,43 +399,40 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
         
     def create_encoder(self,inputs_shape, projection_dim):
 
-        inputs = keras.Input(inputs_shape)
+        inputs = tf.keras.Input(inputs_shape)
+        #inputs = tf.keras.Input(shape=(28, 28, 1))
         features = self.backbone_model(inputs)
 
         # Projection head, the z's remember?
-        outputs = keras.Sequential([
-            keras.layers.Dense(10, activation='linear'),
-            keras.layers.BatchNormalization(),
-            keras.layers.ReLU(),
-            keras.layers.Dense(10, activation='linear'),
-            keras.layers.BatchNormalization(),
-            keras.layers.ReLU(),
-            keras.layers.Dense(10, activation='linear'),
-            keras.layers.BatchNormalization(),
-            keras.layers.ReLU(),
-            keras.layers.Dense(projection_dim)
-        ])(features)
+        layer_list = []
+        for i in range(self.model_config['projection_blocks']):
+            layer_list.append(Dense(projection_dim,activation='linear'))
+            layer_list.append(BatchNormalization())
+            layer_list.append(ReLU())
+        outputs = keras.Sequential(layer_list)(features)
         # Normalize to unit vectors so dot product equals cosine similarity (required for contrastive loss)
+        outputs = Dense(projection_dim, use_bias=False,activation='linear')(outputs)
         outputs = L2NormalizeLayer()(outputs)
-        self.embedding_model = keras.Model(inputs, outputs)
+        self.embedding_model = tf.keras.Model(inputs, outputs)
         
     def compile_model(self, num_samples: int):
         """compile the model generating callbacks and loss function
         Args:
             num_samples (int): Number of samples in the training set used for scheduling
         """
-        scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch, 
-                                                                                                          initial_learning_rate=self.training_config['embeddding_lr'],
-                                                                                                          max_epochs=self.training_config['embedding_epochs']))
+        steps = self.training_config['embedding_epochs'] * (num_samples // self.training_config['batch_size'])
+        scheduler = keras.optimizers.schedules.CosineDecay(
+            initial_learning_rate=self.training_config['embedding_lr'], decay_steps=steps
+        )
 
         beta_scheduler = BetaScheduler(PieceWiseSchedule([(0, 0.2e-7, 'linear'), (self.training_config['embedding_epochs']/3, 3e-7, 'log'), (self.training_config['embedding_epochs'], 3e-6, 'constant')] ))
         # Define the callbacks using hyperparameters in the config
-        self.callbacks = [
-            FreeEBOPs(),
-            scheduler,
-            beta_scheduler
-        ]
         
+        early_stopping = keras.callbacks.EarlyStopping(
+            monitor="loss", patience=5, restore_best_weights=True
+        )
+        
+        self.embedding_callbacks = [early_stopping, FreeEBOPs(),beta_scheduler]
         ft_scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch, 
                                                                                                           initial_learning_rate=self.training_config['learning_rate'],
                                                                                                           max_epochs=self.training_config['finetuning_epochs']))
@@ -439,11 +444,11 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
             ft_beta_scheduler
         ]
         
-        self.constrastive_optimizer = tf.keras.optimizers.Adam()
-        self.embedding_model.optimizer = self.constrastive_optimizer  
+        self.fine_tuning_optimizer = tf.keras.optimizers.Adam(learning_rate=self.training_config['learning_rate'])
+        self.constrastive_optimizer = tf.keras.optimizers.Adam(scheduler)
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
-            optimizer='adam',
+            optimizer=self.fine_tuning_optimizer,
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
@@ -462,7 +467,7 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
     def fit(
         self,
         X_train: npt.NDArray[np.float64],
-        y_train: npt.NDArray[np.float64],
+        Y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: npt.NDArray[np.float64],
     ):
@@ -477,33 +482,39 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
         keras.config.disable_traceback_filtering()
         # Ensure backbone and embedding model are built
         input_shape = X_train.shape[1:]
-        output_shape = (y_train.shape[-1],) if len(y_train.shape) > 1 else (1,)
+        output_shape = (Y_train.shape[-1],) if len(Y_train.shape) > 1 else (1,)
         if self.backbone_model is None or self.jet_model is None:
             self.build_model(input_shape, output_shape)
         # --- Embedding (SimCLR) training (FAST) ---
         x_train = X_train[..., tf.newaxis].astype("float32")
-        augment = SimCLRPreprocessing()
+        y_train = Y_train[..., tf.newaxis].astype("float32")
+        augment = SimCLRPreprocessing(self.training_config['masking_probability'])
         train_ds = (
-            tf.data.Dataset.from_tensor_slices(x_train)
+            tf.data.Dataset.from_tensor_slices((x_train,y_train,sample_weight))
             .shuffle(self.training_config['batch_size'])
             .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
             .batch(self.training_config['batch_size'])
             .prefetch(tf.data.AUTOTUNE)
         )
 
-        callbacks = tf.keras.callbacks.CallbackList(self.callbacks, add_history=True, model=self.embedding_model)
-        logs = {'ebops':0}
+        optimizer = self.constrastive_optimizer
+        self.embedding_model.optimizer = optimizer
+        self.embedding_model.loss = SimCLRLoss(self.training_config['loss_temperature'])
+        print(self.embedding_model)
+        callbacks = tf.keras.callbacks.CallbackList(self.embedding_callbacks, add_history=True, model=self.embedding_model)
+        logs = {}
         callbacks.on_train_begin(logs=logs)
 
         @tf.function
-        def train_step(x1, x2):
+        def train_step(x1, x2, y, w):
             # Record operations for automatic differentiation
             with tf.GradientTape() as tape:
                 # Forward pass: compute embeddings for both augmented views
                 z1 = self.embedding_model(x1, training=True)
                 z2 = self.embedding_model(x2, training=True)
+                zs = tf.stack([z1,z2])
                 # Compute SimCLR contrastive loss between the two views
-                loss = contrastive_loss(z1, z2)
+                loss = self.embedding_model.loss(features=zs,labels=y,weights=w)
             # Compute gradients of loss w.r.t. model trainable weights
             grads = tape.gradient(loss, self.embedding_model.trainable_weights)
             # Apply gradients to update model weights using optimizer
@@ -515,16 +526,15 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
             callbacks.on_epoch_begin(epoch, logs=logs)
             losses = []
             ibatch = 0
-            for x1, x2 in train_ds:
+            for x1, x2,y, w in train_ds:
                 ibatch += 1
                 callbacks.on_train_batch_begin(ibatch, logs=logs)
-                loss = train_step(x1, x2)
+                loss = train_step(x1, x2, y, w)
                 losses.append(loss.numpy())
                 callbacks.on_train_batch_end(ibatch, logs=logs)
             logs['loss'] = np.mean(losses)
             callbacks.on_epoch_end(epoch, logs=logs)
-            print(self.callbacks)
-            print(f"Epoch {epoch+1}: Loss = {logs['loss']:.4f} : ebops = {logs['ebops']:.4f}")
+            print(f"Epoch {epoch+1}: Loss = {logs['loss']:.4f}")
         callbacks.on_train_end(logs=logs)
 
         # --- Finetuning (jet model) training ---
@@ -535,7 +545,7 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
         sample_weight = sample_weight.astype("float32")
 
         # Freeze layers 
-        fine_tune_layers = ['Dense_1_jetID', 'Dense_2_jetID', 'q_dense','Dense_1_pT', 'jet_id_output','pT_output']
+        fine_tune_layers = ['embedding_input','Dense_1_jetID', 'Dense_2_jetID', 'q_dense','Dense_1_pT', 'jet_id_output','pT_output']
         for i, layer in enumerate(self.jet_model.layers):
             if layer.name not in fine_tune_layers:
                 print(layer.name)
@@ -543,7 +553,7 @@ class DeepSetHGQ2EmbeddingModel(DeepSetModelHGQ2):
         
         history = self.jet_model.fit(
             {'model_input': X_train},
-            [y_train,pt_target_train],
+            [Y_train,pt_target_train],
             sample_weight=[sample_weight, sample_weight],
             epochs=self.training_config['finetuning_epochs'],
             batch_size=self.training_config['batch_size'],

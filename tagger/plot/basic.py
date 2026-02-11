@@ -9,7 +9,6 @@ import mplhep as hep
 
 # Third parties
 import pandas
-import tensorflow as tf
 from matplotlib.pyplot import cm
 from scipy.stats import norm
 
@@ -692,8 +691,8 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
 
     labels = list(class_labels.keys())
     try:
-        model2 = tf.keras.Model(model.jet_model.input, model.jet_model.output[0])
-        model3 = tf.keras.Model(model.jet_model.input, model.jet_model.output[1])
+        model2 = keras.Model(model.jet_model.input, model.jet_model.output[0])
+        model3 = keras.Model(model.jet_model.input, model.jet_model.output[1])
 
         for explainer, name in [
             (shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"),

@@ -39,6 +39,8 @@ Switching between keras layers and pytorch layers is reasonably broken, can only
 -> Not immediately clear if layers are pytorch or keras, leading to breaking due to different layer definitions
 Want a keras backed using tenorflow fit methods and callbacks, currently have to do manual pytorch training loops
 
+No softmax: activation_registry = {"relu": relu, "tanh": tanh, "hard_tanh": hard_tanh}
+Will fail without any reason why
 '''
 
 
@@ -58,6 +60,7 @@ def build_p_model(model_config, p_config,q_config, inputs_shape, outputs_shape):
             for i, depth in enumerate(model_config['conv1d_layers']):
                 conv_layers.append(PQConv1d(config=p_config, in_channels= in_channels,out_channels=depth, kernel_size=1))
                 conv_layers.append(PQActivation(p_config,'relu'))
+                in_channels = depth
             self.conv1d_layers = nn.Sequential(*conv_layers)
             
             # Average pooling (same as Keras AveragePooling1D)
@@ -69,15 +72,17 @@ def build_p_model(model_config, p_config,q_config, inputs_shape, outputs_shape):
             for i, depth in enumerate(model_config['classification_layers']):
                 class_layers.append(PQDense(p_config, in_features,depth))
                 class_layers.append(PQActivation(p_config,'relu'))
+                in_features = depth
             class_layers.append(PQDense(p_config, in_features,outputs_shape[0]))
-            class_layers.append(PQActivation(p_config,'softmax', quantize_output=True, out_quant_bits=(1, q_config['class_quantization'][0], q_config['class_quantization'][1] )))
             self.jet_id_head = nn.Sequential(*class_layers)
 
             # ---- pT Regression branch ----
             reg_layers = []
+            in_features = self.flatten_dim
             for i, depth in enumerate(model_config['regression_layers']):
                 reg_layers.append(PQDense(p_config, in_features,depth))
                 reg_layers.append(PQActivation(p_config,'relu'))
+                in_features = depth
             reg_layers.append(PQDense(p_config, in_features,1,quantize_output=True, out_quant_bits=(1, q_config['pt_output_quantization'][0], q_config['pt_output_quantization'][1] )))
             self.pt_head = nn.Sequential(*reg_layers)
             
@@ -91,7 +96,8 @@ def build_p_model(model_config, p_config,q_config, inputs_shape, outputs_shape):
             x = torch.flatten(x, start_dim=1)
 
             jet_id = self.jet_id_head(x)
-            #jet_id = F.softmax(jet_id, dim=1)
+            softmax = nn.Softmax(dim=1)
+            jet_id = softmax(jet_id)
 
             pt_regress = self.pt_head(x)
             
@@ -151,8 +157,8 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         self.quantizer = get_fixed_quantizer(overflow_mode="SAT")
         os.environ["KERAS_BACKEND"] = "torch" 
         self.device = "cpu"
-        self.n_workers = 8
-        self.pin_memory = False
+        self.n_workers = 1
+        self.pin_memory = True
         if torch.cuda.is_available():
             print("Running training on GPU")
             self.device = "cuda"
@@ -178,18 +184,18 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         self.input_shape = inputs_shape
         self.output_shape = outputs_shape
         
-        p_config = dst_config()
-        p_config.training_parameters.pretraining_epochs = self.training_config['epochs']
-        p_config.training_parameters.fine_tuning_epochs = self.training_config['epochs']
-        p_config.training_parameters.epochs = self.training_config['epochs']
-        p_config.quantization_parameters.default_data_integer_bits = int(self.quantization_config['input_quantization'][0])
-        p_config.quantization_parameters.default_data_fractional_bits = int(self.quantization_config['input_quantization'][1])
-        p_config.quantization_parameters.default_weight_integer_bits = int(self.quantization_config['quantizer_bits_int'])
-        p_config.quantization_parameters.default_weight_fractional_bits = int(self.quantization_config['quantizer_bits'])
-        p_config.quantization_parameters.use_relu_multiplier = False
-        p_config.pruning_parameters.disable_pruning_for_layers = ['norm_input,avgpool,flatten_dim']
+        self.p_config = dst_config()
+        self.p_config.training_parameters.pretraining_epochs = self.training_config['epochs']
+        self.p_config.training_parameters.fine_tuning_epochs = self.training_config['epochs']
+        self.p_config.training_parameters.epochs = self.training_config['epochs']
+        self.p_config.quantization_parameters.default_data_integer_bits = int(self.quantization_config['input_quantization'][0])
+        self.p_config.quantization_parameters.default_data_fractional_bits = int(self.quantization_config['input_quantization'][1])
+        self.p_config.quantization_parameters.default_weight_integer_bits = int(self.quantization_config['quantizer_bits_int'])
+        self.p_config.quantization_parameters.default_weight_fractional_bits = int(self.quantization_config['quantizer_bits'])
+        self.p_config.quantization_parameters.use_relu_multiplier = False
+        self.p_config.pruning_parameters.disable_pruning_for_layers = ['norm_input,avgpool,flatten_dim,Softmax']
                 
-        self.jet_model = build_p_model(self.model_config,p_config, self.quantization_config, inputs_shape, outputs_shape)
+        self.jet_model = build_p_model(self.model_config,self.p_config, self.quantization_config, inputs_shape, outputs_shape)
 
         
         self.jet_model.to(self.device)
@@ -348,7 +354,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         
         
         self.jet_model = train_model(model = self.jet_model, 
-                                         config = p_config, 
+                                         config = self.p_config, 
                                          train_func = self.train_func, 
                                          valid_func = self.validation_func, 
                                          trainloader = train_loader, 

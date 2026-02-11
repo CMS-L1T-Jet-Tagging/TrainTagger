@@ -8,7 +8,7 @@ import awkward as ak
 
 # Third party
 import numpy as np
-import tensorflow as tf
+
 import uproot
 import yaml
 from tqdm import tqdm
@@ -314,7 +314,12 @@ def to_ML(data, class_labels):
     """
 
     X = np.asarray(data['nn_inputs'])
-    y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
+    
+    labels = np.asarray(data['class_label'], dtype=int)
+    num_classes = len(class_labels)
+
+    # One-hot encode using NumPy
+    y = np.eye(num_classes)[labels]
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])

@@ -53,6 +53,13 @@ class TransformerModel(JetTagModel):
                 "firmware_config" : None,
             }
     )
+    
+    def __init__(self,output_dir):
+        super().__init__(output_dir)
+        
+        gpus = tf.config.list_physical_devices('GPU')
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
@@ -124,21 +131,25 @@ class TransformerModel(JetTagModel):
         Args:
             num_samples (int): Number of samples in the training set used for scheduling
         """
+        steps = self.training_config['epochs'] * (num_samples // self.training_config['batch_size'])
+        scheduler = keras.optimizers.schedules.CosineDecay(
+            initial_learning_rate=self.training_config['learning_rate'], decay_steps=steps
+        )
 
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
             EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience']),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
+            # ReduceLROnPlateau(
+            #     monitor='val_loss',
+            #     factor=self.training_config['ReduceLROnPlateau_factor'],
+            #     patience=self.training_config['ReduceLROnPlateau_patience'],
+            #     min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
+            # ),
         ]
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
-            optimizer='adam',
+            optimizer= keras.optimizers.Adam(learning_rate=scheduler),
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
@@ -169,12 +180,12 @@ class TransformerModel(JetTagModel):
             pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
-
+        keras.config.disable_traceback_filtering()
         # Train the model using hyperparameters in yaml config
         history = self.jet_model.fit(
             {'model_input': X_train},
-            {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight=sample_weight,
+            [y_train,pt_target_train],
+            sample_weight=[sample_weight, sample_weight],
             epochs=self.training_config['epochs'],
             batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],

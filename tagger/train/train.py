@@ -9,6 +9,7 @@ from tagger.data.tools import load_data, to_ML
 from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
+os.environ["KERAS_BACKEND"] = "torch"
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 

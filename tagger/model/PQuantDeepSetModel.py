@@ -21,15 +21,83 @@ import torch.nn.functional as F
 
 from tagger.model.TorchDeepSetModel import JetTagDataset, TorchDeepSetNetwork,TorchDeepSetModel
 
-from pquant import get_default_config
-from pquant import add_default_layer_quantization_pruning_to_config
-from pquant.core.utils import write_config_to_yaml
+from pquant import cs_config, dst_config
+from pquant.layers import PQActivation, PQDense, PQConv1d
+from pquant import get_layer_keep_ratio, get_model_losses
+from pquant import train_model
 
 from quantizers.fixed_point.fixed_point_ops import get_fixed_quantizer
-from pquant import get_layer_keep_ratio, get_model_losses,add_compression_layers
-from pquant import iterative_train,remove_pruning_from_model
+# from pquant import iterative_train,remove_pruning_from_model
 
 from sklearn import model_selection, metrics
+
+
+'''
+Notes:
+Switching between keras layers and pytorch layers is reasonably broken, can only use pytorch layers properly requiring setting the os to torch, an annoying thing to do in what is supposed to be generic model code
+-> some internal .numpy() is being called deep in Keras causing the gradients to break
+-> Not immediately clear if layers are pytorch or keras, leading to breaking due to different layer definitions
+Want a keras backed using tenorflow fit methods and callbacks, currently have to do manual pytorch training loops
+
+'''
+
+
+def build_p_model(model_config, p_config,q_config, inputs_shape, outputs_shape):
+    class PQTorchDeepSetNetwork(nn.Module):
+        def __init__(self, model_config, p_config, q_config, inputs_shape, outputs_shape ):
+            super().__init__()
+            
+            num_features = inputs_shape[1]  # channels
+            num_particles = inputs_shape[0]     # sequence length
+            
+            self.norm_input = nn.BatchNorm1d(num_features,eps=0.001,momentum=0.99)
+            
+            # Conv1D layers (Keras Conv1D: (batch, L, C) → PyTorch Conv1d: (batch, C, L))
+            conv_layers = []
+            in_channels = num_features
+            for i, depth in enumerate(model_config['conv1d_layers']):
+                conv_layers.append(PQConv1d(config=p_config, in_channels= in_channels,out_channels=depth, kernel_size=1))
+                conv_layers.append(PQActivation(p_config,'relu'))
+            self.conv1d_layers = nn.Sequential(*conv_layers)
+            
+            # Average pooling (same as Keras AveragePooling1D)
+            self.avgpool = nn.AvgPool1d(kernel_size=num_particles)
+            self.flatten_dim = in_channels 
+            # ---- Jet ID (classification) branch ----
+            class_layers = []
+            in_features = self.flatten_dim
+            for i, depth in enumerate(model_config['classification_layers']):
+                class_layers.append(PQDense(p_config, in_features,depth))
+                class_layers.append(PQActivation(p_config,'relu'))
+            class_layers.append(PQDense(p_config, in_features,outputs_shape[0]))
+            class_layers.append(PQActivation(p_config,'softmax', quantize_output=True, out_quant_bits=(1, q_config['class_quantization'][0], q_config['class_quantization'][1] )))
+            self.jet_id_head = nn.Sequential(*class_layers)
+
+            # ---- pT Regression branch ----
+            reg_layers = []
+            for i, depth in enumerate(model_config['regression_layers']):
+                reg_layers.append(PQDense(p_config, in_features,depth))
+                reg_layers.append(PQActivation(p_config,'relu'))
+            reg_layers.append(PQDense(p_config, in_features,1,quantize_output=True, out_quant_bits=(1, q_config['pt_output_quantization'][0], q_config['pt_output_quantization'][1] )))
+            self.pt_head = nn.Sequential(*reg_layers)
+            
+        def forward(self, x):
+            # Keras: (batch, L, C) → PyTorch expects (batch, C, L)
+            x = x.type(torch.float32)
+            x = x.permute(0, 2, 1)
+            x = self.norm_input(x)
+            x = self.conv1d_layers(x)
+            x = self.avgpool(x)
+            x = torch.flatten(x, start_dim=1)
+
+            jet_id = self.jet_id_head(x)
+            #jet_id = F.softmax(jet_id, dim=1)
+
+            pt_regress = self.pt_head(x)
+            
+            return jet_id, pt_regress
+
+    return PQTorchDeepSetNetwork(model_config, p_config,q_config, inputs_shape, outputs_shape)
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('PQuantDeepSetModel')
@@ -53,7 +121,10 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                                   "regression_layers" : list,
                                   "kernel_initializer" : str,
                                   "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])},
-                "quantization_config" : {'input_quantization' : list,
+                "quantization_config" : {'quantizer_bits' : int,
+                                         'quantizer_bits_int' : int,
+                                         'input_quantization' : list,
+                                         'class_quantization' : list,
                                          'pt_output_quantization' : list},
                 "training_config" : {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                      "validation_split" : And(float, lambda s: s > 0.0),
@@ -72,21 +143,6 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                                      "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                      "fpga_part" : str,
                                      "project_name" : str},
-                "pquant_config" : {"pruning_parameters" : dict,
-                                   "quantization_parameters" : dict,
-                                   "fitcompress_parameters" : dict,
-                                   "training_parameters" : dict,
-                                   'batch_size': int, 
-                                   'cosine_tmax': int, 
-                                   'gamma': float, 
-                                   'l2_decay': float, 
-                                   'label_smoothing': float, 
-                                   'lr': float, 
-                                   'lr_schedule': str, 
-                                   'milestones': list, 
-                                   'momentum': float, 
-                                   'optimizer': str, 
-                                   'plot_frequency': int}
             }
     )
 
@@ -102,8 +158,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
             self.device = "cuda"
             self.n_workers = 8
             self.pin_memory= True
-            print(torch.backends.cudnn.version())
-            print(torch.backends.cudnn.enabled)
+
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
@@ -119,19 +174,50 @@ class PQuantDeepSetModel(TorchDeepSetModel):
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
         
+        
         self.input_shape = inputs_shape
         self.output_shape = outputs_shape
-        self.pquant_config = self.yaml_dict['pquant_config']
         
-        self.jet_model = TorchDeepSetNetwork( self.model_config, inputs_shape, outputs_shape)
+        p_config = dst_config()
+        p_config.training_parameters.pretraining_epochs = self.training_config['epochs']
+        p_config.training_parameters.fine_tuning_epochs = self.training_config['epochs']
+        p_config.training_parameters.epochs = self.training_config['epochs']
+        p_config.quantization_parameters.default_data_integer_bits = int(self.quantization_config['input_quantization'][0])
+        p_config.quantization_parameters.default_data_fractional_bits = int(self.quantization_config['input_quantization'][1])
+        p_config.quantization_parameters.default_weight_integer_bits = int(self.quantization_config['quantizer_bits_int'])
+        p_config.quantization_parameters.default_weight_fractional_bits = int(self.quantization_config['quantizer_bits'])
+        p_config.quantization_parameters.use_relu_multiplier = False
+        p_config.pruning_parameters.disable_pruning_for_layers = ['norm_input,avgpool,flatten_dim']
+                
+        self.jet_model = build_p_model(self.model_config,p_config, self.quantization_config, inputs_shape, outputs_shape)
+
+        
         self.jet_model.to(self.device)
-        #Define the model using both branches
-        self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,inputs_shape[0],inputs_shape[1]))
-        
+        random_input = torch.rand(1,inputs_shape[0],inputs_shape[1]).to(self.device)
+        self.jet_model(random_input) # Call once to build Keras layers        
         print(self.jet_model)
 
     def loss_function_wrapper(self,y,y_true,y_pt, y_true_pt,sample_weight):
             return self.class_loss_fn(y,y_true), self.regression_loss_fn(torch.squeeze(y_pt),y_true_pt)
+        
+    def compile_model(self, num_samples: int):
+        """compile the model generating callbacks and loss function
+        Args:
+            num_samples (int): Number of samples in the training set used for scheduling
+        """
+            
+        self.optimizer = torch.optim.Adam(self.jet_model.parameters(), lr=self.training_config['learning_rate'],eps=1e-07)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer , factor=self.training_config['ReduceLROnPlateau_factor'], patience=self.training_config['ReduceLROnPlateau_patience'],min_lr=self.training_config['ReduceLROnPlateau_min_lr'])
+        
+        # Instantiate a loss function.
+        self.class_loss_fn = nn.CrossEntropyLoss(reduction='none')
+        self.regression_loss_fn = nn.HuberLoss(reduction='none')
+        
+        self.history = { self.loss_name + self.output_id_name + '_loss':[], self.loss_name + self.output_pt_name + '_loss':[], 
+                         'val_' + self.loss_name + self.output_id_name + '_loss' :[], 'val_' + self.loss_name + self.output_pt_name + '_loss':[], 
+                        "train_acc":[], 'train_mae':[],'train_mse':[],
+                        "test_acc":[], 'test_mae':[],'test_mse':[],
+                        'ebops':[], 'remaining_weights':[]}
         
     def train_func(self, model, trainloader, device, loss_func, epoch, optimizer, scheduler, *args, **kwargs):
         accuracy_step = 0
@@ -154,7 +240,6 @@ class PQuantDeepSetModel(TorchDeepSetModel):
             optimizer.step()
             
             _,predicted_class = torch.max(output_class,1)
-            y = nn.functional.softmax(y,dim=1) 
             y = y.cpu().detach().numpy()
             y_categorical = [ np.argmax(y[i])  for i in range(len(y))]
             accuracy_step += (metrics.accuracy_score(predicted_class.cpu().detach().numpy(), y_categorical))
@@ -185,6 +270,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         mae_step = 0
         mse_step = 0
         len_step = 0
+
         with torch.no_grad():
             for data in testloader:
                 inputs, y, y_pt, sample_weight = data['X'].to(device), data['y'].to(device), data['y_pt'].to(device), data['sample_weight'].to(device)
@@ -197,7 +283,6 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                 losses = get_model_losses(model, torch.tensor(0.).to(device))
                 loss += losses
                 _,predicted_class = torch.max(output_class,1)
-                y = nn.functional.softmax(y,dim=1)
                 y = y.cpu().detach().numpy()
                 y_categorical = [ np.argmax(y[i])  for i in range(len(y))]
                 
@@ -208,9 +293,15 @@ class PQuantDeepSetModel(TorchDeepSetModel):
             
             if scheduler is not None:
                 scheduler.step(loss.mean())
+            ratio = get_layer_keep_ratio(self.jet_model)
+            remaining_weights = (ratio.cpu().numpy())
+            ebops = (get_ebops(self.jet_model).cpu().numpy())
                 
         self.history['val_' + self.loss_name + self.output_id_name+ '_loss'].append(loss_class.mean().cpu().detach().numpy())
         self.history['val_' + self.loss_name + self.output_pt_name+ '_loss'].append(loss_pt.mean().cpu().detach().numpy())
+        
+        self.history['ebops'].append(ebops)
+        self.history['remaining_weights'].append(remaining_weights)
             
         self.history['test_acc'].append(accuracy_step/len_step)
         self.history['test_mae'].append(mae_step/len_step)
@@ -223,6 +314,8 @@ class PQuantDeepSetModel(TorchDeepSetModel):
               f'val_pT_output_mae: {self.history['test_mae'][-1]:1.3f} '
               f'val_pT_output_mean_squared_error:  {self.history['test_mse'][-1]:1.3f} '
               f'lr: {self.scheduler.get_last_lr()[0]}'
+              f'ebops: {ebops}'
+              f'remaining_weights: {remaining_weights}'
               )
       
     def fit(
@@ -254,8 +347,8 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         
         
         
-        self.jet_model = iterative_train(model = self.jet_model, 
-                                         config = self.pquant_config, 
+        self.jet_model = train_model(model = self.jet_model, 
+                                         config = p_config, 
                                          train_func = self.train_func, 
                                          valid_func = self.validation_func, 
                                          trainloader = train_loader, 
@@ -265,9 +358,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                                          optimizer = self.optimizer, 
                                          scheduler = self.scheduler
                                         )
-        
-        self.jet_model = remove_pruning_from_model(self.jet_model, self.pquant_config)
-        
+                
     
     def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
         """Predict method for model
@@ -315,6 +406,69 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         
         self.jet_model = TorchDeepSetNetwork(self.model_config, self.input_shape, self.output_shape )
         self.jet_model.to(self.device)
-        self.pquant_config = self.yaml_dict['pquant_config']
-        self.jet_model = add_compression_layers(self.jet_model, self.pquant_config, (1,self.input_shape[0],self.input_shape[1]))
         self.jet_model.load_state_dict(torch.load(f"{out_dir}/model/saved_model.keras", weights_only=True))
+        
+        
+    def firmware_convert(self, firmware_dir: str, build: bool = False):
+        """Run the hls4ml model conversion
+
+        Args:
+            firmware_dir (str): Where to save the firmware
+            build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
+        """
+
+        # Remove the old directory if it exists
+        hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
+        os.system(f'rm -rf {hls4ml_outdir}')
+
+        # Create default config
+        config = hls4ml.utils.config_from_pytorch_model(self.jet_model, granularity='name')
+        config['IOType'] = 'io_parallel'
+        config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
+
+        # Configuration for conv1d layers
+        # hls4ml automatically figures out the paralellization factor
+        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
+        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
+
+        # Additional config
+        for layer in self.jet_model.layers:
+            layer_name = layer.__class__.__name__
+
+            if layer_name in ["BatchNormalization", "InputLayer"]:
+                config["LayerName"][layer.name]["Precision"] = self.firmware_config['input_precision']
+                config["LayerName"][layer.name]["result"] = self.firmware_config['input_precision']
+                config["LayerName"][layer.name]["Trace"] = not build
+
+            elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:
+                print("Skipping trace for:", layer.name)
+            else:
+                config["LayerName"][layer.name]["Trace"] = not build
+
+        config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
+        config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
+        config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
+        config["LayerName"]["pT_output"]["Implementation"] = "latency"
+
+        # Write HLS
+        self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
+            self.jet_model,
+            backend='Vitis',
+            project_name=self.firmware_config['project_name'],
+            clock_period=self.firmware_config['clock_period'],
+            hls_config=config,
+            output_dir=f'{hls4ml_outdir}',
+            part= self.firmware_config['fpga_part'],
+        )
+
+        # Compile the project
+        self.hls_jet_model.compile()
+
+        # Save config  as json file
+        print("Saving default config as config.json ...")
+        with open(hls4ml_outdir + '/config.json', 'w') as fp:
+            json.dump(config, fp)
+
+        if build:
+            # build the project
+            self.hls_jet_model.build(csim=False, reset=True)

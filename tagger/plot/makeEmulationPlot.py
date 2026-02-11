@@ -71,13 +71,12 @@ def doPlots(model, outputdir, inputdir):
     model_dict = {k: np.ascontiguousarray(v, dtype=np.float64) for k, v in model_dict.items()}
     model_dict = replace_dict_entries(zero_entries=[],
                                       one_entries=[],
-                                      proper_entries=[],
+                                      proper_entries=['basic_input', 'constituent_fraction', 'jet_features'],
                                       input_dict=model_dict)
     hls_model_input_list = [i for i in model_dict.values()]
     hls_model_input = [np.ascontiguousarray(i, dtype=np.float64) for i in hls_model_input_list]
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_model_input)
     y_class, y_ptreg = model.jet_model.predict(model_dict)
-    from IPython import embed; embed()
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg

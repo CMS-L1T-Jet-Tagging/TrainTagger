@@ -115,11 +115,10 @@ def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1
         linestyle = ['-' for i in range(len(variable))]
     else:
         colours = style.colours
-        linestyle = style.LINESTYLES
+        linestyle = [style.LINESTYLES[i] for i in range(len(variable))]
     colour_list = []
     for i, histo in enumerate(variable):
         colour_list.append(colours[i])
-
     ax.hist(
             variable,
             bins=bins,
@@ -129,9 +128,10 @@ def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1
             color=[colours[i] for i in range(len(variable))],
             label=name,
             linewidth=style.LINEWIDTH - 1.5,
-            linestyle=[linestyle[i] for i in range(len(variable))],
+            linestyle=linestyle[::-1],
             density=True,
         )
+
     ax.grid(True)
     ax.set_yscale(log)
     ax.set_xlabel(xlabel, ha="right", x=1)

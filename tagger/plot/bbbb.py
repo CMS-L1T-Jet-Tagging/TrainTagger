@@ -153,6 +153,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
+    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
     raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
     #Count number of total event
@@ -160,14 +161,15 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, jet_eta_hw, jet_nn_inputs = grouped_arrays
     selection_mask = default_selection(jet_pt, jet_eta, apply_sel)
-    jet_nn_inputs, jet_pt_selected, jet_eta_selected = jet_nn_inputs[selection_mask], jet_pt[selection_mask], jet_eta[selection_mask]
-    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt_selected, jet_eta_selected, apply_light, model.class_labels)
+    jet_nn_inputs, jet_pt_selected, jet_eta_hw_selected = jet_nn_inputs[selection_mask], jet_pt[selection_mask], jet_eta_hw[selection_mask]
+    from IPython import embed; embed() # check the shapes here
+    bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt_selected, jet_eta_hw_selected, apply_light, model.class_labels)
 
     sel_ht = ak.sum(jet_pt, axis=1)[default_selection(jet_pt, jet_eta, apply_sel)]
     jet_ht = ak.sum(jet_pt, axis=1)
@@ -284,6 +286,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
+    raw_jet_eta_hw = extract_array(signal, 'jet_eta', n_entries)
     raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
 
     n_events = len(np.unique(raw_event_id))
@@ -311,15 +314,15 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
     if raw_gen_mHH is not None:
-        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, num_elements=4)
-        event_gen_mHH, jet_genpt, jet_pt, jet_eta, cmssw_bscore, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        event_gen_mHH, jet_genpt, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
 
         #Just pick the first entry of jet mHH arrays
         event_gen_mHH = ak.firsts(event_gen_mHH)
     else:
         # Handle case where genHH_mass doesn't exist
-        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, num_elements=4)
-        jet_genpt, jet_pt, jet_eta, cmssw_bscore, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        jet_genpt, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
         event_gen_mHH = None
 
     #Calculate the ht
@@ -328,7 +331,7 @@ def bbbb_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree=
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, apply_light, model.class_labels)
+    model_bscore_sum = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta_hw, apply_light, model.class_labels)
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)

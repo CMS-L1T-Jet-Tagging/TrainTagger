@@ -355,6 +355,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
     # Load metadata to determine chunks to load
     metadata_file = os.path.join(outdir, "metadata.json")
+    print("Loading metadata from: ", metadata_file)
     with open(metadata_file, "r") as f:
         metadata = json.load(f)
 

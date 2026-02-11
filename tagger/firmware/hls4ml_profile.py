@@ -1,6 +1,7 @@
 import os
 from argparse import ArgumentParser
 from pathlib import Path
+from tensorflow.keras import Model
 
 import hls4ml
 import matplotlib.pyplot as plt
@@ -57,14 +58,19 @@ def doPlots(model, outputdir, inputdir):
     labels = list(class_labels.keys())
 
     raw_inputs_dict = {
-        "basic_inputs": np.ascontiguousarray(X_test),
+        "basic_input": np.ascontiguousarray(X_test),
         "jet_pt": np.ascontiguousarray(jet_pt_hw),
         "jet_eta": np.ascontiguousarray(jet_eta_hw),
     }
 
     model.firmware_convert("temp", build=False)
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict(model.prepare_inputs(raw_inputs_dict))
-    y_class, y_ptreg = model.jet_model.predict(model.prepare_inputs(raw_inputs_dict))
+
+    model_dict, _ = model.prepare_inputs(raw_inputs_dict)
+    model_dict = {key: np.ascontiguousarray(model_dict[key]) for key in model_dict.keys()}
+    hls_inputs = [v for v in model_dict.values()]
+    hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_inputs)
+    y_class, y_ptreg = model.jet_model.predict(model_dict)
 
     for i, label in enumerate(labels):
         plt.clf()
@@ -96,29 +102,45 @@ def doPlots(model, outputdir, inputdir):
     figure.savefig("%s/%s_score_2D.pdf" % (outputdir, "Regression"), bbox_inches='tight')
     plt.close()
 
-    wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)
-    ap.savefig(outputdir + "/model_activations_profile.png")
-    wp.savefig(outputdir + "/model_weights_profile.png")
-    aph.savefig(outputdir + "/model_activations_profile_opt.png")
-    wph.savefig(outputdir + "/model_weights_profile_opt.png")
+    # wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)
+    # ap.savefig(outputdir + "/model_activations_profile.png")
+    # wp.savefig(outputdir + "/model_weights_profile.png")
+    # aph.savefig(outputdir + "/model_activations_profile_opt.png")
+    # wph.savefig(outputdir + "/model_weights_profile_opt.png")
+    y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
 
-    y_hls, hls4ml_trace = model.hls_jet_model.trace(np.ascontiguousarray(X_test))
-    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model.jet_model, X_test)
+    # Create a sub-model that outputs all intermediate layers
+    layer_outputs = [layer.output for layer in model.jet_model.layers]
+    keras_trace_model = Model(inputs=model.jet_model.input, outputs=layer_outputs)
 
+    # Run prediction to get activations
+    keras_activations = keras_trace_model.predict(model_dict)
+
+    # Convert keras activations to a dict keyed by layer name
+    keras_trace = {layer.name: act for layer, act in zip(model.jet_model.layers, keras_activations)}
+
+    # --- Profiling plots ---
+    print(len(model_dict['basic_input']), "inputs to the model")
     for layer in hls4ml_trace.keys():
         print("Doing profiling 2d for layer", layer)
+
         min_x = min(np.amin(hls4ml_trace[layer]), np.amin(keras_trace[layer]))
         max_x = max(np.amax(hls4ml_trace[layer]), np.amax(keras_trace[layer]))
+
         plot_2d(
             hls4ml_trace[layer].flatten(),
             keras_trace[layer].flatten(),
             (min_x, max_x),
             (min_x, max_x),
             "hls4ml {}".format(layer),
-            "Tensorflow  {}".format(layer),
+            "Tensorflow {}".format(layer),
             layer + " agreement",
         )
+
+        # Add diagonal line
         plt.plot([min_x, max_x], [min_x, max_x], c="gray")
+
+        # Save plots
         plt.savefig(f"{outputdir}/profile_2d_{layer}.png", bbox_inches='tight')
         plt.savefig(f"{outputdir}/profile_2d_{layer}.pdf", bbox_inches='tight')
         plt.close()
@@ -134,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-of', '--outpath_firmware', default='output/baseline/firmware', help='Jet tagger firmware directory'
     )
-    parser.add_argument('-i', '--input', default='data/jetTuple_extended_5.root', help='Path to profiling data rootfile')
+    parser.add_argument('-i', '--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part6.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
     parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
 

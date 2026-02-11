@@ -78,7 +78,7 @@ class WeightedAverageSimpleModel(DeepSetModel):
         jet_features = tf.keras.layers.Input(shape=inputs_shape['jet_features'], name='jet_features')
 
         # Main branch
-        main = BatchNormalization(name='norm_input')(inputs)
+        main = BatchNormalization(name='norm_basic_input')(inputs)
         jet_features_norm = BatchNormalization(name='norm_jet_features')(jet_features)
 
         # Make Conv1D layers
@@ -187,9 +187,12 @@ class WeightedAverageSimpleModel(DeepSetModel):
         config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
         config['IOType'] = 'io_parallel'
         print("Default hls4ml config created:", config)
-        config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['constituent_fraction']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['jet_features']['Precision']['result'] = self.firmware_config['input_precision']
+        self.firmware_config['input_precision'] = {'basic_input': 'ap_fixed<32,16,AP_RND,AP_SAT>',
+                    'constituent_fraction': 'ap_ufixed<17,1,AP_RND,AP_SAT>',
+                    'jet_features': 'ap_fixed<32,16,AP_RND,AP_SAT>'}
+        config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']['basic_input']
+        config['LayerName']['constituent_fraction']['Precision']['result'] = self.firmware_config['input_precision']['constituent_fraction']
+        config['LayerName']['jet_features']['Precision']['result'] = self.firmware_config['input_precision']['jet_features']
 
 
         # Configuration for conv1d layers
@@ -197,14 +200,19 @@ class WeightedAverageSimpleModel(DeepSetModel):
         # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
         # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
 
-        self.firmware_config['constituent_fraction'] = 'ap_ufixed<12,1,AP_RND,AP_SAT>'
-
         # Additional config
         for layer in self.jet_model.layers:
             layer_name = layer.__class__.__name__
 
             if layer_name in ["BatchNormalization", "InputLayer"]:
-                precision = self.firmware_config[layer.name] if layer.name in self.firmware_config.keys() else self.firmware_config['input_precision']
+                precision = None
+                for k in self.firmware_config['input_precision'].keys():
+                    if layer.name in k:
+                        precision = self.firmware_config['input_precision'][k]
+                        break  # stop once we found a match
+                if precision is None:
+                    precision = 'ap_fixed<32,16,AP_RND,AP_SAT>'
+
                 config["LayerName"][layer.name]["Precision"] = precision
                 config["LayerName"][layer.name]["result"] = precision
                 config["LayerName"][layer.name]["Trace"] = not build

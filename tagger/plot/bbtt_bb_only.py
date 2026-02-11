@@ -186,6 +186,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
@@ -194,13 +195,13 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta_hw, raw_jet_eta_hw, raw_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, jet_eta_hw, jet_nn_inputs = grouped_arrays
 
-    bscore_sums, bscore_idxs = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, model.class_labels)
+    bscore_sums, bscore_idxs = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta_hw, model.class_labels)
     def_sels = [default_selection(jet_pt, jet_eta, bscore_idxs[0], apply_sel),
                default_selection(jet_pt, jet_eta, bscore_idxs[1], apply_sel)]
 
@@ -295,13 +296,14 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
+    raw_jet_eta_hw = extract_array(signal, 'jet_eta', n_entries)
     raw_tau_pt = extract_array(signal, 'jet_taupt', n_entries)
 
     raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
-    jet_genpt, jet_pt, jet_eta, tau_pt, jet_nn_inputs = grouped_arrays
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_tau_pt, raw_inputs, num_elements=4)
+    jet_genpt, jet_pt, jet_eta, jet_eta_hw, tau_pt, jet_nn_inputs = grouped_arrays
 
     #Calculate the ht
     jet_genht = ak.sum(jet_genpt, axis=1)
@@ -309,7 +311,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
 
     # Result from the baseline selection, multiclass tagger and ht only working point
     baseline_selection, _ = bbtt_seed(jet_pt, tau_pt)
-    model_bscore_sums, bscore_indices = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, model.class_labels)
+    model_bscore_sums, bscore_indices = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta_hw, model.class_labels)
 
     # use either raw or vs light scores
     if score_type == 'raw':

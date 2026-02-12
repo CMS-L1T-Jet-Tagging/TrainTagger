@@ -359,9 +359,8 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     gen_eta_raw = extract_array(signal, 'jet_genmatch_eta', n_entries)
     gen_dr_raw = extract_array(signal, 'jet_genmatch_dR', n_entries)
 
-    l1_pt_raw = extract_array(signal, 'jet_pt', n_entries)
-    l1_eta_raw = extract_array(signal, 'jet_eta_phys', n_entries)
-    l1_eta_hw_raw = extract_array(signal, 'jet_eta', n_entries)
+    l1_pt_raw = extract_array(signal, 'jet_pt', n_entries).to_numpy()
+    l1_eta_hw_raw = extract_array(signal, 'jet_eta', n_entries).to_numpy()
     jet_taupt_raw= extract_array(signal, 'jet_taupt', n_entries)
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 

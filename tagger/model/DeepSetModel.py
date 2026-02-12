@@ -47,7 +47,6 @@ class DeepSetModel(QKerasModel):
                 ## generic hls4ml configuration
                 "firmware_config" : {"input_precision" : dict,
                                     "class_precision" : str,
-                                    "mask_precision" : str,
                                     "reg_precision": str,
                                     "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                     "fpga_part" : str,

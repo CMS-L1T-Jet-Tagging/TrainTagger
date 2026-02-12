@@ -387,9 +387,9 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     gen_eta_raw = extract_array(signal, 'jet_genmatch_eta', n_entries)
     gen_dr_raw = extract_array(signal, 'jet_genmatch_dR', n_entries)
 
-    l1_pt_raw = extract_array(signal, 'jet_pt', n_entries)
+    l1_pt_raw = extract_array(signal, 'jet_pt', n_entries).to_numpy()
     l1_eta_raw = extract_array(signal, 'jet_eta_phys', n_entries)
-    l1_eta_raw_hw = extract_array(signal, 'jet_eta', n_entries)
+    l1_eta_raw_hw = extract_array(signal, 'jet_eta', n_entries).to_numpy()
     jet_taupt_raw= extract_array(signal, 'jet_taupt', n_entries)
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 

@@ -136,9 +136,9 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     minbias = uproot.open(minbias_path)[tree]
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries).to_numpy()
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
+    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries).to_numpy()
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
     raw_inputs_dict = {
@@ -301,9 +301,9 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries).to_numpy()
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
+    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries).to_numpy()
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
@@ -436,12 +436,12 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
 
     raw_jet_genpt = raw_jet_genpt[pt_mask]
     raw_event_id = extract_array(signal, 'event', n_entries)[pt_mask]
-    raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)[pt_mask]
+    raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)[pt_mask].to_numpy()
     raw_jet_genmass = extract_array(signal, 'jet_genmatch_mass', n_entries)[pt_mask]
     raw_jet_geneta = extract_array(signal, 'jet_genmatch_eta', n_entries)[pt_mask]
     raw_jet_genphi = extract_array(signal, 'jet_genmatch_phi', n_entries)[pt_mask]
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)[pt_mask]
-    raw_jet_eta_hw = extract_array(signal, 'jet_eta', n_entries)[pt_mask]
+    raw_jet_eta_hw = extract_array(signal, 'jet_eta', n_entries)[pt_mask].to_numpy()
     raw_jet_phi = extract_array(signal, 'jet_phi_phys', n_entries)[pt_mask]
 
     raw_cmssw_tau = extract_array(signal, 'jet_tauscore', n_entries)[pt_mask]
@@ -453,7 +453,7 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
         'basic_input': raw_inputs,
         'jet_pt': raw_jet_pt,
         'jet_pt_log': np.log(raw_jet_pt),
-        'jet_eta_hw': raw_jet_eta,
+        'jet_eta_hw': raw_jet_eta_hw,
     }
     raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 

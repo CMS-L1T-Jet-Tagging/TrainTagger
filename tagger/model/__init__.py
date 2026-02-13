@@ -13,4 +13,3 @@ from tagger.model.DeepSetFeaturesModel import DeepSetFeaturesModel
 from tagger.model.DeepSetModelHGQ import DeepSetModelHGQ
 from tagger.model.InteractionNetModel import InteractionNetModel
 from tagger.model.QKerasModel import QKerasModel
-from tagger.model.LinearFitModel import LinearFitModel

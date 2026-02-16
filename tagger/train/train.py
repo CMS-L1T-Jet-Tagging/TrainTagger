@@ -9,6 +9,8 @@ from tagger.data.tools import load_data, to_ML
 from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
+from tagger.data.huggingfacedata import process_single_file
+
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
@@ -116,6 +118,48 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
         return None
     return sample_weights
 
+
+def Old_train(model, out_dir, percent):
+
+    # Load the data, class_labels and input variables name, not really using input variable names to be honest
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    model.set_labels(
+        input_vars,
+        extra_vars,
+        class_labels,
+    )
+
+    # Make into ML-like data for training
+    X_train, y_train, pt_target_train, reco_pt_train = process_single_file('/root/TrainTagger/QCD_HT50tobb-NEVENT10000-RS25000001.parquet')
+
+
+    # Calculate the sample weights for training
+    sample_weight = train_weights(
+        y_train,
+        reco_pt_train,
+        class_labels,
+        weightingMethod=model.training_config['weight_method'],
+        debug=model.run_config['debug'],
+    )
+    if model.run_config['debug']:
+        print("DEBUG - Checking sample_weight:")
+        print(sample_weight)
+
+    # Get input shape
+    input_shape = X_train.shape[1:]  # First dimension is batch size
+    output_shape = y_train.shape[1:]
+
+    model.build_model(input_shape, output_shape)
+    # Train it with a pruned model
+    num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
+    model.compile_model(num_samples)
+    model.fit(X_train, y_train, pt_target_train, sample_weight)
+
+    model.save()
+
+    model.plot_loss()
+
+    return
 
 def train(model, out_dir, percent):
 

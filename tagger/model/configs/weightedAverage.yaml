@@ -19,7 +19,7 @@ quantization_config:
   pt_output_quantization : [16,6]
 
 inputs:
-  basic_features: ['basic_input', 'basic_mask', 'constituent_pt', 'pt_mask', 'inverse_jet_pt']
+  basic_features: ['basic_input', 'basic_mask', 'constituent_fraction', 'pt_mask']
   custom_features: ['jet_pt', 'jet_eta'] # will later be concatenated into one jet features input
 
 training_config :
@@ -42,15 +42,14 @@ training_config :
   ReduceLROnPlateau_min_lr : 0.00001
 
 firmware_config:
-  input_precision: {'basic_input': 'ap_fixed<24,12,AP_RND,AP_SAT>',
-                    'constituent_pt': 'ap_fixed<24,12,AP_RND,AP_SAT>',
-                    'inverse_jet_pt': 'ap_fixed<24,12,AP_RND,AP_SAT>',
+  input_precision: {'basic_input': 'ap_fixed<32,16,AP_RND,AP_SAT>',
+                    'constituent_pt': 'ap_fixed<32,16,AP_RND,AP_SAT>',
+                    'constituent_fraction': 'ap_fixed<32,16,AP_RND,AP_SAT>',
+                    'jet_features': 'ap_fixed<32,16,AP_RND,AP_SAT>',
                     'basic_mask': 'ap_uint<1>',
-                    'pt_mask': 'ap_uint<1>',
-                    'jet_features': 'ap_fixed<24,12,AP_RND,AP_SAT>'}
+                    'pt_mask': 'ap_uint<1>'}
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
-
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 

@@ -49,6 +49,15 @@ WeightedAverage:weightedAverage_5param_extended_trk:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 
+WeightedAverageInv:weightedAverageInv_5param_extended_trk:
+  extends: .ml_pipeline
+  variables:
+    Name: weightedAverageInv_5param_extended_trk
+    Model: weightedAverageInv
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+
 WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
   extends: .ml_pipeline
   variables:

@@ -372,7 +372,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
         'jet_pt_log': np.log(l1_pt_raw),
         'jet_eta': l1_eta_hw_raw,
     }
-    pred_score, ratio = model.predict([model.prepare_inputs(raw_inputs_dict)[0]])
+    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 
     nn_tauscore_raw = tau_score(pred_score, model.class_labels)
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())

@@ -180,7 +180,7 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    model.compile_model(num_samples)
+    model.compile_model(num_samples, model.training_config['loss_weights'])
     model.fit(train_dict, y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
 
     # Finished training, save model

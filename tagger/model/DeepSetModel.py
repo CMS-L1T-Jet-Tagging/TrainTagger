@@ -171,7 +171,8 @@ class DeepSetModel(QKerasModel):
         # Create default config
         config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
         config['IOType'] = 'io_parallel'
-        config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']
+        for layer in self.firmware_config['input_precision']:
+            config['LayerName'][layer]['Precision']['result'] = self.firmware_config['input_precision'][layer]
 
         # Configuration for conv1d layers
         # hls4ml does not !!! automatically figure out the paralellization factor, this leads to csim, hdl sim errors
@@ -181,10 +182,13 @@ class DeepSetModel(QKerasModel):
         # Additional config
         for layer in self.jet_model.layers:
             layer_name = layer.__class__.__name__
-
             if layer_name in ["BatchNormalization", "InputLayer"]:
-                config["LayerName"][layer.name]["Precision"] = self.firmware_config['input_precision']
-                config["LayerName"][layer.name]["result"] = self.firmware_config['input_precision']
+                for k in self.firmware_config['input_precision'].keys():
+                    if layer.name in k:
+                        precision = self.firmware_config['input_precision'][k]
+                        break  # stop once we found a match
+                config["LayerName"][layer.name]["Precision"] = precision
+                config["LayerName"][layer.name]["result"] = precision
                 config["LayerName"][layer.name]["Trace"] = not build
 
             elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:

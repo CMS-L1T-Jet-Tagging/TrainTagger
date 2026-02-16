@@ -8,22 +8,22 @@ import tensorflow as tf
 from schema import Schema, And, Use, Optional
 import tensorflow_model_optimization as tfmot
 
-from tagger.model.common import choose_aggregator, initialise_tensorflow, OffsetScaling
+from tagger.model.common import choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 from qkeras.qlayers import QActivation, QDense
-from qkeras.quantizers import quantized_bits, quantized_relu, quantized_tanh
+from qkeras.quantizers import quantized_bits, quantized_relu, quantized_linear
 from tensorflow.keras.layers import Activation, BatchNormalization
 from tagger.model.DeepSetModel import DeepSetModel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
-@JetModelFactory.register('WeightedAverageOffsetModel')
-class WeightedAverageOffsetModel(DeepSetModel):
-    """WeightedAverageOffsetModel class
+@JetModelFactory.register('WeightedAverageInvModel')
+class WeightedAverageInvModel(DeepSetModel):
+    """WeightedAverageInvModel class
 
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
@@ -98,19 +98,13 @@ class WeightedAverageOffsetModel(DeepSetModel):
         # Make the pT weights and corrections
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
-        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 0), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
+        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 3), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
 
-        pt_offsets = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_offsets', **self.common_args)(main)
-        pt_offsets = tf.keras.layers.Flatten(name='Conv1D_pt_offsets_flat')(pt_offsets)  # shape: (batch, timesteps)
-        pt_offsets = tf.keras.layers.Multiply(name='apply_pt_offsets_mask')([pt_offsets, pt_mask])
-
         # Weighted Global Average Pooling
-        weights = tf.keras.layers.Reshape((16, 1), name='reshape_pt_weights')(pt_weights)
-        weighted_inputs = tf.keras.layers.Multiply(name='weighted_main')([main, weights])
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-        main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(weighted_inputs)
-        main = tf.keras.layers.Concatenate(name='main_concat')([main, jet_features_norm])
+        main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(main)
+        main = tf.keras.layers.Concatenate(name='concat_jet_features')([main, jet_features_norm])
 
         # Now split into jet ID and pt regression
         # Make fully connected dense layers for classification task
@@ -129,30 +123,23 @@ class WeightedAverageOffsetModel(DeepSetModel):
         jet_id = QDense(outputs_shape[0], name='Dense_' + str(iclass + 2) + '_jetID', **self.common_args)(jet_id)
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-        # Concatenate jet features to pt offsets and weights
-        pt_weights = tf.keras.layers.Concatenate(name='pt_weights_concat')([pt_weights, jet_features_norm])
-        pt_offsets = tf.keras.layers.Concatenate(name='pt_offsets_concat')([pt_offsets, jet_features_norm])
+        # concat jet features to pt weights
+        pt_weights = tf.keras.layers.Concatenate(name='concat_jet_features_pt_weights')([pt_weights, jet_features_norm])
 
         # Make fully connected dense layers for regression task
-        pt_weights = QDense(16, name='Dense_pt_weights_1', **self.common_args)(pt_weights)
+        pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'], 3),
             name='pt_weights_output')(pt_weights)
+        print('PRECISION', self.quantization_config['quantizer_bits'])
+        print(self.pt_args)
 
-        # pt_offsets
-        pt_offsets = QDense(16, name='Dense_pt_offsets_output', **self.common_args)(pt_offsets)
-        pt_offsets = QActivation(
-            activation=quantized_tanh(self.quantization_config['quantizer_bits'], 3),
-            name='pt_offsets_tanh')(pt_offsets)
-
-        # apply weights and offsets to constituent pTs
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
-        corrected_pt = tf.keras.layers.Add(name='add_pt_offsets')([weighted_pt, pt_offsets])
-        corrected_jet_pt = QDense(1, name='weighted_jet_pt',
+        corrected_jet_pt = QDense(1, name='weighted_pt',
             kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
             use_bias = False,
             trainable=False,
-            **self.pt_args)(corrected_pt) # fix weights at 1 to perform sum, not updated during training
+            **self.pt_args)(weighted_pt) # fix weights at 1 to perform sum, not updated during training
 
         pt_output = tf.keras.layers.Multiply(name='pT_output')([corrected_jet_pt, inverse_jet_pt])
 
@@ -192,75 +179,6 @@ class WeightedAverageOffsetModel(DeepSetModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
-
-    def firmware_convert(self, firmware_dir: str, build: bool = False):
-        """Run the hls4ml model conversion
-
-        Args:
-            firmware_dir (str): Where to save the firmware
-            build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
-        """
-
-        # Remove the old directory if it exists
-        hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
-        os.system(f'rm -rf {hls4ml_outdir}')
-
-        # Create default config
-        config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-        config['IOType'] = 'io_parallel'
-        config['LayerName']['basic_input']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['basic_mask']['Precision']['result'] = self.firmware_config['mask_precision']
-        config['LayerName']['pt_mask']['Precision']['result'] = self.firmware_config['mask_precision']
-        config['LayerName']['constituent_pt']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['inverse_jet_pt']['Precision']['result'] = self.firmware_config['input_precision']
-        config['LayerName']['jet_features']['Precision']['result'] = self.firmware_config['input_precision']
-
-        # Configuration for conv1d layers
-        # hls4ml automatically figures out the paralellization factor
-        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
-
-        # Additional config
-        for layer in self.jet_model.layers:
-            layer_name = layer.__class__.__name__
-
-            if layer_name in ["BatchNormalization", "InputLayer"]:
-                config["LayerName"][layer.name]["Precision"] = self.firmware_config['input_precision']
-                config["LayerName"][layer.name]["result"] = self.firmware_config['input_precision']
-                config["LayerName"][layer.name]["Trace"] = not build
-
-            elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:
-                print("Skipping trace for:", layer.name)
-            else:
-                config["LayerName"][layer.name]["Trace"] = not build
-
-        config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-        config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
-        config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
-        config["LayerName"]["pT_output"]["Implementation"] = "latency"
-
-        # Write HLS
-        self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
-            self.jet_model,
-            backend='Vitis',
-            project_name=self.firmware_config['project_name'],
-            clock_period=self.firmware_config['clock_period'],
-            hls_config=config,
-            output_dir=f'{hls4ml_outdir}',
-            part= self.firmware_config['fpga_part'],
-        )
-
-        # Compile the project
-        self.hls_jet_model.compile()
-
-        # Save config  as json file
-        print("Saving default config as config.json ...")
-        with open(hls4ml_outdir + '/config.json', 'w') as fp:
-            json.dump(config, fp)
-
-        if build:
-            # build the project
-            self.hls_jet_model.build(csim=False, reset=True)
 
     def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0]):
         """compile the model generating callbacks and loss function
@@ -312,10 +230,8 @@ class WeightedAverageOffsetModel(DeepSetModel):
 
         # Additional custom objects for attention layers
         custom_objects_ = {
-            "OffsetScaling": OffsetScaling,
         }
 
         # Load the model
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
-
 

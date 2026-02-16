@@ -48,7 +48,6 @@ firmware_config:
                     'basic_mask': 'ap_uint<1>',
                     'pt_mask': 'ap_uint<1>',
                     'jet_features': 'ap_fixed<24,12,AP_RND,AP_SAT>'}
-  mask_precision: 'ap_ufixed<1,1>'
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
 

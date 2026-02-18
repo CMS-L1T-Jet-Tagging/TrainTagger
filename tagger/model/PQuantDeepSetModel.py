@@ -21,15 +21,20 @@ import torch.nn.functional as F
 
 from tagger.model.TorchDeepSetModel import JetTagDataset, TorchDeepSetNetwork,TorchDeepSetModel
 
-from pquant import cs_config, dst_config
+from pquant import cs_config, dst_config, pdp_config
 from pquant.layers import PQActivation, PQDense, PQConv1d
 from pquant import get_layer_keep_ratio, get_model_losses
-from pquant import train_model
+from pquant import train_model, get_ebops
+from pquant.layers import apply_final_compression
+
+
 
 from quantizers.fixed_point.fixed_point_ops import get_fixed_quantizer
 # from pquant import iterative_train,remove_pruning_from_model
 
 from sklearn import model_selection, metrics
+
+import gc
 
 
 '''
@@ -41,6 +46,17 @@ Want a keras backed using tenorflow fit methods and callbacks, currently have to
 
 No softmax: activation_registry = {"relu": relu, "tanh": tanh, "hard_tanh": hard_tanh}
 Will fail without any reason why
+
+ebops doesn't work
+
+pytorch memory issues -> always overflows no matter what the batch size is
+
+Very slow -> maybe a pytorch only issue
+
+loss func / loss function?
+
+Model saving and loading, broken by default
+
 '''
 
 
@@ -84,6 +100,7 @@ def build_p_model(model_config, p_config,q_config, inputs_shape, outputs_shape):
                 reg_layers.append(PQActivation(p_config,'relu'))
                 in_features = depth
             reg_layers.append(PQDense(p_config, in_features,1,quantize_output=True, out_quant_bits=(1, q_config['pt_output_quantization'][0], q_config['pt_output_quantization'][1] )))
+            #reg_layers.append(PQDense(p_config, in_features,1))
             self.pt_head = nn.Sequential(*reg_layers)
             
         def forward(self, x):
@@ -149,6 +166,21 @@ class PQuantDeepSetModel(TorchDeepSetModel):
                                      "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                      "fpga_part" : str,
                                      "project_name" : str},
+                "pquant_config" : {"pruning_parameters" : dict,
+                                   "quantization_parameters" : dict,
+                                   "fitcompress_parameters" : dict,
+                                   "training_parameters" : dict,
+                                   'batch_size': int, 
+                                   'cosine_tmax': int, 
+                                   'gamma': float, 
+                                   'l2_decay': float, 
+                                   'label_smoothing': float, 
+                                   'lr': float, 
+                                   'lr_schedule': str, 
+                                   'milestones': list, 
+                                   'momentum': float, 
+                                   'optimizer': str, 
+                                   'plot_frequency': int}
             }
     )
 
@@ -162,7 +194,7 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         if torch.cuda.is_available():
             print("Running training on GPU")
             self.device = "cuda"
-            self.n_workers = 8
+            self.n_workers = 1
             self.pin_memory= True
 
 
@@ -183,25 +215,31 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         
         self.input_shape = inputs_shape
         self.output_shape = outputs_shape
+        self.p_config = self.yaml_dict['pquant_config']
+        self.pquant_config = pdp_config()
+        self.pquant_config.training_parameters.pretraining_epochs = 0
+        self.pquant_config.training_parameters.fine_tuning_epochs = self.training_config['epochs']
+        self.pquant_config.training_parameters.epochs = self.training_config['epochs']
+        self.pquant_config.quantization_parameters.enable_quantization = True
+        self.pquant_config.training_parameters.pruning_first = True
+        # #self.p_config.quantization_parameters.use_high_granularity_quantization = True
+        self.pquant_config.quantization_parameters.default_data_fractional_bits = int(self.quantization_config['input_quantization'][1])
+        self.pquant_config.quantization_parameters.default_data_integer_bits = int(self.quantization_config['input_quantization'][0] - self.quantization_config['input_quantization'][1])
+        self.pquant_config.quantization_parameters.default_weight_integer_bits = int(self.quantization_config['quantizer_bits_int'])
+        self.pquant_config.quantization_parameters.default_weight_fractional_bits = int(self.quantization_config['quantizer_bits'])
+        self.pquant_config.quantization_parameters.use_relu_multiplier = False
         
-        self.p_config = dst_config()
-        self.p_config.training_parameters.pretraining_epochs = self.training_config['epochs']
-        self.p_config.training_parameters.fine_tuning_epochs = self.training_config['epochs']
-        self.p_config.training_parameters.epochs = self.training_config['epochs']
-        self.p_config.quantization_parameters.default_data_integer_bits = int(self.quantization_config['input_quantization'][0])
-        self.p_config.quantization_parameters.default_data_fractional_bits = int(self.quantization_config['input_quantization'][1])
-        self.p_config.quantization_parameters.default_weight_integer_bits = int(self.quantization_config['quantizer_bits_int'])
-        self.p_config.quantization_parameters.default_weight_fractional_bits = int(self.quantization_config['quantizer_bits'])
-        self.p_config.quantization_parameters.use_relu_multiplier = False
-        self.p_config.pruning_parameters.disable_pruning_for_layers = ['norm_input,avgpool,flatten_dim,Softmax']
+        self.pquant_config.pruning_parameters.sparsity= 0.1
+        self.pquant_config.pruning_parameters.disable_pruning_for_layers = ['norm_input,avgpool,flatten_dim,Softmax']
                 
-        self.jet_model = build_p_model(self.model_config,self.p_config, self.quantization_config, inputs_shape, outputs_shape)
+        self.jet_model = build_p_model(self.model_config,self.pquant_config, self.quantization_config, inputs_shape, outputs_shape)
 
         
         self.jet_model.to(self.device)
         random_input = torch.rand(1,inputs_shape[0],inputs_shape[1]).to(self.device)
         self.jet_model(random_input) # Call once to build Keras layers        
         print(self.jet_model)
+        self.jet_model.to(self.device)
 
     def loss_function_wrapper(self,y,y_true,y_pt, y_true_pt,sample_weight):
             return self.class_loss_fn(y,y_true), self.regression_loss_fn(torch.squeeze(y_pt),y_true_pt)
@@ -270,6 +308,9 @@ class PQuantDeepSetModel(TorchDeepSetModel):
               f'pT_output_mean_squared_error:  {self.history['train_mse'][-1]:1.3f} '
               )
         
+        #torch.cuda.empty_cache()
+        gc.collect()
+        
     def validation_func(self,model, testloader, device, loss_func, epoch, scheduler, *args, **kwargs):
         self.jet_model.eval()
         accuracy_step = 0
@@ -319,10 +360,11 @@ class PQuantDeepSetModel(TorchDeepSetModel):
               f'val_jet_id_output_categorical_accuracy: {self.history['test_acc'][-1]:1.3f} '
               f'val_pT_output_mae: {self.history['test_mae'][-1]:1.3f} '
               f'val_pT_output_mean_squared_error:  {self.history['test_mse'][-1]:1.3f} '
-              f'lr: {self.scheduler.get_last_lr()[0]}'
-              f'ebops: {ebops}'
-              f'remaining_weights: {remaining_weights}'
-              )
+              f'lr: {self.scheduler.get_last_lr()[0]} '
+              f'ebops: {ebops} '
+              f'remaining_weights: {remaining_weights} '
+           )
+        gc.collect()
       
     def fit(
         self,
@@ -354,13 +396,14 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         
         
         self.jet_model = train_model(model = self.jet_model, 
-                                         config = self.p_config, 
+                                         config = self.pquant_config, 
                                          train_func = self.train_func, 
                                          valid_func = self.validation_func, 
                                          trainloader = train_loader, 
                                          testloader = test_loader, 
                                          device = self.device,
                                          loss_func = self.loss_function_wrapper,
+                                         loss_function = self.loss_function_wrapper,
                                          optimizer = self.optimizer, 
                                          scheduler = self.scheduler
                                         )
@@ -478,3 +521,49 @@ class PQuantDeepSetModel(TorchDeepSetModel):
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
+            
+            
+    # Decorated with save decorator for added functionality
+    @JetTagModel.save_decorator
+    def save(self, out_dir: str = "None"):
+        """Save the model file
+
+        Args:
+            out_dir (str, optional): Where to save it if not in the output_directory. Defaults to "None".
+        """
+        # Export the model
+        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
+        # Use keras save format !NOT .h5! due to depreciation
+        export_path = os.path.join(out_dir, "model/saved_model.keras")
+        apply_final_compression(self.jet_model)
+        torch.save(self.jet_model.state_dict(), export_path)
+        
+        meta_dict = {"input_shape":self.input_shape, 
+                     "output_shape":self.output_shape}
+            
+        with open(f'{out_dir}/model/meta_data.json', 'w') as fp:
+            json.dump(meta_dict, fp)
+        
+        print(f"Model saved to {export_path}")
+
+    @JetTagModel.load_decorator
+    def load(self, out_dir: str = "None"):
+        """Load the model file
+
+        Args:
+            out_dir (str, optional): Where to load it if not in the output_directory. Defaults to "None".
+        """
+        # Load the model
+        with open(f"{out_dir}/model/meta_data.json", 'r') as fp:
+             meta_dict = json.load(fp)
+        self.inputs_shape = meta_dict['input_shape']
+        self.outputs_shape = meta_dict['output_shape']
+        self.pquant_config = dst_config()
+        
+        self.jet_model = build_p_model(self.model_config,self.pquant_config, self.quantization_config, self.inputs_shape, self.outputs_shape)
+        self.jet_model.load_state_dict(torch.load(f"{out_dir}/model/saved_model.keras", weights_only=True, strict=False))
+        
+        self.jet_model.to(self.device)
+        random_input = torch.rand(1,inputs_shape[0],inputs_shape[1]).to(self.device)
+        self.jet_model(random_input) # Call once to build Keras layers        
+        self.jet_model.to(self.device)

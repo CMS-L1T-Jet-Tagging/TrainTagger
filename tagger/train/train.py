@@ -9,8 +9,7 @@ from tagger.data.tools import load_data, to_ML
 from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
-from tagger.data.huggingfacedata import process_single_file
-
+import json
 
 def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
@@ -118,71 +117,30 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
         return None
     return sample_weights
 
-
-def Old_train(model, out_dir, percent):
-
-    # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+def train(model, out_dir):
+    
+    metadata_file = os.path.join("training_data/metadata.json")
+    with open(metadata_file, "r") as f:
+        metadata = json.load(f)
+    
+    
     model.set_labels(
-        input_vars,
-        extra_vars,
-        class_labels,
+        metadata['inputs'],
+        metadata['extras'],
+        metadata['outputs'],
     )
 
-    # Make into ML-like data for training
-    X_train, y_train, pt_target_train, reco_pt_train = process_single_file('/root/TrainTagger/QCD_HT50tobb-NEVENT10000-RS25000001.parquet')
-
+    # Load the data, class_labels and input variables name, not really using input variable names to be honest
+    X_train = np.load('training_data/X_train.npy')
+    y_train = np.load('training_data/y_train.npy')
+    pt_target_train = np.load('training_data/pt_target_train.npy')
+    reco_pt_train = np.load('training_data/reco_pt_train.npy')
 
     # Calculate the sample weights for training
     sample_weight = train_weights(
         y_train,
         reco_pt_train,
-        class_labels,
-        weightingMethod=model.training_config['weight_method'],
-        debug=model.run_config['debug'],
-    )
-    if model.run_config['debug']:
-        print("DEBUG - Checking sample_weight:")
-        print(sample_weight)
-
-    # Get input shape
-    input_shape = X_train.shape[1:]  # First dimension is batch size
-    output_shape = y_train.shape[1:]
-
-    model.build_model(input_shape, output_shape)
-    # Train it with a pruned model
-    num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
-    model.compile_model(num_samples)
-    model.fit(X_train, y_train, pt_target_train, sample_weight)
-
-    model.save()
-
-    model.plot_loss()
-
-    return
-
-def train(model, out_dir, percent):
-
-    # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
-    model.set_labels(
-        input_vars,
-        extra_vars,
-        class_labels,
-    )
-
-    # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train = to_ML(data_train, class_labels)
-
-    # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
-    save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test)
-
-    # Calculate the sample weights for training
-    sample_weight = train_weights(
-        y_train,
-        reco_pt_train,
-        class_labels,
+        metadata['outputs'],
         weightingMethod=model.training_config['weight_method'],
         debug=model.run_config['debug'],
     )
@@ -214,7 +172,6 @@ if __name__ == "__main__":
     parser.add_argument(
         '-o', '--output', default='output/baseline', help='Output model directory path, also save evaluation plots'
     )
-    parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
     parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
     )
@@ -234,4 +191,4 @@ if __name__ == "__main__":
 
     else:
         model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.percent)
+        train(model, args.output)

@@ -44,7 +44,7 @@ training_config :
 firmware_config:
   input_precision: {'basic_input': 'ap_fixed<32,16,AP_RND,AP_SAT>',
                     'constituent_pt': 'ap_fixed<32,16,AP_RND,AP_SAT>',
-                    'inverse_jet_pt': 'ap_fixed<32,16,AP_RND,AP_SAT>',
+                    'inverse_jet_pt': 'ap_fixed<17,1,AP_RND,AP_SAT>',
                     'basic_mask': 'ap_uint<1>',
                     'pt_mask': 'ap_uint<1>',
                     'jet_features': 'ap_fixed<32,16,AP_RND,AP_SAT>'}

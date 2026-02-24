@@ -61,12 +61,13 @@ def doPlots(model, outputdir, inputdir):
         "basic_input": np.ascontiguousarray(X_test),
         "jet_pt": np.ascontiguousarray(jet_pt_hw),
         "jet_eta": np.ascontiguousarray(jet_eta_hw),
+        "jet_pt_log": np.ascontiguousarray(np.log(jet_pt_hw)),
     }
 
     model.firmware_convert("temp", build=False)
 
     model_dict, _ = model.prepare_inputs(raw_inputs_dict)
-    model_dict = {key: np.ascontiguousarray(model_dict[key]) for key in model_dict.keys()}
+    model_dict = {key: np.ascontiguousarray(model_dict[key], dtype=np.float64) for key in model_dict.keys()}
     hls_inputs = [v for v in model_dict.values()]
     hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_inputs)

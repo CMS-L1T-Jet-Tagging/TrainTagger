@@ -960,8 +960,6 @@ def process_labels(process_key):
 
 
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
-
-
 def basic(model, signal_dirs):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate

@@ -262,45 +262,6 @@ class WeightedAverageOffsetModel(DeepSetModel):
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
 
-    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0]):
-        """compile the model generating callbacks and loss function
-        Args:
-            num_samples (int): Number of samples in the training set used for scheduling
-        """
-
-        # Define the callbacks using hyperparameters in the config
-        self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], restore_best_weights=True, verbose=2),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
-        ]
-
-        # Define the pruning
-        if 'initial_sparsity' in self.training_config:
-            self._prune_model(num_samples)
-
-        # compile the tensorflow model setting the loss and metrics
-        self.jet_model.compile(
-            optimizer='adam',
-            loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
-                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
-            },
-            loss_weights=loss_weights,
-            metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-            weighted_metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-        )
-
     # Override load to allow node edge projection to also be loaded
     @JetTagModel.load_decorator
     def load(self, out_dir: str = "None"):

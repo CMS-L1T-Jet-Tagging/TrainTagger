@@ -121,6 +121,7 @@ def doPlots(model, outputdir, inputdir):
     keras_trace = {layer.name: act for layer, act in zip(model.jet_model.layers, keras_activations)}
 
     # --- Profiling plots ---
+    from IPython import embed; embed()
     print(len(model_dict['basic_input']), "inputs to the model")
     for layer in hls4ml_trace.keys():
         print("Doing profiling 2d for layer", layer)

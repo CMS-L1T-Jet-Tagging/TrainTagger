@@ -98,7 +98,7 @@ class WeightedAverageInvModel(DeepSetModel):
         # Make the pT weights and corrections
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
-        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'], 3), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
+        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 4), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
 
         # Weighted Global Average Pooling
@@ -129,7 +129,7 @@ class WeightedAverageInvModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'], 3),
+            activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 4),
             name='pt_weights_output')(pt_weights)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
@@ -176,45 +176,6 @@ class WeightedAverageInvModel(DeepSetModel):
             validation_split=self.training_config['validation_split'],
             callbacks=self.callbacks,
             shuffle=True,
-        )
-
-    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0]):
-        """compile the model generating callbacks and loss function
-        Args:
-            num_samples (int): Number of samples in the training set used for scheduling
-        """
-
-        # Define the callbacks using hyperparameters in the config
-        self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], restore_best_weights=True, verbose=2),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
-        ]
-
-        # Define the pruning
-        if 'initial_sparsity' in self.training_config:
-            self._prune_model(num_samples)
-
-        # compile the tensorflow model setting the loss and metrics
-        self.jet_model.compile(
-            optimizer='adam',
-            loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
-                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
-            },
-            loss_weights=loss_weights,
-            metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-            weighted_metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
         )
 
     # Override load to allow node edge projection to also be loaded

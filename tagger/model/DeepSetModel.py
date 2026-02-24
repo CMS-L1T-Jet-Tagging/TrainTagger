@@ -200,6 +200,8 @@ class DeepSetModel(QKerasModel):
 
         config['LayerName']['apply_pt_weights']['Precision'] = 'ufixed<26,13,RND_CONV,SAT,0>'
         config['LayerName']['weighted_pt']['Precision'] = 'ufixed<26,13,RND_CONV,SAT,0>'
+        config['LayerName']['Dense_pt_weights_output']['Precision'] = 'fixed<13,7,RND_CONV,SAT,0>'
+        config['LayerName']['pt_weights_output']['Precision']['result'] = 'ufixed<13,8,RND_CONV,SAT,0>'
 
         config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
         config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
@@ -259,43 +261,4 @@ class DeepSetModel(QKerasModel):
             validation_split=self.training_config['validation_split'],
             callbacks=self.callbacks,
             shuffle=True,
-        )
-
-    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0]):
-        """compile the model generating callbacks and loss function
-        Args:
-            num_samples (int): Number of samples in the training set used for scheduling
-        """
-
-        # Define the callbacks using hyperparameters in the config
-        self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], restore_best_weights=True, verbose=2),
-            ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=self.training_config['ReduceLROnPlateau_factor'],
-                patience=self.training_config['ReduceLROnPlateau_patience'],
-                min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
-            ),
-        ]
-
-        # Define the pruning
-        if 'initial_sparsity' in self.training_config:
-            self._prune_model(num_samples)
-
-        # compile the tensorflow model setting the loss and metrics
-        self.jet_model.compile(
-            optimizer='adam',
-            loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
-                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
-            },
-            loss_weights=loss_weights,
-            metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-            weighted_metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
         )

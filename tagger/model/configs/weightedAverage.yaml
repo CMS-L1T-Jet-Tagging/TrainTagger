@@ -17,7 +17,7 @@ quantization_config:
   quantizer_bits_int : 2
   quantizer_alpha_val : 1.0
   pt_output_quantization : [16,6]
-  pt_layers_bits: [12, 3]
+  # pt_layers_bits: [12, 3]
 
 inputs:
   basic_features: ['basic_input', 'basic_mask', 'constituent_fraction', 'pt_mask']

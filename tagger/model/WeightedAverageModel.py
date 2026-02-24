@@ -72,19 +72,6 @@ class WeightedAverageModel(DeepSetModel):
             )
         }
 
-        self.pt_layers = {
-            'kernel_quantizer': quantized_bits(
-                self.quantization_config['pt_layers_bits'][0],
-                self.quantization_config['pt_layers_bits'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            'bias_quantizer' : quantized_bits(
-                self.quantization_config['pt_layers_bits'][0],
-                self.quantization_config['pt_layers_bits'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-        }
-
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
         mask = tf.keras.layers.Input(shape=inputs_shape['basic_mask'], name='basic_mask')
@@ -108,7 +95,7 @@ class WeightedAverageModel(DeepSetModel):
         main = tf.keras.layers.Multiply(name='apply_mask')([main, mask])
 
         # Make the pT weights and corrections
-        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.pt_layers)(main)
+        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
         pt_weights = QActivation(activation=quantized_relu(12, 3), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
         pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
@@ -139,7 +126,7 @@ class WeightedAverageModel(DeepSetModel):
         pt_weights = tf.keras.layers.Concatenate(name='concat_jet_features_pt_weights')([pt_weights, jet_features_norm])
 
         # Make fully connected dense layers for regression task
-        pt_weights = QDense(16, name='Dense_pt_weights_output', **self.pt_layers)(pt_weights)
+        pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
             activation=quantized_relu(12, 3),
             name='pt_weights_output')(pt_weights)

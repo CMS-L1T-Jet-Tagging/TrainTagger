@@ -183,7 +183,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
             'basic_input': selected_jet_inputs,
             'jet_pt': jet_pts[cuts],
             'jet_pt_log': np.log(jet_pts[cuts]),
-            'jet_eta': jet_etas_hw[cuts],
+            'jet_eta': jet_eta_hw[cuts],
         }
         pred_scores, pt_ratios = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
         all_scores[cuts] = tau_score(pred_scores, model.class_labels)

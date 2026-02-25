@@ -17,7 +17,7 @@ from schema import Schema, And, Use, Optional
 # Qkeras
 from qkeras.quantizers import quantized_bits
 from qkeras.utils import load_qmodel
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
 from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
@@ -97,6 +97,11 @@ class QKerasModel(JetTagModel):
                 patience=self.training_config['ReduceLROnPlateau_patience'],
                 min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
             ),
+            ModelCheckpoint(
+                filepath=os.path.join(f"{self.output_directory}","weights_epoch_{epoch:02d}.h5"),
+                save_weights_only=True,
+                save_freq="epoch"
+            )
         ]
 
         # Define the pruning

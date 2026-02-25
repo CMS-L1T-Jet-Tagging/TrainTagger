@@ -84,7 +84,7 @@ def load_cmssw_inputs(path, n_entries=100000, tree='outnano/Jets'):
     return n_events, jet_pt, jet_eta, cmssw_b
 
 def derive_cmssw_rate(minbias_path, signal_path, model_dir, target_rate=14, n_entries=100000, tree='outnano/Jets'):
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
+    plot_dir = os.path.join(model_dir, 'plots/physics/bbbb_regression')
     n_events, jet_pt, jet_eta, cmssw_b = load_cmssw_inputs(minbias_path, n_entries, tree)
 
     ht_selection = (jet_pt > 30) & (np.abs(jet_eta) < 2.4)
@@ -141,7 +141,7 @@ def pick_and_plot(rate_list, ht_list, nn_list, model, apply_sel, apply_light, ta
     Pick the working points and plot
     """
 
-    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb_regression')
     os.makedirs(plot_dir, exist_ok=True)
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -195,7 +195,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model, target_rate = 14, RateRang
     Derive the HT only working points (without bb cuts)
     """
 
-    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb_regression')
 
     #Derive the rate
     rate_list = []
@@ -256,8 +256,8 @@ def derive_bbbb_regression_WPs(model, minbias_path, apply_sel, apply_light, targ
     # model regressed pt and event selection
     model_jet_pt = jet_pt_selected * regression_scores
     model_ht_selection = (model_jet_pt > 30) & (np.abs(jet_eta_selected) < 2.4) & (jet_pt_selected > 15)
-    # model_ht = ak.sum(model_jet_pt[model_ht_selection], axis=1)
-    model_ht = ak.sum(jet_pt_selected[(jet_pt_selected > 30) & (np.abs(jet_eta_selected) < 2.4)], axis=1)
+    model_ht = ak.sum(model_jet_pt[model_ht_selection], axis=1)
+    # model_ht = ak.sum(jet_pt_selected[(jet_pt_selected > 30) & (np.abs(jet_eta_selected) < 2.4)], axis=1)
 
     assert(len(bscore_sum) == len(model_ht))
 
@@ -307,8 +307,8 @@ def load_bbbb_regression_WPs(model, apply_sel, apply_light):
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
-    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/working_point_{score_type}_{sel_type}.json")
+    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
@@ -330,8 +330,8 @@ def load_all_bbbb_regression_WPs(model, apply_sel, apply_light):
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/all_working_points_{score_type}_{sel_type}.json")
-    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/all_working_points_{score_type}_{sel_type}.json")
+    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
@@ -423,8 +423,8 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     # model regressed pt and HT
     model_jet_pt = jet_pt * regression_scores
     model_ht_selection = (model_jet_pt > 30) & (np.abs(jet_eta) < 2.4) & (jet_pt > 15)
-    # model_ht = ak.sum(model_jet_pt[model_ht_selection], axis=1)
-    model_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    model_ht = ak.sum(model_jet_pt[model_ht_selection], axis=1)
+    # model_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
@@ -461,7 +461,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
 
     #Save this best WP
     working_point = {"HT": float(model_ht_wp), "NN": float(model_btag_wp)}
-    wp_path = os.path.join(model.output_directory, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
+    wp_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/working_point_{score_type}_{sel_type}.json")
     with open(wp_path, "w") as f:
         json.dump(working_point, f, indent=4)
 
@@ -534,7 +534,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/HH_eff_HT_{score_type}_{sel_type}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 
@@ -559,7 +559,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     ax2.legend(loc='upper left')
 
     # Save second plot
-    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
+    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 
@@ -570,7 +570,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     eff_model_pure = np.mean(model_pure_selection)
     eff_pure_cmssw = np.mean(pure_cmssw_selection)
 
-    plot_dir = os.path.join(model.output_directory, f"plots/physics/bbbb/")
+    plot_dir = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/")
     outname = plot_dir + f"/TotalEff_{score_type}_{sel_type}.txt"
     with open(outname, "w") as outfile:
         outfile.write("Total HH Eff \n")
@@ -663,7 +663,7 @@ def bbbb_regression_eff_mHH(model,
     # Save second plot
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_mHH_{score_type}_{sel_type}")
+    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb_regression/HH_eff_mHH_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 

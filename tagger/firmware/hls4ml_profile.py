@@ -21,7 +21,6 @@ def getReports(indir):
     data_ = {}
 
     report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.rpt'.format(indir))
-
     if report_csynth.is_file():
         print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
 
@@ -36,6 +35,7 @@ def getReports(indir):
                 data_['bram_rel'] = int(resource_line.split('|')[2])
             except ValueError:
                 data_['bram_rel'] = 0
+
             data_['dsp_rel'] = int(resource_line.split('|')[3])
             data_['ff_rel'] = int(resource_line.split('|')[4])
             data_['lut_rel'] = int(resource_line.split('|')[5])
@@ -121,7 +121,6 @@ def doPlots(model, outputdir, inputdir):
     keras_trace = {layer.name: act for layer, act in zip(model.jet_model.layers, keras_activations)}
 
     # --- Profiling plots ---
-    from IPython import embed; embed()
     print(len(model_dict['basic_input']), "inputs to the model")
     for layer in hls4ml_trace.keys():
         print("Doing profiling 2d for layer", layer)
@@ -178,6 +177,7 @@ if __name__ == "__main__":
     print('Class Precision : ', model.firmware_config['class_precision'])
     print('Regression Precision : ', model.firmware_config['reg_precision'])
     print(" Resource Usage of a VU13P")
+    from IPython import embed; embed()
     print('Flip Flops : ', report['ff_rel'], ' %')
     print('Look Up Tables : ', report['lut_rel'], ' %')
     print('Block RAM : ', report['bram_rel'], ' %')

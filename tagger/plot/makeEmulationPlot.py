@@ -84,6 +84,7 @@ def doPlots(model, outputdir, inputdir):
     modelsAndNames["Y_hls_predict"] = y_quant_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
     cmssw_preds = np.stack([data['jet_SC4NGJet_score_' + label] for label in ['b', 'charm', 'light', 'gluon', 'taup', 'taum', 'muon', 'electron']], axis=-1)
+    from IPython import embed; embed()
     print('cmssw to keras:', np.max(abs(cmssw_preds - y_class), axis=1), np.max(abs(cmssw_preds - y_class)))
     print('cmssw to hls:', np.max(abs(cmssw_preds - y_quant_hls), axis=1), np.max(abs(cmssw_preds - y_quant_hls)))
     print('hls to keras:', np.max(abs(y_quant_hls - y_class), axis=1), np.max(abs(y_quant_hls - y_class)))

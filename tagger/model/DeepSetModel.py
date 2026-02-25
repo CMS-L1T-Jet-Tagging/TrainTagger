@@ -198,10 +198,10 @@ class DeepSetModel(QKerasModel):
             else:
                 config["LayerName"][layer.name]["Trace"] = not build
 
-        config['LayerName']['apply_pt_weights']['Precision'] = 'ufixed<26,13,RND_CONV,SAT,0>'
-        config['LayerName']['weighted_pt']['Precision'] = 'ufixed<26,13,RND_CONV,SAT,0>'
-        config['LayerName']['Dense_pt_weights_output']['Precision'] = 'fixed<13,7,RND_CONV,SAT,0>'
-        config['LayerName']['pt_weights_output']['Precision']['result'] = 'ufixed<13,8,RND_CONV,SAT,0>'
+        # config['LayerName']['apply_pt_weights']['Precision'] = 'ufixed<26,13,RND_CONV,SAT,0>'
+        # config['LayerName']['weighted_pt']['Precision'] = 'ufixed<26,13,RND_CONV,SAT,0>'
+        # config['LayerName']['Dense_pt_weights_output']['Precision'] = 'fixed<13,7,RND_CONV,SAT,0>'
+        # config['LayerName']['pt_weights_output']['Precision']['result'] = 'ufixed<13,8,RND_CONV,SAT,0>'
 
         config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
         config["LayerName"]["jet_id_output"]["Implementation"] = "stable"

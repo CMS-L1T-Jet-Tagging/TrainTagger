@@ -56,7 +56,6 @@ def plot_1D_histogram(pt_weights, pt, eta, pt_correction, binning, save_path):
     pt_bins = [0, 0, 5, 15, 30, 80, np.inf]
     eta_bins = [0, 0, 0.5, 1, 1.5, 2, 2.5]
     colors = ['#5790fc', '#f89c20', '#e42536', '#964a8b', '#9c9ca1', '#7a21dd']
-    from IPython import embed; embed()
     pt_weights = np.clip(pt_weights, -np.inf, 200)
     for var_bins, var, var_name in zip([pt_bins, eta_bins], [pt, np.abs(eta)], ['pt', 'eta']):
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)

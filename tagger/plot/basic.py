@@ -984,7 +984,7 @@ def basic(model, signal_dirs):
     pt_ratio = model_outputs[1][:, 0]
 
     # Plot SHAP values
-    plot_shaply(model, test_dict, model.class_labels, plot_dir)
+    # plot_shaply(model, test_dict, model.class_labels, plot_dir)
 
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)

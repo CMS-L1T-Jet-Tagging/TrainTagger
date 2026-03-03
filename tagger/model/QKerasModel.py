@@ -90,12 +90,16 @@ class QKerasModel(JetTagModel):
 
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            EarlyStopping(monitor='val_loss', patience=self.training_config['EarlyStopping_patience'], verbose=2),
+            EarlyStopping(monitor='val_prune_low_magnitude_pT_output_loss',
+                          patience=self.training_config['EarlyStopping_patience'],
+                          restore_best_weights=True,
+                          verbose=2),
             ReduceLROnPlateau(
                 monitor='val_loss',
                 factor=self.training_config['ReduceLROnPlateau_factor'],
                 patience=self.training_config['ReduceLROnPlateau_patience'],
                 min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
+                verbose=2,
             ),
             ModelCheckpoint(
                 filepath=os.path.join(f"{self.output_directory}","weights_epoch_{epoch:02d}.h5"),

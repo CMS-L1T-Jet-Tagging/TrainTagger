@@ -213,7 +213,8 @@ def process_single_file(path):
                                 feature_vector[iconstituent][6:14] = PIDtoOneHot(dataset['L1T_PUPPIPart_PID'][ievent][index])
                                 
                                 feature_vector[iconstituent][14] =  dataset['L1T_PUPPIPart_DZ'][ievent][index]
-                                feature_vector[iconstituent][15] =  0#np.sqrt(abs(dataset['L1T_PUPPIPart_D0'][ievent][index]))
+                                dxy = dataset['L1T_PUPPIPart_D0'][ievent][index] + np.random.normal(0,0.0)
+                                feature_vector[iconstituent][15] =  np.sqrt(abs(dxy))
                                 feature_vector[iconstituent][16] =  1
                                 feature_vector[iconstituent][17] =  dataset['L1T_PUPPIPart_PuppiW'][ievent][index]
                                 feature_vector[iconstituent][18] =  0

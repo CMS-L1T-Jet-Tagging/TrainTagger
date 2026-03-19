@@ -103,7 +103,7 @@ class QKerasModel(JetTagModel):
             ),
             ModelCheckpoint(
                 filepath=os.path.join(f"{self.output_directory}","weights_epoch_{epoch:02d}.h5"),
-                save_weights_only=True,
+                save_weights_only=False,
                 save_freq="epoch"
             )
         ]
@@ -112,12 +112,33 @@ class QKerasModel(JetTagModel):
         if 'initial_sparsity' in self.training_config:
             self._prune_model(num_samples)
 
+        def asymmetric_huber_loss(delta=1.0, alpha=2.0):
+            """
+            Huber loss with asymmetric penalization.
+
+            Args:
+                delta: Huber threshold.
+                alpha: Weight for underestimation (y_true > y_pred).
+            """
+            def loss(y_true, y_pred):
+                residual = y_true - y_pred
+                weight = tf.where(residual > 0, alpha, 1.0)  # Penalize underestimation more
+
+                abs_res = tf.abs(residual)
+                quadratic = tf.minimum(abs_res, delta)
+                linear = abs_res - quadratic
+
+                return tf.reduce_mean(weight * (0.5 * quadratic**2 + delta * linear))
+
+            return loss
+
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
             optimizer='adam',
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
-                self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
+                # self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
+                self.loss_name + self.output_pt_name: asymmetric_huber_loss(),
             },
             loss_weights=loss_weights,
             metrics={

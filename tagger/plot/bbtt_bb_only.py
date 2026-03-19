@@ -59,42 +59,40 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
         event_mask = np.ones(len(jet_pt), dtype=bool)
     return event_mask
 
-def nn_score_sums(model, jet_nn_inputs, jet_pt, jet_eta, class_labels, n_jets=4):
-    #Calculate the output sum
-    b_idx = class_labels['b']
-    l_idx = class_labels['light']
-    g_idx = class_labels['gluon']
+def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta, jet_eta_hw, apply_light, class_labels, n_jets=4):
+    b_index=class_labels['b']
+    l_index=class_labels['light']
+    g_index=class_labels['gluon']
 
-    # Get the inputs for the first n_jets
-    btag_inputs = [{
-        'basic_input': np.asarray(basic_inputs[:, i]),
-        'jet_pt': np.asarray(jet_pt[:, i]),
-        'jet_pt_log': np.log(np.asarray(jet_pt[:, i])),
-        'jet_eta': np.asarray(jet_eta[:, i]),
+    #Get the inputs for the first n_jets
+    og_shape = ak.num(jet_pt)
+    model_inputs = {
+        'basic_input': np.asarray(ak.flatten(basic_inputs)),
+        'jet_pt': np.asarray(ak.flatten(jet_pt)),
+        'jet_pt_log': np.asarray(np.log(ak.flatten(jet_pt))),
+        'jet_eta': np.asarray(ak.flatten(jet_eta_hw)),
         }
-        for i in range(0, n_jets)]
+
 
     #Get the nn outputs
-    nn_outputs = [model.predict(model.prepare_inputs(nn_input)[0])[0]
-        for i, nn_input in enumerate(btag_inputs)]
+    class_outputs, regression_outputs = model.predict(model.prepare_inputs(model_inputs)[0])
+    class_outputs, regression_outputs = ak.unflatten(class_outputs, og_shape), ak.unflatten(regression_outputs, og_shape)
 
-    # get sums of 2 leading b scores
-    rows = np.arange(len(nn_outputs[0])).reshape((-1, 1))
+    # Mask unwanted jets (i.e jets < 15 Gev and |eta| > 2.4), and set all scores to 0
+    selection_mask = (jet_pt > 15) & (abs(jet_eta) < 2.4)
+    regression_outputs = ak.where(selection_mask, regression_outputs, 0)
+    mask_expanded = ak.broadcast_arrays(selection_mask, class_outputs)[0]
+    class_outputs = ak.where(mask_expanded, class_outputs, 0)
 
-    # raw preds
-    b_preds = np.transpose([pred_score[:, b_idx] for pred_score in nn_outputs])
-    b_preds_arg = np.argsort(b_preds, axis=1)[:,-2:]
-    b_preds_sums = np.sum(b_preds[rows, b_preds_arg], axis=1)
+    # 4 leading jets for b tag scores
+    class_outputs = [class_outputs[:,i] for i in range(n_jets)]
 
-    # vs light preds
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    b_vs_qg_arg = np.argsort(b_vs_qg, axis=1)[:,-2:]
-    b_vs_qg_sums = np.sum(b_vs_qg[rows, b_vs_qg_arg], axis=1)
+    #Sum them together
+    bscore_sum = sum(
+            [x_vs_y(pred_score[:, b_index],  pred_score[:,l_index] + pred_score[:,g_index] , apply_light) for pred_score in class_outputs]
+        )
 
-    bscore_sums = [b_preds_sums, b_vs_qg_sums]
-    bscore_idxs = [b_preds_arg, b_vs_qg_arg]
-
-    return bscore_sums, bscore_idxs
+    return bscore_sum, regression_outputs
 
 def pick_and_plot(target_rate_idx, ht_list, bb_list, raw_score, apply_sel, model, tree):
     """

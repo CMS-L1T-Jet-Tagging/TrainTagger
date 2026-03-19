@@ -64,7 +64,7 @@ def doPlots(model, outputdir, inputdir):
         "basic_input": np.ascontiguousarray(X_test),
         "jet_pt": np.ascontiguousarray(jet_pt_hw),
         "jet_pt_log": np.ascontiguousarray(np.log(jet_pt_hw)),
-        "jet_eta": np.ascontiguousarray(jet_eta_hw),
+        "jet_eta": np.ascontiguousarray(abs(jet_eta_hw)),
     }
 
     model_dict, _ = model.prepare_inputs(raw_inputs_dict)
@@ -73,9 +73,13 @@ def doPlots(model, outputdir, inputdir):
                                       one_entries=[],
                                       proper_entries=['basic_input', 'constituent_fraction', 'jet_features'],
                                       input_dict=model_dict)
-    hls_model_input_list = [i for i in model_dict.values()]
-    hls_model_input = [np.ascontiguousarray(i, dtype=np.float64) for i in hls_model_input_list]
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_model_input)
+    hls_inputs = []
+    for var in model.hls_jet_model.get_input_variables():
+        name = var.name
+        hls_inputs.append(np.ascontiguousarray(model_dict[name], dtype=np.float64))
+    # hls_model_input_list = [i for i in model_dict.values()]
+    # hls_model_input = [np.ascontiguousarray(i, dtype=np.float64) for i in hls_model_input_list]
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_inputs)
     y_class, y_ptreg = model.jet_model.predict(model_dict)
 
     modelsAndNames["Y_predict"] = y_class
@@ -84,7 +88,6 @@ def doPlots(model, outputdir, inputdir):
     modelsAndNames["Y_hls_predict"] = y_quant_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
     cmssw_preds = np.stack([data['jet_SC4NGJet_score_' + label] for label in ['b', 'charm', 'light', 'gluon', 'taup', 'taum', 'muon', 'electron']], axis=-1)
-    from IPython import embed; embed()
     print('cmssw to keras:', np.max(abs(cmssw_preds - y_class), axis=1), np.max(abs(cmssw_preds - y_class)))
     print('cmssw to hls:', np.max(abs(cmssw_preds - y_quant_hls), axis=1), np.max(abs(cmssw_preds - y_quant_hls)))
     print('hls to keras:', np.max(abs(y_quant_hls - y_class), axis=1), np.max(abs(y_quant_hls - y_class)))

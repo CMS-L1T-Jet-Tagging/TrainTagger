@@ -126,6 +126,7 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
         origin='lower',
         aspect='auto',
         cmap='viridis',
+        norm='log',
     )
 
     ax.set_xlabel(style.INPUT_FEATURE_STYLE[var_name])
@@ -144,7 +145,7 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
     return
 
 
-def pt_weights_plotting(model, inputs, layer_name, plot_path):
+def pt_weights_plotting(model, inputs, y_test, layer_name, plot_path):
 
     # Unpack inputs
     X_test = inputs['basic_input']
@@ -164,18 +165,18 @@ def pt_weights_plotting(model, inputs, layer_name, plot_path):
         plot_path,
         )
 
-    # class_labels = model.class_labels
-    # y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
-    # for i, input_var in enumerate(model.input_vars):
-    #     plot_2D_histogram(
-    #         pt_weights.flatten(),
-    #         pt_correction_type,
-    #         X_test[:, :, i].flatten(),
-    #         input_var,
-    #         mask,
-    #         binning_dict[input_var],
-    #         save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}"),
-    #         )
+    class_labels = model.class_labels
+    y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
+    for i, input_var in enumerate(model.input_vars):
+        plot_2D_histogram(
+            pt_weights.flatten(),
+            pt_correction_type,
+            X_test[:, :, i].flatten(),
+            input_var,
+            mask,
+            binning_dict[input_var],
+            save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}"),
+            )
 
     #     for flav, c in class_labels.items():
     #         class_mask = y_test == c
@@ -208,9 +209,9 @@ if __name__ == "__main__":
     output_dir = os.path.join(model.output_directory, "plots/training")
 
     # Plot pt weights
-    pt_weights_plotting(model, test_dict, 'pt_weights_output', output_dir)
+    pt_weights_plotting(model, test_dict, y_test, 'pt_weights_output', output_dir)
     try:
-        pt_weights_plotting(model, test_dict, 'pt_offsets_output', output_dir)
+        pt_weights_plotting(model, test_dict, y_test, 'pt_offsets_output', output_dir)
     except:
         print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
 

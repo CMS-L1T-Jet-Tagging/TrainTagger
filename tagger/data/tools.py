@@ -31,7 +31,7 @@ def _add_response_vars(data):
         data['jet_pt_raw'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
     )
 
-def _split_flavor(data):
+def _split_flavor(data, outdir):
     """
     Splits data by particle flavor and applies conditions for each category. Also creates the pT target.
 
@@ -113,6 +113,8 @@ def _split_flavor(data):
     for label, condition in conditions.items():
         data['class_label'] = ak.where(condition, class_labels[label], data['class_label'])
 
+    #load MinBias data to get the pt ratio for hadrons and leptons
+
     # Set pt regression target
     hadrons = conditions["b"] | conditions["charm"] | conditions["light"] | conditions["gluon"]
     leptons = conditions["taup"] | conditions["taum"] | conditions["muon"] | conditions["electron"]
@@ -125,6 +127,10 @@ def _split_flavor(data):
 
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
+
+    # special treatment for MinBias jets in training data only
+    if 'training_data' in outdir:
+        data = load_minbias("/eos/user/s/stella/TrainTagger/signal_process_data/MinBias_PU200", data)
 
     # Apply pt_cut
     jet_ptmin_gen = data['target_pt_phys'] > 5.0
@@ -140,6 +146,21 @@ def _split_flavor(data):
         )
 
     return data[jet_ptmin_gen], class_labels
+
+def load_minbias(minbias_dir, data):
+    a = load_data(minbias_dir, percentage=100, test_ratio=0.0)[0]
+    data_set = ak.to_numpy(np.stack((data['jet_pt'], data['jet_eta'], data['jet_phi']), axis=-1))
+    a_np = ak.to_numpy(np.stack((a['jet_pt'], a['jet_eta'], a['jet_phi']), axis=-1))
+    a_set = set(map(tuple, a_np))
+
+    # List of indices in data_comparison that exist in a_comparison
+    indices = [i for i, row in enumerate(data_set) if tuple(row) in a_set]
+    mask = np.zeros(len(data['target_pt']), dtype=bool)
+    mask[indices] = True  # Set MinBias jets to -1, special treatment in regression loss
+    target_pt = np.where(mask, -1, data['target_pt'])
+    data['target_pt'] = target_pt
+
+    return data
 
 def _get_puppicand_fields(tag):
 
@@ -394,7 +415,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
 def make_data(
     infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part0.root',
-    outdir='training_data/',
+    outdir='/eos/user/s/stella/TrainTagger/training_data_minbias/',
     tag=INPUT_TAG,
     extras=EXTRA_FIELDS,
     n_parts=N_PARTICLES,
@@ -448,7 +469,7 @@ def make_data(
         # Add additional response variables
         # _add_response_vars(data)
         # Split data into all the training classes
-        data_split, class_labels = _split_flavor(data)
+        data_split, class_labels = _split_flavor(data, outdir)
 
         # If first chunk then save metadata of the dataset
         if chunk == 0:

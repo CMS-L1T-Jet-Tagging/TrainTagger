@@ -19,7 +19,6 @@ style.set_style()
 
 def getReports(indir):
     data_ = {}
-
     report_csynth = Path('{}/L1TSC4NGJetModel_prj/solution1/syn/report/L1TSC4NGJetModel_csynth.rpt'.format(indir))
     if report_csynth.is_file():
         print('Found valid vsynth and synth in {}! Fetching numbers'.format(indir))
@@ -59,8 +58,8 @@ def doPlots(model, outputdir, inputdir):
 
     raw_inputs_dict = {
         "basic_input": np.ascontiguousarray(X_test),
-        "jet_pt": np.ascontiguousarray(jet_pt_hw),
-        "jet_eta": np.ascontiguousarray(jet_eta_hw),
+        "jet_pt": np.ascontiguousarray(np.log(jet_pt_hw)),
+        "jet_eta": np.ascontiguousarray(abs(jet_eta_hw)),
         "jet_pt_log": np.ascontiguousarray(np.log(jet_pt_hw)),
     }
 
@@ -68,7 +67,10 @@ def doPlots(model, outputdir, inputdir):
 
     model_dict, _ = model.prepare_inputs(raw_inputs_dict)
     model_dict = {key: np.ascontiguousarray(model_dict[key], dtype=np.float64) for key in model_dict.keys()}
-    hls_inputs = [v for v in model_dict.values()]
+    hls_inputs = []
+    for var in model.hls_jet_model.get_input_variables():
+        name = var.name
+        hls_inputs.append(model_dict[name])
     hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_inputs)
     y_class, y_ptreg = model.jet_model.predict(model_dict)
@@ -155,7 +157,7 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--model_path', default='output/baseline', help='Input model path for comparison')
     parser.add_argument('-o', '--outpath', default='output/baseline/plots/profile', help='Jet tagger plotting directory')
     parser.add_argument(
-        '-of', '--outpath_firmware', default='output/baseline/firmware', help='Jet tagger firmware directory'
+        '-of', '--outpath_firmware', default='output/weightedAverageSimple4bits/firmware', help='Jet tagger firmware directory'
     )
     parser.add_argument('-i', '--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part6.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
@@ -177,7 +179,6 @@ if __name__ == "__main__":
     print('Class Precision : ', model.firmware_config['class_precision'])
     print('Regression Precision : ', model.firmware_config['reg_precision'])
     print(" Resource Usage of a VU13P")
-    from IPython import embed; embed()
     print('Flip Flops : ', report['ff_rel'], ' %')
     print('Look Up Tables : ', report['lut_rel'], ' %')
     print('Block RAM : ', report['bram_rel'], ' %')

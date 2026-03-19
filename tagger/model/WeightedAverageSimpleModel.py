@@ -76,6 +76,7 @@ class WeightedAverageSimpleModel(DeepSetModel):
         inputs = tf.keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
         pt = tf.keras.layers.Input(shape=inputs_shape['constituent_fraction'], name='constituent_fraction')
         jet_features = tf.keras.layers.Input(shape=inputs_shape['jet_features'], name='jet_features')
+        pt_mask = tf.keras.layers.Input(shape=inputs_shape['pt_mask'], name='pt_mask')
 
         # Main branch
         main = BatchNormalization(name='norm_basic_input')(inputs)
@@ -92,7 +93,8 @@ class WeightedAverageSimpleModel(DeepSetModel):
         # Make the pT weights and corrections
         pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
         pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
-        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 4), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
+        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 3), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
+        pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
 
         # Weighted Global Average Pooling
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
@@ -122,20 +124,23 @@ class WeightedAverageSimpleModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 4),
+            activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 2),
             name='pt_weights_output')(pt_weights)
         print('PRECISION', self.quantization_config['quantizer_bits'])
         print(self.pt_args)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
-        pt_output = QDense(1, name='pT_output',
+        pt_output_dense = QDense(1, name='pT_output_dense',
             kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
             use_bias = False,
             trainable=False,
             **self.pt_args)(weighted_pt) # fix weights at 1 to perform sum, not updated during training
+        pt_output = QActivation(
+            activation=quantized_relu(16 , 2),
+            name='pT_output')(pt_output_dense)  # Ensure positive output, and cap
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=[inputs, pt, jet_features], outputs=[jet_id, pt_output])
+        self.jet_model = tf.keras.Model(inputs=[inputs, pt, jet_features, pt_mask], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 

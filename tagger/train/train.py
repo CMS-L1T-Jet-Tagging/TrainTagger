@@ -94,6 +94,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         5: 1.0,  # taum
         6: 1.0,  # muon
         7: 1.0,  # electron
+        8: 1.0,  # pile-up
     }
 
     for idx in class_labels.values():

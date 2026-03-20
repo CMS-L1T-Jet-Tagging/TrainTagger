@@ -31,7 +31,7 @@ def _add_response_vars(data):
         data['jet_pt_raw'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
     )
 
-def _split_flavor(data, outdir):
+def _split_flavor(data):
     """
     Splits data by particle flavor and applies conditions for each category. Also creates the pT target.
 
@@ -105,15 +105,15 @@ def _split_flavor(data, outdir):
 
     # Automatically generate class labels based on the order of keys in conditions
     class_labels = {label: idx for idx, label in enumerate(conditions)}
+    pileup_idx = len(class_labels)
+    class_labels['pileup'] = pileup_idx
 
-    # Initialize the new array in data for numeric labels with default -1 for unmatched entries
-    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], -1)
+    # Initialize the new array in data for numeric labels with default for pileup entries
+    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], pileup_idx)
 
     # Assign numeric values based on conditions using awkward's where function
     for label, condition in conditions.items():
         data['class_label'] = ak.where(condition, class_labels[label], data['class_label'])
-
-    #load MinBias data to get the pt ratio for hadrons and leptons
 
     # Set pt regression target
     hadrons = conditions["b"] | conditions["charm"] | conditions["light"] | conditions["gluon"]
@@ -128,9 +128,9 @@ def _split_flavor(data, outdir):
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
 
-    # special treatment for MinBias jets in training data only
-    if 'training_data' in outdir:
-        data = load_minbias("/eos/user/s/stella/TrainTagger/signal_process_data/MinBias_PU200", data)
+    #Set pt correction target of pileup jets to 1.0
+    data['target_pt'] = ak.where(data['class_label'] == pileup_idx, -1., data['target_pt']) # set target pt to zero
+    data['target_pt_phys'] = ak.where(data['class_label'] == pileup_idx, data['jet_pt_phys'], data['target_pt_phys'])
 
     # Apply pt_cut
     jet_ptmin_gen = data['target_pt_phys'] > 5.0
@@ -139,11 +139,13 @@ def _split_flavor(data, outdir):
 
     # Sanity check for data consistency
     split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
-    if split_data_sum != len(data[jet_ptmin_gen]):
+    matched_entries =  data['class_label'] != pileup_idx
+    if split_data_sum != len(data[jet_ptmin_gen & matched_entries]):
         raise ValueError(
-            f"""Data splitting error: Total entries ({split_data_sum})
+            f"""Data splitting error: Total matched entries ({split_data_sum})
             do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
+
 
     return data[jet_ptmin_gen], class_labels
 
@@ -469,7 +471,7 @@ def make_data(
         # Add additional response variables
         # _add_response_vars(data)
         # Split data into all the training classes
-        data_split, class_labels = _split_flavor(data, outdir)
+        data_split, class_labels = _split_flavor(data)
 
         # If first chunk then save metadata of the dataset
         if chunk == 0:

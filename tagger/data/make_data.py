@@ -31,11 +31,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # MinBias first to compare later for truth pt ratio
-    make_data(
-        infile=os.path.join(os.path.dirname(args.input), 'MinBias_PU200.root'),
-        outdir = os.path.join("/eos/user/s/stella/TrainTagger/signal_process_data", "MinBias_PU200"),
-        step_size=args.step, extras=args.extras, ratio=1, tree=args.tree)
     make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later

@@ -122,10 +122,10 @@ class WeightedAverageSimpleModel(DeepSetModel):
         pt_weights = tf.keras.layers.Concatenate(name='concat_jet_features_pt_weights')([pt_weights, jet_features_norm])
 
         # Make fully connected dense layers for regression task
-        pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
+        pt_weights = QDense(16, name='Dense_pt_weights_output_0', **self.common_args)(pt_weights)
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 2),
-            name='pt_weights_output')(pt_weights)
+            name='pt_weights_output_0')(pt_weights)
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 2),

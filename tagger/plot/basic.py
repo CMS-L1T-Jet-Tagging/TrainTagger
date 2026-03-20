@@ -541,7 +541,7 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     regressed_pt = np.multiply(reco_pt, pt_ratio)
 
     # Get the residuals
-    un_corrected_res = reco_pt - truth_pt
+    uncorrected_res = reco_pt - truth_pt
     regressed_res = regressed_pt - truth_pt
 
     rms_uncorr = []
@@ -553,17 +553,18 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     for i in range(len(PT_BINS) - 1):
         pt_min = PT_BINS[i]
         pt_max = PT_BINS[i + 1]
-        pt_avg = np.mean((pt_min, pt_max))
 
         selection = (truth_pt > pt_min) & (truth_pt < pt_max)
+        pt_avg = np.mean(abs(truth_pt[selection] - reco_pt[selection]))
 
-        # Fit a Gaussian to the residuals and extract the standard deviation
-        mu_uncorr, sigma_uncorr = norm.fit(un_corrected_res[selection] / pt_avg)
-        mu_reg, sigma_reg = norm.fit(regressed_res[selection] / pt_avg)
+        mu_uncorr = np.mean(uncorrected_res[selection])
+        sigma_uncorr = np.std(uncorrected_res[selection])
+        mu_reg = np.mean(regressed_res[selection])
+        sigma_reg = np.std(regressed_res[selection])
 
         # Get the errors for the standard deviation
         # Standard error of the standard deviation for a normal distribution
-        n_uncorr = len(un_corrected_res[selection])
+        n_uncorr = len(uncorrected_res[selection])
         n_reg = len(regressed_res[selection])
 
         if n_uncorr <= 1 or n_reg <= 1:
@@ -616,7 +617,7 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
         )
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
-        ax.set_ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})/p_T^{Gen}}$")
+        ax.set_ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})}$")
         ax.legend()
         ax.grid(True)
 
@@ -1001,6 +1002,7 @@ def basic(model, signal_dirs):
     # plot_shaply(model, test_dict, model.class_labels, plot_dir)
 
     # Plot inclusive response and individual flavor
+    from IPython import embed; embed()
     response(model.class_labels, y_test, truth_pt_test, reco_pt_test, reco_eta_test, pt_ratio, plot_dir)
 
     # Plot ROC curves
@@ -1042,6 +1044,7 @@ def basic(model, signal_dirs):
             ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
+                print('i:', i, class_pair)
                 ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
 
         # Add light vs b/charm/gluon combined plot

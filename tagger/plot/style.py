@@ -47,6 +47,7 @@ CLASS_LABEL_STYLE = {
     'taup': '$\\tau_{h}^{+}$',
     'electron': 'Electron',
     'muon': 'Muon',
+    'pileup': 'Pile-up',
     'inclusive': 'Inclusive',
     'Regression': 'Regression',
     "taus": "Taus",

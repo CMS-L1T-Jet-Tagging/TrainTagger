@@ -122,12 +122,15 @@ class QKerasModel(JetTagModel):
             """
             def loss(y_true, y_pred):
                 # Minbias: punish overestimation
-                pu_punish = tf.max(1., y_pred * pu)  # Punish underestimation more
+                pu_punish = tf.where(
+                    (y_true == -1) & (y_pred > 1),
+                    1.0 + pu * (y_pred - 1.0), # scaling proportional to excess
+                    0.)
                 y_true = tf.where(y_true == -1, 0.0, y_true)
 
                 # punish underestimation more for all other samples
                 residual = y_true - y_pred
-                overest = tf.where(residual < 0, abs(residual) * alpha, 1.)  # Penalize overestimation more
+                overest = tf.where(residual > 0, (abs(residual) * alpha) + 1., 0.)  # Penalize overestimation more
                 weights = overest + pu_punish + 1.0  # Add 1 as base value
 
                 abs_res = tf.abs(residual)

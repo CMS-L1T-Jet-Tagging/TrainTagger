@@ -90,7 +90,7 @@ class QKerasModel(JetTagModel):
 
         # Define the callbacks using hyperparameters in the config
         self.callbacks = [
-            EarlyStopping(monitor='val_prune_low_magnitude_pT_output_loss',
+            EarlyStopping(monitor='val_loss',
                           patience=self.training_config['EarlyStopping_patience'],
                           restore_best_weights=True,
                           verbose=2),
@@ -112,7 +112,7 @@ class QKerasModel(JetTagModel):
         if 'initial_sparsity' in self.training_config:
             self._prune_model(num_samples)
 
-        def asymmetric_huber_loss(delta=.1, pu=2., alpha=1.5):
+        def asymmetric_huber_loss(delta=.1, pu=1.5, alpha=1.5):
             """
             Huber loss with asymmetric penalization.
 

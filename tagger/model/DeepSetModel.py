@@ -188,7 +188,7 @@ class DeepSetModel(QKerasModel):
             layer_name = layer.__class__.__name__
             if layer_name in ["BatchNormalization", "InputLayer"]:
                 for k in self.firmware_config['input_precision'].keys():
-                    if layer.name in k:
+                    if k in layer.name:
                         precision = self.firmware_config['input_precision'][k]
                         break  # stop once we found a match
                 config["LayerName"][layer.name]["Precision"] = precision

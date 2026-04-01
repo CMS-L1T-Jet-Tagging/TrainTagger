@@ -112,7 +112,7 @@ class QKerasModel(JetTagModel):
         if 'initial_sparsity' in self.training_config:
             self._prune_model(num_samples)
 
-        def asymmetric_huber_loss(delta=.1, pu=2., alpha=1.):
+        def asymmetric_huber_loss(delta=.1, pu=1., alpha=2.):
             """
             Huber loss with asymmetric penalization.
 
@@ -126,11 +126,12 @@ class QKerasModel(JetTagModel):
                     (y_true == -1) & (y_pred > 1),
                     pu * (y_pred - 1.0), # scaling proportional to excess
                     0.)
-                y_true = tf.where(y_true == -1, 0.0, y_true)
+                pu_mask = y_true == -1
+                y_true = tf.where(pu_mask, 0.9, y_true)
 
                 # punish underestimation more for all other samples
                 residual = y_true - y_pred
-                overest = tf.where(residual > 0, (abs(residual) * alpha), 0.)  # Penalize overestimation more
+                overest = tf.where((residual > 0) & (~pu_mask)  , (abs(residual) * alpha), 0.)  # Penalize overestimation more
                 weights = overest + pu_punish + 1.0  # Add 1 as base value
 
                 abs_res = tf.abs(residual)

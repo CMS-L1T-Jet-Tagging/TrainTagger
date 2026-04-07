@@ -112,7 +112,7 @@ class QKerasModel(JetTagModel):
         if 'initial_sparsity' in self.training_config:
             self._prune_model(num_samples)
 
-        def huber_loss(delta=0.05, pu=1., bias_factor=0.1):
+        def huber_loss(delta=0.05, pu=1., bias_factor=0.4):
             """
             Huber loss in log-space with PU masking and global bias correction.
             """

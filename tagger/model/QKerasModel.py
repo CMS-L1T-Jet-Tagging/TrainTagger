@@ -112,39 +112,35 @@ class QKerasModel(JetTagModel):
         if 'initial_sparsity' in self.training_config:
             self._prune_model(num_samples)
 
-        def asymmetric_huber_loss(delta=.1, pu=1., alpha=0., bias_factor=0.1):
+        def huber_loss(delta=0.05, pu=1., bias_factor=0.1):
             """
-            Huber loss with asymmetric penalization.
-
-            Args:
-                delta: Huber threshold.
-                alpha: Weight for underestimation (y_true > y_pred).
+            Huber loss in log-space with PU masking and global bias correction.
             """
             def loss(y_true, y_pred):
-                # Minbias: punish overestimation
-                pu_punish = tf.where(
-                    (y_true == -1) & (y_pred > 1),
-                    pu * (y_pred - 1.0), # scaling proportional to excess
-                    0.)
                 pu_mask = y_true == -1
-                y_true = tf.where(pu_mask, 0.9, y_true)
+                y_true_clean = tf.where(pu_mask, 0.9, y_true)
 
-                # punish underestimation more for all other samples
-                residual = y_true - y_pred
-                overest = tf.where((residual > 0) & (~pu_mask)  , (abs(residual) * alpha), 0.)  # Penalize overestimation more
-                weights = overest + pu_punish + 1.0  # Add 1 as base value
-
-                abs_res = tf.abs(residual)
-                quadratic = tf.minimum(abs_res, delta)
-                linear = abs_res - quadratic
-
-                # bias correct
-                log_true = tf.math.log(y_true + 1e-6)
+                # --- log-space residual ---
+                log_true = tf.math.log(y_true_clean + 1e-6)
                 log_pred = tf.math.log(y_pred + 1e-6)
                 log_residual = log_true - log_pred
-                bias_correct = tf.reduce_mean(tf.abs(log_residual)) * bias_factor
 
-                return tf.reduce_mean(weights * (0.5 * quadratic**2 + delta * linear)) + bias_correct
+                # --- Huber term ---
+                abs_res = tf.abs(log_residual)
+                quadratic = tf.minimum(abs_res, delta)
+                linear = abs_res - quadratic
+                huber = 0.5 * quadratic**2 + delta * linear
+
+                # PU penalization (optional)
+                pu_punish = tf.where(pu_mask & (y_pred > 1.0), pu * (y_pred - 1.0), 0.)
+                weights = 1.0 + pu_punish
+                huber_loss = tf.reduce_mean(weights * huber)
+
+                # --- bias correction (exclude PU samples) ---
+                mask = tf.cast(~pu_mask, tf.float32)
+                bias_loss = bias_factor * (tf.reduce_sum(abs(log_residual) * mask) / (tf.reduce_sum(mask) + 1e-6))
+
+                return huber_loss + bias_loss
 
             return loss
 
@@ -154,7 +150,7 @@ class QKerasModel(JetTagModel):
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 # self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
-                self.loss_name + self.output_pt_name: asymmetric_huber_loss(),
+                self.loss_name + self.output_pt_name: huber_loss(),
             },
             loss_weights=loss_weights,
             metrics={

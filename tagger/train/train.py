@@ -170,7 +170,8 @@ def train(model, out_dir, percent):
         class_labels,
         weightingMethod="ptref",
         debug=model.run_config['debug'],
-    )
+    ) * reco_pt_train
+    sample_weight_regression = sample_weight_regression / np.mean(sample_weight_regression)
 
     # Get input shape and inputs dict
     train_dict, input_shapes = model.prepare_inputs(raw_inputs_train)

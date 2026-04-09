@@ -101,11 +101,11 @@ class QKerasModel(JetTagModel):
                 min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
                 verbose=2,
             ),
-            ModelCheckpoint(
-                filepath=os.path.join(f"{self.output_directory}","weights_epoch_{epoch:02d}.h5"),
-                save_weights_only=False,
-                save_freq="epoch"
-            )
+            # ModelCheckpoint(
+            #     filepath=os.path.join(f"{self.output_directory}","weights_epoch_{epoch:02d}.h5"),
+            #     save_weights_only=False,
+            #     save_freq="epoch"
+            # )
         ]
 
         # Define the pruning
@@ -138,7 +138,7 @@ class QKerasModel(JetTagModel):
                 quadratic = tf.minimum(abs_res, delta)
                 linear = abs_res - quadratic
 
-                return tf.reduce_mean(weights * (0.5 * quadratic**2 + delta * linear))
+                return weights * (0.5 * quadratic**2 + delta * linear)
 
             return loss
 

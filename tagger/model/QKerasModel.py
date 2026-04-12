@@ -112,7 +112,7 @@ class QKerasModel(JetTagModel):
         if 'initial_sparsity' in self.training_config:
             self._prune_model(num_samples)
 
-        def huber_loss(delta=.1, pu=0., alpha=4.):
+        def huber_loss(delta=.1, pu=0., alpha=0.):
             """
             Huber loss with asymmetric penalization.
 

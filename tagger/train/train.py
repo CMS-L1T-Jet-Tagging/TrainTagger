@@ -164,14 +164,14 @@ def train(model, out_dir, percent):
         weightingMethod="onlyclass",
         debug=model.run_config['debug'],
     )
-    sample_weight_regression = train_weights(
-        y_train,
-        reco_pt_train,
-        class_labels,
-        weightingMethod="ptref",
-        debug=model.run_config['debug'],
-    ) * reco_pt_train
-    sample_weight_regression = sample_weight_regression / np.mean(sample_weight_regression)
+    # sample_weight_regression = train_weights(
+    #     y_train,
+    #     reco_pt_train,
+    #     class_labels,
+    #     weightingMethod="ptref",
+    #     debug=model.run_config['debug'],
+    # ) * reco_pt_train
+    sample_weight_regression = reco_pt_train / np.mean(reco_pt_train)
 
     # Get input shape and inputs dict
     train_dict, input_shapes = model.prepare_inputs(raw_inputs_train)

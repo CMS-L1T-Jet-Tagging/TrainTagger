@@ -27,14 +27,15 @@ from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch
 
 def default_selection(jet_pt, jet_eta, apply_sel):
     if apply_sel:
-        mask = (jet_pt[:,:4] > 15) & (np.abs(jet_eta[:,:4]) < 2.4)
+        mask = (jet_pt[:,:4] > 10) & (np.abs(jet_eta[:,:4]) < 2.4)
         event_mask = np.sum(mask, axis=1) == 4
     else:
         event_mask = np.ones(len(jet_pt), dtype=bool)
 
     return event_mask
 
-def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta, jet_eta_hw, apply_light, class_labels, n_jets=4):
+
+def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta_hw, jet_eta, apply_light, class_labels, n_jets=4):
     b_index=class_labels['b']
     l_index=class_labels['light']
     g_index=class_labels['gluon']
@@ -45,17 +46,17 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta, jet_eta_hw, apply_light,
         'basic_input': np.asarray(ak.flatten(basic_inputs)),
         'jet_pt': np.asarray(ak.flatten(jet_pt)),
         'jet_pt_log': np.asarray(np.log(ak.flatten(jet_pt))),
-        'jet_eta': np.asarray(ak.flatten(jet_eta_hw)),
+        'jet_eta': np.asarray(ak.flatten(abs(jet_eta_hw))),
         }
-
 
     #Get the nn outputs
     class_outputs, regression_outputs = model.predict(model.prepare_inputs(model_inputs)[0])
+    regression_outputs = np.clip(regression_outputs, 0.5, 2.)
     class_outputs, regression_outputs = ak.unflatten(class_outputs, og_shape), ak.unflatten(regression_outputs, og_shape)
 
     # Mask unwanted jets (i.e jets < 15 Gev and |eta| > 2.4), and set all scores to 0
     selection_mask = (jet_pt > 15) & (abs(jet_eta) < 2.4)
-    regression_outputs = ak.where(selection_mask, regression_outputs, 0)
+    regression_outputs = ak.where(selection_mask, regression_outputs, 1)
     mask_expanded = ak.broadcast_arrays(selection_mask, class_outputs)[0]
     class_outputs = ak.where(mask_expanded, class_outputs, 0)
 
@@ -69,88 +70,12 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta, jet_eta_hw, apply_light,
 
     return bscore_sum, regression_outputs
 
-def load_cmssw_inputs(path, n_entries=100000, tree='outnano/Jets'):
-    # Load the minbias data
-    minbias = uproot.open(path)[tree]
-
-    raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
-    raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_cmssw_bscore = extract_array(minbias, 'jet_bjetscore', n_entries)
-
-    #Count number of total event
-    n_events = len(np.unique(raw_event_id))
-    print("Total number of minbias events: ", n_events)
-
-    #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, num_elements=4)
-
-    # Extract the grouped arrays
-    # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, cmssw_b = grouped_arrays
-    cmssw_b_org = cmssw_b
-    cmssw_b = ak.where(cmssw_b == -1, 0, cmssw_b)
-
-    return n_events, jet_pt, jet_eta, cmssw_b, cmssw_b_org
-
-def derive_cmssw_rate(minbias_path, signal_path, model_dir, target_rate=14, n_entries=100000, tree='outnano/Jets'):
-    plot_dir = os.path.join(model_dir, 'plots/physics/bbbb')
-    n_events, jet_pt, jet_eta, cmssw_b, cmssw_org = load_cmssw_inputs(minbias_path, n_entries, tree)
-
-    ht_selection = (jet_pt > 30) & (np.abs(jet_eta) < 2.4)
-    jet_ht = ak.sum(jet_pt[ht_selection], axis=1)
-    bscore_sum = ak.sum(cmssw_b[:,:4], axis=1) #Only sum up the first four
-
-    ht_edges = list(np.arange(0,500,2)) + [10000] #Make sure to capture everything
-    NN_edges = list([round(i,2) for i in np.arange(0, 2.5, 0.01)]) + [4.0]
-
-    RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
-                    hist.axis.Variable(NN_edges, name="nn", label="nn"))
-
-    RateHist.fill(ht = jet_ht, nn = bscore_sum)
-
-    #Derive the rate
-    rate_list = []
-    ht_list = []
-    nn_list = []
-    #Loop through the edges and integrate
-    for ht in ht_edges[:-1]:
-        for NN in NN_edges[:-1]:
-
-            #Calculate the rate
-            rate = RateHist[{"ht": slice(ht*1j, None, sum)}][{"nn": slice(NN*1.0j, None, sum)}] / n_events
-            rate_list.append(rate*MINBIAS_RATE)
-
-            #Append the results
-            ht_list.append(ht)
-            nn_list.append(NN)
-
-    target_rate_indices = [i for i, r in enumerate(rate_list) if abs(r - target_rate) < 0.3]
-
-    sig_n_events, sig_jet_pt, sig_jet_eta, sig_cmssw_b = load_cmssw_inputs(signal_path, n_entries, tree)
-    sig_ht_selection = (sig_jet_pt > 30) & (np.abs(sig_jet_eta) < 2.4)
-    sig_jet_ht = ak.sum(sig_jet_pt[sig_ht_selection], axis=1)
-
-    sig_eff_list = []
-    for i in target_rate_indices:
-        ht_cut, nn_cut = ht_list[i], nn_list[i]
-        sig_eff = np.sum((sig_jet_ht > ht_cut) & (ak.sum(sig_cmssw_b[:,:4], axis=1) > nn_cut)) / sig_n_events
-        print("For HT > %.2f, NN > %.2f, CMSSW eff is %.2f , rate is %.2f kHz" % (ht_cut, nn_cut, sig_eff, rate_list[i]))
-        sig_eff_list.append(sig_eff)
-
-    best_eff_idx = target_rate_indices[np.argmax(sig_eff_list)]
-    print("Best CMSSW working point at HT > %.2f, NN > %.2f" % (ht_list[best_eff_idx], nn_list[best_eff_idx]))
-    ht_cut, nn_cut = ht_list[best_eff_idx], nn_list[best_eff_idx]
-    cmssw_wp = {"HT": float(ht_cut), "NN": float(nn_cut)}
-
-    with open(os.path.join(plot_dir, f"cmssw_wp.json"), "w") as f:
-        json.dump(cmssw_wp, f, indent=4)
-
 def pick_and_plot(rate_list, ht_list, nn_list, model, apply_sel, apply_light, target_rate = 14):
     """
     Pick the working points and plot
     """
-    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb')
+
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb_og')
     os.makedirs(plot_dir, exist_ok=True)
 
     fig,ax = plt.subplots(1,1,figsize=style.FIGURE_SIZE)
@@ -196,15 +121,15 @@ def pick_and_plot(rate_list, ht_list, nn_list, model, apply_sel, apply_light, ta
                 label = r"${} \pm {}$ kHz".format(target_rate, RateRange))
 
     ax.legend(loc='upper right')
-    plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.pdf", bbox_inches='tight')
-    plt.savefig(f"{plot_dir}/bbbb_rate_{score_type}_{sel_type}.png", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/bbbb_og_rate_{score_type}_{sel_type}.pdf", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/bbbb_og_rate_{score_type}_{sel_type}.png", bbox_inches='tight')
 
 def derive_HT_WP(RateHist, ht_edges, n_events, model, target_rate = 14, RateRange=0.8):
     """
     Derive the HT only working points (without bb cuts)
     """
 
-    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb')
+    plot_dir = os.path.join(model.output_directory, 'plots/physics/bbbb_og')
 
     #Derive the rate
     rate_list = []
@@ -228,7 +153,7 @@ def derive_HT_WP(RateHist, ht_edges, n_events, model, target_rate = 14, RateRang
     json.dump(working_point, open(WP_json, "w"), indent=4)
 
 # WPs
-def derive_bbbb_regression_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14, n_entries=100, tree='outnano/Jets'):
+def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14, n_entries=100, tree='outnano/Jets'):
     """
     Derive the HH->4b working points
     """
@@ -240,7 +165,6 @@ def derive_bbbb_regression_WPs(model, minbias_path, apply_sel, apply_light, targ
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
-    raw_cmssw_bscore = extract_array(minbias, 'jet_bjetscore', n_entries)
     raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
 
     #Count number of total event
@@ -248,32 +172,27 @@ def derive_bbbb_regression_WPs(model, minbias_path, apply_sel, apply_light, targ
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_eta_hw, cmssw_b, jet_nn_inputs = grouped_arrays
-    selection_mask = default_selection(jet_pt, jet_eta, apply_sel)
-    jet_nn_inputs, jet_pt_selected = jet_nn_inputs[selection_mask], jet_pt[selection_mask]
-    jet_eta_hw_selected, jet_eta_selected = jet_eta_hw[selection_mask], jet_eta[selection_mask]
-    bscore_sum, regression_scores = nn_bscore_sum(model, jet_nn_inputs, jet_pt_selected, jet_eta_selected, jet_eta_hw_selected, apply_light, model.class_labels)
+    jet_pt, jet_eta, jet_eta_hw, jet_nn_inputs = grouped_arrays
+    def_sel = default_selection(jet_pt, jet_eta, apply_sel)
+    jet_nn_inputs = jet_nn_inputs[def_sel]
+    jet_pt_sel, jet_eta_sel, jet_eta_hw_sel = jet_pt[def_sel], jet_eta[def_sel], jet_eta_hw[def_sel]
 
-    # HT for HT only wp
-    ht_selection = (jet_pt_selected > 30) & (np.abs(jet_eta_selected) < 2.4)
-    jet_ht = ak.sum(jet_pt_selected[ht_selection], axis=1)
 
-    # model regressed pt and event selection
-    model_jet_pt = jet_pt_selected * regression_scores # regression scores 0 for jets that don't pass the selection
-    model_ht_selection = model_jet_pt > 30 # original eta and pt criteria already applied in nn_bscore_sum
-    # model_ht = ak.sum(model_jet_pt[model_ht_selection], axis=1)
-    model_ht = ak.sum(jet_pt_selected[(jet_pt_selected > 30) & (np.abs(jet_eta_selected) < 2.4)], axis=1)
+    bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt_sel, jet_eta_hw_sel, jet_eta_sel, apply_light, model.class_labels)
+    jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    model_pt = jet_pt_sel * regression
+    # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta_sel) < 2.4)], axis=1)
+    model_ht = jet_ht
 
     assert(len(bscore_sum) == len(model_ht))
 
     #Define the histograms (pT edge and NN Score edge)
     ht_edges = list(np.arange(0,500,2)) + [10000] #Make sure to capture everything
     NN_edges = list([round(i,2) for i in np.arange(0, 2.5, 0.01)]) + [4.0]
-    # NN_edges = [0.71, 0.72]
 
     RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
@@ -309,16 +228,16 @@ def derive_bbbb_regression_WPs(model, minbias_path, apply_sel, apply_light, targ
 
     return
 
-def load_bbbb_regression_WPs(model, apply_sel, apply_light):
+def load_bbbb_WPs(model, apply_sel, apply_light):
     """
-    Check and lodad all bbbb_regression working points
+    Check and lodad all bbbb working points
     """
 
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
-    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/working_point_{score_type}_{sel_type}.json")
+    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
@@ -331,17 +250,45 @@ def load_bbbb_regression_WPs(model, apply_sel, apply_light):
 
     return btag_wp, btag_ht_wp, ht_only_wp
 
+def load_cmssw_inputs(path, n_entries=100000, tree='outnano/Jets', model=None):
+    # Load the minbias data
+    minbias = uproot.open(path)[tree]
 
-def load_all_bbbb_regression_WPs(model, apply_sel, apply_light):
+    raw_event_id = extract_array(minbias, 'event', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
+    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
+    raw_cmssw_bscore = extract_array(minbias, 'jet_bjetscore', n_entries)
+    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries) if model is not None else None
+
+    #Count number of total event
+    n_events = len(np.unique(raw_event_id))
+    print("Total number of minbias events: ", n_events)
+
+    #Group these attributes by event id, and filter out groups that don't have at least 2 elements
+    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+
+    # Extract the grouped arrays
+    # Jet pt is already sorted in the producer, no need to do it here
+    jet_pt, jet_eta, jet_eta_hw, cmssw_b, basic_inputs = grouped_arrays
+    cmssw_b_org = cmssw_b
+    cmssw_b = ak.where(cmssw_b == -1, 0, cmssw_b)
+
+    if model is not None:
+        return n_events, basic_inputs, jet_pt, jet_eta, jet_eta_hw
+    else:
+        return n_events, jet_pt, jet_eta, cmssw_b, cmssw_b_org
+
+def load_all_bbbb_WPs(model, apply_sel, apply_light):
     """
-    Check and load all bbbb_regression working points
+    Check and load all bbbb working points
     """
 
     #Check if the working point have been derived
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/all_working_points_{score_type}_{sel_type}.json")
-    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb/ht_working_point.json")
+    WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/all_working_points_{score_type}_{sel_type}.json")
+    HT_WP_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/ht_working_point.json")
 
     #Get derived working points
     if os.path.exists(WP_path) & os.path.exists(HT_WP_path):
@@ -354,9 +301,23 @@ def load_all_bbbb_regression_WPs(model, apply_sel, apply_light):
 
     return btag_wps, btag_ht_wps, ht_only_wp
 
+# Rate logical or of model and HT trigger
+def get_logical_or_seed(minbias_path, model, model_wps, ht_wp, n_entries=100000, tree='outnano/Jets', apply_sel=True, apply_light=False):
+    n_events, basic_inp, jet_pt, jet_eta, jet_eta_hw = load_cmssw_inputs(minbias_path, n_entries, tree, model)
+    b_sums, regression = nn_bscore_sum(model, basic_inp, jet_pt, jet_eta_hw, jet_eta, apply_light, model.class_labels, n_jets=4)
+    model_pt = jet_pt * regression # regression scores 0 for jets that don't pass the selection
+    jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    model_ht = jet_ht
+    ht_selection = (jet_ht > ht_wp)
+    model_b_wp, model_ht_wp = model_wps
+    model_selection = (model_ht > model_ht_wp) & (b_sums > model_b_wp) & default_selection(jet_pt, jet_eta, apply_sel)
+    final_selection = model_selection | ht_selection
+    rate = (np.sum(final_selection) / n_events) * MINBIAS_RATE
+    return np.round(rate, 2)
 
 # Efficiency
-def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
+def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries=100000, tree='outnano/Jets'):
     """
     Plot HH->4b efficiency w.r.t HT
     """
@@ -368,7 +329,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     cmssw_btag = WPs_CMSSW['btag']
     cmssw_btag_ht =  WPs_CMSSW['btag_l1_ht']
 
-    btag_wps, btag_ht_wps, ht_only_wp = load_all_bbbb_regression_WPs(model, apply_sel, apply_light)
+    btag_wps, btag_ht_wps, ht_only_wp = load_all_bbbb_WPs(model, apply_sel, apply_light)
 
     #Load the signal data
     signal = uproot.open(signal_path)[tree]
@@ -379,11 +340,12 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     # Calculate the truth HT
     raw_event_id = extract_array(signal, 'event', n_entries)
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
+    raw_jet_geneta = extract_array(signal, 'jet_genmatch_eta', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
     raw_jet_eta_hw = extract_array(signal, 'jet_eta', n_entries)
     raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
-    raw_cmssw_bscore = ak.where(raw_cmssw_bscore == -1, 0, raw_cmssw_bscore)
+    raw_cmssw_bscore = ak.where(raw_cmssw_bscore == -1, np.zeros_like(raw_cmssw_bscore), raw_cmssw_bscore)
 
     n_events = len(np.unique(raw_event_id))
 
@@ -410,31 +372,27 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
     if raw_gen_mHH is not None:
-        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
-        event_gen_mHH, jet_genpt, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        event_gen_mHH, jet_genpt, jet_geneta, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
 
         #Just pick the first entry of jet mHH arrays
         event_gen_mHH = ak.firsts(event_gen_mHH)
     else:
         # Handle case where genHH_mass doesn't exist
-        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
-        jet_genpt, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        jet_genpt, jet_geneta, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
         event_gen_mHH = None
 
     #Calculate the ht
-    jet_genht = ak.sum(jet_genpt, axis=1)
-    ht_selection = (jet_pt > 30) & (np.abs(jet_eta) < 2.4)
-    jet_ht = ak.sum(jet_pt[ht_selection], axis=1)
+    jet_genht = ak.sum(jet_genpt[(jet_genpt > 30) & (np.abs(jet_geneta) < 2.4)], axis=1)
+    jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum, regression_scores = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta, jet_eta_hw, apply_light, model.class_labels)
-
-    # model regressed pt and HT
-    model_jet_pt = jet_pt * regression_scores # regression scores 0 for jets that don't pass the selection
-    model_ht_selection = model_jet_pt > 30
-    # model_ht = ak.sum(model_jet_pt[model_ht_selection], axis=1)
-    model_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    model_bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta_hw, jet_eta, apply_light, model.class_labels)
+    model_pt = jet_pt * regression
+    # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    model_ht = jet_ht
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
@@ -442,7 +400,6 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     ht_only_efficiency = np.round(ak.sum(ht_only_selection) / n_events, 2)
 
     ht_only_selection = jet_ht > ht_only_wp
-    model_ht_only_selection = model_ht > ht_only_wp
     pure_cmssw_selection = cmssw_selection & ~ht_only_selection
 
     max_eff = -1.0
@@ -451,56 +408,44 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
 
 
     #Find model WP that maximizes efficiency
-    HT_range = np.arange(150, 300, 5)
+    HT_range = np.arange(150, 250, 5)
 
     interp_func = interp1d(btag_ht_wps, btag_wps, kind='linear', fill_value='extrapolate')
 
-    for i in range(len(btag_ht_wps)):
-        btag_wp = btag_wps[i]
-        btag_ht_wp = btag_ht_wps[i]
-        cand_model_selection = (model_ht > btag_ht_wp) & (model_bscore_sum > btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
-        cand_model_pure_selection = cand_model_selection & ~model_ht_only_selection
+    for HT_cut in HT_range:
+        working_point_NN = interp_func(HT_cut)
+        cand_model_selection = (model_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_selection(jet_pt, jet_eta, apply_sel)
+        cand_model_pure_selection = cand_model_selection & ~ht_only_selection
+
         eff = np.mean(cand_model_selection)
         pure_eff = np.mean(cand_model_pure_selection)
         if( eff > max_eff):
             max_eff = eff
-            model_ht_wp = btag_ht_wp
-            model_btag_wp = float(btag_wp)
-
-    # for HT_cut in HT_range:
-    #     working_point_NN = interp_func(HT_cut)
-    #     cand_model_selection = (model_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_selection(jet_pt, jet_eta, apply_sel)
-    #     cand_model_pure_selection = cand_model_selection & ~model_ht_only_selection
-
-    #     eff = np.mean(cand_model_selection)
-    #     pure_eff = np.mean(cand_model_pure_selection)
-    #     if( eff > max_eff):
-    #         max_eff = eff
-    #         model_ht_wp = HT_cut
-    #         model_btag_wp = float(working_point_NN)
+            model_ht_wp = HT_cut
+            model_btag_wp = float(working_point_NN)
 
     print("Setting HT cut at %.2f, model HH eff is %.3f" % (model_ht_wp, max_eff))
+    or_rate = get_logical_or_seed(minbias_path, model, (model_btag_wp, model_ht_wp), ht_only_wp, n_entries, tree, apply_sel, apply_light)
 
     #Save this best WP
     working_point = {"HT": float(model_ht_wp), "NN": float(model_btag_wp)}
-    wp_path = os.path.join(model.output_directory, f"plots/physics/bbbb/working_point_{score_type}_{sel_type}.json")
+    wp_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/working_point_{score_type}_{sel_type}.json")
     with open(wp_path, "w") as f:
         json.dump(working_point, f, indent=4)
 
     model_selection = (model_ht > model_ht_wp) & (model_bscore_sum > model_btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
     model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
-    model_pure_selection = model_selection & ~model_ht_only_selection
+    model_pure_selection = model_selection & ~ht_only_selection
     model_pure_efficiency = np.round(ak.sum(model_pure_selection) / n_events, 2)
     model_or_ht_only_efficiency = np.round(ak.sum(model_selection | ht_only_selection) / n_events, 2)
 
     #Plot the efficiencies w.r.t mHH, only if genHH_mass exists
     if all_event_gen_mHH is not None and event_gen_mHH is not None:
-        bbbb_regression_eff_mHH(model,
+        bbbb_eff_mHH(model,
                     all_event_gen_mHH,
                     event_gen_mHH,
                     cmssw_selection, model_selection,
-                    model_pure_selection,
-                    ht_only_selection,
+                    model_pure_selection, ht_only_selection,
                     n_events,
                     apply_sel,
                     apply_light)
@@ -557,7 +502,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     plt.legend(loc='upper left')
 
     #Save plot
-    plot_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_{score_type}_{sel_type}")
+    plot_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/HH_eff_HT_{score_type}_{sel_type}")
     plt.savefig(f'{plot_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{plot_path}.png', bbox_inches='tight')
 
@@ -571,7 +516,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
                 label=r'Multiclass @ 14 kHz, {}={} (L1 $HT$ > {} GeV, $\sum$ 4b > {})'.format(eff_str, model_efficiency, model_ht_wp, round(model_btag_wp, 2)))
     ax2.errorbar(model_pure_x, model_pure_y, yerr=model_pure_err, c=style.color_cycle[3], fmt='o', linewidth=3,
                 label=r'Multiclass Gain (Pure eff. wrt HT trigger) {}={} '.format(eff_str, model_pure_efficiency,))
-    ax2.text(63, 0.95, r"Multiclass | HT + QuadJets selection {}={}".format(eff_str, model_or_ht_only_efficiency), fontsize=style.SMALL_SIZE, bbox=dict(facecolor='white', alpha=0.8))
+    ax2.text(63, 0.95, r"Multiclass | HT + QuadJets selection: {} kHz, {}={}".format(or_rate, eff_str, model_or_ht_only_efficiency), fontsize=style.SMALL_SIZE, bbox=dict(facecolor='white', alpha=0.8))
 
     # Common plot settings for second plot
     ax2.hlines(1, 0, 800, linestyles='dashed', color='black', linewidth=4)
@@ -583,7 +528,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     ax2.legend(loc='upper left')
 
     # Save second plot
-    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
+    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/HH_eff_HT_vs_HTonly_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 
@@ -594,7 +539,7 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
     eff_model_pure = np.mean(model_pure_selection)
     eff_pure_cmssw = np.mean(pure_cmssw_selection)
 
-    plot_dir = os.path.join(model.output_directory, f"plots/physics/bbbb/")
+    plot_dir = os.path.join(model.output_directory, f"plots/physics/bbbb_og/")
     outname = plot_dir + f"/TotalEff_{score_type}_{sel_type}.txt"
     with open(outname, "w") as outfile:
         outfile.write("Total HH Eff \n")
@@ -604,12 +549,14 @@ def bbbb_regression_eff(model, signal_path, apply_sel, apply_light, n_entries=10
         outfile.write("Model Pure Eff (exclude HT overlap) %.4f \n" % eff_model_pure)
         outfile.write("CMSSW Model Pure Eff (exclude HT overlap) %.4f \n" % eff_pure_cmssw)
 
-def bbbb_regression_eff_mHH(model,
+
+
+
+def bbbb_eff_mHH(model,
                 all_event_gen_mHH,
                 event_gen_mHH,
                 cmssw_selection, model_selection,
-                model_pure_selection,
-                ht_only_selection,
+                model_pure_selection, ht_only_selection,
                 n_events,
                 apply_sel,
                 apply_light):
@@ -659,7 +606,7 @@ def bbbb_regression_eff_mHH(model,
     normalized_counts = counts / np.sum(counts)
 
     #Load the working point from model directory
-    btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_regression_WPs(model, apply_sel, apply_light)
+    btag_wp, btag_ht_wp, ht_only_wp =  load_bbbb_WPs(model, apply_sel, apply_light)
 
     #Plot a plot comparing the multiclass with ht only selection
     eff_str = r"$\int \epsilon$"
@@ -687,7 +634,7 @@ def bbbb_regression_eff_mHH(model,
     # Save second plot
     score_type = "vs_qg" if apply_light else "raw"
     sel_type = "sel" if apply_sel else "all"
-    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb/HH_eff_mHH_{score_type}_{sel_type}")
+    ht_compare_path = os.path.join(model.output_directory, f"plots/physics/bbbb_og/HH_eff_mHH_{score_type}_{sel_type}")
     plt.savefig(f'{ht_compare_path}.pdf', bbox_inches='tight')
     plt.savefig(f'{ht_compare_path}.png', bbox_inches='tight')
 
@@ -697,13 +644,13 @@ if __name__ == "__main__":
     """
     2 steps:
 
-    1. Derive working points: python bbbb_regression.py --deriveWPs
-    2. Run efficiency based on the derived working points: python bbbb_regression.py --eff
+    1. Derive working points: python bbbb.py --deriveWPs
+    2. Run efficiency based on the derived working points: python bbbb.py --eff
     """
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb_regression')
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
     parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
@@ -719,21 +666,6 @@ if __name__ == "__main__":
     model = fromFolder(args.model_dir)
 
     if args.deriveWPs:
-        derive_cmssw_rate(args.minbias, args.sample, model.output_directory, n_entries=args.n_entries, tree=args.tree)
-        # print('derived cmssw WPs')
-        # gc.collect()
-        # derive_bbbb_regression_WPs(model, args.minbias, True, True, n_entries=args.n_entries,tree=args.tree)
-        # gc.collect()
-        # derive_bbbb_regression_WPs(model, args.minbias, True, False, n_entries=args.n_entries,tree=args.tree)
-        # gc.collect()
-        # derive_bbbb_regression_WPs(model, args.minbias, False, True, n_entries=args.n_entries,tree=args.tree)
-        gc.collect()
-        derive_bbbb_regression_WPs(model, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)
+        derive_bbbb_WPs(model, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)
     elif args.eff:
-        # bbbb_regression_eff(model, args.sample, True, True, n_entries=args.n_entries,tree=args.tree)
-        # gc.collect()
-        # bbbb_regression_eff(model, args.sample, True, False, n_entries=args.n_entries,tree=args.tree)
-        # gc.collect()
-        # bbbb_regression_eff(model, args.sample, False, True, n_entries=args.n_entries,tree=args.tree)
-        gc.collect()
-        bbbb_regression_eff(model, args.sample, False, False, n_entries=args.n_entries,tree=args.tree)
+        bbbb_eff(model, args.sample, args.minbias, False, False, n_entries=args.n_entries,tree=args.tree)

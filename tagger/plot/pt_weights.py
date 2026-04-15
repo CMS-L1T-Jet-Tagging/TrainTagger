@@ -24,7 +24,7 @@ binning_dict = {
     'pt': [0, 100, 20],
     'pt_rel': [0, 1, 10],
     'pt_log': [0, 6, 20],
-    'eta': [-2.5, 2.5, 10],
+    'eta': [-2.5, 2.5, 15],
     'deta': [-0.5, 0.5, 10],
     'dphi': [-0.5, 0.5, 10],
     'mass': [0, 50, 20],
@@ -99,34 +99,37 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
     x_var *= np.pi/720 if var_name == "dphi" or var_name == "deta" else 1.0
 
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+
     caps, bins = plot_params[:-1], plot_params[-1]
     x_var = np.clip(x_var, caps[0], caps[1])
 
-    # Histogram
-    h = ax.hist2d(
+    # 2D histogram
+    hist, xedges, yedges = np.histogram2d(
         x_var,
         pt_weights,
-        bins=[bins, 15],
-        cmap="viridis"
+        bins=[bins, 15]
     )
+
+    # normalize
+    hist = hist / np.max(hist)
+
+    # meshgrid edges
+    X, Y = np.meshgrid(xedges, yedges)
+
+    im = ax.pcolormesh(
+        X, Y,
+        hist.T,
+        cmap="viridis",
+        shading="auto"
+    )
+
+    # ax.set_xscale("log")
 
     hep.cms.label(
         llabel=style.CMSHEADER_LEFT,
         rlabel=style.CMSHEADER_RIGHT,
         ax=ax,
         fontsize=style.MEDIUM_SIZE
-    )
-
-    hist_counts = h[0]
-    hist_counts_normalized = hist_counts / np.max(hist_counts)
-
-    # Redraw heatmap with imshow
-    im = ax.imshow(
-        hist_counts_normalized.T,  # transpose to match axes
-        origin='lower',
-        aspect='auto',
-        cmap='viridis',
-        norm='log',
     )
 
     ax.set_xlabel(style.INPUT_FEATURE_STYLE[var_name])
@@ -164,14 +167,18 @@ def pt_weights_plotting(model, inputs, y_test, layer_name, plot_path):
         20,
         plot_path,
         )
-
     class_labels = model.class_labels
     y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
     for i, input_var in enumerate(model.input_vars):
+        if input_var == "eta":
+            scaling = np.pi / 720 if input_var == "eta" else 1.0
+            var_scaled = abs(X_test[:, :, i].flatten()) * scaling
+        else:
+            var_scaled = X_test[:, :, i].flatten()
         plot_2D_histogram(
             pt_weights.flatten(),
             pt_correction_type,
-            X_test[:, :, i].flatten(),
+            var_scaled,
             input_var,
             mask,
             binning_dict[input_var],

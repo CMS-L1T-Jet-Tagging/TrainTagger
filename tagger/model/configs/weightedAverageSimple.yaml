@@ -30,7 +30,7 @@ training_config :
   validation_split : 0.1
   offsets: False
 
-  loss_weights : [1,15]
+  loss_weights : [1,65]
 
   initial_sparsity : 0.0
   final_sparsity : 0.1

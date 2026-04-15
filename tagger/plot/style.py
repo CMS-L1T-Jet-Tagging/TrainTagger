@@ -78,7 +78,7 @@ INPUT_FEATURE_STYLE = {
     'puppiweight': 'PUPPI Weight',
     'quality': 'Track Quality',
     'emid': 'ElectroMagnetic ID',
-    'jet_eta': 'Jet $\\eta$',
+    'jet_eta': 'Jet |$\\eta$|',
     'jet_pt': 'Jet $p_T$',
     'jet_pt_log': 'Jet $log(p_T)$',
     'charge': 'Charge',

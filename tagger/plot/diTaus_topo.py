@@ -145,7 +145,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
         'basic_input': raw_inputs,
         'jet_pt': raw_jet_pt,
         'jet_pt_log': np.log(raw_jet_pt),
-        'jet_eta': raw_jet_eta_hw,
+        'jet_eta': abs(raw_jet_eta_hw),
     }
     raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 
@@ -313,7 +313,7 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
         'basic_input': raw_inputs,
         'jet_pt': raw_jet_pt,
         'jet_pt_log': np.log(raw_jet_pt),
-        'jet_eta': raw_jet_eta_hw,
+        'jet_eta': abs(raw_jet_eta_hw),
     }
     raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 
@@ -453,7 +453,7 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
         'basic_input': raw_inputs,
         'jet_pt': raw_jet_pt,
         'jet_pt_log': np.log(raw_jet_pt),
-        'jet_eta': raw_jet_eta_hw,
+        'jet_eta': abs(raw_jet_eta_hw),
     }
     raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 

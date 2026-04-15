@@ -1,16 +1,6 @@
 # flake8: noqa
 from tagger.model.DeepSetModel import DeepSetModel
-from tagger.model.DeepSetMaskingModel import DeepSetMaskingModel
-from tagger.model.WeightedAverageModel import WeightedAverageModel
-from tagger.model.WeightedAverageInvModel import WeightedAverageInvModel
 from tagger.model.WeightedAverageSimpleModel import WeightedAverageSimpleModel
-from tagger.model.WeightedAverageAggregateModel import WeightedAverageAggregateModel
-from tagger.model.WeightedAverageOffsetModel import WeightedAverageOffsetModel
-from tagger.model.WeightedAverageOffsetDependModel import WeightedAverageOffsetDependModel
-from tagger.model.WeightedAverageConvModel import WeightedAverageConvModel
-from tagger.model.WeightedAverageConvOffsetModel import WeightedAverageConvOffsetModel
-from tagger.model.DoubleAggregateModel import DoubleAggregateModel
-from tagger.model.DeepSetFeaturesModel import DeepSetFeaturesModel
 from tagger.model.DeepSetModelHGQ import DeepSetModelHGQ
 from tagger.model.InteractionNetModel import InteractionNetModel
 from tagger.model.QKerasModel import QKerasModel

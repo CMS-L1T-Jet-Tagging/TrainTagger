@@ -70,7 +70,7 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta, jet_eta_hw, apply_light,
         'basic_input': np.asarray(ak.flatten(basic_inputs)),
         'jet_pt': np.asarray(ak.flatten(jet_pt)),
         'jet_pt_log': np.asarray(np.log(ak.flatten(jet_pt))),
-        'jet_eta': np.asarray(ak.flatten(jet_eta_hw)),
+        'jet_eta': np.asarray(abs(ak.flatten(jet_eta_hw))),
         }
 
 

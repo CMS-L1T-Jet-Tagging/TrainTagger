@@ -37,7 +37,7 @@ if __name__ == "__main__":
     for signal_process in args.signal_processes:
         signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
         print(signal_input)
-        signal_output = os.path.join("signal_process_data_main", signal_process)
+        signal_output = os.path.join("signal_process_data", signal_process)
         if not os.path.exists(signal_output):
             make_data(
                 infile=signal_input,

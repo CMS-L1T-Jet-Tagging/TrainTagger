@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-i',
         '--input',
-        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',
+        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part0.root',
         help='Path to input training data',
     )
     parser.add_argument('-r', '--ratio', default=1, type=float, help='Ratio (0-1) of the input data root file to process')

@@ -390,7 +390,11 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     print(chunk_files, fields)
 
     # Use uproot.concatenate to load and combine data from multiple files
-    data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
+    data = uproot.concatenate(
+        [f"{file}:data" for file in chunk_files],
+        filter_name=fields,
+        library="ak"
+    )
 
     # Shuffle the data indices
     total_data_len = len(data)
@@ -418,7 +422,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
 def make_data(
     infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part0.root',
-    outdir='training_data/',
+    outdir='/eos/user/s/stella/training_data_test/',
     tag=INPUT_TAG,
     extras=EXTRA_FIELDS,
     n_parts=N_PARTICLES,

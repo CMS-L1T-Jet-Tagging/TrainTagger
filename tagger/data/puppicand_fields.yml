@@ -81,3 +81,4 @@ extra_emulation_fields:
   - jet_genmatch_pt
   - jet_pt
   - jet_eta
+  - jet_pt_log

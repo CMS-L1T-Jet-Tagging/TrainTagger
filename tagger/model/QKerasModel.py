@@ -6,6 +6,7 @@ Written 29/09/2025 cebrown@cern.ch
 import json
 import os
 import re
+import yaml
 
 import hls4ml
 import numpy as np
@@ -198,20 +199,33 @@ class QKerasModel(JetTagModel):
         Returns:
             dict: Dictionary of required input arrays
         """
+        with open("tagger/data/puppicand_fields.yml", "r") as file:
+            puppicand_fields = yaml.safe_load(file)
+
+        # egt relevant feature indices
+        pt_rel_idx = puppicand_fields.index("pt_rel")
+        eta_idx = puppicand_fields.index("eta")
+
+        # use absolute constituent eta
+        raw_inputs['basic_input'][:, :, eta_idx] = np.abs(raw_inputs['basic_input'][:, :, eta_idx])
+
+        # build all possible inputs
         input_dict = {
             'basic_input': raw_inputs['basic_input'],
             'basic_mask': constituents_mask(raw_inputs['basic_input'], 10),
             'pt_mask': constituents_mask(raw_inputs['basic_input'], 10)[:, :, 0],
             'constituent_pt': raw_inputs['basic_input'][:, :, 0],
-            'constituent_fraction': raw_inputs['basic_input'][:, :, 0] / np.sum(raw_inputs['basic_input'][:, :, 0], axis=-1, keepdims=True),
+            'constituent_fraction': raw_inputs['basic_input'][:, :, pt_rel_idx],
             'inverse_jet_pt': 1 / raw_inputs['jet_pt'].reshape(-1, 1),
             'jet_pt': raw_inputs['jet_pt'],
         }
 
+        # remove unused inputs
         for key in list(input_dict.keys()):
             if key not in self.inputs['basic_features']:
                 del input_dict[key]
 
+        # build the jet level features
         if len(self.inputs['custom_features']) > 0:
             jet_features = np.empty((raw_inputs['basic_input'].shape[0], len(self.inputs['custom_features'])))
             for i, k in enumerate(self.inputs['custom_features']):

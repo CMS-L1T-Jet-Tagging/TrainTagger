@@ -714,9 +714,18 @@ def shapPlot(shap_values, feature_names, class_names):
     left_pos = np.zeros(len(feature_inds))
 
     axis_color = "#333333"
-    class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
-    # Use 'tab10' with enough colors
-    colormap = cm.get_cmap('Set1', len(class_names))
+    class_inds = range(len(class_names))
+    colormap = [
+        "#E41A1C",  # red
+        "#377EB8",  # blue
+        "#4DAF4A",  # green
+        "#984EA3",  # purple
+        "#FFFF33",  # yellow
+        "#A65628",  # brown
+        "#F781BF",  # pink
+        "#999999",  # gray
+        "#FF7F00",  # orange
+    ] # for future reproducibility of color and class combinations (style of first DP note)
 
     for i, ind in enumerate(class_inds):
         global_shap_values = np.abs(shap_values[ind]).mean(0)
@@ -728,11 +737,10 @@ def shapPlot(shap_values, feature_names, class_names):
             left=left_pos,
             align='center',
             label=label,
-            color=colormap(class_inds[i]),
+            color=colormap[ind],
         )
         left_pos += global_shap_values[feature_inds]
 
-    # ax.set_yticklabels([style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_inds])
     ax.legend(loc='lower right', fontsize=30)
 
     ax.xaxis.set_ticks_position('bottom')
@@ -784,7 +792,7 @@ def get_branch_inputs(output_tensor):
 
 
 def plot_shaply(model, test_dict, class_labels, plot_dir):
-    njets = 50000
+    njets = 30000
     input_layers_class = get_branch_inputs(model.jet_model.output[0])
     input_layers_reg = get_branch_inputs(model.jet_model.output[1])
     layer_order_class = [layer.name for layer in input_layers_class]
@@ -1084,11 +1092,9 @@ def basic(model, signal_dirs):
         # Plot the binary ROCs for each class pair
         for class_pair in class_pairs:
             binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-            print('class_pair', class_pair)
             ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                print('i:', i, class_pair)
                 ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
 
         # Add light vs b/charm/gluon combined plot

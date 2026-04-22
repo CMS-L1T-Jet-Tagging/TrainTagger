@@ -52,8 +52,11 @@ make
 make install
 cd ..
 
-git clone https://github.com/schaefes/FastPUPPI.git -b dev/15_1_X_NGJet
-
+git clone https://github.com/schaefes/FastPUPPI.git
+cd FastPUPPI
+git fetch origin dev/15_1_X_NGJet_offline
+git checkout dev/15_1_X_NGJet_offline
+cd ..
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
 scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'
@@ -73,6 +76,6 @@ sed -i -e 's/trktype = "extended"/trktype = "'${TRACK_ALGO}'"/g' runJetNtuple.py
 sed -i -e 's/nparam = 5/nparam = '${N_PARAMS}'/g' runJetNtuple.py
 echo "Temporary workaround to get the input files"
 echo $'\nprocess.source.fileNames = ["file:/eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_151X/v1/TT_PU200/inputs151X_10.root"]' >> runJetNtuple.py
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_v1")' >> runJetNtuple.py
+echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_PtPU1")' >> runJetNtuple.py
 cat runJetNtuple.py
 cmsRun runJetNtuple.py --tm18 2>&1 | tee cmsRun.log

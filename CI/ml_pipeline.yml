@@ -240,6 +240,148 @@ profile:
       - output/$Model
     expire_in: 1 day
 
+run_TT_PU200:
+  extends:
+    - .template
+  stage: run_TT_PU200
+  tags: [cern-nextgen-highmem]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_CPU_REQUEST: 4
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  script:
+  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
+  - cmsenv
+  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 TT_PU200 '' --nomerge
+  - cd TT_PU200
+  - hadd perfNano.root perfNano*.root
+  - rm *job*.root
+  artifacts:
+    paths:
+      - output/$Model
+    expire_in: 1 day
+
+run_VBFHToBB_PU200:
+  extends:
+    - .template
+  stage: run_TT_PU200
+  tags: [cern-nextgen-highmem]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_CPU_REQUEST: 4
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  script:
+  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
+  - cmsenv
+  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 VBFHToBB_PU200 '' --nomerge
+  - cd VBFHToBB_PU200
+  - hadd perfNano.root perfNano*.root
+  - rm *job*.root
+  artifacts:
+    paths:
+      - output/$Model
+    expire_in: 1 day
+
+run_VBFHToCC_PU200:
+  extends:
+    - .template
+  stage: run_TT_PU200
+  tags: [cern-nextgen-highmem]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_CPU_REQUEST: 4
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  script:
+  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
+  - cmsenv
+  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 VBFHToCC_PU200 '' --nomerge
+  - cd VBFHToCC_PU200
+  - hadd perfNano.root perfNano*.root
+  - rm *job*.root
+  artifacts:
+    paths:
+      - output/$Model
+    expire_in: 1 day
+
+run_MinBias_PU200:
+  extends:
+    - .template
+  stage: run_TT_PU200
+  tags: [cern-nextgen-highmem]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_CPU_REQUEST: 4
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  script:
+  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
+  - cmsenv
+  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 MinBias_PU200 'inputs151X_5' --nomerge
+  - cd MinBias_PU200
+  - hadd perfNano.root perfNano*.root
+  - rm *job*.root
+  artifacts:
+    paths:
+      - output/$Model
+    expire_in: 1 day
+
+run_QCDPt15To3000_PU200:
+  extends:
+    - .template
+  stage: run_TT_PU200
+  tags: [cern-nextgen-highmem]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_CPU_REQUEST: 4
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  script:
+  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
+  - cmsenv
+  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 QCDPt15To3000_PU200 '' --nomerge
+  - cd QCD_Pt15To3000_PU200
+  - hadd perfNano.root perfNano*.root
+  - rm *job*.root
+  - cd ..
+  - python3 scripts/makeJecs.py QCD_Pt15To3000_PU200/perfNano.root -A -o QCD_Pt15To3000_PU200/jecs.root
+  artifacts:
+    paths:
+      - output/$Model
+    expire_in: 1 day
+
+emulation_regression:
+  extends:
+    - .template
+  stage: emulation_regression
+  tags: [k8s-gpu]
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_CPU_REQUEST: 2
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  script:
+  - source activate tagger
+  - python tagger/plot/emulation_regression/jecs.py -output output/$Model/plots/emulation_regression
+  artifacts:
+    paths:
+      - output/$Model
+    expire_in: 1 day
+
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload

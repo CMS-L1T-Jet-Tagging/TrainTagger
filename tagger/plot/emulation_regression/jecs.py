@@ -135,7 +135,7 @@ if __name__ == "__main__":
                 proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_raw'] = wps_raw
                 proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_jecs'] = wps_jecs
     turn_on_curve(proc_collections['TT_PU200'], proc_collections['MinBias_PU200'], 'TT_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/TT_PU200")
-    turn_on_curve(proc_collections['QCD_PtAll_PU200'], proc_collections['MinBias_PU200'], ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/QCD_PtAll_PU200")
+    turn_on_curve(proc_collections['QCD_PtAll_PU200'], proc_collections['MinBias_PU200'], 'QCD_PtAll_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/QCD_PtAll_PU200")
 
     # Invariant masses
     # top

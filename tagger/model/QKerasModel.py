@@ -202,9 +202,9 @@ class QKerasModel(JetTagModel):
         with open("tagger/data/puppicand_fields.yml", "r") as file:
             puppicand_fields = yaml.safe_load(file)
 
-        # egt relevant feature indices
-        pt_rel_idx = puppicand_fields.index("pt_rel")
-        eta_idx = puppicand_fields.index("eta")
+        # get relevant feature indices
+        pt_rel_idx = puppicand_fields['baseline_hardware_inputs'].index("pt_rel")
+        eta_idx = puppicand_fields['baseline_hardware_inputs'].index("eta")
 
         # use absolute constituent eta
         raw_inputs['basic_input'][:, :, eta_idx] = np.abs(raw_inputs['basic_input'][:, :, eta_idx])

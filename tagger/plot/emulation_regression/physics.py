@@ -96,11 +96,10 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plo
         for t in turn_on_quantity:
             fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
             hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
-            bins = np.linspace(0, 2500, 125)
+            bins = np.linspace(0, 2500, 125) if t in ['mjj', 'max_mjj'] else np.linspace(0, 255, 90)
             bin_centers = 0.5 * (bins[:-1] + bins[1:])
             xerr = (bins[1:] - bins[:-1]) / 2
             for coll in COLLECTION_KEYS:
-                bins = np.linspace(0, 2500, 125)
                 plateau_start = 0
                 for coll_type in ['raw', 'jecs']:
                     if coll_type == 'jecs' and coll == 'scPuppiL1TSC4NGJetJets':

@@ -11,6 +11,12 @@ stages:
   - emulate
   - emulation-evaluate
   - profile
+  - run_TT_PU200
+  - run_VBFHToBB_PU200
+  - run_VBFHToCC_PU200
+  - run_MinBias_PU200
+  - run_QCDPt15To3000_PU200
+  - emulation_regression
   - upload
   - test
 

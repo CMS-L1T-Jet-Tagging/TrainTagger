@@ -273,7 +273,7 @@ run_TT_PU200:
 run_VBFHToBB_PU200:
   extends:
     - .template
-  stage: run_TT_PU200
+  stage: run_VBFHToBB_PU200
   tags: [cern-nextgen-highmem]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
@@ -297,7 +297,7 @@ run_VBFHToBB_PU200:
 run_VBFHToCC_PU200:
   extends:
     - .template
-  stage: run_TT_PU200
+  stage: run_VBFHToCC_PU200
   tags: [cern-nextgen-highmem]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
@@ -321,7 +321,7 @@ run_VBFHToCC_PU200:
 run_MinBias_PU200:
   extends:
     - .template
-  stage: run_TT_PU200
+  stage: run_MinBias_PU200
   tags: [cern-nextgen-highmem]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
@@ -345,7 +345,7 @@ run_MinBias_PU200:
 run_QCDPt15To3000_PU200:
   extends:
     - .template
-  stage: run_TT_PU200
+  stage: run_QCDPt15To3000_PU200
   tags: [cern-nextgen-highmem]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi

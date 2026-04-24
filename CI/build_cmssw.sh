@@ -67,7 +67,7 @@ if grep -q 'out of memory' ../compilation.log; then
 fi;
 scram b 2>&1 || exit 1
 
-if [[ "$RUN" == "false" ]]; then exit 0; fi
 cd FastPUPPI/NtupleProducer/python
+ls
 cmsenv
 

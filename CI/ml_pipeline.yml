@@ -355,6 +355,7 @@ emulation_regression:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
+  - mkdir output/$Model/plots/emulation_regression
   - python tagger/plot/emulation_regression/jecs.py -o output/$Model/plots/emulation_regression -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   artifacts:
     paths:

@@ -11,6 +11,8 @@ if [[ "$1" == "-run" ]]; then RUN=true; shift; fi;
 
 CMSSW_VERSION=$1
 CMSSW_L1CT=$2
+PROC=$3
+OUTPATH=$4
 
 scram p CMSSW ${CMSSW_VERSION}
 cd ${CMSSW_VERSION}/src
@@ -68,6 +70,16 @@ fi;
 scram b 2>&1 || exit 1
 
 cd FastPUPPI/NtupleProducer/python
-ls
 cmsenv
+./scripts/prun.sh runPerformanceNTuple.py --151X_v1 ${PROC} '' --nomerge
+cd ${PROC}
+hadd perfNano.root perfNano*.root
+rm *job*.root
+cp perfNano.root ${OUTPATH}/${PROC}_perfNano.root
+
+if [[ "$PROC" == "QCD_Pt15To3000_PU200" ]]; then
+    cd ..
+    python3 scripts/makeJecs.py QCD_Pt15To3000_PU200/perfNano.root -A -o jecs.root
+    cp jecs.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/jecs.root
+fi
 

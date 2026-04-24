@@ -262,12 +262,7 @@ run_TT_PU200:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
-  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 TT_PU200 '' --nomerge
-  - cd TT_PU200
-  - hadd perfNano.root perfNano*.root
-  - rm *job*.root
-  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/TT_PU200_perfNano.root
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} TT_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
 
 run_VBFHToBB_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
@@ -286,12 +281,7 @@ run_VBFHToBB_PU200:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
-  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 VBFHToBB_PU200 '' --nomerge
-  - cd VBFHToBB_PU200
-  - hadd perfNano.root perfNano*.root
-  - rm *job*.root
-  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/VBFHToBB_PU200_perfNano.root
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} VBFHToBB_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
 
 run_VBFHToCC_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
@@ -310,12 +300,7 @@ run_VBFHToCC_PU200:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
-  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 VBFHToCC_PU200 '' --nomerge
-  - cd VBFHToCC_PU200
-  - hadd perfNano.root perfNano*.root
-  - rm *job*.root
-  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/VBFHToCC_PU200_perfNano.root
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} VBFHToCC_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
 
 run_MinBias_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
@@ -334,16 +319,11 @@ run_MinBias_PU200:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
-  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 MinBias_PU200 '7' --nomerge
-  - cd MinBias_PU200
-  - hadd perfNano.root perfNano*.root
-  - rm *job*.root
-  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/MinBias_PU200_perfNano.root
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} MinBias_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
 
-run_QCDPt15To3000_PU200:
+run_QCD_Pt15To3000_PU200_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
-  stage: run_QCDPt15To3000_PU200
+  stage: run_QCD_Pt15To3000_PU200_PU200
   tags: [cern-nextgen-highmem]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
@@ -358,15 +338,7 @@ run_QCDPt15To3000_PU200:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
-  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 QCDPt15To3000_PU200 '' --nomerge
-  - cd QCDPt15To3000_PU200
-  - hadd perfNano.root perfNano*.root
-  - rm *job*.root
-  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/QCDPt15To3000_PU200_perfNano.root
-  - cd ..
-  - python3 scripts/makeJecs.py QCD_PtAll_PU200/perfNano.root -A -o jecs.root
-  - cp jecs.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/jecs.root
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} QCD_Pt15To3000_PU200_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
 
 emulation_regression:
   extends:

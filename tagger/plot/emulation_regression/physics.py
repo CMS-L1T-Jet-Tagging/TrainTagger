@@ -88,6 +88,7 @@ def get_rate_wps(reco, target_rate, obj):
     wp_rate = rates[wp_idx]
     wp = pt_cuts[wp_idx]
     if abs(wp_rate - target_rate) > 2:
+        from IPython import embed; embed()
         raise ValueError(f"Could not find a working point close to the target rate of {target_rate} kHz for {obj}. Closest rate: {wp_rate} kHz at pt cut {wp} GeV.")
     return wp
 
@@ -96,7 +97,7 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plo
         for t in turn_on_quantity:
             fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
             hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
-            bins = np.linspace(0, 2500, 90) if t in ['mjj', 'max_mjj'] else np.linspace(0, 2500, 125)
+            bins = np.linspace(0, 2500, 60) if t in ['mjj', 'max_mjj'] else np.linspace(0, 2500, 125)
             bin_centers = 0.5 * (bins[:-1] + bins[1:])
             xerr = (bins[1:] - bins[:-1]) / 2
             for coll in COLLECTION_KEYS:
@@ -115,7 +116,7 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plo
                     effs, y_errs = [], []
                     wp = minbias_collection[coll][f'wp_{t}_{r}_{coll_type}']
                     for lower, upper in zip(bins[:-1], bins[1:]):
-                        bin_selection = collapse_all((gen > lower) & (gen <= upper))
+                        bin_selection = collapse_all(gen > lower) & collapse_all(gen <= upper)
                         bin_eff = np.sum(collapse_all(reco[bin_selection] > wp)) / np.sum(bin_selection) if np.sum(bin_selection) > 0 else 0
                         y_err = np.sqrt(bin_eff * (1 - bin_eff) / np.sum(bin_selection)) if np.sum(bin_selection) > 0 else 0
                         effs.append(bin_eff)
@@ -123,7 +124,7 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plo
 
                     # dynamically set plotting range
                     if np.max(effs) >= 0.96:
-                        plateau_start = max(plateau_start, np.where(np.array(effs) > 0.96)[0][0]) + 8 # identify plateau start
+                        plateau_start = max(plateau_start, np.where(np.array(effs) > 0.95)[0][0]) + 8 # identify plateau start
                     else:
                         plateau_start = len(bins) - 1
 
@@ -142,7 +143,7 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plo
 
             # Unify all collections in one plot
             plateau_start = min(plateau_start, len(bins) - 1) # ensure plateau index is within bounds
-            ax.legend(title=PROCS_DICT[proc], fontsize=11)
+            ax.legend(title=PROCS_DICT[proc], fontsize=26)
             ax.set_xlim(0, bins[plateau_start])
             ax.set_ylim(0, 1.05)
             ax.set_xlabel(f"{LABELS_DICT[t]} [GeV]")
@@ -185,14 +186,11 @@ def match_genjets(daughters, genjets, dr_max=0.4, rel_pt_max=0.5):
         used_parts = set()
         used_jets = set()
 
-        evt_parts = []
-        evt_jets = []
+        evt_parts, evt_jets = [], []
 
         for dR, i, j in candidates:
-
             if len(used_jets) == len(jets):
                 break
-
             if i in used_parts or j in used_jets:
                 continue
 
@@ -247,11 +245,10 @@ def match_to_reco(proc_coll, reco_colls, daughter_pdgId=0):
 
     return recos, matched_genjets
 
-
 def plot_mjj(mjjs, gen, colls, proc, version):
     print(f'Plotting mJJ distribution for {proc}')
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-    mHH_bins = np.linspace(0, 230, 30)
+    mHH_bins = np.linspace(0, 230, 40)
     mHH_centers = 0.5 * (mHH_bins[:-1] + mHH_bins[1:])
     sigmas = {}
     eff_helper = "eff"
@@ -299,7 +296,7 @@ def plot_mjj(mjjs, gen, colls, proc, version):
     ax.set_xlabel(r"$M_{JJ}$ [GeV]")
     ax.set_ylabel("Fraction")
     ax.set_xlim(0, 230)
-    ax.legend(title=PROCS_DICT[proc], fontsize=11)
+    ax.legend(title=PROCS_DICT[proc], fontsize=26)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT,
                 ax=ax, fontsize=style.CMSHEADER_SIZE)
 
@@ -348,7 +345,7 @@ def plot_resonance(mjjs, gen, colls, proc, version):
     )
     ax.set_xlabel(r"$M_{JJ}$")
     ax.set_ylabel("Fraction")
-    ax.legend(title=PROCS_DICT[proc], fontsize=11)
+    ax.legend(title=PROCS_DICT[proc], fontsize=26)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT,
                 ax=ax, fontsize=style.CMSHEADER_SIZE)
 
@@ -444,7 +441,7 @@ def plot_tt(proc_colls, colls, plot_path):
     sigmas = {}
     eff_helper = "eff"
     for (p, p_mass) in [('top', 173), ('w', 80)]:
-        bins = np.arange(0, p_mass + 250, 10)
+        bins = np.arange(0, p_mass + 250, 8)
         bin_centers = 0.5 * (bins[:-1] + bins[1:])
         genjets = to_coffea(recos[f'{p}_genjets'])
         decay_modes = to_coffea(recos[f'{p}_decay_type'])
@@ -490,7 +487,7 @@ def plot_tt(proc_colls, colls, plot_path):
             ax.set_xlabel(x_label)
             ax.set_xlim(0, np.max(bins))
             ax.set_ylabel("Fraction")
-            ax.legend(title=f"{PROCS_DICT['TT_PU200']} ({t})", fontsize=11)
+            ax.legend(title=f"{PROCS_DICT['TT_PU200']} ({t})", fontsize=26)
             hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT,
                         ax=ax, fontsize=style.CMSHEADER_SIZE)
             plt.savefig(f"{plot_path}/tt_{p}_{t}_comparison.pdf", bbox_inches='tight')

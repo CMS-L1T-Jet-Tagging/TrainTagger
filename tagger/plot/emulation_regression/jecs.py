@@ -38,18 +38,16 @@ def extract_genjets(reco, genjets):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--output', help='Model output path')
+    parser.add_argument('-o', '--output', help='Model output path')
+    parser.add_argument('-i', '--input', help='FP files output path')
     args = parser.parse_args()
     version = f"{args.output}/plots/emulation_regression"
     os.makedirs(version, exist_ok=True)
     procs = ['TT_PU200','QCD_Pt15To3000_PU200', 'MinBias_PU200', 'VBFHToBB_PU200', 'VBFHToCC_PU200', 'VBFHToInvisible_PU200']
     proc_collections = {}
     for proc in procs:
-        eos_path = f'CMSSW_15_1_0_pre4/src/FastPUPPI/NtupleProducer/python/{proc}'
-        jets_file = 'perfNano.root'
-        jecs_file = f'CMSSW_15_1_0_pre4/src/FastPUPPI/NtupleProducer/python/QCD_Pt15To3000_PU200/jecs.root'
-        jecs = uproot.open(jecs_file)
-        jets = uproot.open(os.path.join(eos_path, jets_file))['Events']
+        jecs = uproot.open(os.path.join(args.input, 'jecs.root'))
+        jets = uproot.open(os.path.join(args.input, f'{proc}_perfNano.root'))['Events']
         eta_bins = [0, 1.3, 1.7, 1.9, 2.1, 2.4]
         jet_collections = {'scPuppiL1TSC4NGJetJets': {'raw': {}, 'jecs': {}}, 'scPuppiExtendedJets': {'raw': {}, 'jecs': {}}}
         for coll in COLLECTION_KEYS:

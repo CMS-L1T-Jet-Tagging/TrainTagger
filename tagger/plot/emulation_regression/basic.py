@@ -24,6 +24,9 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     uncorrected_res = reco_pt - truth_pt
     regressed_res = regressed_pt - truth_pt
 
+    uncorr_response = reco_pt / truth_pt
+    reg_response = regressed_pt / truth_pt
+
     rms_uncorr = []
     rms_reg = []
     rms_uncorr_err = []
@@ -36,8 +39,8 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
 
         selection = (truth_pt > pt_min) & (truth_pt < pt_max)
 
-        sigma_uncorr = np.std(uncorrected_res[selection] / truth_pt[selection])
-        sigma_reg = np.std(regressed_res[selection] / truth_pt[selection])
+        sigma_uncorr = np.std(uncorrected_res[selection]) / uncorr_response[selection].mean()
+        sigma_reg = np.std(regressed_res[selection]) / reg_response[selection].mean()
 
         # Get the errors for the standard deviation
         # Standard error of the standard deviation for a normal distribution
@@ -87,7 +90,6 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
                     elinewidth=3,
                     color="mediumpurple",
                 )
-
                 ax.errorbar(
                     pt_points,
                     uncorrected_rms2,
@@ -115,7 +117,7 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
                 ax.set_ylabel(r"$\sigma\left(\frac{p_T^{\mathrm{Reco}} - p_T^{\mathrm{Gen}}}{p_T^{\mathrm{Gen}}}\right)$")
                 ax.set_xscale(l1)
                 ax.set_yscale(l2)
-                ax.legend(title=PROCS_DICT[proc], fontsize=11)
+                ax.legend(title=PROCS_DICT[proc], fontsize=26)
                 ax.grid(True, alpha=1, linestyle='-', lw=0.75)
 
                 # Save the plot
@@ -134,37 +136,38 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
 
     return
 
-def plot_distribution(uncorrected1, corrected1, uncorrected2, corrected2, coll1, coll2, plot_dir):
+def plot_distribution(uncorrected1, uncorrected2, corrected2, genjets, coll1, coll2, plot_dir):
     bins = np.linspace(0., 1000, 50)
     for i in ['Leading', 'Full']:
         plt.figure(figsize=style.FIGURE_SIZE)
         if i == 'Leading':
             data1 = ak.sort(uncorrected1, axis=1, ascending=False)[:, :1]
             data2 = ak.sort(uncorrected2, axis=1, ascending=False)[:, :1]
-            data1_corr = ak.sort(corrected1, axis=1, ascending=False)[:, :1]
             data2_corr = ak.sort(corrected2, axis=1, ascending=False)[:, :1]
+            gen = ak.sort(genjets, axis=1, ascending=False)[:, :1]
         else:
             data1 = uncorrected1
             data2 = uncorrected2
-            data1_corr = corrected1
             data2_corr = corrected2
-        for data, label, color in [
-            (data1, coll1, "mediumpurple"),
-            (data2, f"JECs - {coll1}", "indigo"),
-            (data1_corr, coll2, "coral"),
-            (data2_corr, f"JECs - {coll2}", "orangered")
+            gen = genjets
+        for data, c, t, color in [
+            (data1, coll1, 'raw', "mediumpurple"),
+            (data2_corr, coll2, 'jecs', "orangered"),
+            (data2, coll2, 'raw', "coral"),
+            (gen, "GenJets", '', "gray")
         ]:
             # histogram
             data = ak.to_numpy(ak.flatten(data, axis=None))
-            data = np.clip(data, 0, 1000)
+            data = np.clip(data, 0, 1300)
             hist, edges = np.histogram(data, bins=bins)
             hist = hist / hist.sum()  # normalize to sum = 1
+            label = LABELS_DICT[coll2 + '_' + t] if t else c
             plt.step(edges[:-1], hist, where='post', label=label, color=color, linewidth=2)
 
-        plt.xlabel(f"{i} Jet pT [GeV]")
+        plt.xlabel(f"{i} Jet $p_{T}$ [GeV]")
         plt.ylabel("Fraction")
-        plt.yscale('log')
-        plt.legend(fontsize=11)
+        plt.xlim(-10, max(data) + 20)
+        plt.legend(fontsize=26)
         plt.grid(True, alpha=1, linestyle='-', lw=0.75)
 
         outpath = f"{plot_dir}"
@@ -211,7 +214,7 @@ def plot_response_bin(uncorrected_response1, regressed_response1,
         if 'pt' in plot_dir.lower() and len(data) > 1:
             plt.yscale('log')
         plt.title(f"{PT_BINS[i]} < pT_truth < {PT_BINS[i+1]}")
-        plt.legend(fontsize=11)
+        plt.legend(fontsize=26)
         plt.grid(True, alpha=1, linestyle='-', lw=0.75)
 
         outpath = f"{plot_dir}"
@@ -284,7 +287,7 @@ def plot_response_ridge_outline(uncorrected_response1, regressed_response1,
     plt.ylabel(r"Gen $p_T$ bins")
 
     plt.legend(loc='lower right',
-           fontsize=11,
+           fontsize=26,
            frameon=True,
            facecolor='white',
            edgecolor='black',
@@ -413,7 +416,7 @@ def response(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
 
                 ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
                 ax.set_ylabel(f"Response {bin_type}(L1/Gen)")
-                ax.legend(title=PROCS_DICT[proc], fontsize=11)
+                ax.legend(title=PROCS_DICT[proc], fontsize=26)
                 ax.set_xscale(l1)
                 ax.set_yscale(l2)
                 ax.grid(alpha=1, linestyle='-', lw=0.75)
@@ -478,20 +481,49 @@ def response(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
 
     return
 
-def distribution_heatmaps(l1jets, coll, plot_dir):
+def distribution_heatmaps(l1jets, plot_dir):
     # 2D histogram of gen vs reco pt
-    for t in ['raw', 'jecs']:
-        jets = l1jets[t]
-        fig, ax = plt.subplots(1, 1, figsize=(17, 20))
-        hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+    ratios = []
+    for coll in COLLECTION_KEYS:
+        t = 'raw' if coll == 'scPuppiL1TSC4NGJetJets' else 'jecs'
+        jets = l1jets[coll][t]
         pt_bins = np.linspace(0, 1000, 50)
         gen_pt = ak.to_numpy(np.clip(ak.flatten(jets.genpt, axis=None), 0, 1000))
         reco_pt = ak.to_numpy(np.clip(ak.flatten(jets.pt, axis=None), 0, 1000))
+        fig, ax = plt.subplots(figsize=(22, 25))
         h = ax.hist2d(gen_pt, reco_pt, bins=pt_bins, norm=LogNorm())
-        ax.set_xlabel(r"Gen Jet $p_T$ [GeV]")
-        ax.set_ylabel(rf"{LABELS_DICT[coll]} Jet $p_T$ [GeV]")
-        fig.colorbar(h[3], ax=ax, label="Entries")
-        ax.grid(alpha=1, linestyle='-', lw=0.75)
-        fig.savefig(f"{plot_dir}/gen_vs_reco_pt_{coll}_{t}.pdf", bbox_inches='tight')
-        fig.savefig(f"{plot_dir}/gen_vs_reco_pt_{coll}_{t}.png", bbox_inches='tight')
+        ratios.append(h)
         plt.close()
+        y_label = LABELS_DICT[f'{coll}_{t}']
+        plot_heatmap(h[0][::-1], y_label, 'Entries', plot_dir)
+    plot_heatmap(ratios[0][0][::-1] / ratios[1][0][::-1],
+        r'Reco Jet $p_{T}$',
+        f'Ratio {LABELS_DICT[COLLECTION_KEYS[0]]} vs {LABELS_DICT[COLLECTION_KEYS[1]+"_jecs"]}',
+        plot_dir)
+
+def plot_heatmap(ratio, y_label, label, plot_dir):
+    from matplotlib.colors import TwoSlopeNorm
+
+    fig, ax = plt.subplots(figsize=(22, 25))
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+
+    max_dev = max(abs(ratio.min() - 1), abs(ratio.max() - 1))
+    norm = TwoSlopeNorm(vmin=1 - max_dev, vcenter=1, vmax=1 + max_dev)
+
+    cmap = plt.cm.coolwarm.copy()
+    cmap.set_bad(color='lightgray')
+
+    im = ax.imshow(ratio, cmap=cmap, norm=norm)
+    ax.set_xlim(0, 1000)
+    ax.set_ylim(0, 1000)
+    ax.set_aspect('equal')
+    ax.set_xlabel('GenJet $p_T$')
+    ax.set_ylabel(y_label)
+
+    cbar = fig.colorbar(im, ax=ax, shrink=0.686)
+    cbar.set_label(label, fontsize=40)
+
+    plt.savefig(f"{plot_dir}/ratio_heatmap.pdf", bbox_inches='tight')
+
+
+

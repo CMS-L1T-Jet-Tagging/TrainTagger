@@ -39,6 +39,7 @@ variables:
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
+    EOS_STORAGE_PROCSDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/FPOutput
     CMSSW_VERSION: 'CMSSW_15_1_0_pre4'
     CMSSW_L1CT: 'schaefes:L1PF_15_1_X_L1TSC4NGJetTagger'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
@@ -242,13 +243,10 @@ profile:
   - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
   artifacts:
-    paths:
-      - output/$Model
     expire_in: 1 day
 
 run_TT_PU200:
-  extends:
-    - .template
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_TT_PU200
   tags: [cern-nextgen-highmem]
   variables:
@@ -258,21 +256,21 @@ run_TT_PU200:
   dependencies: [emulate,train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  before_script:
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
-  - cmsenv
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
   - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 TT_PU200 '' --nomerge
   - cd TT_PU200
   - hadd perfNano.root perfNano*.root
   - rm *job*.root
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 1 day
+  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/TT_PU200_perfNano.root
 
 run_VBFHToBB_PU200:
-  extends:
-    - .template
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_VBFHToBB_PU200
   tags: [cern-nextgen-highmem]
   variables:
@@ -282,21 +280,21 @@ run_VBFHToBB_PU200:
   dependencies: [emulate,train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  before_script:
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
-  - cmsenv
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
   - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 VBFHToBB_PU200 '' --nomerge
   - cd VBFHToBB_PU200
   - hadd perfNano.root perfNano*.root
   - rm *job*.root
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 1 day
+  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/VBFHToBB_PU200_perfNano.root
 
 run_VBFHToCC_PU200:
-  extends:
-    - .template
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_VBFHToCC_PU200
   tags: [cern-nextgen-highmem]
   variables:
@@ -306,21 +304,21 @@ run_VBFHToCC_PU200:
   dependencies: [emulate,train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  before_script:
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
-  - cmsenv
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
   - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 VBFHToCC_PU200 '' --nomerge
   - cd VBFHToCC_PU200
   - hadd perfNano.root perfNano*.root
   - rm *job*.root
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 1 day
+  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/VBFHToCC_PU200_perfNano.root
 
 run_MinBias_PU200:
-  extends:
-    - .template
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_MinBias_PU200
   tags: [cern-nextgen-highmem]
   variables:
@@ -330,21 +328,21 @@ run_MinBias_PU200:
   dependencies: [emulate,train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  before_script:
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
-  - cmsenv
-  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 MinBias_PU200 'inputs151X_5' --nomerge
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
+  - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 MinBias_PU200 '7' --nomerge
   - cd MinBias_PU200
   - hadd perfNano.root perfNano*.root
   - rm *job*.root
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 1 day
+  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/MinBias_PU200_perfNano.root
 
 run_QCDPt15To3000_PU200:
-  extends:
-    - .template
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_QCDPt15To3000_PU200
   tags: [cern-nextgen-highmem]
   variables:
@@ -354,19 +352,21 @@ run_QCDPt15To3000_PU200:
   dependencies: [emulate,train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  before_script:
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - cd ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python
-  - cmsenv
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
   - ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 QCDPt15To3000_PU200 '' --nomerge
-  - cd QCD_Pt15To3000_PU200
+  - cd QCDPt15To3000_PU200
   - hadd perfNano.root perfNano*.root
   - rm *job*.root
+  - cp perfNano.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/QCDPt15To3000_PU200_perfNano.root
   - cd ..
-  - python3 scripts/makeJecs.py QCD_Pt15To3000_PU200/perfNano.root -A -o QCD_Pt15To3000_PU200/jecs.root
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 1 day
+  - python3 scripts/makeJecs.py QCD_PtAll_PU200/perfNano.root -A -o jecs.root
+  - cp jecs.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/jecs.root
 
 emulation_regression:
   extends:
@@ -382,7 +382,7 @@ emulation_regression:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
-  - python tagger/plot/emulation_regression/jecs.py -output output/$Model/plots/emulation_regression
+  - python tagger/plot/emulation_regression/jecs.py -o output/$Model/plots/emulation_regression -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   artifacts:
     paths:
       - output/$Model

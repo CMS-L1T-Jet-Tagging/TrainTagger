@@ -75,6 +75,7 @@ cmsenv
 cd ${PROC}
 hadd perfNano.root perfNano*.root
 rm *job*.root
+mkdir -p ${OUTPATH}
 cp perfNano.root ${OUTPATH}/${PROC}_perfNano.root
 
 if [[ "$PROC" == "QCD_Pt15To3000_PU200" ]]; then

@@ -395,6 +395,8 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         filter_name=fields,
         library="ak"
     )
+    print(data)
+    print(len(data))
 
     # Shuffle the data indices
     total_data_len = len(data)

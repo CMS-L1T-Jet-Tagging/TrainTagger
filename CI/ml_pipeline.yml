@@ -15,7 +15,7 @@ stages:
   - run_VBFHToBB_PU200
   - run_VBFHToCC_PU200
   - run_MinBias_PU200
-  - run_QCDPt15To3000_PU200
+  - run_QCD_Pt15To3000_PU200
   - emulation_regression
   - upload
   - test
@@ -321,9 +321,9 @@ run_MinBias_PU200:
   script:
   - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} MinBias_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
 
-run_QCD_Pt15To3000_PU200_PU200:
+run_QCD_Pt15To3000_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
-  stage: run_QCD_Pt15To3000_PU200_PU200
+  stage: run_QCD_Pt15To3000_PU200
   tags: [cern-nextgen-highmem]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
@@ -338,7 +338,7 @@ run_QCD_Pt15To3000_PU200_PU200:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} QCD_Pt15To3000_PU200_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} QCD_Pt15To3000_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
 
 emulation_regression:
   extends:
@@ -348,8 +348,8 @@ emulation_regression:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCDPt15To3000_PU200]
-  dependencies: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCDPt15To3000_PU200]
+  needs: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCD_Pt15To3000_PU200]
+  dependencies: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCD_Pt15To3000_PU200]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:

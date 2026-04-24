@@ -404,6 +404,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     # Split indices based on test_ratio
     split_index = int((1 - test_ratio) * total_data_len)
     train_indices, test_indices = indices[:split_index], indices[split_index:]
+    print(train_indices, test_indices, split_index, indices)
 
     # Split the data into training and testing sets
     train_data = data[train_indices]

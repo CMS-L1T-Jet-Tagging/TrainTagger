@@ -226,8 +226,8 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [emulate,synth,train]
-  dependencies: [emulate,synth,train]
+  needs: [train,hls4ml]
+  dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
@@ -252,8 +252,8 @@ run_TT_PU200:
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
-  needs: [emulate,train,hls4ml]
-  dependencies: [emulate,train,hls4ml]
+  needs: [train,hls4ml]
+  dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
@@ -276,8 +276,8 @@ run_VBFHToBB_PU200:
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
-  needs: [emulate,train,hls4ml]
-  dependencies: [emulate,train,hls4ml]
+  needs: [train,hls4ml]
+  dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
@@ -300,8 +300,8 @@ run_VBFHToCC_PU200:
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
-  needs: [emulate,train,hls4ml]
-  dependencies: [emulate,train,hls4ml]
+  needs: [train,hls4ml]
+  dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
@@ -324,8 +324,8 @@ run_MinBias_PU200:
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
-  needs: [emulate,train,hls4ml]
-  dependencies: [emulate,train,hls4ml]
+  needs: [train,hls4ml]
+  dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
@@ -348,8 +348,8 @@ run_QCDPt15To3000_PU200:
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
-  needs: [emulate,train,hls4ml]
-  dependencies: [emulate,train,hls4ml]
+  needs: [train,hls4ml]
+  dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
@@ -376,8 +376,8 @@ emulation_regression:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [emulate,train,hls4ml]
-  dependencies: [emulate,train,hls4ml]
+  needs: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCDPt15To3000_PU200]
+  dependencies: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCDPt15To3000_PU200]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:

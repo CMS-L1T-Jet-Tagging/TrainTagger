@@ -49,11 +49,11 @@ def smallest_interval(data, fraction=0.68):
 def get_obj(coll, obj):
     coll = to_coffea(coll)
     if obj == 'jet1':
-        return coll.pt[ak.num(coll.pt) > 0][:, 0], np.arange(80, 500, 0.25)
+        return ak.max(coll.pt[ak.num(coll.pt) > 0], axis=1), np.arange(80, 500, 0.25)
     elif obj == 'jet2':
-        return coll.pt[ak.num(coll.pt) > 1][:, 1],  np.arange(50, 320, 0.25)
+        return ak.sort(coll.pt[ak.num(coll.pt) > 1], axis=1, ascending=False)[:,1],  np.arange(50, 320, 0.25)
     elif obj == 'jet3':
-        return coll.pt[ak.num(coll.pt) > 2][:, 2],  np.arange(5, 100, 0.25)
+        return ak.sort(coll.pt[ak.num(coll.pt) > 2], axis=1, ascending=False)[:,2],  np.arange(5, 100, 0.25)
     elif obj == 'ht15':
         return ak.sum(coll.pt[coll.pt > 15], axis=1), np.arange(100, 550, 0.25)
     elif obj == 'ht30':
@@ -68,11 +68,12 @@ def get_obj(coll, obj):
 
     # symmetric di- and quad jet seeds
     elif obj == 'dijet':
-        return coll[ak.num(coll.pt) > 1][:, :2], np.arange(50, 300, 0.25)
+        return ak.min(coll[ak.num(coll.pt) > 1][:, :2].pt, axis=1), np.arange(10, 500, 0.1)
     elif obj == 'quadjet':
-        return coll[ak.num(coll.pt) > 3][:, :4], np.arange(50, 200, 0.25)
+        return ak.min(coll[ak.num(coll.pt) > 3][:, :4].pt, axis=1), np.arange(1, 200, 0.1)
 
-def get_rate_wps(reco, target_rate, obj):
+def get_rate_wps(reco, target_rates, obj):
+    wps = {}
     rates, pt_cuts = [], []
     total_events = len(reco)
     sort_idx = ak.argsort(reco.pt[ak.num(reco.pt) > 0], axis=1, ascending=False, stable=True)
@@ -84,13 +85,17 @@ def get_rate_wps(reco, target_rate, obj):
         rate = (np.sum(selection) / total_events) * MINBIAS_RATE
         rates.append(rate)
         pt_cuts.append(pt_cut)
-    wp_idx = np.argmin(np.abs(np.array(rates) - target_rate))
-    wp_rate = rates[wp_idx]
-    wp = pt_cuts[wp_idx]
-    if abs(wp_rate - target_rate) > 2:
-        from IPython import embed; embed()
-        raise ValueError(f"Could not find a working point close to the target rate of {target_rate} kHz for {obj}. Closest rate: {wp_rate} kHz at pt cut {wp} GeV.")
-    return wp
+
+    # find wps for target rates
+    for target_rate in target_rates:
+        wp_idx = np.argmin(np.abs(np.array(rates) - target_rate))
+        wp_rate = rates[wp_idx]
+        wp = pt_cuts[wp_idx]
+        if abs(wp_rate - target_rate) > 2:
+            from IPython import embed; embed()
+            raise ValueError(f"Could not find a working point close to the target rate of {target_rate} kHz for {obj}. Closest rate: {wp_rate} kHz at pt cut {wp} GeV.")
+        wps[target_rate] = wp
+    return wps
 
 def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plot_dir):
     for r in [10, 20, 50, 100, 150]:
@@ -251,7 +256,7 @@ def plot_mjj(mjjs, gen, colls, proc, version):
     mHH_bins = np.linspace(0, 230, 40)
     mHH_centers = 0.5 * (mHH_bins[:-1] + mHH_bins[1:])
     sigmas = {}
-    eff_helper = "eff"
+    eff_helper = r'$\sigma_{eff}$'
     for coll in colls:
         for t in ['raw', 'jecs']:
             if t == 'jecs' and coll == 'scPuppiL1TSC4NGJetJets':
@@ -271,7 +276,7 @@ def plot_mjj(mjjs, gen, colls, proc, version):
             hist_err = np.sqrt(hist_counts) / hist_counts.sum()
             ax.errorbar(
                 mHH_centers, hist, yerr=hist_err,
-                label=LABELS_DICT[f'{coll}_{t}']+ f" ($\mu$ = {mean:.1f}, $\sigma_{eff}$ = {sigma:.1f})",
+                label=LABELS_DICT[f'{coll}_{t}']+ f" ($\mu$ = {mean:.1f}, {eff_helper} = {sigma:.1f})",
                 color=COLORS_DICT[f"{coll}_{t}"],
                 fmt='o-',         # circle marker
                 markersize=5,
@@ -439,12 +444,13 @@ def plot_tt(proc_colls, colls, plot_path):
     print('Plotting top and W mass peaks...')
     recos = find_top_daughters(proc_colls, colls)
     sigmas = {}
-    eff_helper = "eff"
+    eff_helper = r'\sigma_{eff}'
     for (p, p_mass) in [('top', 173), ('w', 80)]:
-        bins = np.arange(0, p_mass + 250, 8)
+        bins = np.arange(0, p_mass + 170, 4)
         bin_centers = 0.5 * (bins[:-1] + bins[1:])
         genjets = to_coffea(recos[f'{p}_genjets'])
         decay_modes = to_coffea(recos[f'{p}_decay_type'])
+        i_mins, i_masx = [], []
         for t in np.unique(decay_modes):
             fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
             decay_mask = (decay_modes == t)
@@ -453,7 +459,8 @@ def plot_tt(proc_colls, colls, plot_path):
             hist_gen = hist_gen_counts / hist_gen_counts.sum()
             mean_gen = np.mean(gen_masses)
             sigma_gen = smallest_interval(gen_masses)
-            ax.step(edges_gen[:-1], hist_gen, where='post', label=f'GenJets ($\mu$ = {mean_gen:.1f}, $\sigma_{eff_helper}$ = {sigma_gen:.1f})', color='grey', linewidth=2)
+            ax.axvline(p_mass, color='black', linestyle='--', linewidth=1.5, label=p_label)
+            ax.step(edges_gen[:-1], hist_gen, where='post', label=f'GenJets ($\mu$ = {mean_gen:.1f}, $\sigma_{{eff}}$ = {sigma_gen:.1f})', color='grey', linewidth=2)
             for coll in colls:
                 for c in ['raw', 'jecs']:
                     if c == 'jecs' and coll == 'scPuppiL1TSC4NGJetJets':
@@ -472,20 +479,26 @@ def plot_tt(proc_colls, colls, plot_path):
                     x_hist = 0.5 * (edges[:-1] + edges[1:])
                     ax.errorbar(
                         x_hist, hist, yerr=hist_err,
-                        label=LABELS_DICT[f'{coll}_{c}'] + f" ($\mu$ = {mean:.1f}, $\sigma_{eff_helper}$ = {sigma:.1f})",
+                        label=LABELS_DICT[f'{coll}_{c}'] + f" ($\mu$ = {mean:.1f}, $\sigma_{{eff}}$ = {sigma:.1f})",
                         color=COLORS_DICT[f"{coll}_{c}"],
                         fmt='o-',         # circle marker
                         markersize=5,
                         linewidth=1.5,
                         capsize=3
                     )
+                    nonzero = np.where(hist > 0)[0]
+                    pad = 2  # number of bins to keep as margin
+                    i_min = max(nonzero[0] - pad, 0)
+                    i_max = min(nonzero[-1] + pad, len(hist) - 1)
+                    i_mins.append(i_min)
+                    i_masx.append(i_max)
                     if coll == 'scPuppiL1TSC4NGJetJets' and c == 'raw':
                         np.savez(f"{plot_path}/arr_{p}_{t}_hist.npz", x=x_hist, y=hist, yerr=hist_err, sigma=sigma, mu=mean)
+
             x_label = r"$M_{JJJ}$ [GeV]" if p == 'top' else r"$M_{JJ}$ [GeV]"
             p_label = r"$m_{t}$ = 173 GeV" if p == 'top' else r"$m_{W}$ = 80 GeV"
-            ax.axvline(p_mass, color='black', linestyle='--', linewidth=1.5, label=p_label)
             ax.set_xlabel(x_label)
-            ax.set_xlim(0, np.max(bins))
+            ax.set_xlim(bins[np.min(i_mins)], bins[np.max(i_masx)])
             ax.set_ylabel("Fraction")
             ax.legend(title=f"{PROCS_DICT['TT_PU200']} ({t})", fontsize=26)
             hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT,
@@ -494,5 +507,3 @@ def plot_tt(proc_colls, colls, plot_path):
             plt.savefig(f"{plot_path}/tt_{p}_{t}_comparison.png", bbox_inches='tight')
             plt.close(fig)
     return sigmas
-
-

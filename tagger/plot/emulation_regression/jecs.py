@@ -91,11 +91,11 @@ if __name__ == "__main__":
         plot_dir = f"{version}/{p}/distributions"
         os.makedirs(plot_dir, exist_ok=True)
         plot_distribution(jet_collections['scPuppiL1TSC4NGJetJets']['raw'].pt,
-                    jet_collections['scPuppiL1TSC4NGJetJets']['jecs'].pt,
                     jet_collections['scPuppiExtendedJets']['raw'].pt,
                     jet_collections['scPuppiExtendedJets']['jecs'].pt,
+                    jet_collections['genjets'].pt,
                     'scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets',
-                    plot_dir=plot_dir)
+                    p, plot_dir=plot_dir)
 
         # response and rms
         response(ak.to_numpy(ak.flatten(jet_collections['scPuppiL1TSC4NGJetJets']['raw'].genpt)),
@@ -120,28 +120,28 @@ if __name__ == "__main__":
             )
 
         # 2d heatmaps
-        for coll in COLLECTION_KEYS:
-            distribution_heatmaps(jet_collections[coll], coll, plot_dir)
+        distribution_heatmaps(jet_collections, plot_dir)
 
-    # Turn-on Curves for TTbar
-    for r in [10, 20, 50, 100, 150]:
-        for coll in COLLECTION_KEYS:
-            for obj in ['jet1', 'jet2', 'ht15', 'ht30']:
-                print(f"Calculating turn-on curve for {coll}")
-                wps_raw = get_rate_wps(proc_collections['MinBias_PU200'][coll]['raw'], r, obj)
-                wps_jecs = get_rate_wps(proc_collections['MinBias_PU200'][coll]['jecs'], r, obj)
-                proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_raw'] = wps_raw
-                proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_jecs'] = wps_jecs
-    turn_on_curve(proc_collections['TT_PU200'], proc_collections['MinBias_PU200'], 'TT_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/TT_PU200")
-    turn_on_curve(proc_collections['QCD_PtAll_PU200'], proc_collections['MinBias_PU200'], 'QCD_PtAll_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/QCD_PtAll_PU200")
+    # Derive Rates
+    target_rates =  [10, 20, 50, 100, 150]
+    for coll in COLLECTION_KEYS:
+        for obj in ['jet1', 'jet2', 'ht15', 'ht30', 'dijet']:
+            wps_raw = get_rate_wps(proc_collections['MinBias_PU200'][coll]['raw'], target_rates, obj)
+            wps_jecs = get_rate_wps(proc_collections['MinBias_PU200'][coll]['jecs'], target_rates, obj)
+            for r in target_rates:
+                proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_raw'] = wps_raw[r]
+                proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_jecs'] = wps_jecs[r]
+
+    # Plot Turn on cuves
+    turn_on_curve(proc_collections['TT_PU200'], proc_collections['MinBias_PU200'], 'TT_PU200', ['jet1', 'jet2', 'ht15', 'ht30', 'dijet'], plot_dir=f"{version}/TT_PU200")
+    turn_on_curve(proc_collections['QCD_Pt15To3000_PU200'], proc_collections['MinBias_PU200'], 'QCD_Pt15To3000_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/QCD_Pt15To3000_PU200")
 
     # Invariant masses
-    # top
+    # Top and W
     plot_tt(proc_collections['TT_PU200'], ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'], f'{version}/TT_PU200')
 
     # Higgs
     for vbf, pdgId in {'VBFHToBB_PU200': 5, 'VBFHToCC_PU200': 4}.items():
         mjjs, mHH = match_to_reco(proc_collections[vbf], ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'], pdgId)
         plot_mjj(mjjs, mHH, ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'], vbf, version)
-
 

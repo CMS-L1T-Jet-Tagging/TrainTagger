@@ -136,10 +136,10 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
 
     return
 
-def plot_distribution(uncorrected1, uncorrected2, corrected2, genjets, coll1, coll2, plot_dir):
-    bins = np.linspace(0., 1000, 50)
+def plot_distribution(uncorrected1, uncorrected2, corrected2, genjets, coll1, coll2, proc, plot_dir):
+    bins = np.linspace(0., 1200, 50)
     for i in ['Leading', 'Full']:
-        plt.figure(figsize=style.FIGURE_SIZE)
+        fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         if i == 'Leading':
             data1 = ak.sort(uncorrected1, axis=1, ascending=False)[:, :1]
             data2 = ak.sort(uncorrected2, axis=1, ascending=False)[:, :1]
@@ -152,29 +152,30 @@ def plot_distribution(uncorrected1, uncorrected2, corrected2, genjets, coll1, co
             gen = genjets
         for data, c, t, color in [
             (data1, coll1, 'raw', "mediumpurple"),
-            (data2_corr, coll2, 'jecs', "orangered"),
             (data2, coll2, 'raw', "coral"),
+            (data2_corr, coll2, 'jecs', "orangered"),
             (gen, "GenJets", '', "gray")
         ]:
             # histogram
             data = ak.to_numpy(ak.flatten(data, axis=None))
-            data = np.clip(data, 0, 1300)
+            data = np.clip(data, 0, np.max(bins) - 0.5)  # clip to bin edges to avoid outliers dominating the plot
             hist, edges = np.histogram(data, bins=bins)
             hist = hist / hist.sum()  # normalize to sum = 1
             label = LABELS_DICT[coll2 + '_' + t] if t else c
-            plt.step(edges[:-1], hist, where='post', label=label, color=color, linewidth=2)
+            ax.hist(data, bins=bins, weights=np.ones_like(data)/len(data),
+                histtype='step', label=label, color=color, linewidth=2)
 
-        plt.xlabel(f"{i} Jet $p_{T}$ [GeV]")
-        plt.ylabel("Fraction")
-        plt.xlim(-10, max(data) + 20)
-        plt.legend(fontsize=26)
-        plt.grid(True, alpha=1, linestyle='-', lw=0.75)
+        ax.set_xlabel(f"{i} Jet $p_T$ [GeV]")
+        ax.set_ylabel("Fraction")
+        ax.set_yscale('log')
+        ax.set_xlim(0, np.max(bins) + 50)
+        ax.legend(fontsize=26, title=PROCS_DICT[proc])
+        ax.grid(True, alpha=1, linestyle='-', lw=0.75)
 
         outpath = f"{plot_dir}"
         os.makedirs(outpath, exist_ok=True)
-        plt.savefig(f"{outpath}/{i}_pt_distribution.pdf", bbox_inches='tight')
-        plt.savefig(f"{outpath}/{i}_pt_distribution.png", bbox_inches='tight')
-        plt.close()
+        fig.savefig(f"{outpath}/{i}_pt_distribution.pdf", bbox_inches='tight')
+        fig.savefig(f"{outpath}/{i}_pt_distribution.png", bbox_inches='tight')
 
 def plot_response_bin(uncorrected_response1, regressed_response1,
                       uncorrected_response2, regressed_response2,
@@ -524,6 +525,8 @@ def plot_heatmap(ratio, y_label, label, plot_dir):
     cbar.set_label(label, fontsize=40)
 
     plt.savefig(f"{plot_dir}/ratio_heatmap.pdf", bbox_inches='tight')
+
+
 
 
 

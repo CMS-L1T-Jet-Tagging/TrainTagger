@@ -14,9 +14,7 @@ from physics import get_rate_wps, turn_on_curve, plot_mjj, match_to_reco, find_d
 from basic import response, rms, plot_distribution, get_response, get_rms, rms, plot_response_bin, distribution_heatmaps
 from extras import N_BUNCHES, REVOLUTION_FREQUENCY, MINBIAS_RATE, PT_BINS, LABELS_DICT, COLORS_DICT, PROCS_DICT, COLLECTION_KEYS
 
-import tagger.plot.style
-style.set_style()
-
+import tagger.plot.style as style
 style.set_style()
 
 # Helpers
@@ -43,7 +41,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     version = f"{args.output}/plots/emulation_regression"
     os.makedirs(version, exist_ok=True)
-    procs = ['TT_PU200','QCD_Pt15To3000_PU200', 'MinBias_PU200', 'VBFHToBB_PU200', 'VBFHToCC_PU200', 'VBFHToInvisible_PU200']
+    procs = ['TT_PU200','QCD_Pt15To3000_PU200', 'MinBias_PU200', 'VBFHToBB_PU200', 'VBFHToCC_PU200']
     proc_collections = {}
     for proc in procs:
         jecs = uproot.open(os.path.join(args.input, 'jecs.root'))
@@ -133,7 +131,7 @@ if __name__ == "__main__":
                 proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_jecs'] = wps_jecs[r]
 
     # Plot Turn on cuves
-    turn_on_curve(proc_collections['TT_PU200'], proc_collections['MinBias_PU200'], 'TT_PU200', ['jet1', 'jet2', 'ht15', 'ht30', 'dijet'], plot_dir=f"{version}/TT_PU200")
+    turn_on_curve(proc_collections['TT_PU200'], proc_collections['MinBias_PU200'], 'TT_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/TT_PU200")
     turn_on_curve(proc_collections['QCD_Pt15To3000_PU200'], proc_collections['MinBias_PU200'], 'QCD_Pt15To3000_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/QCD_Pt15To3000_PU200")
 
     # Invariant masses

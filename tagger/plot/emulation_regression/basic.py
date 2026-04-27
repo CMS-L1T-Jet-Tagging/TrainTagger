@@ -10,9 +10,7 @@ from scipy.stats import norm
 from coffea.nanoevents.methods import vector
 
 # style from tagger
-import sys
-sys.path.append("/afs/cern.ch/user/s/stella/TaggerFork/TrainTagger/tagger/plot")  # The directory *containing* style.py
-import style
+import tagger.plot.style as style
 style.set_style()
 
 def get_rms(truth_pt, reco_pt, pt_ratio):

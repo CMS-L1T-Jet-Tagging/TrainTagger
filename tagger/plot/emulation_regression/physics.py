@@ -9,10 +9,7 @@ from coffea.nanoevents.methods import vector
 from extras import N_BUNCHES, REVOLUTION_FREQUENCY, MINBIAS_RATE, PT_BINS, LABELS_DICT, COLORS_DICT, PROCS_DICT, COLLECTION_KEYS
 from scipy.interpolate import make_interp_spline
 
-# style from tagger
-import sys
-sys.path.append("/afs/cern.ch/user/s/stella/TaggerFork/TrainTagger/tagger/plot")  # The directory *containing* style.py
-import style
+import tagger.plot.style as style
 style.set_style()
 
 # Helpers
@@ -49,11 +46,11 @@ def smallest_interval(data, fraction=0.68):
 def get_obj(coll, obj):
     coll = to_coffea(coll)
     if obj == 'jet1':
-        return ak.max(coll.pt[ak.num(coll.pt) > 0], axis=1), np.arange(80, 500, 0.25)
+        return coll.pt[ak.num(coll.pt) > 0][:,0], np.arange(80, 500, 0.25)
     elif obj == 'jet2':
-        return ak.sort(coll.pt[ak.num(coll.pt) > 1], axis=1, ascending=False)[:,1],  np.arange(50, 320, 0.25)
+        return coll.pt[ak.num(coll.pt) > 1][:,1],  np.arange(50, 320, 0.25)
     elif obj == 'jet3':
-        return ak.sort(coll.pt[ak.num(coll.pt) > 2], axis=1, ascending=False)[:,2],  np.arange(5, 100, 0.25)
+        return coll.pt[ak.num(coll.pt) > 2][:,2],  np.arange(5, 100, 0.25)
     elif obj == 'ht15':
         return ak.sum(coll.pt[coll.pt > 15], axis=1), np.arange(100, 550, 0.25)
     elif obj == 'ht30':

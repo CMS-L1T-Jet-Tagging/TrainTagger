@@ -31,8 +31,17 @@ def apply_jecs(jets_pt, jecs_x, jecs_y):
 def extract_genjets(reco, genjets):
     matches = reco.genpt[:, :, None] == genjets.pt[:, None, :]
     matches_idx = ak.argmax(matches, axis=2)
+    unmatched_mask = (reco.genpt == 0)
     matched_genjets = genjets[matches_idx]
-    return matched_genjets
+    matched = ak.zip({
+        "pt": ak.where(unmatched_mask, 0, matched_genjets.pt),
+        "eta": ak.where(unmatched_mask, 0, matched_genjets.eta),
+        "phi": ak.where(unmatched_mask, 0, matched_genjets.phi),
+        "mass": ak.where(unmatched_mask, 0, matched_genjets.mass),
+        "partonFlavour": ak.where(unmatched_mask, 0, matched_genjets.partonFlavour),
+    })
+
+    return to_coffea(matched)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -84,7 +93,7 @@ if __name__ == "__main__":
         proc_collections[proc] = jet_collections
 
     # START PLOTTIMG
-    for p in proc_collections.keys():
+    for p in ['TT_PU200','QCD_PtAll_PU200']:
         jet_collections = proc_collections[p]
         plot_dir = f"{version}/{p}/distributions"
         os.makedirs(plot_dir, exist_ok=True)
@@ -123,7 +132,7 @@ if __name__ == "__main__":
     # Derive Rates
     target_rates =  [10, 20, 50, 100, 150]
     for coll in COLLECTION_KEYS:
-        for obj in ['jet1', 'jet2', 'ht15', 'ht30', 'dijet']:
+        for obj in ['jet1', 'jet2', 'ht30']:
             wps_raw = get_rate_wps(proc_collections['MinBias_PU200'][coll]['raw'], target_rates, obj)
             wps_jecs = get_rate_wps(proc_collections['MinBias_PU200'][coll]['jecs'], target_rates, obj)
             for r in target_rates:
@@ -131,15 +140,14 @@ if __name__ == "__main__":
                 proc_collections['MinBias_PU200'][coll][f'wp_{obj}_{r}_jecs'] = wps_jecs[r]
 
     # Plot Turn on cuves
-    turn_on_curve(proc_collections['TT_PU200'], proc_collections['MinBias_PU200'], 'TT_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/TT_PU200")
-    turn_on_curve(proc_collections['QCD_Pt15To3000_PU200'], proc_collections['MinBias_PU200'], 'QCD_Pt15To3000_PU200', ['jet1', 'jet2', 'ht15', 'ht30'], plot_dir=f"{version}/QCD_Pt15To3000_PU200")
+    turn_on_curve(proc_collections['TT_PU200'], proc_collections['MinBias_PU200'], 'TT_PU200', ['jet1', 'jet2', 'ht30'], plot_dir=f"{version}/TT_PU200/turn_ons")
+    turn_on_curve(proc_collections['QCD_PtAll_PU200'], proc_collections['MinBias_PU200'], 'QCD_PtAll_PU200', ['jet1', 'jet2', 'ht30'], plot_dir=f"{version}/QCD_PtAll_PU200/turn_ons")
 
-    # Invariant masses
-    # Top and W
-    plot_tt(proc_collections['TT_PU200'], ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'], f'{version}/TT_PU200')
+    # # Invariant masses
+    # # Top and W
+    plot_tt(proc_collections['TT_PU200'], ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'], f'{version}/TT_PU200/masses')
 
     # Higgs
     for vbf, pdgId in {'VBFHToBB_PU200': 5, 'VBFHToCC_PU200': 4}.items():
         mjjs, mHH = match_to_reco(proc_collections[vbf], ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'], pdgId)
         plot_mjj(mjjs, mHH, ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'], vbf, version)
-

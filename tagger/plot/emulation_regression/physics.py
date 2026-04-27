@@ -9,7 +9,10 @@ from coffea.nanoevents.methods import vector
 from extras import N_BUNCHES, REVOLUTION_FREQUENCY, MINBIAS_RATE, PT_BINS, LABELS_DICT, COLORS_DICT, PROCS_DICT, COLLECTION_KEYS
 from scipy.interpolate import make_interp_spline
 
-import tagger.plot.style as style
+# style from tagger
+import sys
+sys.path.append("/afs/cern.ch/user/s/stella/TaggerFork/TrainTagger/tagger/plot")  # The directory *containing* style.py
+import style
 style.set_style()
 
 # Helpers
@@ -43,14 +46,17 @@ def smallest_interval(data, fraction=0.68):
 
 # Physics starts here
 # Turn-On Curves and Working Points
-def get_obj(coll, obj):
+def get_obj(coll, n_reco, n_gen, obj):
     coll = to_coffea(coll)
     if obj == 'jet1':
-        return coll.pt[ak.num(coll.pt) > 0][:,0], np.arange(80, 500, 0.25)
+        num_cut = (n_reco > 0) & (n_gen > 0)
+        return ak.max(coll.pt[num_cut], axis=1), np.arange(80, 500, 0.25)
     elif obj == 'jet2':
-        return coll.pt[ak.num(coll.pt) > 1][:,1],  np.arange(50, 320, 0.25)
+        num_cut = (n_reco > 1) & (n_gen > 1)
+        return ak.sort(coll.pt[num_cut], ascending=False)[:,1],  np.arange(50, 320, 0.25)
     elif obj == 'jet3':
-        return coll.pt[ak.num(coll.pt) > 2][:,2],  np.arange(5, 100, 0.25)
+        num_cut = (n_reco > 2) & (n_gen > 2)
+        return ak.sort(coll.pt[num_cut], ascending=False)[:,2],  np.arange(5, 100, 0.25)
     elif obj == 'ht15':
         return ak.sum(coll.pt[coll.pt > 15], axis=1), np.arange(100, 550, 0.25)
     elif obj == 'ht30':
@@ -58,16 +64,20 @@ def get_obj(coll, obj):
 
     # invarinat masses
     elif obj == 'mjj':
-        return (coll[ak.num(coll.pt) > 1][:, 0] + coll[ak.num(coll.pt) > 1][:, 1]).mass, np.arange(400, 2200, 0.25)
+        num_cut = (n_reco > 1) & (n_gen > 1)
+        return (coll[num_cut][:, 0] + coll[num_cut][:, 1]).mass, np.arange(400, 2200, 0.25)
     elif obj == 'max_mjj':
-        mjjs = coll[ak.num(coll.pt) > 1].metric_table(coll[ak.num(coll.pt) > 1], metric=inv_helper)
+        num_cut = (n_reco > 1) & (n_gen > 1)
+        mjjs = coll[num_cut].metric_table(coll[num_cut], metric=inv_helper)
         return ak.max(ak.max(mjjs, axis=-1), axis=-1), np.arange(400, 2800, 0.25)
 
     # symmetric di- and quad jet seeds
     elif obj == 'dijet':
-        return ak.min(coll[ak.num(coll.pt) > 1][:, :2].pt, axis=1), np.arange(10, 500, 0.1)
+        num_cut = (n_reco > 1) & (n_gen > 1)
+        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :2].pt, axis=1), np.arange(10, 500, 0.1)
     elif obj == 'quadjet':
-        return ak.min(coll[ak.num(coll.pt) > 3][:, :4].pt, axis=1), np.arange(1, 200, 0.1)
+        num_cut = (n_reco > 3) & (n_gen > 3)
+        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :4].pt, axis=1), np.arange(1, 200, 0.1)
 
 def get_rate_wps(reco, target_rates, obj):
     wps = {}
@@ -75,7 +85,8 @@ def get_rate_wps(reco, target_rates, obj):
     total_events = len(reco)
     sort_idx = ak.argsort(reco.pt[ak.num(reco.pt) > 0], axis=1, ascending=False, stable=True)
     reco = reco[ak.num(reco.pt) > 0][sort_idx] # sort by pt
-    reco_obj, bins = get_obj(reco, obj)
+    n_reco = ak.num(reco)
+    reco_obj, bins = get_obj(reco, n_reco, n_reco, obj)
     for pt_cut in bins:
         selection = reco_obj > pt_cut
         selection = collapse_all(selection)
@@ -95,6 +106,7 @@ def get_rate_wps(reco, target_rates, obj):
     return wps
 
 def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plot_dir):
+    os.makedirs(plot_dir, exist_ok=True)
     for r in [10, 20, 50, 100, 150]:
         for t in turn_on_quantity:
             fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -108,13 +120,12 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, plo
                     if coll_type == 'jecs' and coll == 'scPuppiL1TSC4NGJetJets':
                         continue
                     reco = to_coffea(tt_collection[coll][coll_type])
-                    genjets = to_coffea(tt_collection[coll]['gen'])
+                    genjets = to_coffea(tt_collection['genjets'])
                     total_events = len(reco)
                     reco, genjets = reco[ak.num(reco) > 0], genjets[ak.num(reco) > 0]  # Only consider events with at least one jet
-                    arg_sort = ak.argsort(reco.pt, axis=1, ascending=False)
-                    reco, genjets = reco[arg_sort], genjets[arg_sort]  # Sort jets by pt
-                    gen, _ = get_obj(genjets, t)
-                    reco, _ = get_obj(reco, t)
+                    n_reco, n_gen = ak.num(reco), ak.num(genjets)
+                    gen, _ = get_obj(genjets, n_reco, n_gen, t)
+                    reco, _ = get_obj(reco, n_reco, n_gen, t)
                     effs, y_errs = [], []
                     wp = minbias_collection[coll][f'wp_{t}_{r}_{coll_type}']
                     for lower, upper in zip(bins[:-1], bins[1:]):
@@ -249,11 +260,12 @@ def match_to_reco(proc_coll, reco_colls, daughter_pdgId=0):
 
 def plot_mjj(mjjs, gen, colls, proc, version):
     print(f'Plotting mJJ distribution for {proc}')
+    plot_dir = f"{version}/{proc}/masses"
+    os.makedirs(plot_dir, exist_ok=True)
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     mHH_bins = np.linspace(0, 230, 40)
     mHH_centers = 0.5 * (mHH_bins[:-1] + mHH_bins[1:])
     sigmas = {}
-    eff_helper = r'$\sigma_{eff}$'
     for coll in colls:
         for t in ['raw', 'jecs']:
             if t == 'jecs' and coll == 'scPuppiL1TSC4NGJetJets':
@@ -273,7 +285,7 @@ def plot_mjj(mjjs, gen, colls, proc, version):
             hist_err = np.sqrt(hist_counts) / hist_counts.sum()
             ax.errorbar(
                 mHH_centers, hist, yerr=hist_err,
-                label=LABELS_DICT[f'{coll}_{t}']+ f" ($\mu$ = {mean:.1f}, {eff_helper} = {sigma:.1f})",
+                label=LABELS_DICT[f'{coll}_{t}']+ f" ($\mu$ = {mean:.1f}, $\sigma_{{eff}}$ = {sigma:.1f})",
                 color=COLORS_DICT[f"{coll}_{t}"],
                 fmt='o-',         # circle marker
                 markersize=5,
@@ -281,7 +293,7 @@ def plot_mjj(mjjs, gen, colls, proc, version):
                 capsize=3
             )
             if coll == 'scPuppiL1TSC4NGJetJets' and t == 'raw':
-                np.savez(f"{version}/{proc}/arr_hist.npz", x=mHH_centers, y=hist, yerr=hist_err, sigma=sigma, mu=mean)
+                np.savez(f"{plot_dir}/arr_hist.npz", x=mHH_centers, y=hist, yerr=hist_err, sigma=sigma, mu=mean)
 
     # GenJets step histogram
     mHH_array = ak.to_numpy(gen[ak.num(gen) == 2].sum().mass)
@@ -292,7 +304,7 @@ def plot_mjj(mjjs, gen, colls, proc, version):
     sigma_gen = smallest_interval(mHH_array)
     mean_gen = np.mean(mHH_array)
 
-    ax.step(edges_gen[:-1], hist_gen, where='post', label=f'GenJets ($\mu$ = {mean_gen:.1f}, $\sigma_{eff_helper}$ = {sigma_gen:.1f})', color='grey', linewidth=2)
+    ax.step(edges_gen[:-1], hist_gen, where='post', label=f'GenJets ($\mu$ = {mean_gen:.1f}, $\sigma_{{eff}}$ = {sigma_gen:.1f})', color='grey', linewidth=2)
     ax.axvline(125, color='black', linestyle='--', linewidth=1.5, label=r"$m_H = 125 GeV$")
 
     ax.set_xlabel(r"$M_{JJ}$ [GeV]")
@@ -302,8 +314,8 @@ def plot_mjj(mjjs, gen, colls, proc, version):
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT,
                 ax=ax, fontsize=style.CMSHEADER_SIZE)
 
-    plt.savefig(f"{version}/{proc}/mjj_comparison.pdf", bbox_inches='tight')
-    plt.savefig(f"{version}/{proc}/mjj_comparison.png", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/mjj_comparison.pdf", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}/mjj_comparison.png", bbox_inches='tight')
     return sigmas
 
 def plot_resonance(mjjs, gen, colls, proc, version):
@@ -441,7 +453,7 @@ def plot_tt(proc_colls, colls, plot_path):
     print('Plotting top and W mass peaks...')
     recos = find_top_daughters(proc_colls, colls)
     sigmas = {}
-    eff_helper = r'\sigma_{eff}'
+    os.makedirs(plot_path, exist_ok=True)
     for (p, p_mass) in [('top', 173), ('w', 80)]:
         bins = np.arange(0, p_mass + 170, 4)
         bin_centers = 0.5 * (bins[:-1] + bins[1:])
@@ -456,6 +468,7 @@ def plot_tt(proc_colls, colls, plot_path):
             hist_gen = hist_gen_counts / hist_gen_counts.sum()
             mean_gen = np.mean(gen_masses)
             sigma_gen = smallest_interval(gen_masses)
+            p_label = r"$m_{t}$ = 173 GeV" if p == 'top' else r"$m_{W}$ = 80 GeV"
             ax.axvline(p_mass, color='black', linestyle='--', linewidth=1.5, label=p_label)
             ax.step(edges_gen[:-1], hist_gen, where='post', label=f'GenJets ($\mu$ = {mean_gen:.1f}, $\sigma_{{eff}}$ = {sigma_gen:.1f})', color='grey', linewidth=2)
             for coll in colls:
@@ -483,7 +496,7 @@ def plot_tt(proc_colls, colls, plot_path):
                         linewidth=1.5,
                         capsize=3
                     )
-                    nonzero = np.where(hist > 0)[0]
+                    nonzero = np.where(hist > 0.002)[0]
                     pad = 2  # number of bins to keep as margin
                     i_min = max(nonzero[0] - pad, 0)
                     i_max = min(nonzero[-1] + pad, len(hist) - 1)
@@ -493,7 +506,6 @@ def plot_tt(proc_colls, colls, plot_path):
                         np.savez(f"{plot_path}/arr_{p}_{t}_hist.npz", x=x_hist, y=hist, yerr=hist_err, sigma=sigma, mu=mean)
 
             x_label = r"$M_{JJJ}$ [GeV]" if p == 'top' else r"$M_{JJ}$ [GeV]"
-            p_label = r"$m_{t}$ = 173 GeV" if p == 'top' else r"$m_{W}$ = 80 GeV"
             ax.set_xlabel(x_label)
             ax.set_xlim(bins[np.min(i_mins)], bins[np.max(i_masx)])
             ax.set_ylabel("Fraction")
@@ -504,3 +516,5 @@ def plot_tt(proc_colls, colls, plot_path):
             plt.savefig(f"{plot_path}/tt_{p}_{t}_comparison.png", bbox_inches='tight')
             plt.close(fig)
     return sigmas
+
+

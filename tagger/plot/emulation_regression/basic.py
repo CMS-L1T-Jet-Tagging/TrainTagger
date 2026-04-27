@@ -10,7 +10,9 @@ from scipy.stats import norm
 from coffea.nanoevents.methods import vector
 
 # style from tagger
-import tagger.plot.style as style
+import sys
+sys.path.append("/afs/cern.ch/user/s/stella/TaggerFork/TrainTagger/tagger/plot")  # The directory *containing* style.py
+import style
 style.set_style()
 
 def get_rms(truth_pt, reco_pt, pt_ratio):
@@ -67,10 +69,12 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
     # pT coordinate points for plotting
     proc = plot_dir.split("/")[-1]
     pt_points = [np.mean((PT_BINS[i], PT_BINS[i + 1])) for i in range(len(PT_BINS) - 1)]
+    outpath = f"{plot_dir}/rms"
+    os.makedirs(outpath, exist_ok=True)
 
     def plot_rms(uncorrected_rms1, regressed_rms1, uncorrected_rms_err1, regressed_rms_err1, jet_collection1,
                  uncorrected_rms2, regressed_rms2, uncorrected_rms_err2, regressed_rms_err2, jet_collection2,
-                 proc):
+                 proc, outpath):
 
         for l1 in ['log', 'linear']:
             for l2 in ['log', 'linear']:
@@ -93,7 +97,7 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
                     uncorrected_rms2,
                     yerr=uncorrected_rms_err2,
                     fmt='o',
-                    label=r"{}".format(LABELS_DICT[jet_collection2]),
+                    label=LABELS_DICT[f"{jet_collection2}_raw"],
                     capsize=4,
                     ms=10,
                     elinewidth=3,
@@ -104,7 +108,7 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
                     regressed_rms2,
                     yerr=regressed_rms_err2,
                     fmt='o',
-                    label=r"JECs - {}".format(LABELS_DICT[jet_collection2]),
+                    label=LABELS_DICT[f"{jet_collection2}_jecs"],
                     capsize=4,
                     ms=10,
                     elinewidth=3,
@@ -112,15 +116,15 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
                 )
 
                 ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
-                ax.set_ylabel(r"$\sigma\left(\frac{p_T^{\mathrm{Reco}} - p_T^{\mathrm{Gen}}}{p_T^{\mathrm{Gen}}}\right)$")
+                ax.set_ylabel(r"$\sigma(p_T^{\mathrm{Reco}} - p_T^{\mathrm{Gen}}) / \mathrm{response}$")
                 ax.set_xscale(l1)
                 ax.set_yscale(l2)
                 ax.legend(title=PROCS_DICT[proc], fontsize=26)
                 ax.grid(True, alpha=1, linestyle='-', lw=0.75)
 
                 # Save the plot
-                plt.savefig(f"{plot_dir}/residual_rms_{l1}_{l2}.pdf", bbox_inches='tight')
-                plt.savefig(f"{plot_dir}/residual_rms_{l1}_{l2}.png", bbox_inches='tight')
+                plt.savefig(f"{outpath}/residual_rms_{l1}_{l2}.pdf", bbox_inches='tight')
+                plt.savefig(f"{outpath}/residual_rms_{l1}_{l2}.png", bbox_inches='tight')
                 plt.close()
 
     # Inclusive rms
@@ -129,7 +133,7 @@ def rms(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
     plot_rms(
         uncorrected_rms1, regressed_rms1, uncorrected_rms_err1, regressed_rms_err1, jet_collection1,
         uncorrected_rms2, regressed_rms2, uncorrected_rms_err2, regressed_rms_err2, jet_collection2,
-        proc
+        proc, outpath
     )
 
     return
@@ -159,7 +163,7 @@ def plot_distribution(uncorrected1, uncorrected2, corrected2, genjets, coll1, co
             data = np.clip(data, 0, np.max(bins) - 0.5)  # clip to bin edges to avoid outliers dominating the plot
             hist, edges = np.histogram(data, bins=bins)
             hist = hist / hist.sum()  # normalize to sum = 1
-            label = LABELS_DICT[coll2 + '_' + t] if t else c
+            label = LABELS_DICT[c + '_' + t] if t else c
             ax.hist(data, bins=bins, weights=np.ones_like(data)/len(data),
                 histtype='step', label=label, color=color, linewidth=2)
 
@@ -358,6 +362,8 @@ def response(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
              outpath):
     # pT coordinate points for plotting
     proc = outpath.split("/")[-1]
+    outpath = f"{outpath}/response"
+    os.makedirs(outpath, exist_ok=True)
     pt_points = [np.mean((PT_BINS[i], PT_BINS[i + 1])) for i in range(len(PT_BINS) - 1)]
 
     def plot_response(uncorrected_response1, regressed_response1, uncorrected_errors1, regressed_errors1, jet_collection1,
@@ -386,7 +392,7 @@ def response(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
                     uncorrected_response2,
                     yerr=uncorrected_errors2,
                     fmt='o',
-                    label=LABELS_DICT[jet_collection2],
+                    label=f"{LABELS_DICT[jet_collection2]}_raw",
                     capsize=4,
                     ms=10,
                     elinewidth=3,
@@ -397,7 +403,7 @@ def response(truth_pt_test1, reco_pt_test1, pt_ratio1, jet_collection1,
                     regressed_response2,
                     yerr=regressed_errors2,
                     fmt='o',
-                    label="JECs - " + LABELS_DICT[jet_collection2],
+                    label=f"{LABELS_DICT[jet_collection2]}_jecs",
                     capsize=4,
                     ms=10,
                     elinewidth=3,
@@ -490,39 +496,44 @@ def distribution_heatmaps(l1jets, plot_dir):
         gen_pt = ak.to_numpy(np.clip(ak.flatten(jets.genpt, axis=None), 0, 1000))
         reco_pt = ak.to_numpy(np.clip(ak.flatten(jets.pt, axis=None), 0, 1000))
         fig, ax = plt.subplots(figsize=(22, 25))
-        h = ax.hist2d(gen_pt, reco_pt, bins=pt_bins, norm=LogNorm())
+        h = ax.hist2d(gen_pt, reco_pt, bins=pt_bins)
         ratios.append(h)
         plt.close()
         y_label = LABELS_DICT[f'{coll}_{t}']
-        plot_heatmap(h[0][::-1], y_label, 'Entries', plot_dir)
+        plot_heatmap(h[0][::-1], y_label, 'Entries', f"{plot_dir}/{coll}_{t}_heatmap")
+
+    ratio = np.where(ratios[1][0] != 0, ratios[0][0] / ratios[1][0], 0)
     plot_heatmap(ratios[0][0][::-1] / ratios[1][0][::-1],
         r'Reco Jet $p_{T}$',
         f'Ratio {LABELS_DICT[COLLECTION_KEYS[0]]} vs {LABELS_DICT[COLLECTION_KEYS[1]+"_jecs"]}',
-        plot_dir)
+        f"{plot_dir}/ratio_heatmap", plot_ratio=True)
 
-def plot_heatmap(ratio, y_label, label, plot_dir):
+def plot_heatmap(ratio, y_label, label, plot_dir, plot_ratio=False):
     from matplotlib.colors import TwoSlopeNorm
-
     fig, ax = plt.subplots(figsize=(22, 25))
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
 
-    max_dev = max(abs(ratio.min() - 1), abs(ratio.max() - 1))
-    norm = TwoSlopeNorm(vmin=1 - max_dev, vcenter=1, vmax=1 + max_dev)
+    if plot_ratio:
+        max_dev = max(abs(ratio.min() - 1), abs(ratio.max() - 1))
+        norm = TwoSlopeNorm(vmin=1 - max_dev, vcenter=1, vmax=1 + max_dev)
+        cmap = plt.cm.coolwarm.copy()
+        cmap.set_bad(color='lightgray')
+    else:
+        plot_data = np.where(ratio <= 0, np.nan, ratio)
+        norm = LogNorm()
+        cmap = plt.cm.viridis.copy()
+        cmap.set_bad(color='lightgray')
 
-    cmap = plt.cm.coolwarm.copy()
-    cmap.set_bad(color='lightgray')
-
-    im = ax.imshow(ratio, cmap=cmap, norm=norm)
-    ax.set_xlim(0, 1000)
-    ax.set_ylim(0, 1000)
+    im = ax.imshow(ratio, cmap=cmap, norm=norm, extent=[0, 1000, 0, 1000])
     ax.set_aspect('equal')
     ax.set_xlabel('GenJet $p_T$')
     ax.set_ylabel(y_label)
 
-    cbar = fig.colorbar(im, ax=ax, shrink=0.686)
+    cbar = fig.colorbar(im, ax=ax, shrink=0.7)
     cbar.set_label(label, fontsize=40)
 
-    plt.savefig(f"{plot_dir}/ratio_heatmap.pdf", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}.pdf", bbox_inches='tight')
+    plt.savefig(f"{plot_dir}.png", bbox_inches='tight')
 
 
 

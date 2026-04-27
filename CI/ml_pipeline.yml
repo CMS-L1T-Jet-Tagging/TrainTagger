@@ -26,7 +26,7 @@ variables:
     Model: weightedAverage
     N_PARAMS: 5
     TRACK_ALGO: extended
-    TRAIN: All200_part0.root
+    TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
     BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/
@@ -93,7 +93,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true
@@ -113,7 +113,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -155,7 +155,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 4
@@ -199,7 +199,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
@@ -223,7 +223,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
@@ -249,7 +249,7 @@ profile:
 run_TT_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_TT_PU200
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
@@ -268,7 +268,7 @@ run_TT_PU200:
 run_VBFHToBB_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_VBFHToBB_PU200
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
@@ -287,7 +287,7 @@ run_VBFHToBB_PU200:
 run_VBFHToCC_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_VBFHToCC_PU200
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
@@ -306,7 +306,7 @@ run_VBFHToCC_PU200:
 run_MinBias_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_MinBias_PU200
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4
@@ -325,7 +325,7 @@ run_MinBias_PU200:
 run_QCD_Pt15To3000_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_QCD_Pt15To3000_PU200
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4

@@ -753,7 +753,7 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.set_yticks(
         range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order], fontsize=30
     )
-    ax.set_xlabel("mean (|Shapley value|) - (average impact on model output magnitude)", fontsize=30)
+    ax.set_xlabel("mean (|Shapley value|)", fontsize=30)
     plt.tight_layout()
 
 import tensorflow as tf
@@ -792,7 +792,7 @@ def get_branch_inputs(output_tensor):
 
 
 def plot_shaply(model, test_dict, class_labels, plot_dir):
-    njets = 30
+    njets = 30000
     input_layers_class = get_branch_inputs(model.jet_model.output[0])
     input_layers_reg = get_branch_inputs(model.jet_model.output[1])
     layer_order_class = [layer.name for layer in input_layers_class]

@@ -93,7 +93,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true

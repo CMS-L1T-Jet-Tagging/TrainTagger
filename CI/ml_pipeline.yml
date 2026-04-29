@@ -26,7 +26,7 @@ variables:
     Model: weightedAverage
     N_PARAMS: 5
     TRACK_ALGO: extended
-    TRAIN: All200_part0.root
+    TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
     BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/

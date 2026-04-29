@@ -50,13 +50,11 @@ def doPlots(model, outputdir, inputdir):
     raw_inputs_dict = {
         "basic_input": np.ascontiguousarray(X_test),
         "jet_pt": np.ascontiguousarray(jet_pt_hw),
-        "jet_pt_log": data['jet_pt_log'],
+        "jet_pt_log": np.ascontiguousarray(data['jet_pt_log']),
         "jet_eta": np.ascontiguousarray(abs(jet_eta_hw)),
     }
-    # raw_inputs_dict['jet_pt_log'][2] = 4.85594
 
     model_dict, _ = model.prepare_inputs(raw_inputs_dict)
-    model_dict['constituent_fraction'] = X_test[:,:,1]
     model_dict = {k: np.ascontiguousarray(v, dtype=np.float64) for k, v in model_dict.items()}
     hls_inputs = []
     for var in model.hls_jet_model.get_input_variables():
@@ -70,7 +68,7 @@ def doPlots(model, outputdir, inputdir):
     y_quant_hls = np.array([[quantize(i,8) for i in xi] for xi in y_hls])
     modelsAndNames["Y_hls_predict"] = y_quant_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
-
+    cmssw_pred = np.stack([data[f'jet_SC4NGJet_score_{label}'] for label in labels], axis=1)
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):

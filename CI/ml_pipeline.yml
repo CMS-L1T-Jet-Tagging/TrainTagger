@@ -93,7 +93,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-highmem]
   needs:
     - job : data
       optional: true
@@ -227,8 +227,8 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [train,hls4ml]
-  dependencies: [train,hls4ml]
+  needs: [emulate,train,hls4ml]
+  dependencies: [emulate,train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
@@ -236,11 +236,6 @@ profile:
   - mkdir data
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
-  - cd ..
-  - pip uninstall hls4ml -y
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
-  - cd hls4ml
-  - pip install .[profiling]
   - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
   artifacts:
@@ -306,7 +301,7 @@ run_VBFHToCC_PU200:
 run_MinBias_PU200:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_MinBias_PU200
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-highmem]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4

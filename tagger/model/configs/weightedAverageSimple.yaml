@@ -24,7 +24,7 @@ inputs:
 
 training_config :
   weight_method: "onlyclass"
-  epochs : 100
+  epochs : 1
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1
@@ -47,7 +47,7 @@ firmware_config:
                     'jet_features': 'ap_fixed<32,16,AP_RND,AP_SAT>',
                     'pt_mask': 'ap_uint<1>'}
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
-  reg_precision: 'ap_fixed<16,2,AP_RND,AP_SAT>'
+  reg_precision: 'ap_ufixed<16,2,AP_RND,AP_SAT>'
 
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'

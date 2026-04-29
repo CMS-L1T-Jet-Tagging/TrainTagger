@@ -229,6 +229,14 @@ class DeepSetModel(QKerasModel):
         with open(hls4ml_outdir + '/config.json', 'w') as fp:
             json.dump(config, fp)
 
+        old_text = '#include <tuple>'
+            new_text = ""
+
+            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
+                content = f.read()
+
+            content = content.replace(old_text, new_text)
+
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)

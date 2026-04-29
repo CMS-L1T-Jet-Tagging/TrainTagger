@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
+import awkward as ak
 
 from tagger.plot import style
 
@@ -178,3 +179,6 @@ def x_vs_y(x, y, apply_light=True):
         return s
     else:
         return x
+
+def to_coffea(array):
+    return ak.Array(array, behavior=vector.behavior, with_name="PtEtaPhiMLorentzVector")

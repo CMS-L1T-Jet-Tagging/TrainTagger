@@ -230,12 +230,17 @@ class DeepSetModel(QKerasModel):
             json.dump(config, fp)
 
         old_text = '#include <tuple>'
-            new_text = ""
+        new_text = ""
 
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
+        # manually remove the #include <tuple>
+        path = hls4ml_outdir + '/firmware/defines.h'
+        with open(path, 'r') as f:
+            content = f.read()
 
-            content = content.replace(old_text, new_text)
+        content = content.replace('#include <tuple>', '')
+
+        with open(path, 'w') as f:
+            f.write(content)
 
         if build:
             # build the project

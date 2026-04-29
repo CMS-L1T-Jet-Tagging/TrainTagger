@@ -753,7 +753,7 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.set_yticks(
         range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order], fontsize=30
     )
-    ax.set_xlabel("mean (Shapley value) - (average impact on model output magnitude)", fontsize=30)
+    ax.set_xlabel("mean (|Shapley value|) - (average impact on model output magnitude)", fontsize=30)
     plt.tight_layout()
 
 import tensorflow as tf

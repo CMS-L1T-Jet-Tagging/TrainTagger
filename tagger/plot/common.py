@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 import awkward as ak
+from coffea.nanoevents.methods import vector
 
 from tagger.plot import style
 

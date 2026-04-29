@@ -1,35 +1,32 @@
 import numpy as np
 
-N_BUNCHES = 2760
-REVOLUTION_FREQUENCY = 11246
-MINBIAS_RATE = N_BUNCHES * REVOLUTION_FREQUENCY / 1000  # in kHz
-
-PT_BINS = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 1000])
-ETA_BINS = [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]
-
 COLLECTION_KEYS = ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets']
 
 LABELS_DICT = {
-    'scPuppiL1TSC4NGJetJets': 'NG',
+    'scPuppiL1TSC4NGJetJets': 'SC4 NG',
     'scPuppiExtendedJets': 'SC4',
     'ht': r'$HT^{Gen}$',
-    'jet1': r'Leading $p_{T}$^{Gen} Jet',
-    'jet2': r'Subleading $p_{T}$^{Gen} Jet',
-    'ht15': r'HT^{Gen} ($p_{T}$ > 15 GeV)',
-    'ht30': r'HT^{Gen} ($p_{T}$ > 30 GeV)',
+    'jet1': r'Leading $p_{T}^{Gen}$ Jet',
+    'jet2': r'Subleading $p_{T}^{Gen}$ Jet',
+    'ht15': r'$HT^{Gen}$ ($p_{T}^{Gen}$ > 15 GeV)',
+    'ht30': r'$HT^{Gen}$ ($p_{T}^{Gen}$ > 30 GeV)',
     'mjj': r'$m_{jj}^{Gen}$',
     'max_mjj': r'$max(m_{jj}^{Gen})$',
-    'scPuppiL1TSC4NGJetJets_raw': 'NG',
-    'scPuppiL1TSC4NGJetJets_jecs': 'NG JECs',
+    'dijet': r'Leading two $p_{T}^{Gen}$ Jets',
+    'quadjet': r'Leading four $p_{T}^{Gen}$ Jets',
+    'scPuppiL1TSC4NGJetJets_raw': 'SC4 NG',
+    'scPuppiL1TSC4NGJetJets_jecs': 'SC4 NG JECs',
     'scPuppiExtendedJets_raw': 'SC4 Raw',
     'scPuppiExtendedJets_jecs': 'SC4 JECs',
+    'genjets': 'GenJets',
 }
 
 COLORS_DICT = {
     'scPuppiL1TSC4NGJetJets_raw': 'mediumpurple',
     'scPuppiL1TSC4NGJetJets_jecs': 'indigo',
-    'scPuppiExtendedJets_raw': 'coral',
-    'scPuppiExtendedJets_jecs': 'orangered'
+    'scPuppiExtendedJets_raw': 'gold',
+    'scPuppiExtendedJets_jecs': 'red',
+    'genjets': 'gray',
 }
 
 PROCS_DICT = {
@@ -47,3 +44,5 @@ PROCS_DICT = {
     'VBFHToCC_PU200': r"$VBF H \to c\bar{c}$",
     'VBFHToInvisible_PU200': r"$VBF \to invisible$",
 }
+
+ETA_BINS = [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]

@@ -22,10 +22,10 @@ LABELS_DICT = {
 }
 
 COLORS_DICT = {
-    'scPuppiL1TSC4NGJetJets_raw': 'mediumpurple',
-    'scPuppiL1TSC4NGJetJets_jecs': 'indigo',
-    'scPuppiExtendedJets_raw': 'gold',
-    'scPuppiExtendedJets_jecs': 'red',
+    'scPuppiL1TSC4NGJetJets_raw': '#964a8b',
+    'scPuppiL1TSC4NGJetJets_jecs': '#7a21dd',
+    'scPuppiExtendedJets_raw': '#f89c20',
+    'scPuppiExtendedJets_jecs': '#e42536',
     'genjets': 'gray',
 }
 

@@ -45,7 +45,7 @@ WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
   variables:
     Name: weightedAverageSimple_5param_extended_trk
     Model: weightedAverageSimple
-    RERUN_ON_TAG: 'False'
+    RERUN_ON_OLDTRAINING: 'True'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
 

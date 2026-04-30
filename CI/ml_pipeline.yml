@@ -47,6 +47,8 @@ variables:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
+    RERUN_ON_OLDTRAINING: 'False'
+    MODEL_LOCATION: ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline14654660 #Use specific old pipeline to run pipeline on
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -101,7 +103,7 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - ./CI/run_training.sh $RERUN_ON_TAG
+  - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING
   artifacts:
     paths:
       - output

@@ -48,7 +48,7 @@ variables:
     RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
     RERUN_ON_OLDTRAINING: 'False'
-    MODEL_LOCATION: ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline14654660 #Use specific old pipeline to run pipeline on
+    MODEL_LOCATION: ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline14654660/output/${Model} #Use specific old pipeline to run pipeline on
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest

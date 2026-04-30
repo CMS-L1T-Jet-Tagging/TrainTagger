@@ -24,6 +24,7 @@ elif [ "$1" == "False" ] && [ "$2" == "True" ]; then
     eos cp ${MODEL_LOCATION}/testing_data/* output/$Model/testing_data
     eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
     tar -xf signal_process_data.tgz
+    mkdir -p output/weightedAverageSimple/plots/training
     python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
 
 elif [ "$1" == "True" ] && [ "$2" == "False" ]; then

@@ -320,8 +320,9 @@ if __name__ == "__main__":
     if 'top' in args.particles:
         masses_tt = find_top_daughters(proc_collections['TT_PU200'], COLLECTION_KEYS)
         for p in ['top', 'w']:
-            plot_dir = f"{plot_dir}/{particle_info[p]['proc']}/masses"
-            plot_mjj(masses_tt, masses_tt[f'{p}_genjets'], p, particle_info[p], particle_info[p]['proc'], plot_dir)
+            proc = particle_info[p]['proc'][0]
+            plot_dir = f"{plot_dir}/{proc}/masses"
+            plot_mjj(masses_tt, masses_tt[f'{p}_genjets'], p, particle_info[p], proc, plot_dir)
 
     # Higgs
     if 'h' in args.particles:

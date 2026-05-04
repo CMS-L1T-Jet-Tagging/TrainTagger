@@ -230,8 +230,8 @@ profile:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [emulate,train,hls4ml]
-  dependencies: [emulate,train,hls4ml]
+  needs: [emulate,train,hls4ml,synth]
+  dependencies: [emulate,train,hls4ml,synth]
   rules:
     - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:

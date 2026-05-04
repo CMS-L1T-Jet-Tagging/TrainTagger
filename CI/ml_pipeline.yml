@@ -46,6 +46,7 @@ variables:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
+    RUN_FASTPUPPI: 'False'
     TAG: 'v0.0.0'
     RERUN_ON_OLDTRAINING: 'False'
     MODEL_LOCATION: ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline14654660/output/${Model} #Use specific old pipeline to run pipeline on
@@ -253,7 +254,7 @@ run_TT_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -272,7 +273,7 @@ run_VBFHToBB_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -291,7 +292,7 @@ run_VBFHToCC_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -310,7 +311,7 @@ run_MinBias_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -329,7 +330,7 @@ run_QCD_Pt15To3000_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -342,18 +343,20 @@ emulation_regression:
   extends:
     - .template
   stage: emulation_regression
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCD_Pt15To3000_PU200]
-  dependencies: [train, hls4ml, run_TT_PU200, run_VBFHToBB_PU200, run_VBFHToCC_PU200, run_MinBias_PU200, run_QCD_Pt15To3000_PU200]
+  needs: [train, hls4ml]
+  dependencies: [train, hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
   - mkdir output/$Model/plots/emulation_regression
-  - python tagger/plot/emulation_regression/jecs.py -o output/$Model/plots/emulation_regression -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   artifacts:
     paths:
       - output/$Model

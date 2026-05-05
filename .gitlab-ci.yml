@@ -48,7 +48,6 @@ WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
     RERUN_ON_OLDTRAINING: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    RUN_FASTPUPPI: 'False'
 
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:
 #  extends: .ml_pipeline

@@ -26,6 +26,12 @@ mlruns/**
 mlflow_*.txt
 tagger/firmware/*.json
 
+archive/**
+event_output**/**
+event_training**/**
+
+*.tgz
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

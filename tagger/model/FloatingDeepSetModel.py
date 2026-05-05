@@ -265,6 +265,10 @@ class FloatingDeepSetModel(JetTagModel):
         )
         
         self.history = history.history
+        
+    def embedding_predict(self, X_test: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:        
+        embedding_model = keras.Model(self.jet_model.input, self.jet_model.get_layer('pool').output)
+        return embedding_model.predict(X_test,verbose=0)
 
 
     # Decorated with save decorator for added functionality
@@ -576,7 +580,7 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         # --- Embedding (SimCLR) training (FAST) ---
         x_train = X_train[..., tf.newaxis].astype("float32")
         y_train = Y_train[..., tf.newaxis].astype("float32")
-        augment = SimCLRPreprocessing()
+        augment = SimCLRPreprocessing(0.2)
         train_ds = (
             tf.data.Dataset.from_tensor_slices((x_train,y_train,sample_weight))
             .shuffle(self.training_config['batch_size'])
@@ -657,6 +661,10 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         print(self.jet_model.get_layer('Dense_1_jetID').get_weights())
         
         self.history = history.history
+        
+    def embedding_predict(self, X_test: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:        
+        embedding_model = keras.Model(self.jet_model.input, self.jet_model.get_layer('pool').output)
+        return embedding_model.predict(X_test,verbose=0)
 
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator

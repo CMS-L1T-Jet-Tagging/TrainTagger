@@ -4,7 +4,9 @@ import os
 
 import awkward as ak
 import matplotlib
+matplotlib.use('Agg')  # Must be before `import matplotlib.pyplot as plt`
 import matplotlib.pyplot as plt
+
 import mplhep as hep
 
 # Third parties
@@ -19,6 +21,12 @@ import numpy as np
 import shap
 from sklearn.metrics import auc, roc_curve
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+
+import itertools
+
+import matplotlib.gridspec as gridspec
+from matplotlib.colors import LogNorm
 
 from tagger.data.tools import load_data, to_ML
 from tagger.plot import style
@@ -34,6 +42,9 @@ np.bool = np.bool_
 
 
 style.set_style()
+
+import matplotlib.style as mplstyle
+mplstyle.use('fast')
 
 # DEFINE ALL THE PLOTTING FUNCTIONS HERE!!!! THEY WILL BE CALLED IN basic() function >>>>>>>
 
@@ -174,8 +185,145 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.close()
+    
+def plot_nontrained_event_ROC(y_pred, y_test, event_labels, printing_labels, plot_dir):
+    
+    for i, event_label in enumerate(event_labels):
+        if i == 0:
+            continue
+        idx1, idx2 = i, 0
 
+        # Select true labels and predicted probabilities for the selected classes
+        y_true1, y_true2 = y_test[:, idx1], y_test[:, 0]
+        selection = (y_true1 == 1) | (y_true2 == 1)
+        
+        
+        y_score1, y_score2 = (y_pred[:, 1]+y_pred[:, 2]), y_pred[:, 0]
 
+        # Combine the labels and scores for binary classification
+        
+        y_true_binary = y_true1[selection]
+        # Normalized probabilities
+        y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
+
+        # Compute FPR, TPR, and AUC
+        fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
+        roc_auc = auc(fpr, tpr)
+
+        # Plot the ROC curve
+        fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+        ax.plot(
+            fpr,
+            tpr,
+            label=f'{printing_labels[event_label]} vs {printing_labels['minbias']} (AUC = {roc_auc:.2f})',
+            color='blue',
+            linewidth=5,
+        )
+        ax.grid(True)
+        ax.set_xlabel('Mistag Rate')
+        ax.set_ylabel('Signal Efficiency')
+        leg = ax.legend(loc='upper left', fontsize=style.SMALL_SIZE + 3)
+        leg._legend_box.align = "left"
+        ax.set_xscale('log')
+        ax.set_xlim([1e-5, 1.1])
+
+        # Save the plot
+        save_path = os.path.join(plot_dir, f"ROC_{event_label}_vs_minbias")
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.close()
+
+def plot_event_ROC(y_pred, y_test, event_labels, printing_labels, plot_dir, bonus_classes=False):
+    colormap = cm.get_cmap('Set1', len(event_labels))
+
+    # Create a plot for ROC curves
+    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+    for i, event_label in enumerate(event_labels):
+
+        # Get true labels and predicted probabilities for the current class
+        # Extract the one-hot column for the current class
+        y_true = y_test[:, i]
+        y_score = y_pred[:, i]  # Predicted probabilities for the current class
+
+        # Compute FPR, TPR, and AUC
+        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc_auc = auc(fpr, tpr)
+
+        # Plot the ROC curve for the current class
+        ax.plot(
+            tpr,
+            fpr,
+            label=f'{printing_labels[event_label]} (AUC = {roc_auc:.2f})',
+            color=colormap(i),
+            linewidth=style.LINEWIDTH,
+        )
+        
+
+    # Plot formatting
+    ax.grid(True)
+    ax.set_ylabel('Mistag Rate')
+    ax.set_xlabel('Signal Efficiency')
+
+    ax.legend(
+        loc='upper left',
+        ncol=2,
+        fontsize=style.SMALL_SIZE - 3,
+    )
+
+    ax.set_yscale('log')
+    ax.set_ylim([1e-3, 1.1])
+
+    # Save the plot
+    save_path = os.path.join(plot_dir, "event_ROC")
+    plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.close()
+    
+    # VS minbias
+    # Get indices of the classes to compare
+    
+    for i, event_label in enumerate(event_labels):
+        if i == 0:
+            continue
+        idx1, idx2 = i, 0
+
+        # Select true labels and predicted probabilities for the selected classes
+        y_true1, y_true2 = y_test[:, idx1], y_test[:, idx2]
+        y_score1, y_score2 = y_pred[:, idx1], y_pred[:, idx2]
+
+        # Combine the labels and scores for binary classification
+        selection = (y_true1 == 1) | (y_true2 == 1)
+        y_true_binary = y_true1[selection]
+        # Normalized probabilities
+        y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
+
+        # Compute FPR, TPR, and AUC
+        fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
+        roc_auc = auc(fpr, tpr)
+
+        # Plot the ROC curve
+        fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+        ax.plot(
+            fpr,
+            tpr,
+            label=f'{printing_labels[event_label]} vs {printing_labels['minbias']} (AUC = {roc_auc:.2f})',
+            color='blue',
+            linewidth=5,
+        )
+        ax.grid(True)
+        ax.set_xlabel('Mistag Rate')
+        ax.set_ylabel('Signal Efficiency')
+        leg = ax.legend(loc='upper left', fontsize=style.SMALL_SIZE + 3)
+        leg._legend_box.align = "left"
+        ax.set_xscale('log')
+        ax.set_xlim([1e-5, 1.1])
+
+        # Save the plot
+        save_path = os.path.join(plot_dir, f"ROC_{event_label}_vs_minbias")
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.close()
+    
 def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
@@ -725,15 +873,230 @@ def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
             
     except AttributeError:
         print('Shapely not yet implemented for non-keras models')
-
-def plot_embeddings(model, X_test, y_test,y_pt, class_labels, plot_dir):
-    labels = list(class_labels.keys())
-    embedding_model = tf.keras.Model(model.jet_model.input, model.jet_model.get_layer('pool').output)
+        
+def plot_latent(embedding, labels, label_style, plot_dir):
     
-    # ----- Embedding Visualization -----
-    # Extract features and apply t-SNE
-    features = embedding_model(X_test).numpy()
-    print(features)
+    embedding_dim = embedding.shape[1]
+    embedding_dim_list = np.arange(embedding_dim)
+    combinations = list(itertools.combinations(embedding_dim_list, 2))
+    
+    # Subsample to at most 1000 points
+    n_samples = min(10000, len(embedding))
+    sample_idx = np.random.choice(len(embedding), size=n_samples, replace=False)
+    embedding_sample = embedding[sample_idx]
+    labels_sample = labels[sample_idx]
+
+
+    n = len(combinations) 
+    titles =[str(combination[0]) + ' vs ' + str(combination[1]) for combination in combinations]
+    # Determine grid dimensions
+    ncols = int(np.ceil(np.sqrt(n)))
+    nrows = int(np.ceil(n / ncols))
+    
+    colormap = cm.get_cmap('Set1', len(label_style))
+    figsize=(8 * ncols, 6 * nrows)
+    fig, axes_grid = plt.subplots(
+        nrows, ncols,
+        figsize=figsize,
+        layout="constrained",
+        squeeze=False,
+    )
+ 
+    axes = np.empty((nrows, ncols), dtype=object)
+
+    for i in range(n):
+        row, col = divmod(i, ncols)
+        ax = axes_grid[row, col]
+        axes[row, col] = ax
+
+        scatter = ax.scatter(embedding_sample[:, combinations[i][0]], embedding_sample[:, combinations[i][1]], c=labels_sample, cmap= colormap, alpha=0.6, vmin=0, vmax=len(label_style))
+        ax.set_title(titles[i], fontsize=20, pad=6)
+    
+    # Hide unused axes
+    for i in range(n, nrows * ncols):
+        row, col = divmod(i, ncols)
+        fig.add_subplot(axes_grid[row, col]).set_visible(False)
+ 
+    fig.draw_without_rendering()
+    # Top of the top-left subplot, bottom of the bottom-right subplot
+    # (in figure-fraction coordinates).
+    top    = axes_grid[0, 0].get_position().y1
+    bottom = axes_grid[nrows - 1, ncols - 1].get_position().y0
+    right  = axes_grid[nrows - 1, ncols - 1].get_position().x1
+ 
+    cbar_pad   = 0.01   # gap between grid and colorbar (figure fraction)
+    cbar_width = 0.02
+
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=matplotlib.colors.Normalize(vmin=0, vmax=len(label_style)))
+    sm.set_array([])
+    cbar_ax = fig.add_axes([right + cbar_pad, bottom, cbar_width, top - bottom])
+    cbar = fig.colorbar(sm, cax=cbar_ax, ticks=range(len(label_style)))
+    cbar.set_ticklabels(label_style)
+    cbar.ax.tick_params(labelsize=9)
+    plt.savefig(plot_dir+'/latent_dims.png', dpi=100, bbox_inches="tight") 
+    plt.close(fig)
+    
+    
+def plot_latent_vs_variable(variable,embedding, labels, label_style, variable_name,plot_dir):
+    
+    embedding_dim = embedding.shape[1]
+    embedding_dim_list = np.arange(embedding_dim)
+    
+    n = len(embedding_dim_list) 
+    titles =[variable_name + ' vs latent ' + str(dim) for dim in embedding_dim_list]
+    # Determine grid dimensions
+    ncols = int(np.ceil(np.sqrt(n)))
+    nrows = int(np.ceil(n / ncols))
+    
+    colormap = cm.get_cmap('Set1', len(label_style))
+    figsize=(8 * ncols, 6 * nrows)
+    fig, axes_grid = plt.subplots(
+        nrows, ncols,
+        figsize=figsize,
+        layout="constrained",
+        squeeze=False,
+    )
+ 
+    axes = np.empty((nrows, ncols), dtype=object)
+
+    for i in range(n):
+        row, col = divmod(i, ncols)
+        ax = axes_grid[row, col]
+        axes[row, col] = ax
+
+        scatter = ax.scatter(variable, embedding[:,i], c=labels, cmap= colormap, alpha=0.6, vmin=0, vmax=len(label_style))
+        ax.set_title(titles[i], fontsize=20, pad=6)
+    
+    # Hide unused axes
+    for i in range(n, nrows * ncols):
+        row, col = divmod(i, ncols)
+        fig.add_subplot(axes_grid[row, col]).set_visible(False)
+ 
+    fig.draw_without_rendering()
+    # Top of the top-left subplot, bottom of the bottom-right subplot
+    # (in figure-fraction coordinates).
+    top    = axes_grid[0, 0].get_position().y1
+    bottom = axes_grid[nrows - 1, ncols - 1].get_position().y0
+    right  = axes_grid[nrows - 1, ncols - 1].get_position().x1
+ 
+    cbar_pad   = 0.01   # gap between grid and colorbar (figure fraction)
+    cbar_width = 0.02
+
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=matplotlib.colors.Normalize(vmin=0, vmax=len(label_style)))
+    sm.set_array([])
+    cbar_ax = fig.add_axes([right + cbar_pad, bottom, cbar_width, top - bottom])
+    cbar = fig.colorbar(sm, cax=cbar_ax, ticks=range(len(label_style)))
+    cbar.set_ticklabels(label_style)
+    cbar.ax.tick_params(labelsize=9)
+    plt.savefig(plot_dir+'/latent_vs_'+variable_name+'.png', dpi=100, bbox_inches="tight") 
+    plt.close(fig)
+        
+def plot_PCA(principle_components, labels, global_range,printing_labels,plot_dir):
+    
+    os.makedirs(plot_dir, exist_ok=True)
+    
+    colormap = cm.get_cmap('Set1', len(printing_labels))
+    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
+    scatter = ax.scatter(principle_components[:, 0], principle_components[:, 1], c=labels, cmap= colormap, alpha=0.6)
+    cbar = plt.colorbar(scatter, ticks=range(len(printing_labels)))
+    cbar.ax.set_yticklabels(printing_labels)
+    
+    ax.set_title("Principle Components of Pooling Layer embeddings",y=1.0, pad=84)
+    
+    plt.tight_layout()
+    plt.savefig(plot_dir+'/PCA_scatter.png')
+    
+    n = len(printing_labels) 
+    titles = list(printing_labels.keys())
+    
+    # Determine grid dimensions
+    ncols = int(np.ceil(np.sqrt(n)))
+    nrows = int(np.ceil(n / ncols))
+        
+    arrays = []
+    for iclass in range(n):
+        indices = np.squeeze(np.argwhere(labels==iclass))
+        arrays.append((principle_components[indices,0], principle_components[indices,1]))
+
+    ranges = [global_range] * len(arrays)
+    
+    all_counts = []
+    for (x, y), rng in zip(arrays, ranges):
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        if len(x) > 0:
+            counts, _, _ = np.histogram2d(x, y, bins=50, range=rng)
+            pos = counts[counts > 0]
+            all_counts.append(pos)
+ 
+    if all_counts:
+        flat = np.concatenate(all_counts)
+        vmin = float(flat.min())
+        vmax = float(flat.max())
+    else:
+        vmin, vmax = 1, 10   # fallback for all-zero data
+ 
+    norm = LogNorm(vmin=vmin, vmax=vmax)
+    figsize=(10 * ncols, 8 * nrows)
+     
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+ 
+    # constrained_layout automatically prevents tick labels / titles overlapping
+    fig, axes_grid = plt.subplots(
+        nrows, ncols,
+        figsize=figsize,
+        layout="constrained",
+        squeeze=False,
+    )
+ 
+    axes = np.empty((nrows, ncols), dtype=object)
+ 
+    for i, ((x, y), rng) in enumerate(zip(arrays, ranges)):
+        row, col = divmod(i, ncols)
+        ax = axes_grid[row, col]
+        axes[row, col] = ax
+        
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        if len(x) > 0:
+            ax.hist2d(x, y, range=rng, bins=50, norm=norm, cmap='jet')
+ 
+        ax.set_title(printing_labels[titles[i]], fontsize=20, pad=6)
+        ax.set_xlabel('PCA dim #1', fontsize=15)
+        ax.set_ylabel('PCA dim #2', fontsize=15)
+        ax.tick_params(labelsize=8)
+ 
+    # Hide unused axes
+    for i in range(n, nrows * ncols):
+        row, col = divmod(i, ncols)
+        fig.add_subplot(axes_grid[row, col]).set_visible(False)
+
+ 
+    # ── 3. Shared colorbar in the reserved column ────────────────────────────
+    fig.draw_without_rendering()
+ 
+    # Top of the top-left subplot, bottom of the bottom-right subplot
+    # (in figure-fraction coordinates).
+    top    = axes_grid[0, 0].get_position().y1
+    bottom = axes_grid[nrows - 1, ncols - 1].get_position().y0
+    right  = axes_grid[nrows - 1, ncols - 1].get_position().x1
+ 
+    cbar_pad   = 0.01   # gap between grid and colorbar (figure fraction)
+    cbar_width = 0.02
+ 
+    cbar_ax = fig.add_axes([right + cbar_pad, bottom, cbar_width, top - bottom])
+    
+    sm = plt.cm.ScalarMappable(cmap='jet', norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+    cbar.set_label('# Events', fontsize=20)
+    cbar.ax.tick_params(labelsize=9)
+
+    plt.savefig(plot_dir+'/PCA_2D.png', bbox_inches="tight")
+
+
+def plot_tnse(features):
     tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, init='random', random_state=42,verbose=1)
     embeddings_2d = tsne.fit_transform(features)
     
@@ -805,6 +1168,68 @@ def plot_embeddings(model, X_test, y_test,y_pt, class_labels, plot_dir):
     plt.tight_layout()
     plt.savefig(plot_dir+'/2D_regress_finetune.png')
     plt.savefig(plot_dir+'/2D_regress_finetune.pdf')
+    
+    
+def plot_output_scores(y_pred, labels, label_style, plot_dir):
+    
+    n = len(label_style) 
+    titles = list(label_style.keys())
+    
+    # Determine grid dimensions
+    ncols = int(np.ceil(np.sqrt(n)))
+    nrows = int(np.ceil(n / ncols))
+
+    figsize=(10 * ncols, 8 * nrows)
+     
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+ 
+    # constrained_layout automatically prevents tick labels / titles overlapping
+    fig, axes_grid = plt.subplots(
+        nrows, ncols,
+        figsize=figsize,
+        layout="constrained",
+        squeeze=False,
+    )
+ 
+    axes = np.empty((nrows, ncols), dtype=object)
+ 
+    for iclass in range(n):
+        row, col = divmod(iclass, ncols)
+        ax = axes_grid[row, col]
+        axes[row, col] = ax
+        indices = np.squeeze(np.argwhere(labels==iclass))
+
+        ax.hist(y_pred[indices,0],bins=50,range=(0,1),histtype="step",stacked=False,density=True,label='minbias output',color='b',linewidth=style.LINEWIDTH - 1.5)
+        ax.hist(y_pred[indices,1],bins=50,range=(0,1),histtype="step",stacked=False,density=True,label='TT output',color='g',linewidth=style.LINEWIDTH - 1.5)
+        ax.hist(y_pred[indices,2],bins=50,range=(0,1),histtype="step",stacked=False,density=True,label='HH4b output',color='r',linewidth=style.LINEWIDTH - 1.5)
+        ax.legend()
+        ax.set_title(label_style[titles[iclass]], fontsize=20, pad=6)
+        ax.set_xlabel('Model Output Score', fontsize=15)
+        ax.set_ylabel('a.u.', fontsize=15)
+        ax.tick_params(labelsize=8)
+ 
+    # Hide unused axes
+    for i in range(n, nrows * ncols):
+        row, col = divmod(i, ncols)
+        fig.add_subplot(axes_grid[row, col]).set_visible(False)
+
+    plt.savefig(plot_dir+'/ModelOutput.png', bbox_inches="tight")
+
+
+def plot_embeddings(model, X_test, y_test, X_jets, event, y_pt, class_labels, plot_dir):
+    labels = list(class_labels.keys())
+    
+    plot_dir = os.path.join(plot_dir, 'embeddings')
+    os.makedirs(plot_dir, exist_ok=True)
+    # ----- Embedding Visualization -----
+    # Extract features and apply t-SNE
+    features = model.embedding_predict(X_test,X_jets,event).numpy()
+    
+    data_labels = [np.where(y_test[i]==1) for i in range(len(y_test))]
+    
+    plot_PCA(features,y_test,plot_dir,class_labels)
+    
+    
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
@@ -1005,8 +1430,10 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-
-    model_outputs = model.predict(X_test)
+    jet_features = np.load(f"{model.output_directory}/testing_data/jet_X_test.npy")
+    event = np.load(f"{model.output_directory}/testing_data/event.npy")
+    event_info = np.load(f"{model.output_directory}/testing_data/bonus_event_info.npy")
+    model_outputs = model.predict(X_test,jet_features.T,event)
 
     # Get classification outputs
     y_pred = model_outputs[0]
@@ -1077,6 +1504,6 @@ def basic(model, signal_dirs):
     # plot_shaply(model, X_test, model.class_labels, model.input_vars, plot_dir)
     
     # Plot the embedding space of the model
-    plot_embeddings(model, X_test, y_test, truth_pt_test, model.class_labels, plot_dir )
+    plot_embeddings(model, X_test, y_test, jet_features, event, truth_pt_test, model.class_labels, plot_dir )
 
     return ROC_dict

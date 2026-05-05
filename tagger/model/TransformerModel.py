@@ -59,7 +59,7 @@ class TransformerModel(JetTagModel):
         
         gpus = tf.config.list_physical_devices('GPU')
         for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
+             tf.config.experimental.set_memory_growth(gpu, True)
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
@@ -212,6 +212,10 @@ class TransformerModel(JetTagModel):
 
     def hls4ml_convert(self, firmware_dir: str, build: bool = False):
         print('AMEC: hls4ml_convert was called but will do nothing!')
+        
+    def embedding_predict(self, X_test: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:        
+        embedding_model = keras.Model(self.jet_model.input, self.jet_model.get_layer('pool').output)
+        return embedding_model(X_test).numpy()
      
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('TransformerEmbeddingModel')
@@ -499,4 +503,4 @@ class TransformerEmbeddingModel(TransformerModel):
             shuffle=True,
         )
         
-        self.history = history.history
+        self.history = history.history   

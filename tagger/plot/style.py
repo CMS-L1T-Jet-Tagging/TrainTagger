@@ -38,6 +38,8 @@ CMSHEADER_LEFT = "Phase 2 Simulation Preliminary"
 CMSHEADER_RIGHT = "PU 200 (14 TeV)"
 CMSHEADER_SIZE = BIGGER_SIZE
 
+class_labels = ['b','c','light','gluon','taum','taup''electron','muon']
+
 CLASS_LABEL_STYLE = {
     'b': 'b',
     'charm': 'c',
@@ -52,6 +54,17 @@ CLASS_LABEL_STYLE = {
     "taus": "Taus",
     "jets": "Jets (b, c, light, gluon)",
     "leptons": "Leptons (muon, electron)",
+}
+
+ONLY_CLASS_LABEL_STYLE = {
+    'b': 'b',
+    'charm': 'c',
+    'light': 'light',
+    'gluon': 'gluon',
+    'taum': '$\\tau_{h}^{-}$',
+    'taup': '$\\tau_{h}^{+}$',
+    'electron': 'Electron',
+    'muon': 'Muon',
 }
 
 INPUT_FEATURE_STYLE = {

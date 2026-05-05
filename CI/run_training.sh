@@ -13,7 +13,7 @@ if [ "$1" == "False" ] && [ "$2" == "False" ]; then
     eos cp *.json ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
     eos cp *.yaml ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
     eos cp -r testing_data ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
-    rm -r /eos/${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+    rm -rf /eos/${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
     export MODEL_LOCATION=${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
 
 elif [ "$1" == "False" ] && [ "$2" == "True" ]; then

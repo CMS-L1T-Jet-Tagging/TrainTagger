@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 from scipy.interpolate import make_interp_spline
 
 # plotting imports
-from extras import LABELS_DICT, COLORS_DICT, PROCS_DICT, COLLECTION_KEYS, ETA_BINS
+from extras import LABELS_DICT, COLORS_DICT, PROCS_DICT, LINESTYLES_DICT, COLLECTION_KEYS
 from load_collections import load_collections
 
 # style from tagger
@@ -72,7 +72,6 @@ def get_rate_wps(reco, target_rates, obj):
         wp_rate = rates[wp_idx]
         wp = pt_cuts[wp_idx]
         if abs(wp_rate - target_rate) > 2:
-            from IPython import embed; embed()
             raise ValueError(f"Could not find a working point close to the target rate of {target_rate} kHz for {obj}. Closest rate: {wp_rate} kHz at pt cut {wp} GeV.")
         wps[target_rate] = wp
     return wps
@@ -115,6 +114,7 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, rat
 
                     # Plot turn-on curve with error bars and spline interpolation
                     color = COLORS_DICT[f"{coll}_{coll_type}"]
+                    linestyle = LINESTYLES_DICT[f"{coll}_{coll_type}"]
                     label = '{}, {} GeV'.format(LABELS_DICT[f"{coll}_{coll_type}"], np.round(wp))
                     ax.errorbar(
                         bin_centers, effs,
@@ -124,7 +124,7 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, rat
                     spl = make_interp_spline(bin_centers, effs, k=3)
                     x_smooth = np.linspace(bin_centers.min(), bin_centers.max(), 500)
                     y_smooth = spl(x_smooth)
-                    ax.plot(x_smooth, y_smooth, color=color)
+                    ax.plot(x_smooth, y_smooth, color=color, linestyle=linestyle)
 
             # Unify all collections in one plot
             plateau_start = min(plateau_start, len(bins) - 1) # ensure plateau index is within bounds

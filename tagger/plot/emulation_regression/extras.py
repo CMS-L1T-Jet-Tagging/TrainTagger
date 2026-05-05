@@ -3,7 +3,7 @@ import numpy as np
 COLLECTION_KEYS = ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets']
 
 LABELS_DICT = {
-    'scPuppiL1TSC4NGJetJets': 'SC4 NG',
+    'scPuppiL1TSC4NGJetJets': 'SC4 NN',
     'scPuppiExtendedJets': 'SC4',
     'ht': r'$HT^{Gen}$',
     'jet1': r'Leading $p_{T}^{Gen}$ Jet',
@@ -14,8 +14,8 @@ LABELS_DICT = {
     'max_mjj': r'$max(m_{jj}^{Gen})$',
     'dijet': r'Leading two $p_{T}^{Gen}$ Jets',
     'quadjet': r'Leading four $p_{T}^{Gen}$ Jets',
-    'scPuppiL1TSC4NGJetJets_raw': 'SC4 NG',
-    'scPuppiL1TSC4NGJetJets_jecs': 'SC4 NG JECs',
+    'scPuppiL1TSC4NGJetJets_raw': 'SC4 NN',
+    'scPuppiL1TSC4NGJetJets_jecs': 'SC4 NN JECs',
     'scPuppiExtendedJets_raw': 'SC4 Raw',
     'scPuppiExtendedJets_jecs': 'SC4 JECs',
     'genjets': 'GenJets',
@@ -24,8 +24,8 @@ LABELS_DICT = {
 COLORS_DICT = {
     'scPuppiL1TSC4NGJetJets_raw': '#964a8b',
     'scPuppiL1TSC4NGJetJets_jecs': '#7a21dd',
-    'scPuppiExtendedJets_raw': '#f89c20',
-    'scPuppiExtendedJets_jecs': '#e42536',
+    'scPuppiExtendedJets_raw': '#e42536',
+    'scPuppiExtendedJets_jecs': '#f89c20',
     'genjets': 'gray',
 }
 
@@ -45,4 +45,13 @@ PROCS_DICT = {
     'VBFHToInvisible_PU200': r"$VBF \to invisible$",
 }
 
+LINESTYLES_DICT = {
+    'scPuppiL1TSC4NGJetJets_raw': 'solid',
+    'scPuppiL1TSC4NGJetJets_jecs': 'dashdot',
+    'scPuppiExtendedJets_raw': 'dashed',
+    'scPuppiExtendedJets_jecs': 'dotted',
+}
+
+
+# must be updatted if eta bins for jecs in FastPUPPI are changed
 ETA_BINS = [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]

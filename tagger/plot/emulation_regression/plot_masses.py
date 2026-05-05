@@ -321,12 +321,12 @@ if __name__ == "__main__":
         masses_tt = find_top_daughters(proc_collections['TT_PU200'], COLLECTION_KEYS)
         for p in ['top', 'w']:
             proc = particle_info[p]['proc'][0]
-            plot_dir = f"{plot_dir}/{proc}/masses"
-            plot_mjj(masses_tt, masses_tt[f'{p}_genjets'], p, particle_info[p], proc, plot_dir)
+            tt_dir = f"{plot_dir}/{proc}/masses"
+            plot_mjj(masses_tt, masses_tt[f'{p}_genjets'], p, particle_info[p], proc, tt_dir)
 
     # Higgs
     if 'h' in args.particles:
         for vbf, pdgId in {'VBFHToBB_PU200': 5, 'VBFHToCC_PU200': 4}.items():
             masses_h = match_to_reco(proc_collections[vbf], pdgId)
-            plot_dir = f"{plot_dir}/{vbf}/masses"
-            plot_mjj(masses_h, masses_h['h_genjets'], 'h', particle_info['h'], vbf, plot_dir)
+            vbf_dir = f"{plot_dir}/{vbf}/masses"
+            plot_mjj(masses_h, masses_h['h_genjets'], 'h', particle_info['h'], vbf, vbf_dir)

@@ -123,10 +123,10 @@ def rms(procs_dict, proc, plot_dir):
                 )
 
                 ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
-                ax.set_ylabel(r"$\sigma(p_T^{\mathrm{Reco}} - p_T^{\mathrm{Gen}}) / \mathrm{mean(p_T^{\mathrm{Gen}})}$")
+                ax.set_ylabel(r"$\sigma(p_T^{\mathrm{L1}} - p_T^{\mathrm{Gen}})\, / \, \mathrm{Mean}(p_T^{\mathrm{Gen}})$")
                 ax.set_xscale(l1)
                 ax.set_yscale(l2)
-                ax.legend(title=PROCS_DICT[proc], fontsize=35, title_fontsize=35)
+                ax.legend(title=PROCS_DICT[proc], fontsize=35, title_fontsize=35, loc='upper center')
                 ax.grid(True, alpha=1, linestyle='-', lw=0.75)
 
                 # Save the plot

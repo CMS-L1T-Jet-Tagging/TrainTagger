@@ -81,6 +81,6 @@ cp perfNano.root ${OUTPATH}/${PROC}_perfNano.root
 if [[ "$PROC" == "QCD_Pt15To3000_PU200" ]]; then
     cd ..
     python3 scripts/makeJecs.py QCD_Pt15To3000_PU200/perfNano.root -A -o jecs.root
-    cp jecs.root ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}/jecs.root
+    cp jecs.root ${OUTPATH}/jecs.root
 fi
 

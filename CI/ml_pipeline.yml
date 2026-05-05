@@ -254,7 +254,7 @@ run_TT_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -273,7 +273,7 @@ run_VBFHToBB_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -292,7 +292,7 @@ run_VBFHToCC_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -311,7 +311,7 @@ run_MinBias_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -330,7 +330,7 @@ run_QCD_Pt15To3000_PU200:
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True") && ($RUN_FASTPUPPI == "False")
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
@@ -348,7 +348,7 @@ emulation_regression:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
   needs: [train, hls4ml]
-  dependencies: [train, hls4ml]
+  dependencies: [train, hls4ml, run_QCD_Pt15To3000_PU200, run_MinBias_PU200, run_VBFHToCC_PU200, run_VBFHToBB_PU200, TT_PU200]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:

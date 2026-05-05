@@ -16,6 +16,7 @@ mkdir $Name/plots
 mv output/$Model/model $Name/model
 mv output/$Model/plots/training/ $Name/plots
 mv output/$Model/plots/physics/ $Name/plots
+mv output/$Model/plots/emulation_regression/ $Name/plots
 
 if [[ "$RUN_SYNTHESIS" == "True" ]]; then
     cd output/$Model/firmware/

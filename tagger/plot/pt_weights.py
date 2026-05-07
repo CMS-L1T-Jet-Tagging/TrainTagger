@@ -55,7 +55,6 @@ def plot_1D_histogram(pt_weights, pt, eta, pt_correction, binning, save_path):
     # show distribution of pt weights
     pt_bins = [0, 0, 5, 15, 30, 80, np.inf]
     eta_bins = [0, 0, 0.5, 1, 1.5, 2, 2.5]
-    print('another dummy commit')
     colors = ['#5790fc', '#f89c20', '#e42536', '#964a8b', '#9c9ca1', '#7a21dd']
     pt_weights = np.clip(pt_weights, -np.inf, 200)
     for var_bins, var, var_name in zip([pt_bins, eta_bins], [pt, np.abs(eta)], ['pt', 'eta']):
@@ -185,19 +184,6 @@ def pt_weights_plotting(model, inputs, y_test, layer_name, plot_path):
             save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}"),
             )
 
-    #     for flav, c in class_labels.items():
-    #         class_mask = y_test == c
-    #         sub_mask = X_test[:, :, 0][class_mask].flatten() != 0
-    #         plot_2D_histogram(
-    #             pt_weights[class_mask].flatten(),
-    #             pt_correction_type,
-    #             X_test[:, :, i][class_mask].flatten(),
-    #             input_var,
-    #             sub_mask,
-    #             binning_dict[input_var],
-    #             save_path=os.path.join(plot_path, f"pt_{pt_correction_type}_vs_{input_var}_{flav}"),
-    #             )
-
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-m', '--model-dir', required=True, help='model directory')
@@ -216,9 +202,7 @@ if __name__ == "__main__":
     output_dir = os.path.join(model.output_directory, "plots/training")
 
     # Plot pt weights
-    pt_weights_plotting(model, test_dict, y_test, 'pt_weights_output', output_dir)
-    try:
-        pt_weights_plotting(model, test_dict, y_test, 'pt_offsets_output', output_dir)
-    except:
-        print("No pt_offsets_output layer found in model, skipping offset weights plotting.")
+    layer_names = [model.jet_model.layers[i].name for i in range(len(model.jet_model.layers))]
+    if 'pt_weights_output' in layer_names:
+        pt_weights_plotting(model, test_dict, y_test, 'pt_weights_output', output_dir)
 

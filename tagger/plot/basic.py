@@ -707,6 +707,7 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
 def shapPlot(shap_values, feature_names, class_names):
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
     feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
     num_features = shap_values[0].shape[1]
     feature_inds = feature_order
@@ -792,7 +793,7 @@ def get_branch_inputs(output_tensor):
 
 
 def plot_shaply(model, test_dict, class_labels, plot_dir):
-    njets = 1000
+    njets = 10
     input_layers_class = get_branch_inputs(model.jet_model.output[0])
     input_layers_reg = get_branch_inputs(model.jet_model.output[1])
     layer_order_class = [layer.name for layer in input_layers_class]
@@ -805,7 +806,11 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
         (shap.GradientExplainer(model_class, list_inp_class), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values_basic = explainer.shap_values(list_inp_class)[layer_order_class.index('basic_input')]
+        n_class_inp = len(list_inp_class)
+        list_inp_class = list_inp_class[0] if n_class_inp == 1 else list_inp_class
+        shap_values_basic = explainer.shap_values(list_inp_class)
+        if n_class_inp > 1:
+            shap_values_basic = shap_values_basic[layer_order_class.index('basic_input')]
         shap_values_basic = np.sum(shap_values_basic, axis=1)
         if 'jet_features' in layer_order_class:
             shap_values_jet = explainer.shap_values(list_inp_class)[layer_order_class.index('jet_features')]
@@ -825,7 +830,11 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
         (shap.GradientExplainer(model_reg, list_inp_reg), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values_basic = explainer.shap_values(list_inp_reg)[layer_order_reg.index('basic_input')]
+        n_reg_inp = len(list_inp_reg)
+        list_inp_reg = list_inp_reg[0] if n_reg_inp == 1 else list_inp_reg
+        shap_values_basic = explainer.shap_values(list_inp_reg)
+        if n_reg_inp > 1:
+            shap_values_basic = shap_values_basic[layer_order_reg.index('basic_input')]
         shap_values_basic = np.sum(shap_values_basic, axis=1)
         if 'jet_features' in layer_order_reg:
             shap_values_jet = explainer.shap_values(list_inp_reg)[layer_order_reg.index('jet_features')]

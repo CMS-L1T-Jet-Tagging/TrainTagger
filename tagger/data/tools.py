@@ -387,7 +387,6 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
     # Collect the file paths for the chunks to load
     chunk_files = [metadata[i]["file"] for i in range(chunks_to_load)]
-    print(chunk_files, fields)
 
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(
@@ -395,8 +394,6 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         filter_name=fields,
         library="ak"
     )
-    print(data)
-    print(len(data))
 
     # Shuffle the data indices
     total_data_len = len(data)
@@ -406,7 +403,6 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     # Split indices based on test_ratio
     split_index = int((1 - test_ratio) * total_data_len)
     train_indices, test_indices = indices[:split_index], indices[split_index:]
-    print(train_indices, test_indices, split_index, indices)
 
     # Split the data into training and testing sets
     train_data = data[train_indices]

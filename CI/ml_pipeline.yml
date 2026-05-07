@@ -383,6 +383,8 @@ upload_new_model:
       optional: true
     - job: profile
       optional: true
+    - job: emulation_regression
+      optional: false
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -400,8 +402,8 @@ upload_tagged_model:
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
-  needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
-  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  needs: [emulation-evaluate,hls4ml,train,evaluate,profile,emulation_regression]
+  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile,emulation_regression]
   rules:
     - if: $RERUN_ON_TAG == "True"
   before_script:

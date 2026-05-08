@@ -178,6 +178,89 @@ class WeightedAverageSimpleModel(DeepSetModel):
             shuffle=True,
         )
 
+    def firmware_convert(self, firmware_dir: str, build: bool = False):
+        """Run the hls4ml model conversion
+
+        Args:
+            firmware_dir (str): Where to save the firmware
+            build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
+        """
+
+        # Remove the old directory if it exists
+        hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
+        os.system(f'rm -rf {hls4ml_outdir}')
+
+        # Create default config
+        config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
+        config['IOType'] = 'io_parallel'
+        for layer in self.firmware_config['input_precision']:
+            config['LayerName'][layer]['Precision']['result'] = self.firmware_config['input_precision'][layer]
+
+        # Configuration for conv1d layers
+        # hls4ml does not !!! automatically figure out the paralellization factor, this leads to csim, hdl sim errors
+        config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
+        config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
+        config['LayerName']['Conv1D_pt_weights']['ParallelizationFactor'] = 16
+        config['LayerName']['apply_pt_weights']['ParallelizationFactor'] = 16
+
+        # Additional config
+        for layer in self.jet_model.layers:
+            layer_name = layer.__class__.__name__
+            if layer_name in ["BatchNormalization", "InputLayer"]:
+                for k in self.firmware_config['input_precision'].keys():
+                    if k in layer.name:
+                        precision = self.firmware_config['input_precision'][k]
+                        break  # stop once we found a match
+                config["LayerName"][layer.name]["Precision"] = precision
+                config["LayerName"][layer.name]["result"] = precision
+                config["LayerName"][layer.name]["Trace"] = not build
+
+            elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:
+                print("Skipping trace for:", layer.name)
+            else:
+                config["LayerName"][layer.name]["Trace"] = not build
+
+        config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
+        config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
+        config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
+        config["LayerName"]["pT_output"]["Implementation"] = "latency"
+
+        # Write HLS
+        self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
+            self.jet_model,
+            backend='Vitis',
+            project_name=self.firmware_config['project_name'],
+            clock_period=self.firmware_config['clock_period'],
+            hls_config=config,
+            output_dir=f'{hls4ml_outdir}',
+            part= self.firmware_config['fpga_part'],
+        )
+
+        # Compile the project
+        self.hls_jet_model.compile()
+
+        # Save config  as json file
+        print("Saving default config as config.json ...")
+        with open(hls4ml_outdir + '/config.json', 'w') as fp:
+            json.dump(config, fp)
+
+        old_text = '#include <tuple>'
+        new_text = ""
+
+        # manually remove the #include <tuple>
+        path = hls4ml_outdir + '/firmware/defines.h'
+        with open(path, 'r') as f:
+            content = f.read()
+
+        content = content.replace('#include <tuple>', '')
+
+        with open(path, 'w') as f:
+            f.write(content)
+
+        if build:
+            # build the project
+            self.hls_jet_model.build(csim=False, reset=True)
+
     # Override load to allow node edge projection to also be loaded
     @JetTagModel.load_decorator
     def load(self, out_dir: str = "None"):

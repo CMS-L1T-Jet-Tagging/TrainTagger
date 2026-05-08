@@ -40,7 +40,6 @@ baseline_hardware_inputs:
   - pt
   - pt_rel
   - pt_log
-  - eta
   - deta
   - dphi
   - mass
@@ -58,6 +57,7 @@ baseline_hardware_inputs:
   - puppiweight
   - emid
   - quality
+  - eta
 
 extra_fields:
   - jet_pt_phys

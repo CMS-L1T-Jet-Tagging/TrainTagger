@@ -31,7 +31,7 @@ def _add_response_vars(data):
         data['jet_pt_raw'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
     )
 
-def _split_flavor(data):
+def _split_flavor(data, use_pileup):
     """
     Splits data by particle flavor and applies conditions for each category. Also creates the pT target.
 

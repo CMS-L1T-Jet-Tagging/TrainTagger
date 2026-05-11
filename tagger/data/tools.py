@@ -318,8 +318,13 @@ def to_ML(data, class_labels):
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     reco_pt = np.asarray(data['jet_pt_phys'])
+    reco_eta = np.asarray(data['jet_eta_phys'])
+    reco_phi =np.asarray(data['jet_phi_phys'])
+    event =np.asarray(data['event'])
+    
+    jet_features = np.stack([reco_pt,reco_eta,reco_phi])
 
-    return X, y, pt_target, truth_pt, reco_pt
+    return X, y, pt_target, truth_pt, reco_pt, jet_features,event
 
 
 def load_data(outdir, percentage, test_ratio=0.1, fields=None):
@@ -447,3 +452,22 @@ def make_data(
         chunk += 1
         if num_entries_done / num_entries >= ratio:
             break
+        
+        
+def select_events(jet_features_vector ):
+    num_jets = (jet_features_vector[:,:,0] != 0).sum(1)
+    num_cut = num_jets >= 0
+    jet_ht = np.zeros((jet_features_vector.shape[0]))
+    for ievent in range(jet_features_vector.shape[0]):
+        ht = 0
+        if num_cut[ievent]:
+            for ijet in range(12):
+                if (jet_features_vector[ievent,ijet,0] > 0) & (np.abs(jet_features_vector[ievent,ijet,1]) < 2.4):
+                    ht += jet_features_vector[ievent,ijet,0]
+        jet_ht[ievent] = ht
+    
+    ht_cut = (jet_ht > 100) & (jet_ht < 300)
+    
+    selected_events = num_cut  & ht_cut
+
+    return selected_events

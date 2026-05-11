@@ -148,7 +148,7 @@ def _split_flavor(data, use_pileup):
 
     # Remove pileup entries if not using pileup for training
     if not use_pileup:
-        pu_mask = (data['class_label'] == pileup_idx)
+        pu_mask = (data['class_label'] != pileup_idx)
         jet_ptmin_gen = jet_ptmin_gen & pu_mask
         del class_labels['pileup']  # remove pileup from class labels if not using pileup
 

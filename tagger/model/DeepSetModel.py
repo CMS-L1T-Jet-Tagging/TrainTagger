@@ -54,6 +54,7 @@ class DeepSetModel(QKerasModel):
                                     "fpga_part" : str,
                                     "project_name" : str},
                 "inputs" : {  # <-- add this
+                    "basic_input_config": list,
                     "basic_features": list,
                     "custom_features": list}
             }

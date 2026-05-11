@@ -19,17 +19,19 @@ quantization_config:
   pt_output_quantization : [16,2]
 
 inputs:
+  basic_input_config: ['eta'] # features to add to the basic input
   basic_features: ['basic_input', 'constituent_fraction', 'pt_mask']
   custom_features: ['jet_pt_log', 'jet_eta'] # will later be concatenated into one jet features input
 
 training_config :
-  weight_method: "onlyclass"
+  weight_method: ["onlyclass", "ptref"]
   epochs : 1
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1
 
-  loss_weights : [1,65]
+  loss_weights : [1,65] # class, regression
+  huber_weights : [2, 3] # pu, alpha
 
   initial_sparsity : 0.0
   final_sparsity : 0.1
@@ -39,6 +41,8 @@ training_config :
   ReduceLROnPlateau_factor : 0.5
   ReduceLROnPlateau_patience : 5
   ReduceLROnPlateau_min_lr : 0.00001
+
+  pileup: True
 
 firmware_config:
   input_precision: {'basic_input': 'ap_fixed<32,16,AP_RND,AP_SAT>',

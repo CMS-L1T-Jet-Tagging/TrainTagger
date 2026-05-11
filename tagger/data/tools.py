@@ -146,25 +146,9 @@ def _split_flavor(data):
             do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
 
-
     return data[jet_ptmin_gen], class_labels
 
-def load_minbias(minbias_dir, data):
-    a = load_data(minbias_dir, percentage=100, test_ratio=0.0)[0]
-    data_set = ak.to_numpy(np.stack((data['jet_pt'], data['jet_eta'], data['jet_phi']), axis=-1))
-    a_np = ak.to_numpy(np.stack((a['jet_pt'], a['jet_eta'], a['jet_phi']), axis=-1))
-    a_set = set(map(tuple, a_np))
-
-    # List of indices in data_comparison that exist in a_comparison
-    indices = [i for i, row in enumerate(data_set) if tuple(row) in a_set]
-    mask = np.zeros(len(data['target_pt']), dtype=bool)
-    mask[indices] = True  # Set MinBias jets to -1, special treatment in regression loss
-    target_pt = np.where(mask, -1, data['target_pt'])
-    data['target_pt'] = target_pt
-
-    return data
-
-def _get_puppicand_fields(tag):
+def _get_puppicand_fields(tag, extras=[]):
 
     # Get the directory of the current file (tools.py)
     current_dir = os.path.dirname(__file__)
@@ -175,8 +159,7 @@ def _get_puppicand_fields(tag):
     # Load the YAML file as a dictionary
     with open(puppicand_fields_path, "r") as file:
         puppicand_fields = yaml.safe_load(file)
-
-    return puppicand_fields[tag]
+    return puppicand_fields[tag] + extras
 
 
 def _pad_fill(array, target):
@@ -185,9 +168,9 @@ def _pad_fill(array, target):
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
-def _make_nn_inputs(data_split, tag, n_parts):
+def _make_nn_inputs(data_split, tag, extra_basic_input, n_parts):
 
-    features = _get_puppicand_fields(tag)
+    features = _get_puppicand_fields(tag, extra_basic_input)
     # Concatenate all the inputs
     inputs_list = []
 
@@ -227,13 +210,13 @@ def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
     return
 
 
-def _save_dataset_metadata(outdir, class_labels, tag, extras):
+def _save_dataset_metadata(outdir, class_labels, tag, extra_basic_input, extras):
 
     dataset_metadata_file = os.path.join(outdir, 'variables.json')
 
     metadata = {
         "outputs": class_labels,
-        "inputs": _get_puppicand_fields(tag),
+        "inputs": _get_puppicand_fields(tag, extra_basic_input),
         "extras": _get_puppicand_fields(extras),
     }
 
@@ -243,13 +226,13 @@ def _save_dataset_metadata(outdir, class_labels, tag, extras):
     return
 
 
-def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
+def _process_chunk(data_split, tag, extra_basic_input, extras, n_parts, chunk, outdir):
     """
     Process chunk of data_split to save/parse it for training datasets
     """
 
     # Create the NN inputs
-    _make_nn_inputs(data_split, tag, n_parts)
+    _make_nn_inputs(data_split, tag, extra_basic_input, n_parts)
     extra_features = _get_puppicand_fields(extras)
 
     # Save them to a root file
@@ -358,7 +341,7 @@ def constituents_mask(x, features_dim):
     return mask.numpy()
 
 
-def load_data(outdir, percentage, test_ratio=0.1, fields=None):
+def load_data(outdir, percentage, use_pileup=False, test_ratio=0.1, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -395,6 +378,20 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         library="ak"
     )
 
+    # Load corresponding metadata for classlabels/input variables
+    data_metadata_file = os.path.join(outdir, "variables.json")
+    with open(data_metadata_file, "r") as f:
+        variables = json.load(f)
+        class_labels = variables['outputs']
+        input_vars = variables['inputs']
+        extra_vars = variables['extras']
+
+    # remove pilup class if not using pileup
+    if not use_pileup:
+        pu_mask = (data['class_label'] != class_labels['pileup'])
+        data = ak.Array({key: data[key][pu_mask] for key in data.fields})
+        del class_labels['pileup']
+
     # Shuffle the data indices
     total_data_len = len(data)
     indices = np.arange(total_data_len)
@@ -408,20 +405,13 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     train_data = data[train_indices]
     test_data = data[test_indices]
 
-    # Load corresponding metadata for classlabels/input variables
-    data_metadata_file = os.path.join(outdir, "variables.json")
-    with open(data_metadata_file, "r") as f:
-        variables = json.load(f)
-        class_labels = variables['outputs']
-        input_vars = variables['inputs']
-        extra_vars = variables['extras']
-
     return train_data, test_data, class_labels, input_vars, extra_vars
 
 
 def make_data(
     infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',
-    outdir='training_data/',
+    outdir='/eos/user/s/stella/training_data_test/',
+    extra_basic_inputs=[],
     tag=INPUT_TAG,
     extras=EXTRA_FIELDS,
     n_parts=N_PARTICLES,
@@ -479,10 +469,10 @@ def make_data(
 
         # If first chunk then save metadata of the dataset
         if chunk == 0:
-            _save_dataset_metadata(outdir, class_labels, tag, extras)
+            _save_dataset_metadata(outdir, class_labels, tag, extra_basic_inputs, extras)
 
         # Process and save training data for a given feature set
-        _process_chunk(data_split, tag=tag, extras=extras, n_parts=n_parts, chunk=chunk, outdir=outdir)
+        _process_chunk(data_split, tag=tag, extra_basic_input = extra_basic_inputs, extras=extras, n_parts=n_parts, chunk=chunk, outdir=outdir)
 
         # Number of chunk for indexing files
         chunk += 1

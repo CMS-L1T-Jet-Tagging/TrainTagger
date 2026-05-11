@@ -21,6 +21,7 @@ echo "git cms-checkout-topic -u ${CMSSW_L1CT}"
 git cms-checkout-topic -u ${CMSSW_L1CT}
 echo "git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f"
 git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f 2>&1 | grep -v 'new tag.*CMSSW'
+git checkout L1PF_15_1_X_GenericEmulator
 
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/Configuration
@@ -43,7 +44,7 @@ git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hl
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout regression_note
+git checkout model_wrapper_v2
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
 ./setup.sh PtPU1

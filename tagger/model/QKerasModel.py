@@ -38,7 +38,11 @@ class QKerasModel(JetTagModel):
                            # 'pt_layers_bits': list,
                            }
 
-    training_config_schema =    {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
+    training_config_schema =    {"weight_method": And(
+                                        list,
+                                        lambda lst: len(lst) == 2,
+                                        lambda lst: all(x in ["none", "ptref", "onlyclass"] for x in lst)
+                                    ),
                                  "validation_split" : And(float, lambda s: s > 0.0),
                                  "epochs" : And(int, lambda s: s >= 1),
                                  "batch_size" : And(int, lambda s: s >= 1),
@@ -49,7 +53,9 @@ class QKerasModel(JetTagModel):
                                  "EarlyStopping_patience" : And(int, lambda s: s > 0),
                                  "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
                                  "ReduceLROnPlateau_patience" : int,
-                                 "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)}
+                                 "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0),
+                                 "pileup": And(bool),
+                                 "huber_weights": And(list, lambda s: len(s) == 2),}
 
     def _prune_model(self, num_samples: int):
         """Pruning setup for the model, internal model function called by compile
@@ -82,7 +88,7 @@ class QKerasModel(JetTagModel):
         # Add pruning callback
         self.callbacks.append(tfmot.sparsity.keras.UpdatePruningStep())
 
-    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0]):
+    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0], huber_weights: list = [0., 0.]):
         """compile the model generating callbacks and loss function
         Args:
             num_samples (int): Number of samples in the training set used for scheduling
@@ -203,10 +209,10 @@ class QKerasModel(JetTagModel):
 
         # get relevant feature indices
         pt_rel_idx = puppicand_fields['baseline_hardware_inputs'].index("pt_rel")
-        eta_idx = puppicand_fields['baseline_hardware_inputs'].index("eta")
 
-        # use absolute constituent eta
-        raw_inputs['basic_input'][:, :, eta_idx] = np.abs(raw_inputs['basic_input'][:, :, eta_idx])
+        if "eta" in puppicand_fields['baseline_hardware_inputs']:
+            eta_idx = puppicand_fields['baseline_hardware_inputs'].index("eta")
+            raw_inputs['basic_input'][:, :, eta_idx] = np.abs(raw_inputs['basic_input'][:, :, eta_idx])
 
         # build all possible inputs
         input_dict = {

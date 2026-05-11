@@ -94,8 +94,9 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         5: 1.0,  # taum
         6: 1.0,  # muon
         7: 1.0,  # electron
-        8: 1.0,  # pile-up
     }
+    if model.training_config['pileup']:
+        weights_per_class[8] = 1.0  # pileup
 
     for idx in class_labels.values():
         weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * weights_per_class[idx]
@@ -118,6 +119,11 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
 
     # Normalize sample weights
     sample_weights = sample_weights / np.mean(sample_weights)
+
+    # pt ref
+    if weightingMethod == "ptref":
+        sample_weights = sample_weights * reco_pt_train
+        sample_weights = sample_weights / np.mean(sample_weights)
 
     if weightingMethod == "none":
         return None
@@ -157,21 +163,16 @@ def train(model, out_dir, percent):
     save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test)
 
     # Calculate the sample weights for training
-    sample_weight_class = train_weights(
-        y_train,
-        reco_pt_train,
-        class_labels,
-        weightingMethod="onlyclass",
-        debug=model.run_config['debug'],
-    )
-    sample_weight_regression = train_weights(
-        y_train,
-        reco_pt_train,
-        class_labels,
-        weightingMethod="ptref",
-        debug=model.run_config['debug'],
-    ) * reco_pt_train
-    sample_weight_regression = sample_weight_regression / np.mean(sample_weight_regression)
+    jet_weights = []
+    for w in model.training_config['weight_method']:
+        sample_weight_class = train_weights(
+            y_train,
+            reco_pt_train,
+            class_labels,
+            weightingMethod=w,
+            debug=model.run_config['debug'],
+        )
+        jet_weights.append(sample_weight_class)
 
     # Get input shape and inputs dict
     train_dict, input_shapes = model.prepare_inputs(raw_inputs_train)
@@ -182,8 +183,8 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    model.compile_model(num_samples, model.training_config['loss_weights'])
-    model.fit(train_dict, y_train, pt_target_train, [sample_weight_class, sample_weight_regression])
+    model.compile_model(num_samples, model.training_config['loss_weights'], model.training_config['huber_weights'])
+    model.fit(train_dict, y_train, pt_target_train, jet_weights)
 
     # Finished training, save model
     model.save()

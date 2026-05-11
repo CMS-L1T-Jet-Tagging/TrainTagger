@@ -1,5 +1,6 @@
 import os
 from argparse import ArgumentParser
+import yaml
 
 # Import from other modules
 from tagger.data.tools import make_data
@@ -11,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-i',
         '--input',
-        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',
+        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part0.root',
         help='Path to input training data',
     )
     parser.add_argument('-r', '--ratio', default=1, type=float, help='Ratio (0-1) of the input data root file to process')
@@ -20,6 +21,7 @@ if __name__ == "__main__":
         '-e', '--extras', default='extra_fields', help='Which extra fields to add to output tuples, in puppicand_fields.yml'
     )
     parser.add_argument('-t', '--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('-m', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
 
     parser.add_argument(
         '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
@@ -31,7 +33,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    # fields to add to basic input
+    with open(args.yaml_config, "r") as f:
+        extended_basic_inp = yaml.safe_load(f)['inputs']['basic_input_config']
+
+    make_data(infile=args.input, extra_basic_inputs = extended_basic_inp, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:

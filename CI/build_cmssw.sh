@@ -23,6 +23,7 @@ echo "git cms-checkout-topic -u ${CMSSW_L1CT}"
 git cms-checkout-topic -u ${CMSSW_L1CT}
 echo "git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f"
 git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f 2>&1 | grep -v 'new tag.*CMSSW'
+git checkout L1PF_15_1_X_GenericEmulator
 
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/Configuration

@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-i',
         '--input',
-        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part0.root',
+        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',
         help='Path to input training data',
     )
     parser.add_argument('-r', '--ratio', default=1, type=float, help='Ratio (0-1) of the input data root file to process')
@@ -33,11 +33,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # fields to add to basic input
+    # fields to add to basic input and whether to add pileup info are specified in the yaml config file
     with open(args.yaml_config, "r") as f:
-        extended_basic_inp = yaml.safe_load(f)['inputs']['basic_input_config']
+        config = yaml.safe_load(f)
+    extended_basic_inp = config['inputs']['basic_input_config']
+    use_pu = config['training_config']['pileup']
 
-    make_data(infile=args.input, extra_basic_inputs = extended_basic_inp, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    make_data(infile=args.input, extra_basic_inputs = extended_basic_inp, use_pu=use_pu, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:

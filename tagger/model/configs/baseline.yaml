@@ -23,7 +23,7 @@ inputs:
   basic_features: ['basic_input']
   custom_features: [] # will later be concatenated into one jet features input
 
-training_config :
+training_config:
   weight_method: ["onlyclass", "onlyclass"]
   epochs : 1
   batch_size : 1024

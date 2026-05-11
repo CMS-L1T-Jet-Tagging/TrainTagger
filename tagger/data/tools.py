@@ -128,7 +128,7 @@ def _split_flavor(data):
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
 
-    #Set pt correction target of pileup jets to 1.0
+    # Set pt correction target of pileup jets to 1.0
     data['target_pt'] = ak.where(data['class_label'] == pileup_idx, -1., data['target_pt']) # set target pt to zero
     data['target_pt_phys'] = ak.where(data['class_label'] == pileup_idx, data['jet_pt_phys'], data['target_pt_phys'])
 
@@ -145,6 +145,12 @@ def _split_flavor(data):
             f"""Data splitting error: Total matched entries ({split_data_sum})
             do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
+
+    # Remove pileup entries if not using pileup for training
+    if not use_pileup:
+        pu_mask = (data['class_label'] == pileup_idx)
+        jet_ptmin_gen = jet_ptmin_gen & pu_mask
+        del class_labels['pileup']  # remove pileup from class labels if not using pileup
 
     return data[jet_ptmin_gen], class_labels
 
@@ -341,7 +347,7 @@ def constituents_mask(x, features_dim):
     return mask.numpy()
 
 
-def load_data(outdir, percentage, use_pileup=False, test_ratio=0.1, fields=None):
+def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -386,12 +392,6 @@ def load_data(outdir, percentage, use_pileup=False, test_ratio=0.1, fields=None)
         input_vars = variables['inputs']
         extra_vars = variables['extras']
 
-    # remove pilup class if not using pileup
-    if not use_pileup:
-        pu_mask = (data['class_label'] != class_labels['pileup'])
-        data = ak.Array({key: data[key][pu_mask] for key in data.fields})
-        del class_labels['pileup']
-
     # Shuffle the data indices
     total_data_len = len(data)
     indices = np.arange(total_data_len)
@@ -410,8 +410,9 @@ def load_data(outdir, percentage, use_pileup=False, test_ratio=0.1, fields=None)
 
 def make_data(
     infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',
-    outdir='/eos/user/s/stella/training_data_test/',
+    outdir='training_data/',
     extra_basic_inputs=[],
+    use_pu=False,
     tag=INPUT_TAG,
     extras=EXTRA_FIELDS,
     n_parts=N_PARTICLES,
@@ -465,7 +466,7 @@ def make_data(
         # Add additional response variables
         # _add_response_vars(data)
         # Split data into all the training classes
-        data_split, class_labels = _split_flavor(data)
+        data_split, class_labels = _split_flavor(data, use_pu)
 
         # If first chunk then save metadata of the dataset
         if chunk == 0:

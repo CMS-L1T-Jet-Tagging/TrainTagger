@@ -1062,8 +1062,10 @@ def basic(model, signal_dirs):
 
     # Plot inclusive response and individual flavor
     response(model.class_labels, y_test, truth_pt_test, reco_pt_test, reco_eta_test, pt_ratio, plot_dir)
-    pu_mask = y_test[:, model.class_labels['pileup']] == 1
-    hist_response(pt_ratio, y_test, model.class_labels, plot_dir)
+
+    if "pileup" in model.class_labels.keys():
+        pu_mask = y_test[:, model.class_labels['pileup']] == 1
+        hist_response(pt_ratio, y_test, model.class_labels, plot_dir)
 
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)

@@ -16,11 +16,11 @@ from tagger.model.common import fromFolder
 parser = ArgumentParser()
 
 parser.add_argument(
-        '-i', '--input', default='output/trf', help='input model for jet embedding'
+        '-i', '--input', default='output/ds', help='input model for jet embedding'
     )
 
 parser.add_argument(
-        '-o', '--output', default='event_training_data_trf/', help='output folder for datafiles'
+        '-o', '--output', default='event_training_data', help='output folder for datafiles'
     )
 
 files = {

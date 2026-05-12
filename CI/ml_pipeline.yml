@@ -47,6 +47,7 @@ variables:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
+    EMULATION_WRAPPER_VERSION: v2_0_0
     RERUN_ON_OLDTRAINING: 'False'
     MODEL_LOCATION: ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline14654660/output/${Model} #Use specific old pipeline to run pipeline on
 

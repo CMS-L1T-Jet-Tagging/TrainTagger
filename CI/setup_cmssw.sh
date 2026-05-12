@@ -46,7 +46,7 @@ cd L1TSC4NGJetModel
 git checkout model_wrapper_v2
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-./setup.sh PtPU1
+./setup.sh PtPU1 ${EMULATION_WRAPPER_VERSION}
 
 make
 make install

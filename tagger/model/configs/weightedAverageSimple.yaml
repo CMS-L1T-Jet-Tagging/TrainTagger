@@ -25,7 +25,7 @@ inputs:
 
 training_config :
   weight_method: ["onlyclass", "ptref"]
-  epochs : 1
+  epochs : 10
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1

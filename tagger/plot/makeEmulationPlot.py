@@ -60,6 +60,7 @@ def doPlots(model, outputdir, inputdir):
     for var in model.hls_jet_model.get_input_variables():
         name = var.name
         hls_inputs.append(np.ascontiguousarray(model_dict[name], dtype=np.float64))
+    hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_inputs)
     y_class, y_ptreg = model.jet_model.predict(model_dict)
 
@@ -266,7 +267,7 @@ def doPlots(model, outputdir, inputdir):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m', '--model_path', default='output/weightedAverageSimple2/firmware/L1TSC4NGJetModel/firmware', help='Input model path for comparison')
+    parser.add_argument('-m', '--model_path', default='output/baseline/firmware/L1TSC4NGJetModel/firmware', help='Input model path for comparison')
     parser.add_argument('-o', '--outpath', default='output/baseline/plots/emulation', help='Jet tagger plotting directory')
     parser.add_argument('-i', '--input', default='data/jetTuple_extended_5.root', help='Path to emulation data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake emulation data? ')
@@ -277,7 +278,13 @@ if __name__ == "__main__":
     model = fromFolder(args.model_path)
 
     if args.remake:
-        make_data(infile=args.input, outdir="emulation_data/", extras='extra_emulation_fields', tree="outnano/Jets")
+        make_data(infile=args.input,
+                  outdir="emulation_data/",
+                  extra_basic_inputs = model.inputs['basic_input_config'],
+                  use_pu= model.training_config['pileup'],
+                  extras='extra_emulation_fields',
+                  tree="outnano/Jets"
+                  )
 
     print('done remake')
     doPlots(model, args.outpath, "emulation_data/")

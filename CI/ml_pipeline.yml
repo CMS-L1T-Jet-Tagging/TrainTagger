@@ -347,8 +347,8 @@ emulation_regression:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [train, hls4ml, run_QCD_Pt15To3000_PU200, run_MinBias_PU200, run_VBFHToCC_PU200, run_VBFHToBB_PU200, run_TT_PU200]
-  dependencies: [train, hls4ml, run_QCD_Pt15To3000_PU200, run_MinBias_PU200, run_VBFHToCC_PU200, run_VBFHToBB_PU200, run_TT_PU200]
+  needs: [run_QCD_Pt15To3000_PU200, run_MinBias_PU200, run_VBFHToCC_PU200, run_VBFHToBB_PU200, run_TT_PU200]
+  dependencies: [run_QCD_Pt15To3000_PU200, run_MinBias_PU200, run_VBFHToCC_PU200, run_VBFHToBB_PU200, run_TT_PU200]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:

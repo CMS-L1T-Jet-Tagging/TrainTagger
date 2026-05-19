@@ -168,7 +168,12 @@ if __name__ == "__main__":
     model = fromFolder(args.model_path)
 
     if args.remake:
-        make_data(infile=args.input, outdir="profiling_data/", extras='extra_emulation_fields', tree="outnano/Jets")
+        make_data(infile=args.input,
+                  outdir="profiling_data/",
+                  extra_basic_inputs = model.inputs['basic_input_config'],
+                  use_pu=model.training_config['pileup'],
+                  extras='extra_emulation_fields',
+                  tree="outnano/Jets")
 
     doPlots(model, args.outpath, "profiling_data/")
 

@@ -171,6 +171,11 @@ hls4ml:
     - job : train
       optional: true
   script:
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .
+  - cd ..
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
@@ -211,6 +216,11 @@ emulation-evaluate:
   needs: [emulate,train,hls4ml]
   dependencies: [emulate,train,hls4ml]
   script:
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .
+  - cd ..
   - mkdir data
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
@@ -235,6 +245,11 @@ profile:
   rules:
     - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .
+  - cd ..
   - source activate tagger
   - mkdir data
   - cd data
@@ -244,7 +259,8 @@ profile:
   artifacts:
     expire_in: 1 day
 
-run_TT_PU200:
+
+run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_TT_PU200
   tags: [cern-nextgen-h100]
@@ -261,83 +277,10 @@ run_TT_PU200:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
     - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} TT_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-
-run_VBFHToBB_PU200:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
-  stage: run_VBFHToBB_PU200
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_CPU_REQUEST: 4
-  needs: [train,hls4ml]
-  dependencies: [train,hls4ml]
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  before_script:
-    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
-    - source /cvmfs/cms.cern.ch/cmsset_default.sh
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
-  script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} VBFHToBB_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-
-run_VBFHToCC_PU200:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
-  stage: run_VBFHToCC_PU200
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_CPU_REQUEST: 4
-  needs: [train,hls4ml]
-  dependencies: [train,hls4ml]
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  before_script:
-    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
-    - source /cvmfs/cms.cern.ch/cmsset_default.sh
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
-  script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} VBFHToCC_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-
-run_MinBias_PU200:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
-  stage: run_MinBias_PU200
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_CPU_REQUEST: 4
-  needs: [train,hls4ml]
-  dependencies: [train,hls4ml]
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  before_script:
-    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
-    - source /cvmfs/cms.cern.ch/cmsset_default.sh
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
-  script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} MinBias_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-
-run_QCD_Pt15To3000_PU200:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
-  stage: run_QCD_Pt15To3000_PU200
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_CPU_REQUEST: 4
-  needs: [train,hls4ml]
-  dependencies: [train,hls4ml]
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  before_script:
-    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
-    - source /cvmfs/cms.cern.ch/cmsset_default.sh
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
-  script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} QCD_Pt15To3000_PU200 ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  parallel:
+    matrix:
+      - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
 
 emulation_regression:
   extends:
@@ -347,12 +290,17 @@ emulation_regression:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: [run_QCD_Pt15To3000_PU200, run_MinBias_PU200, run_VBFHToCC_PU200, run_VBFHToBB_PU200, run_TT_PU200]
-  dependencies: [run_QCD_Pt15To3000_PU200, run_MinBias_PU200, run_VBFHToCC_PU200, run_VBFHToBB_PU200, run_TT_PU200]
+  needs: [run_processes]
+  dependencies: [run_processes]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .
+  - cd ..
   - mkdir output/$Model/plots/emulation_regression
   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}

@@ -158,6 +158,11 @@ hls4ml:
     - job : train
       optional: true
   script:
+  - pip uninstall hls4ml -y
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .[profiling]
+  - cd ..
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
@@ -198,6 +203,11 @@ emulation-evaluate:
   needs: [emulate,train,hls4ml]
   dependencies: [emulate,train,hls4ml]
   script:
+  - pip uninstall hls4ml -y
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .[profiling]
+  - cd ..
   - mkdir data
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
@@ -228,7 +238,7 @@ profile:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - pip uninstall hls4ml -y
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
   - cd hls4ml
   - pip install .[profiling]
   - cd ..

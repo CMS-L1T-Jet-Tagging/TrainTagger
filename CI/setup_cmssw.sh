@@ -46,7 +46,7 @@ cd L1TSC4NGJetModel
 git checkout model_wrapper_v2
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-./setup.sh v2_0_0 v2_0_0
+./setup.sh test v2_0_0
 
 make
 make install
@@ -73,6 +73,6 @@ sed -i -e 's/trktype = "extended"/trktype = "'${TRACK_ALGO}'"/g' runJetNtuple.py
 sed -i -e 's/nparam = 5/nparam = '${N_PARAMS}'/g' runJetNtuple.py
 echo "Temporary workaround to get the input files"
 echo $'\nprocess.source.fileNames = ["file:/eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_151X/v1/TT_PU200/inputs151X_10.root"]' >> runJetNtuple.py
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_v2_0_0")' >> runJetNtuple.py
+echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test/L1TSC4NGJetModel_test")' >> runJetNtuple.py
 cat runJetNtuple.py
 cmsRun runJetNtuple.py --tm18 2>&1 | tee cmsRun.log

@@ -190,7 +190,7 @@ class DeepSetModel(QKerasModel):
                 config["LayerName"][layer.name]["Trace"] = not build
 
         config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-        config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
+        config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
         config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
 

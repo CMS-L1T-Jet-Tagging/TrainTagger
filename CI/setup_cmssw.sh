@@ -43,16 +43,16 @@ git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hl
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout emulator_test
+git checkout model_wrapper_v2
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-./setup.sh v1
+./setup.sh v2_0_0 v2_0_0
 
 make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_X_NGJet
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_X_NGJet_EmulatorUpdate
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
@@ -73,6 +73,6 @@ sed -i -e 's/trktype = "extended"/trktype = "'${TRACK_ALGO}'"/g' runJetNtuple.py
 sed -i -e 's/nparam = 5/nparam = '${N_PARAMS}'/g' runJetNtuple.py
 echo "Temporary workaround to get the input files"
 echo $'\nprocess.source.fileNames = ["file:/eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_151X/v1/TT_PU200/inputs151X_10.root"]' >> runJetNtuple.py
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_v1")' >> runJetNtuple.py
+echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_v2_0_0")' >> runJetNtuple.py
 cat runJetNtuple.py
 cmsRun runJetNtuple.py --tm18 2>&1 | tee cmsRun.log

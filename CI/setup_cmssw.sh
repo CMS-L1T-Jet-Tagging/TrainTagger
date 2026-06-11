@@ -33,13 +33,13 @@ mv L1Trigger-Phase2L1ParticleFlow data
 mv hadcorr_HGCal3D_TC.root data
 cd ../..
 
-git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
-  cd hls4mlEmulatorExtras &&
-  git checkout -b v1.1.3 tags/v1.1.3
-make
-make install
-cd ..
-git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
+# git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
+#   cd hls4mlEmulatorExtras &&
+#   git checkout -b v1.1.3 tags/v1.1.3
+# make
+# make install
+# cd ..
+# git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel

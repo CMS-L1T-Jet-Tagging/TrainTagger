@@ -27,13 +27,13 @@ git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/Configuration
 
-cd L1Trigger/Phase2L1ParticleFlow
-mv data/hadcorr_HGCal3D_TC.root .
-rm -r data
-git clone https://github.com/cms-data/L1Trigger-Phase2L1ParticleFlow.git
-mv L1Trigger-Phase2L1ParticleFlow data
-mv hadcorr_HGCal3D_TC.root data
-cd ../..
+#cd L1Trigger/Phase2L1ParticleFlow
+# mv data/hadcorr_HGCal3D_TC.root .
+# rm -r data
+# git clone https://github.com/cms-data/L1Trigger-Phase2L1ParticleFlow.git
+# mv L1Trigger-Phase2L1ParticleFlow data
+# mv hadcorr_HGCal3D_TC.root data
+# cd ../..
 
 # git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
 #   cd hls4mlEmulatorExtras &&
@@ -54,7 +54,7 @@ make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_X_NGJet_EmulatorUpdate
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 20_0_X_NGJet
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi

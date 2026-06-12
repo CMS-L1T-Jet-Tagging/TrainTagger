@@ -15,7 +15,7 @@ from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule,EarlySto
 # Qkeras
 
 from keras.models import load_model
-import hls4ml
+#import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
@@ -194,7 +194,7 @@ class DeepSetModelHGQ2(JetTagModel):
                 # build the project
                 self.hls_jet_model.build(csim=False, reset=True)
        
-    def compile_model(self, num_samples: int):
+    def compile_model(self, num_samples: int, ebops: int):
         
         """compile the model generating callbacks and loss function
         Args:
@@ -211,14 +211,14 @@ class DeepSetModelHGQ2(JetTagModel):
                                          mode="min",
                                          restore_best_weights=True,
                                          start_from_epoch=75,
-                                         ebops_threshold=self.training_config['target_ebops'] + 100000
+                                         ebops_threshold=ebops + 100000
                                         )
         terminate_on_nan = keras.callbacks.TerminateOnNaN()
 
         ebops_tracker = FreeEBOPs()
         ebops_scheduler = BetaPID(
             p=1, i=0.1, d=0,
-            target_ebops=self.training_config['target_ebops'],
+            target_ebops=ebops,
             init_beta=1e-10, warmup=10,
             max_beta=5e-6, damp_beta_on_target=0.5
         )

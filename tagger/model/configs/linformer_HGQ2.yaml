@@ -9,10 +9,10 @@ model_config :
   feedforward_dim : 16
   projection_k : 2
   num_heads : 1
-  classification_layers : [16,8]
-  classification_parallelisation_factor : [16,8]
-  regression_layers : [8]
-  regression_parallelisation_factor : [8]
+  classification_layers : [64,32,16]
+  classification_parallelisation_factor : [64,32,16]
+  regression_layers : [64,32,16]
+  regression_parallelisation_factor : [64,32,16]
   beta: 1.1e-8
 
 quantization_config:

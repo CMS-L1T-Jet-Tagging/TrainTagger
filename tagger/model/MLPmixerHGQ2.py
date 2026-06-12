@@ -15,7 +15,7 @@ from hgq.constraints import MinMax
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
 
 from keras.models import load_model
-import hls4ml
+#import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
@@ -92,23 +92,23 @@ class MLPmixerHGQ2(JetTagModel):
                 inp_b = keras.layers.Input((N_constituents, n_features),name='model_input')
                 #inp_b = QBatchNormalization()(inp)
                     
-                x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu',iq_conf=iq_conf_inputs)(inp_b)
+                x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 16), bias_axes='C', activation='relu',iq_conf=iq_conf_inputs)(inp_b)
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x1)
                 x2 = QEinsumDenseBatchnorm('bnc,nN->bNc', (N_constituents, n_features), bias_axes='N')(x1)
                 x = QAdd(iq_confs=(iq_conf_inputs, iq_default))([inp_b, x2])
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
-                x = QEinsumDense('bnc,n->bc', n_features)(x)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 16), bias_axes='C', activation='relu', )(x)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 16), bias_axes='C', activation='relu', )(x)
+                x = QEinsumDense('bnc,n->bc', 16)(x)
                     
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 64, bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C',activation='relu')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
                 
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 64, bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C')(pt_regress)
                 pt_regress = Activation('linear', name='pT_output')(pt_regress)
                 #Define the model using both branches
@@ -223,7 +223,7 @@ class MLPmixerHGQ2(JetTagModel):
     
 
     
-    def compile_model(self, num_samples: int):
+    def compile_model(self, num_samples: int, ebops: int):
         
         """compile the model generating callbacks and loss function
         Args:
@@ -239,7 +239,7 @@ class MLPmixerHGQ2(JetTagModel):
                                          mode="min",
                                          restore_best_weights=True,
                                          start_from_epoch=75,
-                                         ebops_threshold=self.training_config['target_ebops'] + 100000
+                                         ebops_threshold=ebops + 100000
                                         )
         
         terminate_on_nan = keras.callbacks.TerminateOnNaN()
@@ -247,7 +247,7 @@ class MLPmixerHGQ2(JetTagModel):
         ebops_tracker = FreeEBOPs()
         ebops_scheduler = BetaPID(
             p=1, i=0.1, d=0,
-            target_ebops=self.training_config['target_ebops'],
+            target_ebops=ebops,
             init_beta=1e-10, warmup=10,
             max_beta=5e-6, damp_beta_on_target=0.5
         )

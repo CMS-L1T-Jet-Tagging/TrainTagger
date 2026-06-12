@@ -118,7 +118,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug):
     return sample_weights
 
 
-def train(model, out_dir, percent):
+def train(model, out_dir, percent, ebops):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
@@ -154,7 +154,7 @@ def train(model, out_dir, percent):
     model.build_model(input_shape, output_shape)
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
-    model.compile_model(num_samples)
+    model.compile_model(num_samples, ebops)
     model.fit(X_train, y_train, pt_target_train, sample_weight)
 
     model.save()
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-o', '--output', default='output/baseline', help='Output model directory path, also save evaluation plots'
     )
-    parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
+    parser.add_argument('-p', '--percent', default=100,type=float, help='Percentage of how much processed data to train on')
     parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
     )
@@ -181,6 +181,11 @@ if __name__ == "__main__":
     parser.add_argument(
         '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
     )
+    
+    parser.add_argument(
+        '-e', '--ebops', default=300000, type=int
+    )
+
 
     args = parser.parse_args()
 
@@ -191,4 +196,4 @@ if __name__ == "__main__":
 
     else:
         model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.percent)
+        train(model, args.output, args.percent, args.ebops)

@@ -15,7 +15,7 @@ from hgq.constraints import MinMax
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
 
 from keras.models import load_model
-import hls4ml
+#import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
@@ -96,18 +96,18 @@ class JEDILinearHGQ2(JetTagModel):
                 #inp_b = QBatchNormalization()(inp)
                 pool_scale = 2.**-round(log2(N_constituents))
                 
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu')(inp_b)
-                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 32), bias_axes='C', activation='relu')(inp_b)
+                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 32), bias_axes='C', activation='relu', )(x)
                 
                 s2 = AveragePooling1D(N_constituents)(x)
                 #s2 = Rescaling(pool_scale)(s2)
                 
-                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, n_features), bias_axes='C', activation='relu')(s2)
+                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, 32), bias_axes='C', activation='relu')(s2)
                 
                 x = QAdd()([s, d])
 
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC',
-                                          (N_constituents, n_features),
+                                          (N_constituents, 32),
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
@@ -116,15 +116,15 @@ class JEDILinearHGQ2(JetTagModel):
                 x = Flatten()(x)
                 #x = Rescaling(1/16)(x)
                 
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',n_features, bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',32, bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(x)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', n_features, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C')(pt_regress)
                 pt_regress = Activation('linear', name='pT_output')(pt_regress)
 
@@ -230,7 +230,7 @@ class JEDILinearHGQ2(JetTagModel):
 
     
     
-    def compile_model(self, num_samples: int):
+    def compile_model(self, num_samples: int, ebops: int):
         
         """compile the model generating callbacks and loss function
         Args:
@@ -246,14 +246,14 @@ class JEDILinearHGQ2(JetTagModel):
                                          mode="min",
                                          restore_best_weights=True,
                                          start_from_epoch=75,
-                                         ebops_threshold=self.training_config['target_ebops'] + 100000
+                                         ebops_threshold=ebops + 100000
                                         )
         terminate_on_nan = keras.callbacks.TerminateOnNaN()
 
         ebops_tracker = FreeEBOPs()
         ebops_scheduler = BetaPID(
             p=1, i=0.1, d=0,
-            target_ebops=self.training_config['target_ebops'],
+            target_ebops=ebops,
             init_beta=1e-10, warmup=10,
             max_beta=5e-6, damp_beta_on_target=0.5
         )

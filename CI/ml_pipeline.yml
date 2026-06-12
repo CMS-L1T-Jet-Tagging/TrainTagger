@@ -223,6 +223,7 @@ profile:
     - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
+  - pip install hls4ml[profiling]
   - mkdir data
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .

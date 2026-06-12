@@ -33,8 +33,8 @@ variables:
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
-    CMSSW_VERSION: 'CMSSW_17_0_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_17_0_0_pre2_NGJet'
+    CMSSW_VERSION: 'CMSSW_20_0_0_pre1'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_20_0_0_pre1_NGJet'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'

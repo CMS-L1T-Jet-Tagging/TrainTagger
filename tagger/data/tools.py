@@ -327,7 +327,7 @@ def to_ML(data, class_labels):
     return X, y, pt_target, truth_pt, reco_pt
 
 
-def load_data(outdir, percentage, test_ratio=0.1, fields=None):
+def load_data(outdir, percentage, test_ratio=0.0, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -365,12 +365,12 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     np.random.shuffle(indices)
 
     # Split indices based on test_ratio
-    split_index = int((1 - test_ratio) * total_data_len)
-    train_indices, test_indices = indices[:split_index], indices[split_index:]
+    # split_index = int((1 - test_ratio) * total_data_len)
+    # train_indices, test_indices = indices[:split_index], indices[split_index:]
 
     # Split the data into training and testing sets
-    train_data = data[train_indices]
-    test_data = data[test_indices]
+    train_data = data
+    # test_data = data[test_indices]
 
     # Load corresponding metadata for classlabels/input variables
     data_metadata_file = os.path.join(outdir, "variables.json")
@@ -380,7 +380,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         input_vars = variables['inputs']
         extra_vars = variables['extras']
 
-    return train_data, test_data, class_labels, input_vars, extra_vars
+    return train_data, 0, class_labels, input_vars, extra_vars
 
 
 def make_data(

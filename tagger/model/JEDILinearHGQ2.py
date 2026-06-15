@@ -96,18 +96,18 @@ class JEDILinearHGQ2(JetTagModel):
                 #inp_b = QBatchNormalization()(inp)
                 pool_scale = 2.**-round(log2(N_constituents))
                 
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 32), bias_axes='C', activation='relu')(inp_b)
-                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 32), bias_axes='C', activation='relu', )(x)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 64), bias_axes='C', activation='relu')(inp_b)
+                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 64), bias_axes='C', activation='relu', )(x)
                 
                 s2 = AveragePooling1D(N_constituents)(x)
                 #s2 = Rescaling(pool_scale)(s2)
                 
-                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, 32), bias_axes='C', activation='relu')(s2)
+                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, 64), bias_axes='C', activation='relu')(s2)
                 
                 x = QAdd()([s, d])
 
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC',
-                                          (N_constituents, 32),
+                                          (N_constituents, 64),
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
@@ -116,15 +116,15 @@ class JEDILinearHGQ2(JetTagModel):
                 x = Flatten()(x)
                 #x = Rescaling(1/16)(x)
                 
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',32, bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',64, bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 64, bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 8, bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C')(pt_regress)
                 pt_regress = Activation('linear', name='pT_output')(pt_regress)
 
@@ -138,14 +138,14 @@ class JEDILinearHGQ2(JetTagModel):
         # Export the model
         #model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
         os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
-        export_path = os.path.join(out_dir, "model/saved_model.h5")
+        export_path = os.path.join(out_dir, "model/saved_model.keras")
         self.jet_model.save(export_path)
         print(f"Model saved to {export_path}")
 
     @JetTagModel.load_decorator
     def load(self, out_dir=None):
         # Load model
-        self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
+        self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
             """Run the hls4ml model conversion

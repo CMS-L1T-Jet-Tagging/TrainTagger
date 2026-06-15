@@ -121,7 +121,7 @@ class MLPmixerHGQ2(JetTagModel):
         # Export the model
         #model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
         os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
-        export_path = os.path.join(out_dir, "model/saved_model.h5")
+        export_path = os.path.join(out_dir, "model/saved_model.keras")
         self.jet_model.save(export_path)
         print(f"Model saved to {export_path}")
 
@@ -129,7 +129,7 @@ class MLPmixerHGQ2(JetTagModel):
     def load(self, out_dir=None):
         # Load model
 
-        self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
+        self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
         
     def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
         model_outputs = self.jet_model.predict(X_test)

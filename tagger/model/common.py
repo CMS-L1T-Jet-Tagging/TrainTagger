@@ -21,6 +21,9 @@ def initialise_tensorflow(num_threads):
     print("Using ")
     print(tf.config.list_physical_devices('GPU'))
     print("for training")
+    
+    gpu = tf.config.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(gpu[0], True)
 
     # Set some tensorflow constants
     os.environ["OMP_NUM_THREADS"] = str(num_threads)

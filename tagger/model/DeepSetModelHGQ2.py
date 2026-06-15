@@ -102,7 +102,7 @@ class DeepSetModelHGQ2(JetTagModel):
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+                jet_id = Activation('linear', name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
@@ -124,14 +124,14 @@ class DeepSetModelHGQ2(JetTagModel):
         # Export the model
         #model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
         os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
-        export_path = os.path.join(out_dir, "model/saved_model.h5")
+        export_path = os.path.join(out_dir, "model/saved_model.keras")
         self.jet_model.save(export_path)
         print(f"Model saved to {export_path}")
 
     @JetTagModel.load_decorator
     def load(self, out_dir=None):
         # Load model
-        self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
+        self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
     
     def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
         model_outputs = self.jet_model.predict(X_test)
@@ -235,7 +235,7 @@ class DeepSetModelHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer=keras.optimizers.Adam(learning_rate=self.training_config['learning_rate']),
             loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

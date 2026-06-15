@@ -16,7 +16,7 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  epochs : 1000
+  epochs : 500
   batch_size : 150000
   learning_rate : 0.003
   validation_split : 0.1

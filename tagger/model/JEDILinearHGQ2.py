@@ -111,16 +111,16 @@ class JEDILinearHGQ2(JetTagModel):
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
-                #x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
-                x = AveragePooling1D(N_constituents)(x)
-                x = Flatten()(x)
+                x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
+                #x = AveragePooling1D(N_constituents)(x)
+                #x = Flatten()(x)
                 #x = Rescaling(1/16)(x)
                 
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',64, bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',32, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',16, bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+                jet_id = Activation('linear', name='jet_id_output')(jet_id)
 
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 64, bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(pt_regress)
@@ -271,7 +271,7 @@ class JEDILinearHGQ2(JetTagModel):
         self.jet_model.compile(
             optimizer='adam',
             loss={
-                self.loss_name + self.output_id_name: 'categorical_crossentropy',
+                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

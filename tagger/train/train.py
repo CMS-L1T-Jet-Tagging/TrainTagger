@@ -153,6 +153,8 @@ def train(model, out_dir, percent, ebops):
     # Get input shape
     input_shape = X_train.shape[1:]  # First dimension is batch size
     output_shape = y_train.shape[1:]
+    
+    print("Total jets for training: ", X_train.shape[0:] )
 
     model.build_model(input_shape, output_shape)
     # Train it with a pruned model

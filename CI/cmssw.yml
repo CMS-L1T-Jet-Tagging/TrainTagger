@@ -1,6 +1,6 @@
 emulate:
   tags: [ k8s-cvmfs ]
-  image: gitlab-registry.cern.ch/ci-tools/ci-worker:cs8
+  image: gitlab-registry.cern.ch/linuxsupport/alma10-base
 
   stage: emulate
   needs: [hls4ml]

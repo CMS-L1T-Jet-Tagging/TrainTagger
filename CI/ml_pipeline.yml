@@ -183,7 +183,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cern-nextgen-]
+  tags: [cern-nextgen-cpu]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -204,7 +204,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-]
+  tags: [cern-nextgen-cpu]
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:

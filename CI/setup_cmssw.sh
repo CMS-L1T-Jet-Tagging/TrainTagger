@@ -1,5 +1,5 @@
 #!/bin/bash
-export SCRAM_ARCH=el9_amd64_gcc14
+export SCRAM_ARCH=el8_amd64_gcc13
 
 if [[ "$2" == "" ]]; then
     echo "Usage $0 [ -checkout | -compile | -run ] CMSSW_VERSION GITHUB_MASTER GITHUB_TAG [ GITHUB_PR ]"

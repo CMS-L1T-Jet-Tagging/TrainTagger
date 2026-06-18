@@ -59,9 +59,6 @@ data:
     - .template
   stage: data
   tags: [cern-nextgen-cpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 2
   rules:
     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
         - tagger/data/**
@@ -146,9 +143,6 @@ evaluate:
 
 hls4ml:
   tags: [cern-nextgen-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 4
   extends:
     - .template
   rules:
@@ -189,10 +183,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cern-nextgen-cpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+  tags: [cern-nextgen-]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -213,10 +204,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-cpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+  tags: [cern-nextgen-]
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:
@@ -238,9 +226,6 @@ upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
   tags: [cern-nextgen-cpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_CPU_REQUEST: 1
   rules:
     - if: $RERUN_ON_TAG == "False"
   needs:
@@ -271,9 +256,6 @@ upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
   tags: [cern-nextgen-cpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_CPU_REQUEST: 1
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
   rules:

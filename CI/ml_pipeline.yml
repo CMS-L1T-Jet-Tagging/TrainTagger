@@ -58,7 +58,7 @@ data:
   extends:
     - .template
   stage: data
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-cpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 32Gi
     KUBERNETES_CPU_REQUEST: 2
@@ -189,7 +189,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-cpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
@@ -213,7 +213,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-cpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
@@ -237,7 +237,7 @@ profile:
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-cpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1
@@ -270,7 +270,7 @@ upload_new_model:
 upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [cern-nextgen-highmem]
+  tags: [cern-nextgen-cpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_CPU_REQUEST: 1

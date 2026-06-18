@@ -1,6 +1,6 @@
 emulate:
   tags: [ k8s-cvmfs ]
-  image: gitlab-registry.cern.ch/linuxsupport/alma9-base
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
 
   stage: emulate
   needs: [hls4ml]

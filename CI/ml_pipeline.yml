@@ -265,6 +265,8 @@ upload_tagged_model:
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - source activate tagger
+    - echo ${EOS_STORAGE_DIR}/tags/${TAG}
+    - ls ${EOS_STORAGE_DIR}/tags/${TAG}/
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots
     - mkdir $Name

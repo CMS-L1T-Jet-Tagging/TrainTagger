@@ -58,7 +58,7 @@ data:
   extends:
     - .template
   stage: data
-  tags: [cern-nextgen-cpu]
+  tags: [cern-nextgen-gpu]
   rules:
     - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
         - tagger/data/**
@@ -183,7 +183,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cern-nextgen-cpu]
+  tags: [cern-nextgen-gpu]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -204,7 +204,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-cpu]
+  tags: [cern-nextgen-gpu]
   needs: [emulate,synth,train]
   dependencies: [emulate,synth,train]
   rules:
@@ -225,7 +225,7 @@ profile:
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [cern-nextgen-cpu]
+  tags: [k8s-default]
   rules:
     - if: $RERUN_ON_TAG == "False"
   needs:
@@ -255,7 +255,7 @@ upload_new_model:
 upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [cern-nextgen-cpu]
+  tags: [k8s-default]
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
   rules:

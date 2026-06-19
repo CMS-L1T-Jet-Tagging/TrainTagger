@@ -27,21 +27,13 @@ git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/Configuration
 
-#cd L1Trigger/Phase2L1ParticleFlow
-# mv data/hadcorr_HGCal3D_TC.root .
-# rm -r data
-# git clone https://github.com/cms-data/L1Trigger-Phase2L1ParticleFlow.git
-# mv L1Trigger-Phase2L1ParticleFlow data
-# mv hadcorr_HGCal3D_TC.root data
-# cd ../..
-
-# git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
-#   cd hls4mlEmulatorExtras &&
-#   git checkout -b v1.1.3 tags/v1.1.3
-# make
-# make install
-# cd ..
-# git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
+git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
+  cd hls4mlEmulatorExtras &&
+  git checkout -b v1.1.4 tags/v1.1.4
+make
+make install
+cd ..
+git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel

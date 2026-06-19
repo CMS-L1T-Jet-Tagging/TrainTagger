@@ -261,12 +261,14 @@ upload_tagged_model:
   rules:
     - if: $RERUN_ON_TAG == "True"
   before_script:
+    - export EOS_MGM_URL=root://eosproject.cern.ch
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - source activate tagger
     - echo ${EOS_STORAGE_DIR}/tags/${TAG}
-    - ls ${EOS_STORAGE_DIR}/tags/${TAG}/
+    - eos ls ${EOS_STORAGE_DIR}/tags/${TAG}
+    - ls ${EOS_STORAGE_DIR}/tags/${TAG}
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots
     - mkdir $Name

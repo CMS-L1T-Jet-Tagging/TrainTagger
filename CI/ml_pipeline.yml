@@ -255,7 +255,7 @@ upload_new_model:
 upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [k8s-default]
+  tags: [k8s-gpu]
   needs: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
   dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
   rules:

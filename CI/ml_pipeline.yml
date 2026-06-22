@@ -275,7 +275,6 @@ run_processes:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
   - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   parallel:

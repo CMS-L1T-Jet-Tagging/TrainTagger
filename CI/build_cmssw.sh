@@ -72,7 +72,6 @@ scram b 2>&1 || exit 1
 cd FastPUPPI/NtupleProducer/python
 echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_PtPU1/L1TSC4NGJetModel_PtPU1")' >> runPerformanceNtuple.py
 cmsenv
-cmsRun runPerformanceNTuple.py
 ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 ${PROC} '' --nomerge
 cd ${PROC}
 hadd perfNano.root perfNano*.root

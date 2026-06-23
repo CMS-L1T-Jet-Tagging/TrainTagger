@@ -264,7 +264,7 @@ profile:
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_processes
-  tags: [cern-nextgen-w7900]
+  tags: [k8s-gpu]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi
     KUBERNETES_CPU_REQUEST: 4

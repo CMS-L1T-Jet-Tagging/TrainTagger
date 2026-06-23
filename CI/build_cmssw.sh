@@ -23,6 +23,7 @@ echo "git cms-checkout-topic -u ${CMSSW_L1CT}"
 git cms-checkout-topic -u ${CMSSW_L1CT}
 echo "git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f"
 git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f 2>&1 | grep -v 'new tag.*CMSSW'
+git log -1
 
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/Configuration
@@ -70,6 +71,7 @@ fi;
 scram b 2>&1 || exit 1
 
 cd FastPUPPI/NtupleProducer/python
+git log -1
 echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_PtPU1/L1TSC4NGJetModel_PtPU1")' >> runPerformanceNtuple.py
 cmsenv
 ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 ${PROC} '' --nomerge

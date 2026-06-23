@@ -262,7 +262,7 @@ profile:
 
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
-  stage: run_TT_PU200
+  stage: run_processes
   tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 16Gi

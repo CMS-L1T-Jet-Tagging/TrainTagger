@@ -11,6 +11,7 @@ stages:
   - emulate
   - emulation-evaluate
   - profile
+  - run_processes
   - run_TT_PU200
   - run_VBFHToBB_PU200
   - run_VBFHToCC_PU200

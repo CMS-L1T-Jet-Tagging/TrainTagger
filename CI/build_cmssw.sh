@@ -21,7 +21,7 @@ eval $(scram runtime -sh)
 git cms-init  --upstream-only -q -y
 echo "git cms-checkout-topic -u ${CMSSW_L1CT}"
 git cms-checkout-topic -u ${CMSSW_L1CT}
-git remote add stella git@github.com:schaefes/cmssw.git
+git remote add stella https://github.com/schaefes/cmssw.git
 git fetch stella fix_corrector
 git checkout stella/fix_corrector
 echo "git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1CT##*:} -f"

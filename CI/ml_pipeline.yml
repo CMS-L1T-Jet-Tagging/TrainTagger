@@ -292,8 +292,8 @@ emulation_regression:
     KUBERNETES_CPU_REQUEST: 2
   # needs: [run_processes]
   # dependencies: [run_processes]
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  # rules:
+  #   - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
   # - pip uninstall hls4ml

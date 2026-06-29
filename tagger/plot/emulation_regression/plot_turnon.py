@@ -141,7 +141,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-i', '--input', help='path to fast puppi files')
     parser.add_argument('-m', '--model', default='output/baseline', help='model output directory')
-    parser.add_argument('-o', '--observables', nargs='+', default=['jet1', 'jet2', 'ht30', 'quadjet'], help='List of observables to plot turn on curves for')
+    parser.add_argument('-o', '--observables', nargs='+', default=['jet1', 'jet2', 'ht30'], help='List of observables to plot turn on curves for')
     parser.add_argument('-s', '--signal', nargs='+', default=['TT_PU200', 'QCD_Pt15To3000_PU200'], help='Whether to include signal processes in the turn on curves')
     args = parser.parse_args()
 

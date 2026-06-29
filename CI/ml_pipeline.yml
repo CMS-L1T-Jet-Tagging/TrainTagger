@@ -49,7 +49,7 @@ variables:
     RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
     EMULATION_WRAPPER_VERSION: v2_0_0
-    RERUN_ON_OLDTRAINING: 'True'
+    RERUN_ON_OLDTRAINING: 'False'
     MODEL_LOCATION: ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline14654660/output/${Model} #Use specific old pipeline to run pipeline on
 
 .template:
@@ -286,15 +286,14 @@ emulation_regression:
   extends:
     - .template
   stage: emulation_regression
-  when: always
   tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  needs: []
-  dependencies: []
-  # rules:
-  #   - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  needs: [run_processes]
+  dependencies: [run_processes]
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
   # - pip uninstall hls4ml

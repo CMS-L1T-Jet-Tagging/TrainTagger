@@ -286,6 +286,7 @@ emulation_regression:
   extends:
     - .template
   stage: emulation_regression
+  when: always
   tags: [cern-nextgen-h100]
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi

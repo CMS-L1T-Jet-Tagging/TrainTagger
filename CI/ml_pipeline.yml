@@ -45,8 +45,8 @@ variables:
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:L1PF_15_1_X_GenericEmulator'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
     TAG: 'v0.0.0'
     EMULATION_WRAPPER_VERSION: v2_0_0
     RERUN_ON_OLDTRAINING: 'True'

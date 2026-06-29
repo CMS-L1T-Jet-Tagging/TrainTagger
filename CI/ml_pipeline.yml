@@ -44,9 +44,9 @@ variables:
     CMSSW_VERSION: 'CMSSW_15_1_0_pre4'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:L1PF_15_1_X_GenericEmulator'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
+    RERUN_ON_TAG: 'True'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
     TAG: 'v0.0.0'
     EMULATION_WRAPPER_VERSION: v2_0_0
     RERUN_ON_OLDTRAINING: 'False'
@@ -296,11 +296,11 @@ emulation_regression:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
-  - pip uninstall hls4ml
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
-  - cd hls4ml
-  - pip install .
-  - cd ..
+  # - pip uninstall hls4ml
+  # - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  # - cd hls4ml
+  # - pip install .
+  # - cd ..
   - mkdir output/$Model/plots/emulation_regression
   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}

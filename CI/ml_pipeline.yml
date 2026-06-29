@@ -302,6 +302,7 @@ emulation_regression:
   # - cd hls4ml
   # - pip install .
   # - cd ..
+  - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
   - mkdir -p output/$Model/plots/emulation_regression
   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}

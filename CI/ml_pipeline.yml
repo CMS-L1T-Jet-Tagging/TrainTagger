@@ -291,8 +291,8 @@ emulation_regression:
   variables:
     KUBERNETES_MEMORY_REQUEST: 8Gi
     KUBERNETES_CPU_REQUEST: 2
-  # needs: [run_processes]
-  # dependencies: [run_processes]
+  needs: []
+  dependencies: []
   # rules:
   #   - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:

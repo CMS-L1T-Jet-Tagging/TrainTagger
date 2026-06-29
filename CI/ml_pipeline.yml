@@ -44,12 +44,12 @@ variables:
     CMSSW_VERSION: 'CMSSW_15_1_0_pre4'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:L1PF_15_1_X_GenericEmulator'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
-    RERUN_ON_TAG: 'True'
+    RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'False'
     TAG: 'v0.0.0'
     EMULATION_WRAPPER_VERSION: v2_0_0
-    RERUN_ON_OLDTRAINING: 'False'
+    RERUN_ON_OLDTRAINING: 'True'
     MODEL_LOCATION: ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline14654660/output/${Model} #Use specific old pipeline to run pipeline on
 
 .template:

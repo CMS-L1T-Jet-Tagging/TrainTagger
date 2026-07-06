@@ -43,7 +43,7 @@ git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hl
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout model_wrapper_v2
+git checkout main_plus_v2_1_0
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
 ./setup.sh PtPU1 ${EMULATION_WRAPPER_VERSION}

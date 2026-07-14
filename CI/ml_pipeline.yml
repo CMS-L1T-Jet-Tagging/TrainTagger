@@ -97,7 +97,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-h100]
+  tags: [k8s-gpu]
   needs:
     - job : data
       optional: true

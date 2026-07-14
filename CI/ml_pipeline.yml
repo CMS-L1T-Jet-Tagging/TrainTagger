@@ -97,7 +97,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-highmem]
   needs:
     - job : data
       optional: true

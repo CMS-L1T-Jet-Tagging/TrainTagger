@@ -60,7 +60,7 @@ variables:
     - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-gpu]
   # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
   #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
   #      when: on_success
@@ -97,7 +97,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-gpu]
   needs:
     - job : data
       optional: true
@@ -117,7 +117,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-gpu]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -159,10 +159,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 4
+  tags: [cern-nextgen-cpu]
   extends:
     - .template
   rules:
@@ -208,10 +205,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+  tags: [cern-nextgen-gpu]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -237,10 +231,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+  tags: [cern-nextgen-cpu]
   needs: [emulate,train,hls4ml,synth]
   dependencies: [emulate,train,hls4ml,synth]
   rules:
@@ -264,10 +255,7 @@ profile:
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_processes
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_CPU_REQUEST: 4
+  tags: [cern-nextgen-cpu]
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
@@ -286,10 +274,7 @@ emulation_regression:
   extends:
     - .template
   stage: emulation_regression
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+  tags: [cern-nextgen-cpu]
   needs: [run_processes]
   dependencies: [run_processes]
   rules:

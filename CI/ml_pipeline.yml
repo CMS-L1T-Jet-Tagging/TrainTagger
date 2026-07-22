@@ -159,7 +159,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [cern-nextgen-cpu]
+  tags: [cern-nextgen-highfrequency-3.8-4c]
   extends:
     - .template
   rules:
@@ -231,7 +231,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cern-nextgen-cpu]
+  tags: [cern-nextgen-highfrequency-3.8-4c]
   needs: [emulate,train,hls4ml,synth]
   dependencies: [emulate,train,hls4ml,synth]
   rules:
@@ -255,7 +255,7 @@ profile:
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_processes
-  tags: [cern-nextgen-cpu]
+  tags: [cern-nextgen-gpu]
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
@@ -274,7 +274,7 @@ emulation_regression:
   extends:
     - .template
   stage: emulation_regression
-  tags: [cern-nextgen-cpu]
+  tags: [cern-nextgen-highfrequency-3.8-4c]
   needs: [run_processes]
   dependencies: [run_processes]
   rules:

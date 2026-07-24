@@ -91,7 +91,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-gpu]
   needs:
     - job : data
       optional: true
@@ -111,7 +111,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [cern-nextgen-w7900]
+  tags: [cern-nextgen-gpu]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -226,8 +226,8 @@ profile:
     - .template
   stage: profile
   tags: [cern-nextgen-gpu]
-  needs: [emulate,synth,train]
-  dependencies: [emulate,synth,train]
+  needs: [emulate,train,hls4ml,synth]
+  dependencies: [emulate,train,hls4ml,synth]
   rules:
     - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
@@ -250,10 +250,7 @@ profile:
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
   stage: run_processes
-  tags: [cern-nextgen-highmem]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_CPU_REQUEST: 4
+  tags: [cern-nextgen-gpu]
   needs: [train,hls4ml]
   dependencies: [train,hls4ml]
   rules:
@@ -272,10 +269,7 @@ emulation_regression:
   extends:
     - .template
   stage: emulation_regression
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+  tags: [cern-nextgen-gpu]
   needs: [run_processes]
   dependencies: [run_processes]
   rules:

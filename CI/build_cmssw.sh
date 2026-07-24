@@ -48,20 +48,16 @@ git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hl
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout main_plus_v2_1_0
+git checkout model_wrapper_v2
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-./setup.sh PtPU1 ${EMULATION_WRAPPER_VERSION}
+./setup.sh test v2_0_0
 
 make
 make install
 cd ..
 
-git clone https://github.com/schaefes/FastPUPPI.git
-cd FastPUPPI
-git fetch origin dev/15_1_X_NGJet_offline
-git checkout dev/15_1_X_NGJet_offline
-cd ..
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 20_0_X_NGJet
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
 scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'
@@ -73,7 +69,7 @@ fi;
 scram b 2>&1 || exit 1
 
 cd FastPUPPI/NtupleProducer/python
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_PtPU1/L1TSC4NGJetModel_PtPU1")' >> runPerformanceNtuple.py
+echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_PtPU1/L1TSC4NGJetModel_test")' >> runPerformanceNtuple.py
 cmsenv
 export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
 ls /eos/project/c/cms-l1t-jet-tagger

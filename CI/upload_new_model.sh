@@ -13,6 +13,8 @@ if [ -z "${Name}" ] || [ -z "${Model}" ] || [ -z "${EOS_STORAGE_DIR}" ] || [ -z 
 fi
 mkdir $Name
 mkdir $Name/plots
+mv output/$Model/*.json $Name
+mv output/$Model/*.yaml $Name
 mv output/$Model/model $Name/model
 mv output/$Model/plots/training/ $Name/plots
 mv output/$Model/plots/physics/ $Name/plots

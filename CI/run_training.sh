@@ -15,25 +15,16 @@ if [ "$1" == "False" ] && [ "$2" == "False" ]; then
     eos cp -r testing_data ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
     rm -rf /eos/${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
     export MODEL_LOCATION=${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
-
-elif [ "$1" == "False" ] && [ "$2" == "True" ]; then
+else
+    export MODEL_LOCATION=${EOS_STORAGE_DIR}/tags/${TAG}/
     mkdir -p output/$Model/model
     eos cp ${MODEL_LOCATION}/model/saved_model.* output/$Model/model
-    eos cp ${MODEL_LOCATION}/*.json output/$Model/
-    eos cp ${MODEL_LOCATION}/*.yaml output/$Model/
-    mkdir -p output/$Model/testing_data
-    eos cp ${MODEL_LOCATION}/testing_data/* output/$Model/testing_data
-    eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
-    tar -xf signal_process_data.tgz
-    mkdir -p output/$Model/plots/training
-    python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
-
-elif [ "$1" == "True" ] && [ "$2" == "False" ]; then
-    mkdir -p output/$Model/model
-    eos cp ${MODEL_LOCATION}/model/saved_model.* output/$Model/model
+    eos cp ${MODEL_LOCATION}/model/*.yaml output/$Model/
+    eos cp ${MODEL_LOCATION}/extras/* output/$Model/
     mkdir -p output/$Model/testing_data
     eos cp ${MODEL_LOCATION}/testing_data/* output/$Model/testing_data
     eos cp ${MODEL_LOCATION}/signal_process_data.tgz .
     tar -xf signal_process_data.tgz
+    mkdir -p output/$Model/plots/training
     python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
 fi

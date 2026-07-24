@@ -182,7 +182,11 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
 def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
+<<<<<<< HEAD
     colormap = matplotlib.colormaps.get_cmap('Set1')
+=======
+    colormap = plt.get_cmap('Set1', len(class_labels))
+>>>>>>> upstream/generic_emulator_update
 
     # Create a plot for ROC curves
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)

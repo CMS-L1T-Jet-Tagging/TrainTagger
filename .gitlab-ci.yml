@@ -36,7 +36,7 @@ DeepSet:baseline_5param_extended_trk:
   variables:
     Name: baseline_5param_extended_trk
     Model: baseline
-    RERUN_ON_TAG: 'False'
+    RERUN_ON_TAG: 'True'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v2_0_0

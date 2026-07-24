@@ -14,6 +14,8 @@ from tagger.model.common import fromFolder
 from tagger.plot import style
 from tagger.plot.common import plot_2d
 
+from hls4ml.model import profiling
+
 style.set_style()
 
 
@@ -105,16 +107,15 @@ def doPlots(model, outputdir, inputdir):
     figure.savefig("%s/%s_score_2D.pdf" % (outputdir, "Regression"), bbox_inches='tight')
     plt.close()
 
-    # wp, wph, ap, aph = hls4ml.model.profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)
-    # ap.savefig(outputdir + "/model_activations_profile.png")
-    # wp.savefig(outputdir + "/model_weights_profile.png")
-    # aph.savefig(outputdir + "/model_activations_profile_opt.png")
-    # wph.savefig(outputdir + "/model_weights_profile_opt.png")
-    y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
+    print(hls4ml.__version__)
+    wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=X_test)
+    ap.savefig(outputdir + "/model_activations_profile.png")
+    wp.savefig(outputdir + "/model_weights_profile.png")
+    aph.savefig(outputdir + "/model_activations_profile_opt.png")
+    wph.savefig(outputdir + "/model_weights_profile_opt.png")
 
-    # Create a sub-model that outputs all intermediate layers
-    layer_outputs = [layer.output for layer in model.jet_model.layers]
-    keras_trace_model = Model(inputs=model.jet_model.input, outputs=layer_outputs)
+    y_hls, hls4ml_trace = model.hls_jet_model.trace(np.ascontiguousarray(X_test))
+    keras_trace = profiling.get_ymodel_keras(model.jet_model, X_test)
 
     # Run prediction to get activations
     keras_activations = keras_trace_model.predict(model_dict)

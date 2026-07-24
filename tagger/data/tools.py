@@ -375,7 +375,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     chunks_to_load = int(np.ceil((percentage / 100) * total_chunks))
 
     # Collect the file paths for the chunks to load
-    chunk_files = [metadata[i]["file"] for i in range(chunks_to_load)]
+    chunk_files = [f"{metadata[i]['file']}:data" for i in range(chunks_to_load)]
 
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(
@@ -406,7 +406,6 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     test_data = data[test_indices]
 
     return train_data, test_data, class_labels, input_vars, extra_vars
-
 
 def make_data(
     infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',

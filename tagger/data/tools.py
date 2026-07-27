@@ -379,7 +379,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(
-        [f"{file}:data" for file in chunk_files],
+        [f"{file}" for file in chunk_files],
         filter_name=fields,
         library="ak"
     )

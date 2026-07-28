@@ -59,11 +59,9 @@ fi;
 scram b 2>&1 || exit 1
 
 cd FastPUPPI/NtupleProducer/python
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_PtPU1/L1TSC4NGJetModel_test")' >> runPerformanceNtuple.py
+echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test")' >> runPerformanceNtuple.py
 cmsenv
 export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
-ls /eos/project/c/cms-l1t-jet-tagger
-ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_151X/v1/MinBias_PU200
 ./scripts/prun.sh runPerformanceNTuple.py --151X_v1 ${PROC} '' --nomerge
 cd ${PROC}
 hadd perfNano.root perfNano*.root

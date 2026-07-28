@@ -40,7 +40,7 @@ DeepSet:baseline_5param_extended_trk:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    EMULATION_WRAPPER_VERSION: v2_0_0
+    EMULATION_WRAPPER_VERSION: v1_0_1
 
 WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
   extends: .ml_pipeline
@@ -50,7 +50,7 @@ WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
     RERUN_ON_OLDTRAINING: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    EMULATION_WRAPPER_VERSION: v2_1_0
+    EMULATION_WRAPPER_VERSION: v2_0_0
 
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:
 #  extends: .ml_pipeline

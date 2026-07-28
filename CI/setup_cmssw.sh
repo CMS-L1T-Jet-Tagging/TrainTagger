@@ -40,7 +40,7 @@ cd L1TSC4NGJetModel
 git checkout rework_v2_release
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-./setup.sh test v2_0_0
+./setup.sh test $EMULATION_WRAPPER_VERSION
 
 make
 make install

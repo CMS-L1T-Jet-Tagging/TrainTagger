@@ -248,7 +248,7 @@ profile:
 
 
 run_processes:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
   stage: run_processes
   tags: [cern-nextgen-gpu]
   needs: [train,hls4ml]

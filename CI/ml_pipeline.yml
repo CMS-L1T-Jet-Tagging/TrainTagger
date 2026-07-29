@@ -264,6 +264,10 @@ run_processes:
   parallel:
     matrix:
       - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
+  artifacts:
+    paths:
+      - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
+    expire_in: 2 day
 
 emulation_regression:
   extends:

@@ -114,14 +114,20 @@ def doPlots(model, outputdir, inputdir):
         name = var.name
         hls_inputs.append(np.ascontiguousarray(model_dict[name], dtype=np.float64))
     hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
-    wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
-    ap.savefig(outputdir + "/model_activations_profile.png")
-    wp.savefig(outputdir + "/model_weights_profile.png")
-    aph.savefig(outputdir + "/model_activations_profile_opt.png")
-    wph.savefig(outputdir + "/model_weights_profile_opt.png")
+    try:
+        wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
+        ap.savefig(outputdir + "/model_activations_profile.png")
+        wp.savefig(outputdir + "/model_weights_profile.png")
+        aph.savefig(outputdir + "/model_activations_profile_opt.png")
+        wph.savefig(outputdir + "/model_weights_profile_opt.png")
+    except:
+        print("Profiling failed, skipping profiling plots")
 
-    y_hls, hls4ml_trace = model.hls_jet_model.trace(np.ascontiguousarray(X_test))
-    keras_trace = profiling.get_ymodel_keras(model.jet_model, X_test)
+    y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
+
+    # Create a sub-model that outputs all intermediate layers
+    layer_outputs = [layer.output for layer in model.jet_model.layers]
+    keras_trace_model = Model(inputs=model.jet_model.input, outputs=layer_outputs)
 
     # Run prediction to get activations
     keras_activations = keras_trace_model.predict(model_dict)

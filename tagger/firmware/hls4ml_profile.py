@@ -108,11 +108,14 @@ def doPlots(model, outputdir, inputdir):
     plt.close()
 
     print(hls4ml.__version__)
-    wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
-    ap.savefig(outputdir + "/model_activations_profile.png")
-    wp.savefig(outputdir + "/model_weights_profile.png")
-    aph.savefig(outputdir + "/model_activations_profile_opt.png")
-    wph.savefig(outputdir + "/model_weights_profile_opt.png")
+    try:
+        wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
+        ap.savefig(outputdir + "/model_activations_profile.png")
+        wp.savefig(outputdir + "/model_weights_profile.png")
+        aph.savefig(outputdir + "/model_activations_profile_opt.png")
+        wph.savefig(outputdir + "/model_weights_profile_opt.png")
+    except:
+        print("Profiling failed due to tracing error, issue reported to hls4ml team")
 
     y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
 

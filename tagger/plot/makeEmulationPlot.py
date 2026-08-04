@@ -45,6 +45,7 @@ def doPlots(model, outputdir, inputdir):
     X_test, Y_test, pt_target, truth_pt, jet_pt_phys, jet_pt_hw, jet_eta_hw = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
+    labels.remove("pileup") if "pileup" in labels else None # remove once there is proper handling of pilup score in cmssw
     model.firmware_convert("temp", build=False)
 
     raw_inputs_dict = {

@@ -47,7 +47,7 @@ make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 20_0_X_NGJet
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 17_0_X_NG
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
 scram b -j 8 -k  2>&1 | tee ../compilation.log | grep '^>>\|[Ee]rror\|out of memory'

@@ -108,20 +108,11 @@ def doPlots(model, outputdir, inputdir):
     plt.close()
 
     print(hls4ml.__version__)
-    model_dict = {k: np.ascontiguousarray(v, dtype=np.float64) for k, v in model_dict.items()}
-    hls_inputs = []
-    for var in model.hls_jet_model.get_input_variables():
-        name = var.name
-        hls_inputs.append(np.ascontiguousarray(model_dict[name], dtype=np.float64))
-    hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
-    try:
-        wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
-        ap.savefig(outputdir + "/model_activations_profile.png")
-        wp.savefig(outputdir + "/model_weights_profile.png")
-        aph.savefig(outputdir + "/model_activations_profile_opt.png")
-        wph.savefig(outputdir + "/model_weights_profile_opt.png")
-    except:
-        print("Profiling failed, skipping profiling plots")
+    wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
+    ap.savefig(outputdir + "/model_activations_profile.png")
+    wp.savefig(outputdir + "/model_weights_profile.png")
+    aph.savefig(outputdir + "/model_activations_profile_opt.png")
+    wph.savefig(outputdir + "/model_weights_profile_opt.png")
 
     y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
 

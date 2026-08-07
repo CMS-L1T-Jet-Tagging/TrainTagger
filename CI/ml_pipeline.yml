@@ -34,7 +34,7 @@ variables:
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
     CMSSW_VERSION: 'CMSSW_17_0_0_pre2'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_17_0_0_pre2_NGJet'
+    CMSSW_L1CT: 'CMSSW_17_0_0_pre2_NGJet_plus_correlator'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'

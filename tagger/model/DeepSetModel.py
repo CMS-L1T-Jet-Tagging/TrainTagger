@@ -192,7 +192,7 @@ class DeepSetModel(QKerasModel):
         config["LayerName"]["Dense_3_jetID"]["Precision"]["result"] = self.firmware_config['input_precision']
         config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
         config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
-        config['LayerName"]["jet_id_output"]["TableSize"] = 2048
+        config["LayerName"]["jet_id_output"]["TableSize"] = 2048
         config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
         config["LayerName"]["pT_output"]["Implementation"] = "latency"
 

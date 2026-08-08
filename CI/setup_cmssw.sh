@@ -1,4 +1,6 @@
 #!/bin/bash
+export SCRAM_ARCH=el8_amd64_gcc13
+
 if [[ "$2" == "" ]]; then
     echo "Usage $0 [ -checkout | -compile | -run ] CMSSW_VERSION GITHUB_MASTER GITHUB_TAG [ GITHUB_PR ]"
     exit 1;
@@ -25,17 +27,9 @@ git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/Configuration
 
-cd L1Trigger/Phase2L1ParticleFlow
-mv data/hadcorr_HGCal3D_TC.root .
-rm -r data
-git clone https://github.com/cms-data/L1Trigger-Phase2L1ParticleFlow.git
-mv L1Trigger-Phase2L1ParticleFlow data
-mv hadcorr_HGCal3D_TC.root data
-cd ../..
-
 git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
   cd hls4mlEmulatorExtras &&
-  git checkout -b v1.1.3 tags/v1.1.3
+  git checkout -b v1.1.4 tags/v1.1.4
 make
 make install
 cd ..
@@ -43,16 +37,16 @@ git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hl
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout emulator_test
+git checkout rework_v2_release
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-./setup.sh v1
+./setup.sh test v1_0_1
 
 make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 15_1_X_NGJet
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b CMSSW_17_0_0_pre2_NGJet_plus_correlator
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi
@@ -73,6 +67,6 @@ sed -i -e 's/trktype = "extended"/trktype = "'${TRACK_ALGO}'"/g' runJetNtuple.py
 sed -i -e 's/nparam = 5/nparam = '${N_PARAMS}'/g' runJetNtuple.py
 echo "Temporary workaround to get the input files"
 echo $'\nprocess.source.fileNames = ["file:/eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_151X/v1/TT_PU200/inputs151X_10.root"]' >> runJetNtuple.py
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_v1")' >> runJetNtuple.py
+echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test/L1TSC4NGJetModel_test")' >> runJetNtuple.py
 cat runJetNtuple.py
 cmsRun runJetNtuple.py --tm18 2>&1 | tee cmsRun.log

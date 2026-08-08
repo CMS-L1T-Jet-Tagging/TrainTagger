@@ -178,7 +178,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
 def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
-    colormap = cm.get_cmap('Set1', len(class_labels))
+    colormap = plt.get_cmap('Set1', len(class_labels))
 
     # Create a plot for ROC curves
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -655,7 +655,7 @@ def shapPlot(shap_values, feature_names, class_names):
     axis_color = "#333333"
     class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
     # Use 'tab10' with enough colors
-    colormap = cm.get_cmap('Set1', len(class_names))
+    colormap = plt.get_cmap('Set1', len(class_names))
 
     for i, ind in enumerate(class_inds):
         global_shap_values = np.abs(shap_values[ind]).mean(0)

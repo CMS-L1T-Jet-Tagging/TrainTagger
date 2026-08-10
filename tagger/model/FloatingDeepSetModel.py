@@ -374,10 +374,13 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         main = GlobalAveragePooling1D(data_format='channels_last', name="pool")(main)
 
         # Projection head
-        proj = BatchNormalization(name='norm_embedding')(main)
-        for iproj, depthproj in enumerate(self.model_config['projection_layers'][:-1]):
-            proj = Dense(depthproj, name='Dense_' + str(iproj + 1) + '_proj', activation='relu', **self.common_args)(proj)
-        proj = Dense(self.model_config['projection_layers'][-1], name='Dense_' + str(len(self.model_config['projection_layers'])) + '_proj', activation='linear', **self.common_args)(proj)
+        proj = BatchNormalization(name='norm_projection')(main)
+        for iproj, depthproj in enumerate(self.projection_layers):
+            is_last = (iproj == len(self.projection_layers) - 1)
+            proj = Dense(depthproj, use_bias=False, name=f'Dense_proj_{iproj+1}', **self.common_args)(proj)
+            if not is_last:
+                proj = BatchNormalization(name=f'norm_proj_{iproj+1}')(proj)
+                proj = ReLU(name=f'relu_proj_{iproj+1}')(proj)
 
         # Jet ID and pT regression heads
         bn_main = BatchNormalization(name='norm_embedding')(main)
@@ -415,9 +418,7 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         )
 
         self.embedding_callbacks = [
-            keras.callbacks.EarlyStopping(
-                monitor="loss", patience=5, restore_best_weights=True
-            )
+            keras.callbacks.EarlyStopping(monitor="loss", patience=5, restore_best_weights=True),
         ]
         self.embedding_optimizer = tf.keras.optimizers.Adam(scheduler)
         

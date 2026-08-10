@@ -46,7 +46,7 @@ make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b 17_0_X_NG
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b CMSSW_17_0_0_pre2_NGJet_plus_correlator
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi

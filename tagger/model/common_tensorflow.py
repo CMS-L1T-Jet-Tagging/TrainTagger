@@ -226,14 +226,22 @@ class EtaPhiRotationLayer(keras.layers.Layer):
 class AugmentationLayer(keras.layers.Layer):
     def __init__(
             self,
+            masking_probability=0.2,
+            smearing_std=0.02,
+            pt_scale=40.0,
+            isFilled_idx=15,
+            pt_index=0,
+            pt_log_index=1,
+            eta_index=2,
+            phi_index=3,
         ):
         super().__init__()
         self.augment = tf.keras.Sequential([
-            # PtSmearingLayer(pt_index=0, pt_log_index=1, smearing_std=0.02),
-            # EtaPhiSmearingLayer(isFilled_idx=15, eta_index=2, phi_index=3, smearing_std=2),
-            # EtaPhiRotationLayer(isFilled_idx=15, eta_index=2, phi_index=3),
-            # PtDependentMaskingLayer(isFilled_idx=15, pt_index=0, pt_scale=50.0),
-            FlatMaskingLayer(isFilled_idx=15, pt_index=0, masking_probability=0.2),
+            PtSmearingLayer(pt_index=pt_index, pt_log_index=pt_log_index, smearing_std=smearing_std),
+            EtaPhiSmearingLayer(isFilled_idx=isFilled_idx, eta_index=eta_index, phi_index=phi_index, smearing_std=smearing_std),
+            EtaPhiRotationLayer(isFilled_idx=isFilled_idx, eta_index=eta_index, phi_index=phi_index),
+            PtDependentMaskingLayer(isFilled_idx=isFilled_idx, pt_index=pt_index, pt_scale=pt_scale),
+            FlatMaskingLayer(isFilled_idx=isFilled_idx, pt_index=pt_index, masking_probability=masking_probability),
         ])
 
     def call(self, x, y , w):

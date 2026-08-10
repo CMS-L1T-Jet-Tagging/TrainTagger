@@ -118,7 +118,7 @@ class FloatingDeepSetModel(JetTagModel):
             if ireg == 0:
                 pt_regress = Dense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', **self.common_args)(main)
             else:
-                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', activation='relu',**self.common_args)(pt_regress)
+                pt_regress = Dense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', activation='relu',**self.common_args)(pt_regress)
 
         pt_regress = Dense(1, name='pT_output',
                             kernel_initializer='lecun_uniform')(pt_regress)
@@ -127,70 +127,6 @@ class FloatingDeepSetModel(JetTagModel):
         self.jet_model = keras.Model(inputs = [inputs], outputs = [jet_id, pt_regress])
 
         print(self.jet_model.summary())
-
-    def firmware_convert(self, firmware_dir: str, build: bool = False):
-        """Run the hls4ml model conversion
-
-        Args:
-            firmware_dir (str): Where to save the firmware
-            build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
-        """
-
-        # Remove the old directory if it exists
-        hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
-        os.system(f'rm -rf {hls4ml_outdir}')
-
-        # Create default config
-        config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-        config['IOType'] = 'io_parallel'
-        config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
-
-        # Configuration for conv1d layers
-        # hls4ml automatically figures out the paralellization factor
-        # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-        # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
-
-        # Additional config
-        for layer in self.jet_model.layers:
-            layer_name = layer.__class__.__name__
-
-            if layer_name in ["BatchNormalization", "InputLayer"]:
-                config["LayerName"][layer.name]["Precision"] = self.firmware_config['input_precision']
-                config["LayerName"][layer.name]["result"] = self.firmware_config['input_precision']
-                config["LayerName"][layer.name]["Trace"] = not build
-
-            elif layer_name in ["Permute", "Concatenate", "Flatten", "Reshape", "UpSampling1D", "Add"]:
-                print("Skipping trace for:", layer.name)
-            else:
-                config["LayerName"][layer.name]["Trace"] = not build
-
-        config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-        config["LayerName"]["jet_id_output"]["Implementation"] = "latency"
-        config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
-        config["LayerName"]["pT_output"]["Implementation"] = "latency"
-
-        # Write HLS
-        self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
-            self.jet_model,
-            backend='Vitis',
-            project_name=self.firmware_config['project_name'],
-            clock_period=self.firmware_config['clock_period'],
-            hls_config=config,
-            output_dir=f'{hls4ml_outdir}',
-            part= self.firmware_config['fpga_part'],
-        )
-
-        # Compile the project
-        self.hls_jet_model.compile()
-
-        # Save config  as json file
-        print("Saving default config as config.json ...")
-        with open(hls4ml_outdir + '/config.json', 'w') as fp:
-            json.dump(config, fp)
-
-        if build:
-            # build the project
-            self.hls_jet_model.build(csim=False, reset=True)
 
     def compile_model(self, num_samples: int):
         """compile the model generating callbacks and loss function
@@ -313,11 +249,11 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
                 "run_config" : JetTagModel.run_schema,
                 "model_config" : {"name" : str,
                                   "conv1d_layers" : list,
+                                  "projection_layers" : list,
                                   "classification_layers" : list,
                                   "regression_layers" : list,
                                   "kernel_initializer" : str,
-                                  "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"]),
-                                  "projection_dims" : And(int, lambda s: s >= 1),},
+                                  "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"]),},
                 "quantization_config" : {'pt_output_quantization' : list},
                 "training_config" : {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
                                      "validation_split" : And(float, lambda s: s > 0.0),
@@ -375,8 +311,8 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
 
         # Projection head
         proj = BatchNormalization(name='norm_projection')(main)
-        for iproj, depthproj in enumerate(self.projection_layers):
-            is_last = (iproj == len(self.projection_layers) - 1)
+        for iproj, depthproj in enumerate(self.model_config['projection_layers']):
+            is_last = (iproj == len(self.model_config['projection_layers']) - 1)
             proj = Dense(depthproj, use_bias=False, name=f'Dense_proj_{iproj+1}', **self.common_args)(proj)
             if not is_last:
                 proj = BatchNormalization(name=f'norm_proj_{iproj+1}')(proj)
@@ -477,12 +413,12 @@ class FloatingDeepSetEmbeddingModel(JetTagModel):
         # --- Embedding (SimCLR) training (FAST) ---
         x_train = X_train[..., tf.newaxis].astype("float32")
         y_train = Y_train[..., tf.newaxis].astype("float32")
-        augment = SimCLRPreprocessing(0.2)
+        augment = AugmentationLayer()
         train_ds = (
             tf.data.Dataset.from_tensor_slices((x_train,y_train,sample_weight))
             .shuffle(20_000, reshuffle_each_iteration=True)
-            .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
             .batch(self.training_config['batch_size'])
+            .map(augment, num_parallel_calls=tf.data.AUTOTUNE)
             .prefetch(tf.data.AUTOTUNE)
         )
 

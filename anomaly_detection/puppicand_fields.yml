@@ -1,0 +1,82 @@
+puppicand_fields_all:
+  - puppiweight
+  - pt_rel
+  - pt_rel_log
+  - pt
+  - dxy
+  - id
+  - charge
+  - deta
+  - dphi
+  - pt_log
+  - eta
+  - phi
+  - emid
+  - quality
+  - z0
+  - mass
+  - isPhoton
+  - isElectronPlus
+  - isElectronMinus
+  - isMuonPlus
+  - isMuonMinus
+  - isNeutralHadron
+  - isChargedHadronPlus
+  - isChargedHadronMinus
+  - isfilled
+  - jet_SC4NGJet_score_b
+  - jet_SC4NGJet_score_bkg
+  - jet_SC4NGJet_score_gluon
+  - jet_SC4NGJet_score_charm
+  - jet_SC4NGJet_score_taup
+  - jet_SC4NGJet_score_taum
+  - jet_SC4NGJet_score_muon
+  - jet_SC4NGJet_score_electron
+  - jet_SC4NGJet_score_regression
+  - jet_pt_phys
+  - jet_genmatch_pt
+
+baseline_hardware_inputs:
+  - pt
+  # - pt_rel
+  - pt_log
+  - deta
+  - dphi
+  - mass
+  - isPhoton
+  - isElectronPlus
+  - isElectronMinus
+  - isMuonPlus
+  - isMuonMinus
+  - isNeutralHadron
+  - isChargedHadronPlus
+  - isChargedHadronMinus
+  - z0
+  - dxy
+  - isfilled
+  - puppiweight
+  - emid
+  - quality
+
+extra_fields:
+  - event
+  - jet_pt
+  - jet_eta
+  - jet_phi
+  - jet_pt_phys
+  - jet_eta_phys
+  - jet_phi_phys
+  - jet_genmatch_pt
+
+extra_emulation_fields:
+  - jet_SC4NGJet_score_b
+  - jet_SC4NGJet_score_light
+  - jet_SC4NGJet_score_gluon
+  - jet_SC4NGJet_score_charm
+  - jet_SC4NGJet_score_taup
+  - jet_SC4NGJet_score_taum
+  - jet_SC4NGJet_score_muon
+  - jet_SC4NGJet_score_electron
+  - jet_SC4NGJet_score_regression
+  - jet_pt_phys
+  - jet_genmatch_pt

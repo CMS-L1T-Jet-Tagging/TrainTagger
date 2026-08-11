@@ -254,7 +254,6 @@ run_processes:
   needs:
     - job : hls4ml
       optional: true
-  dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   before_script:
@@ -279,7 +278,6 @@ emulation_regression:
   needs:
     - job : run_processes
       optional: true
-  dependencies: [run_processes]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:

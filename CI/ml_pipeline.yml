@@ -251,7 +251,9 @@ run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
   stage: run_processes
   tags: [cern-nextgen-gpu]
-  needs: [train,hls4ml]
+  needs:
+    - job : hls4ml
+      optional: true
   dependencies: [train,hls4ml]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
@@ -274,17 +276,14 @@ emulation_regression:
     - .template
   stage: emulation_regression
   tags: [cern-nextgen-gpu]
-  needs: [run_processes]
+  needs:
+    - job : run_processes
+      optional: true
   dependencies: [run_processes]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   script:
   - source activate tagger
-  # - pip uninstall hls4ml
-  # - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
-  # - cd hls4ml
-  # - pip install .
-  # - cd ..
   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
   - mkdir -p output/$Model/plots/emulation_regression
   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}

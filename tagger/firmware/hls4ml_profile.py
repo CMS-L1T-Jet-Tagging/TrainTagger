@@ -60,7 +60,6 @@ def doPlots(model, outputdir, inputdir):
 
     raw_inputs_dict = {
         "basic_input": np.ascontiguousarray(X_test),
-        "jet_pt": np.ascontiguousarray(np.log(jet_pt_hw)),
         "jet_eta": np.ascontiguousarray(abs(jet_eta_hw)),
         "jet_pt_log": np.ascontiguousarray(np.log(jet_pt_hw)),
     }
@@ -108,14 +107,11 @@ def doPlots(model, outputdir, inputdir):
     plt.close()
 
     print(hls4ml.__version__)
-    try:
-        wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
-        ap.savefig(outputdir + "/model_activations_profile.png")
-        wp.savefig(outputdir + "/model_weights_profile.png")
-        aph.savefig(outputdir + "/model_activations_profile_opt.png")
-        wph.savefig(outputdir + "/model_weights_profile_opt.png")
-    except:
-        print("Profiling failed due to tracing error, issue reported to hls4ml team")
+    wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
+    ap.savefig(outputdir + "/model_activations_profile.png")
+    wp.savefig(outputdir + "/model_weights_profile.png")
+    aph.savefig(outputdir + "/model_activations_profile_opt.png")
+    wph.savefig(outputdir + "/model_weights_profile_opt.png")
 
     y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
 
@@ -166,7 +162,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-of', '--outpath_firmware', default='output/weightedAverageSimple4bits/firmware', help='Jet tagger firmware directory'
     )
-    parser.add_argument('-i', '--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part6.root', help='Path to profiling data rootfile')
+    parser.add_argument('-i', '--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_100826_170X/All200_part6.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
     parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
 

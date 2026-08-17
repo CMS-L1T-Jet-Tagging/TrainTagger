@@ -140,24 +140,22 @@ def train(model, out_dir, percent):
     )
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, jet_pt_hw_train, jet_eta_hw_train = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, jet_pt_hw_train, jet_eta_hw_train, jet_pt_log_train = to_ML(data_train, class_labels)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test = to_ML(data_test, class_labels)
+    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test, jet_pt_log_test = to_ML(data_test, class_labels)
 
     # collect all possible train and test inputs
     raw_inputs_train = {
         'basic_input': X_train,
-        'jet_pt': jet_pt_hw_train,
-        'jet_pt_log': np.log(jet_pt_hw_train),
-        'jet_eta': abs(jet_eta_hw_train),
+        'jet_pt_log': jet_pt_log_train,
+        'jet_eta': jet_eta_hw_train,
     }
 
     raw_inputs_test = {
         'basic_input': X_test,
-        'jet_pt': jet_pt_hw_test,
-        'jet_pt_log': np.log(jet_pt_hw_test),
-        'jet_eta': abs(jet_eta_hw_test),
+        'jet_pt_log': jet_pt_log_test,
+        'jet_eta': jet_eta_hw_test,
     }
     test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys
     save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test)

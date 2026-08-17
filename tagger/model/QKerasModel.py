@@ -210,19 +210,12 @@ class QKerasModel(JetTagModel):
         # get relevant feature indices
         pt_rel_idx = puppicand_fields['baseline_hardware_inputs'].index("pt_rel")
 
-        if "eta" in puppicand_fields['baseline_hardware_inputs']:
-            eta_idx = puppicand_fields['baseline_hardware_inputs'].index("eta")
-            raw_inputs['basic_input'][:, :, eta_idx] = np.abs(raw_inputs['basic_input'][:, :, eta_idx])
-
         # build all possible inputs
         input_dict = {
             'basic_input': raw_inputs['basic_input'],
             'basic_mask': constituents_mask(raw_inputs['basic_input'], 10),
             'pt_mask': constituents_mask(raw_inputs['basic_input'], 10)[:, :, 0],
-            'constituent_pt': raw_inputs['basic_input'][:, :, 0],
             'constituent_fraction': raw_inputs['basic_input'][:, :, pt_rel_idx],
-            'inverse_jet_pt': 1 / raw_inputs['jet_pt'].reshape(-1, 1),
-            'jet_pt': raw_inputs['jet_pt'],
         }
 
         # remove unused inputs

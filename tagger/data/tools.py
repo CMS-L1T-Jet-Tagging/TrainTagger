@@ -329,8 +329,9 @@ def to_ML(data, class_labels):
     jet_pt_phys = np.asarray(data['jet_pt_phys'])
     jet_pt_hw = np.asarray(data['jet_pt'])
     jet_eta_hw = np.asarray(data['jet_eta'])
+    jet_pt_log = np.asarray(data['jet_pt_log'])
 
-    return X, y, pt_target, truth_pt, jet_pt_phys, jet_pt_hw, jet_eta_hw
+    return X, y, pt_target, truth_pt, jet_pt_phys, jet_pt_hw, jet_eta_hw, jet_pt_log
 
 
 def constituents_mask(x, features_dim):
@@ -408,7 +409,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     return train_data, test_data, class_labels, input_vars, extra_vars
 
 def make_data(
-    infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',
+    infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_100826_170X/All200.root',
     outdir='training_data/',
     extra_basic_inputs=[],
     use_pu=False,

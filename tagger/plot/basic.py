@@ -1086,13 +1086,12 @@ def basic(model, signal_dirs):
         else:
             signal_indices, sample_train, sample_test = filter_process(test_dict['basic_input'], signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_reco_pt = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)
-            sample_reco_eta = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
+            sample_reco_pt_log = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
+            sample_reco_eta = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
             sample_raw_inputs = {
                 'basic_input': sample_data,
-                'jet_pt': sample_reco_pt,
-                'jet_pt_log': np.log(sample_reco_pt),
+                'jet_pt_log': sample_reco_pt_log,
                 'jet_eta': sample_reco_eta,
             }
             sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]

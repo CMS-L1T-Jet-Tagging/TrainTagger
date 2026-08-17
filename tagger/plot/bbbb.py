@@ -35,7 +35,7 @@ def default_selection(jet_pt, jet_eta, apply_sel):
     return event_mask
 
 
-def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta_hw, jet_eta, apply_light, class_labels, n_jets=4):
+def nn_bscore_sum(model, basic_inputs, jet_pt, jet_pt_log, jet_eta_hw, jet_eta, apply_light, class_labels, n_jets=4):
     b_index=class_labels['b']
     l_index=class_labels['light']
     g_index=class_labels['gluon']
@@ -44,9 +44,8 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_eta_hw, jet_eta, apply_light,
     og_shape = ak.num(jet_pt)
     model_inputs = {
         'basic_input': np.asarray(ak.flatten(basic_inputs)),
-        'jet_pt': np.asarray(ak.flatten(jet_pt)),
-        'jet_pt_log': np.asarray(np.log(ak.flatten(jet_pt))),
-        'jet_eta': np.asarray(ak.flatten(abs(jet_eta_hw))),
+        'jet_pt_log': np.asarray(jet_pt_log),
+        'jet_eta': np.asarray(ak.flatten(jet_eta_hw)),
         }
 
     #Get the nn outputs
@@ -163,6 +162,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    jet_pt_log = extract_array(minbias, 'jet_pt_log', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
     raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
@@ -179,10 +179,10 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     jet_pt, jet_eta, jet_eta_hw, jet_nn_inputs = grouped_arrays
     def_sel = default_selection(jet_pt, jet_eta, apply_sel)
     jet_nn_inputs = jet_nn_inputs[def_sel]
-    jet_pt_sel, jet_eta_sel, jet_eta_hw_sel = jet_pt[def_sel], jet_eta[def_sel], jet_eta_hw[def_sel]
+    jet_pt_sel, jet_pt_log_sel, jet_eta_sel, jet_eta_hw_sel = jet_pt[def_sel], jet_pt_log[def_sel], jet_eta[def_sel], jet_eta_hw[def_sel]
 
 
-    bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt_sel, jet_eta_hw_sel, jet_eta_sel, apply_light, model.class_labels)
+    bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt_sel, jet_pt_log_sel, jet_eta_hw_sel, jet_eta_sel, apply_light, model.class_labels)
     jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
     model_pt = jet_pt_sel * regression
     # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta_sel) < 2.4)], axis=1)
@@ -256,6 +256,7 @@ def load_cmssw_inputs(path, n_entries=100000, tree='outnano/Jets', model=None):
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    jet_pt_log = extract_array(minbias, 'jet_pt_log', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
     raw_cmssw_bscore = extract_array(minbias, 'jet_bjetscore', n_entries)
@@ -266,16 +267,16 @@ def load_cmssw_inputs(path, n_entries=100000, tree='outnano/Jets', model=None):
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_eta_hw, cmssw_b, basic_inputs = grouped_arrays
+    jet_pt, jet_pt_log,  jet_eta, jet_eta_hw, cmssw_b, basic_inputs = grouped_arrays
     cmssw_b_org = cmssw_b
     cmssw_b = ak.where(cmssw_b == -1, 0, cmssw_b)
 
     if model is not None:
-        return n_events, basic_inputs, jet_pt, jet_eta, jet_eta_hw
+        return n_events, basic_inputs, jet_pt, jet_pt_log, jet_eta, jet_eta_hw
     else:
         return n_events, jet_pt, jet_eta, cmssw_b, cmssw_b_org
 
@@ -303,8 +304,8 @@ def load_all_bbbb_WPs(model, apply_sel, apply_light):
 
 # Rate logical or of model and HT trigger
 def get_logical_or_seed(minbias_path, model, model_wps, ht_wp, n_entries=100000, tree='outnano/Jets', apply_sel=True, apply_light=False):
-    n_events, basic_inp, jet_pt, jet_eta, jet_eta_hw = load_cmssw_inputs(minbias_path, n_entries, tree, model)
-    b_sums, regression = nn_bscore_sum(model, basic_inp, jet_pt, jet_eta_hw, jet_eta, apply_light, model.class_labels, n_jets=4)
+    n_events, basic_inp, jet_pt, jet_pt_log, jet_eta, jet_eta_hw = load_cmssw_inputs(minbias_path, n_entries, tree, model)
+    b_sums, regression = nn_bscore_sum(model, basic_inp, jet_pt, jet_pt_log, jet_eta_hw, jet_eta, apply_light, model.class_labels, n_jets=4)
     model_pt = jet_pt * regression # regression scores 0 for jets that don't pass the selection
     jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
     # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
@@ -342,6 +343,7 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
     raw_jet_geneta = extract_array(signal, 'jet_genmatch_eta', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
+    jet_pt_log = extract_array(signal, 'jet_pt_log', n_entries)
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
     raw_jet_eta_hw = extract_array(signal, 'jet_eta', n_entries)
     raw_cmssw_bscore = extract_array(signal, 'jet_bjetscore', n_entries)
@@ -372,15 +374,15 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
     if raw_gen_mHH is not None:
-        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
-        event_gen_mHH, jet_genpt, jet_geneta, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        event_gen_mHH, jet_genpt, jet_geneta, jet_pt, jet_pt_log, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
 
         #Just pick the first entry of jet mHH arrays
         event_gen_mHH = ak.firsts(event_gen_mHH)
     else:
         # Handle case where genHH_mass doesn't exist
-        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
-        jet_genpt, jet_geneta, jet_pt, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, jet_pt_log,  raw_jet_eta, raw_jet_eta_hw, raw_cmssw_bscore, raw_inputs, num_elements=4)
+        jet_genpt, jet_geneta, jet_pt, jet_pt_log, jet_eta, jet_eta_hw, cmssw_bscore, jet_nn_inputs = grouped_arrays
         event_gen_mHH = None
 
     #Calculate the ht
@@ -389,7 +391,7 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
-    model_bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_eta_hw, jet_eta, apply_light, model.class_labels)
+    model_bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta_hw, jet_eta, apply_light, model.class_labels)
     model_pt = jet_pt * regression
     # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
     model_ht = jet_ht
@@ -650,8 +652,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_100826_170X/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_100826_170X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')

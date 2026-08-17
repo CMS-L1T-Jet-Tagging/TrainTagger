@@ -135,6 +135,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_pt_log = extract_array(minbias, 'jet_pt_log', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
@@ -147,11 +148,11 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 1 element
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_eta_hw, raw_jet_phi, raw_inputs, num_elements=1)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_jet_phi, raw_inputs, num_elements=1)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_eta_hw, jet_phi, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_pt_log, jet_eta, jet_eta_hw, jet_phi, jet_nn_inputs = grouped_arrays
 
     # Additional cuts recommended here:
     # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
@@ -161,6 +162,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
 
     #flatten for NN eval
     jet_pts = np.asarray(ak.flatten(jet_pt))
+    jet_pts_log = np.asarray(ak.flatten(jet_pt_log))
     jet_etas = np.asarray(ak.flatten(jet_eta))
     jet_eta_hw = np.asarray(ak.flatten(jet_eta_hw))
     jet_inputs = np.asarray(ak.flatten(jet_nn_inputs))
@@ -181,9 +183,8 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
         selected_jet_inputs = jet_inputs[cuts]
         raw_inputs_dict = {
             'basic_input': selected_jet_inputs,
-            'jet_pt': jet_pts[cuts],
-            'jet_pt_log': np.log(jet_pts[cuts]),
-            'jet_eta': abs(jet_eta_hw[cuts]),
+            'jet_pt_log': jet_pts_log[cuts],
+            'jet_eta': jet_eta_hw[cuts],
         }
         pred_scores, pt_ratios = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
         all_scores[cuts] = tau_score(pred_scores, model.class_labels)
@@ -250,6 +251,7 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
     jet_eta =  extract_array(minbias, 'jet_eta_phys', n_entries)
     jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
     jet_pt = extract_array(minbias, 'jet_pt_phys', n_entries)
+    jet_pt_log = extract_array(minbias, 'jet_pt_log', n_entries)
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
@@ -257,13 +259,12 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
 
     #Get the NN predictions
     selected_eta_inputs = nn_inputs[eta_selection]
-    selected_jet_pt, selected_jet_eta = jet_pt[eta_selection], jet_eta[eta_selection]
+    selected_jet_pt, selected_jet_eta, selected_jet_pt_log = jet_pt[eta_selection], jet_eta[eta_selection], jet_pt_log[eta_selection]
     selected_jet_eta_hw = jet_eta_hw[eta_selection]
     raw_inputs_dict = {
         'basic_input': selected_eta_inputs,
-        'jet_pt': selected_jet_pt,
-        'jet_pt_log': np.log(selected_jet_pt),
-        'jet_eta': abs(selected_jet_eta_hw),
+        'jet_pt_log': selected_jet_pt,
+        'jet_eta': selected_jet_eta_hw,
     }
     pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
     model_tau = tau_score(pred_score, model.class_labels )
@@ -388,6 +389,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     gen_dr_raw = extract_array(signal, 'jet_genmatch_dR', n_entries)
 
     l1_pt_raw = extract_array(signal, 'jet_pt', n_entries).to_numpy()
+    l1_pt_log = extract_array(signal, 'jet_pt_log', n_entries)
     l1_eta_raw = extract_array(signal, 'jet_eta_phys', n_entries)
     l1_eta_raw_hw = extract_array(signal, 'jet_eta', n_entries).to_numpy()
     jet_taupt_raw= extract_array(signal, 'jet_taupt', n_entries)
@@ -397,9 +399,8 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
     raw_inputs_dict = {
         'basic_input': nn_inputs,
-        'jet_pt': l1_pt_raw,
-        'jet_pt_log': np.log(l1_pt_raw),
-        'jet_eta': abs(l1_eta_raw_hw),
+        'jet_pt_log': l1_pt_log,
+        'jet_eta': l1_eta_raw_hw,
     }
     pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 

@@ -54,7 +54,7 @@ def doPlots(model, outputdir, inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_pt_hw, jet_eta_hw = to_ML(data, class_labels)
+    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_pt_hw, jet_eta_hw, jet_pt_log = to_ML(data, class_labels)
 
     labels = list(class_labels.keys())
 

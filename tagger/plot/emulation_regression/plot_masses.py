@@ -1,13 +1,10 @@
-import uproot
 import numpy as np
 import awkward as ak
 import os
 import matplotlib.pyplot as plt
 import mplhep as hep
-from scipy.stats import norm
 from coffea.nanoevents.methods import vector
 from argparse import ArgumentParser
-from scipy.interpolate import interp1d
 
 # plotting imports
 from extras import LABELS_DICT, COLORS_DICT, PROCS_DICT, COLLECTION_KEYS
@@ -92,32 +89,25 @@ def match_genjets(daughters, genjets, dr_max=0.4, rel_pt_max=0.5):
     return matched_parts, matched_jets
 
 # find Higgs daughters and match to genjets
-def find_daughter_jets(pdgId_mother, genparts, genjets, pdgId_daughter=0,
-                 dr_max=0.4, rel_pt_max=0.5):
+def find_daughter_jets(pdgId_mother, genparts, genjets, pdgId_daughter):
 
     genPartMothers = genparts.pdgId[genparts.genPartIdxMother]
 
-    if pdgId_daughter == 0:
-        daughters = genparts[
-            (genparts.status == 23)
-            & (genPartMothers == pdgId_mother)
-        ]
-    else:
-        daughters = genparts[
-            (abs(genparts.pdgId) == pdgId_daughter)
-            & (genparts.status == 23)
-            & (genPartMothers == pdgId_mother)
-        ]
+    daughters = genparts[
+        (abs(genparts.pdgId) == pdgId_daughter)
+        & (genparts.status == 23)
+        & (genPartMothers == pdgId_mother)
+    ]
     matched_parts, matched_jets = match_genjets(daughters, genjets)
 
     return ak.Array(matched_parts), ak.Array(matched_jets), daughters
 
 # match Higgs genjets to reco jets
-def match_to_reco(proc_coll, daughter_pdgId=0):
+def match_to_reco(proc_coll, daughter_pdgId):
     # Compute the delta R between each reco jet and each filtered genjet
     genparts = to_coffea(proc_coll['genparts'])
     genjets = to_coffea(proc_coll['genjets'])
-    _, matched_genjets, daughters = find_daughter_jets(25, genparts, genjets, pdgId_daughter=daughter_pdgId)
+    _, matched_genjets, daughters = find_daughter_jets(25, genparts, genjets, daughter_pdgId)
     recos = {}
     for coll in COLLECTION_KEYS:
         for c in ['raw', 'jecs']:
@@ -134,7 +124,7 @@ def match_to_reco(proc_coll, daughter_pdgId=0):
     return recos
 
 # Match top and W partons to genjets and then to reco jets, use only hadronic decays
-def find_top_daughters(gen, colls, dr_max=0.4, rel_pt_max=0.5):
+def find_top_daughters(gen, colls):
     genparts = to_coffea(gen['genparts'])
     genjets = to_coffea(gen['genjets'])
     genPartMothers = genparts.pdgId[genparts.genPartIdxMother]
@@ -154,7 +144,7 @@ def find_top_daughters(gen, colls, dr_max=0.4, rel_pt_max=0.5):
     def decay_mode(particles):
         pdg = abs(particles.pdgId)
 
-        def is_quark(id):
+        def is_quark(pdg):
             return (pdg >= 1) & (pdg <= 6)
         def is_lepton(id):
             return (pdg == 11) | (pdg == 13) | (pdg == 15)
@@ -209,7 +199,6 @@ def find_top_daughters(gen, colls, dr_max=0.4, rel_pt_max=0.5):
         # only hadronic decay and correct number of matched genjets
         gen_mask = (ak.num(matched_genjets) == jet_count) & (decay_type == 'hadronic')
         recos[f'{particle}_genjets'] = to_coffea(matched_genjets[gen_mask])
-        a = to_coffea(matched_genjets[gen_mask]).sum(axis=1).mass
 
         # Match to reco
         for coll in colls:
@@ -294,21 +283,21 @@ if __name__ == "__main__":
             'label': r"$m_{t}$ = 173 GeV",
             'x_label': r"Trijet invariant mass [GeV]",
             'bins': np.linspace(0, 310, 40),
-            'proc': ['TT_PU200'],
+            'proc': ['TT_PU200']
         },
         'w': {
             'mass': 80,
             'label': r"$m_{W}$ = 80 GeV",
             'x_label': r"Dijet invariant mass [GeV]",
             'bins': np.linspace(0, 180, 40),
-            'proc': ['TT_PU200'],
+            'proc': ['TT_PU200']
         },
         'h': {
             'mass': 125,
             'label': r"$m_{H}$ = 125 GeV",
             'x_label': r"Dijet invariant mass [GeV]",
             'bins': np.linspace(0, 230, 40),
-            'proc': ['VBFHToBB_PU200', 'VBFHToCC_PU200'],
+            'proc': ['VBFHToBB_PU200', 'VBFHToCC_PU200']
         }
     }
 

@@ -16,41 +16,45 @@ from load_collections import load_collections
 # style from tagger
 import tagger.plot.style as style
 from tagger.plot.common import to_coffea, MINBIAS_RATE
+
 style.set_style()
 
 # Turn-On Curves and Working Points
+def inv_helper(jet1, jet2):
+    return (jet1 + jet2).mass
+
 def get_obj(coll, n_reco, n_gen, obj):
     coll = to_coffea(coll)
     if obj == 'jet1':
         num_cut = (n_reco > 0) & (n_gen > 0)
-        return ak.max(coll.pt[num_cut], axis=1), np.arange(80, 500, 0.25)
+        return ak.max(coll.pt[num_cut], axis=1), np.arange(80, 500, 0.25), 500
     elif obj == 'jet2':
         num_cut = (n_reco > 1) & (n_gen > 1)
-        return ak.sort(coll.pt[num_cut], ascending=False)[:,1], np.arange(50, 320, 0.25)
+        return ak.sort(coll.pt[num_cut], ascending=False)[:,1], np.arange(50, 320, 0.25), 500
     elif obj == 'jet3':
         num_cut = (n_reco > 2) & (n_gen > 2)
-        return ak.sort(coll.pt[num_cut], ascending=False)[:,2], np.arange(5, 100, 0.25)
+        return ak.sort(coll.pt[num_cut], ascending=False)[:,2], np.arange(5, 100, 0.25), 300
     elif obj == 'ht15':
-        return ak.sum(coll.pt[coll.pt > 15], axis=1), np.arange(100, 550, 0.25)
+        return ak.sum(coll.pt[coll.pt > 15], axis=1), np.arange(100, 550, 0.25), 1200
     elif obj == 'ht30':
-        return ak.sum(coll.pt[coll.pt > 30], axis=1), np.arange(100, 550, 0.25)
+        return ak.sum(coll.pt[coll.pt > 30], axis=1), np.arange(100, 550, 0.25), 1000
 
     # invarinat masses
     elif obj == 'mjj':
         num_cut = (n_reco > 1) & (n_gen > 1)
-        return (coll[num_cut][:, 0] + coll[num_cut][:, 1]).mass, np.arange(400, 2200, 0.25)
+        return (coll[num_cut][:, 0] + coll[num_cut][:, 1]).mass, np.arange(400, 2200, 0.25), 1500
     elif obj == 'max_mjj':
         num_cut = (n_reco > 1) & (n_gen > 1)
         mjjs = coll[num_cut].metric_table(coll[num_cut], metric=inv_helper)
-        return ak.max(ak.max(mjjs, axis=-1), axis=-1), np.arange(400, 2800, 0.25)
+        return ak.max(ak.max(mjjs, axis=-1), axis=-1), np.arange(400, 2800, 0.25), 2000
 
     # symmetric di- and quad jet seeds
     elif obj == 'dijet':
         num_cut = (n_reco > 1) & (n_gen > 1)
-        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :2].pt, axis=1), np.arange(10, 500, 0.1)
+        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :2].pt, axis=1), np.arange(10, 500, 0.1), 400
     elif obj == 'quadjet':
         num_cut = (n_reco > 3) & (n_gen > 3)
-        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :4].pt, axis=1), np.arange(1, 200, 0.05)
+        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :4].pt, axis=1), np.arange(1, 200, 0.05), 200
 
 def get_rate_wps(reco, target_rates, obj):
     wps = {}
@@ -59,7 +63,7 @@ def get_rate_wps(reco, target_rates, obj):
     sort_idx = ak.argsort(reco.pt[ak.num(reco.pt) > 0], axis=1, ascending=False, stable=True)
     reco = reco[ak.num(reco.pt) > 0][sort_idx] # sort by pt
     n_reco = ak.num(reco)
-    reco_obj, bins = get_obj(reco, n_reco, n_reco, obj)
+    reco_obj, bins, _ = get_obj(reco, n_reco, n_reco, obj)
     for pt_cut in bins:
         selection = reco_obj > pt_cut
         rate = (np.sum(selection) / total_events) * MINBIAS_RATE
@@ -82,21 +86,19 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, rat
         for t in turn_on_quantity:
             fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
             hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
-            bins = np.linspace(0, 2500, 60) if t in ['mjj', 'max_mjj'] else np.linspace(0, 2500, 125)
-            bin_centers = 0.5 * (bins[:-1] + bins[1:])
-            xerr = (bins[1:] - bins[:-1]) / 2
             for coll in COLLECTION_KEYS:
-                plateau_start = 0
                 for coll_type in ['raw', 'jecs']:
                     if coll_type == 'jecs' and coll == 'scPuppiL1TSC4NGJetJets':
-                        continue
+                        continue # no need for jecs on top of model for now
                     reco = to_coffea(tt_collection[coll][coll_type])
                     genjets = to_coffea(tt_collection['genjets'])
                     total_events = len(reco)
                     reco, genjets = reco[ak.num(reco) > 0], genjets[ak.num(reco) > 0]  # Only consider events with at least one jet
                     n_reco, n_gen = ak.num(reco), ak.num(genjets)
-                    gen, _ = get_obj(genjets, n_reco, n_gen, t)
-                    reco, _ = get_obj(reco, n_reco, n_gen, t)
+                    gen, bins, bin_cut = get_obj(genjets, n_reco, n_gen, t)
+                    reco, _, _ = get_obj(reco, n_reco, n_gen, t)
+                    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+                    x_errs = (bins[1:] - bins[:-1]) / 2
                     effs, y_errs = [], []
                     wp = minbias_collection[coll][f'wp_{t}_{r}_{coll_type}']
                     for lower, upper in zip(bins[:-1], bins[1:]):
@@ -106,19 +108,13 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, rat
                         effs.append(bin_eff)
                         y_errs.append(y_err)
 
-                    # dynamically set plotting range
-                    if np.max(effs) >= 0.96:
-                        plateau_start = max(plateau_start, np.where(np.array(effs) > 0.95)[0][0]) + 8 # identify plateau start
-                    else:
-                        plateau_start = len(bins) - 1
-
                     # Plot turn-on curve with error bars and spline interpolation
                     color = COLORS_DICT[f"{coll}_{coll_type}"]
                     linestyle = LINESTYLES_DICT[f"{coll}_{coll_type}"]
                     label = '{}, {} GeV'.format(LABELS_DICT[f"{coll}_{coll_type}"], np.round(wp))
                     ax.errorbar(
                         bin_centers, effs,
-                        xerr=xerr, yerr=y_err,
+                        xerr=x_errs, yerr=y_errs,
                         fmt='o', capsize=3, color=color, label=label
                     )
                     spl = make_interp_spline(bin_centers, effs, k=3)
@@ -127,12 +123,12 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, rat
                     ax.plot(x_smooth, y_smooth, color=color, linestyle=linestyle)
 
             # Unify all collections in one plot
-            plateau_start = min(plateau_start, len(bins) - 1) # ensure plateau index is within bounds
-            ax.legend(title=PROCS_DICT[proc], fontsize=35, title_fontsize=35)
-            ax.set_xlim(0, bins[plateau_start])
+            x_lim = bins[bins >= bin_cut][0] if np.max(bins) >= bin_cut else bins[-1]
+            ax.legend(title=PROCS_DICT[proc], fontsize=40, title_fontsize=40)
+            ax.set_xlim(0, x_lim)
             ax.set_ylim(0, 1.05)
-            ax.set_xlabel(f"{LABELS_DICT[t]} [GeV]")
-            ax.set_ylabel(f"Eff (L1 rate at {r} kHz)")
+            ax.set_xlabel(f"{LABELS_DICT[t]} [GeV]", fontsize=44)
+            ax.set_ylabel(f"Eff (L1 rate at {r} kHz)", fontsize=44)
             fig.savefig(f"{plot_dir}/turn_on_curve_{t}_{r}kHz.pdf", bbox_inches='tight')
             fig.savefig(f"{plot_dir}/turn_on_curve_{t}_{r}kHz.png", bbox_inches='tight')
             plt.close(fig)

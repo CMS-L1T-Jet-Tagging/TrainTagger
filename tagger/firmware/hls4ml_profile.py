@@ -162,7 +162,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-of', '--outpath_firmware', default='output/weightedAverageSimple4bits/firmware', help='Jet tagger firmware directory'
     )
-    parser.add_argument('-i', '--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_100826_170X/All200_part6.root', help='Path to profiling data rootfile')
+    parser.add_argument('-i', '--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200_part6.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
     parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
 

@@ -31,9 +31,6 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     uncorrected_res = reco_pt - truth_pt
     regressed_res = regressed_pt - truth_pt
 
-    uncorr_response = reco_pt / truth_pt
-    reg_response = regressed_pt / truth_pt
-
     rms_uncorr = []
     rms_reg = []
     rms_uncorr_err = []
@@ -104,7 +101,7 @@ def rms(procs_dict, proc, plot_dir):
                     rms_colls['scPuppiExtendedJets'][0],
                     yerr=rms_colls['scPuppiExtendedJets'][2],
                     fmt='o',
-                    label=LABELS_DICT[f"scPuppiExtendedJets_raw"],
+                    label=LABELS_DICT["scPuppiExtendedJets_raw"],
                     capsize=4,
                     ms=10,
                     elinewidth=3,
@@ -192,10 +189,6 @@ def get_response(truth_pt, reco_pt, pt_ratio, reduce):
     regressed_response = []
     uncorrected_errors = []
     regressed_errors = []
-    uncorrected_response_bins = []
-    regressed_response_bins = []
-    raw_pt_bins = []
-    corrected_pt_bins = []
 
     # Loop over the pT ranges
     for i in range(len(PT_BINS) - 1):
@@ -229,11 +222,6 @@ def get_response(truth_pt, reco_pt, pt_ratio, reduce):
             # No events in bin
             uncorrected_errors.append(0)
             regressed_errors.append(0)
-
-        uncorrected_response_bins.append(uncorrected_response_bin)
-        regressed_response_bins.append(regressed_response_bin)
-        raw_pt_bins.append(reco_pt[selection])
-        corrected_pt_bins.append(regressed_pt[selection])
 
     return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
 
@@ -334,8 +322,8 @@ def distribution_heatmaps(l1jets, plot_dir):
         y_label = LABELS_DICT[f'{coll}_{t}']
         plot_heatmap(h[0][::-1], y_label, 'Entries', f"{plot_dir}/{coll}_{t}_heatmap")
 
-    ratio = np.where(ratios[1][0] != 0, ratios[0][0] / ratios[1][0], 0)
-    plot_heatmap(ratios[0][0][::-1] / ratios[1][0][::-1],
+    ratio = np.where(ratios[1][0][::-1] != 0, ratios[0][0][::-1] / ratios[1][0][::-1], 0)
+    plot_heatmap(ratio,
         r'Reco Jet $p_{T}$',
         f'Ratio {LABELS_DICT[COLLECTION_KEYS[0]]} vs {LABELS_DICT[COLLECTION_KEYS[1]+"_jecs"]}',
         f"{plot_dir}/ratio_heatmap", plot_ratio=True)

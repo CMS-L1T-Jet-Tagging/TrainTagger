@@ -377,10 +377,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
     plt.close()
 
 
-def get_response(x_variable, bins, truth_pt, reco_pt, pt_ratio, pt_mask, reduce):
-
-    # apply pt mask
-    x_variable, truth_pt, reco_pt, pt_ratio = x_variable[pt_mask], truth_pt[pt_mask], reco_pt[pt_mask], pt_ratio[pt_mask]
+def get_response(truth_pt, reco_pt, pt_ratio):
 
     # Calculate the regressed pt
     regressed_pt = np.multiply(reco_pt, pt_ratio)
@@ -392,26 +389,22 @@ def get_response(x_variable, bins, truth_pt, reco_pt, pt_ratio, pt_mask, reduce)
     regressed_errors = []
 
     # Loop over the pT ranges
-    for i in range(len(bins) - 1):
-        bins_min = bins[i]
-        bins_max = bins[i + 1]
+    for i in range(len(PT_BINS) - 1):
+        pt_min = PT_BINS[i]
+        pt_max = PT_BINS[i + 1]
 
-        selection = (x_variable > bins_min) & (x_variable < bins_max)
+        selection = (truth_pt > pt_min) & (truth_pt < pt_max)
 
         # Compute responses
         uncorrected_response_bin = reco_pt[selection] / truth_pt[selection]
         regressed_response_bin = regressed_pt[selection] / truth_pt[selection]
 
         # Append the mean response
-        if reduce == "mean":
-            uncorrected_response.append(np.mean(uncorrected_response_bin))
-            regressed_response.append(np.mean(regressed_response_bin))
-        if reduce == "median":
-            uncorrected_response.append(np.median(uncorrected_response_bin))
-            regressed_response.append(np.median(regressed_response_bin))
+        uncorrected_response.append(np.mean(uncorrected_response_bin))
+        regressed_response.append(np.mean(regressed_response_bin))
 
         # Compute the standard deviation and uncertainty in the mean
-        n_events = len(x_variable[selection])
+        n_events = len(truth_pt[selection])
 
         if n_events > 0:
             uncorrected_std = np.std(uncorrected_response_bin)
@@ -423,7 +416,7 @@ def get_response(x_variable, bins, truth_pt, reco_pt, pt_ratio, pt_mask, reduce)
             # No events in bin
             uncorrected_errors.append(0)
             regressed_errors.append(0)
-    print(uncorrected_response, regressed_response)
+
     return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
 
 def hist_response(pt_ratio, y_test, class_labels, plot_dir):
@@ -456,123 +449,101 @@ def hist_response(pt_ratio, y_test, class_labels, plot_dir):
     plt.close()
 
 
-def response(class_labels, y_test, truth_pt_test, reco_pt_test, reco_eta, pt_ratio, plot_dir):
+def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
+    save_dir = os.path.join(plot_dir, 'response')
+    os.makedirs(save_dir, exist_ok=True)
 
-    ETA_BINS = [-2.4, -2., -1.6, -1.2, -0.8, -0.4, 0., 0.4, 0.8, 1.2, 1.6, 2., 2.4]
-    reco_eta = np.pi / 710 * reco_eta  # convert to physical eta
-    for bins, l in zip([ETA_BINS, PT_BINS], [(reco_eta, r"$\eta$", "eta"), (truth_pt_test, r"$p_T^{Gen}$ [GeV]", "pt")]):
-        x_variable, var_label, dir_label = l
-        pt_mask = reco_pt_test > 40 if dir_label == "eta" else reco_pt_test > 0
-        plot_range = (np.min(bins), np.max(bins))
+    # pT coordinate points for plotting
+    pt_points = [np.mean((PT_BINS[i], PT_BINS[i + 1])) for i in range(len(PT_BINS) - 1)]
 
-        save_dir = os.path.join(plot_dir, 'response_' + dir_label)
-        os.makedirs(save_dir, exist_ok=True)
+    def plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, flavor, plot_name):
 
-        # pT coordinate points for plotting
-        bin_points = [np.mean((bins[i], bins[i + 1])) for i in range(len(bins) - 1)]
+        # Plot the response
+        fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+        hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+        ax.errorbar(
+            pt_points,
+            uncorrected_response,
+            yerr=uncorrected_errors,
+            fmt='o',
+            label=f"Uncorrected - {style.CLASS_LABEL_STYLE[flavor]}",
+            capsize=4,
+            ms=8,
+            elinewidth=3,
+        )
+        ax.errorbar(
+            pt_points,
+            regressed_response,
+            yerr=regressed_errors,
+            fmt='o',
+            label=f"Regressed - {style.CLASS_LABEL_STYLE[flavor]}",
+            capsize=4,
+            ms=8,
+            elinewidth=3,
+        )
 
-        def plot_response(uncorrected_response, regressed_response, uncorrected_errors, regressed_errors, x_label, flavor, plot_range, plot_name):
+        ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
+        ax.set_ylabel("Response (L1/Gen)")
+        ax.legend()
+        ax.grid()
 
-            # Plot the response
-            fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-            hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
-            ax.errorbar(
-                bin_points,
-                uncorrected_response,
-                yerr=uncorrected_errors,
-                fmt='o',
-                label=f"Uncorrected - {style.CLASS_LABEL_STYLE[flavor]}",
-                capsize=4,
-                ms=8,
-                elinewidth=3,
-            )
-            ax.errorbar(
-                bin_points,
-                regressed_response,
-                yerr=regressed_errors,
-                fmt='o',
-                label=f"Regressed - {style.CLASS_LABEL_STYLE[flavor]}",
-                capsize=4,
-                ms=8,
-                elinewidth=3,
-            )
+        # Save the plot
+        save_path = os.path.join(save_dir, plot_name)
+        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+        plt.savefig(f"{save_path}.png", bbox_inches='tight')
+        plt.close()
 
-            ax.set_xlabel(f"Jet {x_label}")
-            ax.set_ylabel("Response (L1/Gen)")
-            ax.set_xlim(plot_range)
-            ax.set_ylim(0.7, 1.8)
-            ax.legend()
-            ax.grid()
+    # Inclusive response
+    uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
+        truth_pt_test, reco_pt_test, pt_ratio
+    )
+    plot_response(
+        uncorrected_response,
+        regressed_response,
+        uncorrected_errors,
+        regressed_errors,
+        flavor='inclusive',
+        plot_name="inclusive_response",
+    )
 
-            # Save the plot
-            save_path = os.path.join(save_dir, plot_name)
-            plt.savefig(f"{save_path}.pdf", bbox_inches='tight', transparent=True)
-            plt.savefig(f"{save_path}.png", bbox_inches='tight', transparent=True)
-            plt.close()
+    # Flavor-wise response
+    for flavor in class_labels.keys():
+        idx = class_labels[flavor]
+        flavor_selection = y_test[:, idx] == 1
 
-        # Inclusive response
-        for reduce in ["mean", "median"]:
-            uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
-                x_variable, bins, truth_pt_test, reco_pt_test, pt_ratio, pt_mask, reduce
-            )
+        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
+            truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection]
+        )
+        plot_response(
+            uncorrected_response,
+            regressed_response,
+            uncorrected_errors,
+            regressed_errors,
+            flavor=flavor,
+            plot_name=f"{flavor}_response",
+        )
 
-            plot_response(
-                uncorrected_response,
-                regressed_response,
-                uncorrected_errors,
-                regressed_errors,
-                x_label=var_label,
-                flavor='inclusive',
-                plot_range=plot_range,
-                plot_name=f"inclusive_response_{reduce}",
-            )
+    # Taus, jets, leptons rms
+    rms_selection = {
+        'taus': [class_labels['taup'], class_labels['taum']],
+        'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
+        'leptons': [class_labels[key] for key in ['muon', 'electron']],
+    }
 
-        # Flavor-wise response
-        for flavor in class_labels.keys():
-            idx = class_labels[flavor]
-            flavor_selection = y_test[:, idx] == 1
-            print(flavor)
-            for reduce in ["mean", "median"]:
-                uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
-                    x_variable[flavor_selection], bins, truth_pt_test[flavor_selection], reco_pt_test[flavor_selection], pt_ratio[flavor_selection],
-                    pt_mask[flavor_selection], reduce
-                )
-                plot_response(
-                    uncorrected_response,
-                    regressed_response,
-                    uncorrected_errors,
-                    regressed_errors,
-                    x_label=var_label,
-                    flavor=flavor,
-                    plot_range=plot_range,
-                    plot_name=f"{flavor}_response_{reduce}",
-                )
+    for key in rms_selection.keys():
+        selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
 
-        # Taus, jets, leptons rms
-        rms_selection = {
-            'taus': [class_labels['taup'], class_labels['taum']],
-            'jets': [class_labels[key] for key in ['b', 'charm', 'light', 'gluon']],
-            'leptons': [class_labels[key] for key in ['muon', 'electron']],
-        }
-
-        for key in rms_selection.keys():
-            selection = sum(y_test[:, idx] for idx in rms_selection[key]) > 0
-
-            for reduce in ["mean", "median"]:
-                uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
-                    x_variable[selection], bins, truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection],
-                    pt_mask[selection], reduce
-                )
-                plot_response(
-                    uncorrected_response,
-                    regressed_response,
-                    uncorrected_errors,
-                    regressed_errors,
-                    x_label=var_label,
-                    flavor=key,
-                    plot_range=plot_range,
-                    plot_name=f"{key}_response_{reduce}",
-                )
+        uncorrected_response, regressed_response, uncorrected_errors, regressed_errors = get_response(
+            truth_pt_test[selection], reco_pt_test[selection], pt_ratio[selection]
+        )
+        plot_response(
+            uncorrected_response,
+            regressed_response,
+            uncorrected_errors,
+            regressed_errors,
+            flavor=key,
+            plot_name=f"{key}_response",
+        )
 
     return
 
@@ -1049,7 +1020,6 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-    reco_eta_test = np.load(f"{model.output_directory}/testing_data/reco_eta_test.npy")
 
     model_outputs = model.jet_model.predict(test_dict)
 
@@ -1061,7 +1031,7 @@ def basic(model, signal_dirs):
     plot_shaply(model, test_dict, model.class_labels, plot_dir)
 
     # Plot inclusive response and individual flavor
-    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, reco_eta_test, pt_ratio, plot_dir)
+    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
     if "pileup" in model.class_labels.keys():
         pu_mask = y_test[:, model.class_labels['pileup']] == 1

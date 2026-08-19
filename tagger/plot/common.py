@@ -29,8 +29,8 @@ WPs_CMSSW = {
     'l1_pt_sc_barrel': 164,  # GeV
     'l1_pt_sc_endcap': 121,  # GeV
     # Slide 19 here: https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
-    'btag': 1.88, # 2.32,
-    'btag_l1_ht': 208, # 220
+    'btag': 2.32,
+    'btag_l1_ht': 220
 }
 
 # FUNCTIONS

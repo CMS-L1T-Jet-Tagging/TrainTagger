@@ -107,11 +107,6 @@ class QKerasModel(JetTagModel):
                 min_lr=self.training_config['ReduceLROnPlateau_min_lr'],
                 verbose=2,
             ),
-            # ModelCheckpoint(
-            #     filepath=os.path.join(f"{self.output_directory}","weights_epoch_{epoch:02d}.h5"),
-            #     save_weights_only=False,
-            #     save_freq="epoch"
-            # )
         ]
 
         # Define the pruning
@@ -210,7 +205,7 @@ class QKerasModel(JetTagModel):
         # get relevant feature indices
         pt_rel_idx = puppicand_fields['baseline_hardware_inputs'].index("pt_rel")
 
-        # build all possible inputs
+        # build all possible inputs, add here if ever in need of new ones
         input_dict = {
             'basic_input': raw_inputs['basic_input'],
             'basic_mask': constituents_mask(raw_inputs['basic_input'], 10),

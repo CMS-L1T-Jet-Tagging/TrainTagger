@@ -20,7 +20,6 @@ def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt, jet_pt_hw
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_hw_test.npy"), jet_pt_hw)
-    np.save(os.path.join(out_dir, "testing_data/reco_eta_test.npy"), jet_eta_hw)
 
     print(f"Test labels saved to {out_dir}")
 

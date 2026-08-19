@@ -44,7 +44,7 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_pt_log, jet_eta_hw, jet_eta, 
     og_shape = ak.num(jet_pt)
     model_inputs = {
         'basic_input': np.asarray(ak.flatten(basic_inputs)),
-        'jet_pt_log': np.asarray(jet_pt_log),
+        'jet_pt_log': np.asarray(ak.flatten(jet_pt_log)),
         'jet_eta': np.asarray(ak.flatten(jet_eta_hw)),
         }
 
@@ -184,11 +184,8 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
 
     bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt_sel, jet_pt_log_sel, jet_eta_hw_sel, jet_eta_sel, apply_light, model.class_labels)
     jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
-    model_pt = jet_pt_sel * regression
-    # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta_sel) < 2.4)], axis=1)
-    model_ht = jet_ht
 
-    assert(len(bscore_sum) == len(model_ht))
+    assert(len(bscore_sum) == len(jet_ht))
 
     #Define the histograms (pT edge and NN Score edge)
     ht_edges = list(np.arange(0,500,2)) + [10000] #Make sure to capture everything
@@ -197,7 +194,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     RateHist = Hist(hist.axis.Variable(ht_edges, name="ht", label="ht"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
 
-    RateHist.fill(ht = model_ht, nn = bscore_sum)
+    RateHist.fill(ht = jet_ht, nn = bscore_sum)
 
     #Derive the rate
     rate_list = []
@@ -306,13 +303,10 @@ def load_all_bbbb_WPs(model, apply_sel, apply_light):
 def get_logical_or_seed(minbias_path, model, model_wps, ht_wp, n_entries=100000, tree='outnano/Jets', apply_sel=True, apply_light=False):
     n_events, basic_inp, jet_pt, jet_pt_log, jet_eta, jet_eta_hw = load_cmssw_inputs(minbias_path, n_entries, tree, model)
     b_sums, regression = nn_bscore_sum(model, basic_inp, jet_pt, jet_pt_log, jet_eta_hw, jet_eta, apply_light, model.class_labels, n_jets=4)
-    model_pt = jet_pt * regression # regression scores 0 for jets that don't pass the selection
     jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
-    # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
-    model_ht = jet_ht
     ht_selection = (jet_ht > ht_wp)
     model_b_wp, model_ht_wp = model_wps
-    model_selection = (model_ht > model_ht_wp) & (b_sums > model_b_wp) & default_selection(jet_pt, jet_eta, apply_sel)
+    model_selection = (jet_ht > model_ht_wp) & (b_sums > model_b_wp) & default_selection(jet_pt, jet_eta, apply_sel)
     final_selection = model_selection | ht_selection
     rate = (np.sum(final_selection) / n_events) * MINBIAS_RATE
     return np.round(rate, 2)
@@ -392,9 +386,6 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four
     model_bscore_sum, regression = nn_bscore_sum(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta_hw, jet_eta, apply_light, model.class_labels)
-    model_pt = jet_pt * regression
-    # model_ht = ak.sum(model_pt[(model_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
-    model_ht = jet_ht
 
     cmssw_selection = (jet_ht > cmssw_btag_ht) & (cmsssw_bscore_sum > cmssw_btag)
     cmssw_efficiency = np.round(ak.sum(cmssw_selection) / n_events, 2)
@@ -416,7 +407,7 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
 
     for HT_cut in HT_range:
         working_point_NN = interp_func(HT_cut)
-        cand_model_selection = (model_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_selection(jet_pt, jet_eta, apply_sel)
+        cand_model_selection = (jet_ht > HT_cut) & (model_bscore_sum > working_point_NN) & default_selection(jet_pt, jet_eta, apply_sel)
         cand_model_pure_selection = cand_model_selection & ~ht_only_selection
 
         eff = np.mean(cand_model_selection)
@@ -435,7 +426,7 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
     with open(wp_path, "w") as f:
         json.dump(working_point, f, indent=4)
 
-    model_selection = (model_ht > model_ht_wp) & (model_bscore_sum > model_btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
+    model_selection = (jet_ht > model_ht_wp) & (model_bscore_sum > model_btag_wp) & default_selection(jet_pt, jet_eta, apply_sel)
     model_efficiency = np.round(ak.sum(model_selection) / n_events, 2)
     model_pure_selection = model_selection & ~ht_only_selection
     model_pure_efficiency = np.round(ak.sum(model_pure_selection) / n_events, 2)
@@ -652,8 +643,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-s', '--sample', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/GluGluHHTo4B_PU200.root' , help = 'Signal sample for HH->bbbb')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for b-tagging')

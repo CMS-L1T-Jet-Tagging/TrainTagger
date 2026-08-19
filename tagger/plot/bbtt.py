@@ -153,12 +153,12 @@ def max_tau_sum(taup_preds, taum_preds):
 
     return tau_scores2, tau_idxs
 
-def nn_score_sums(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta, class_labels, n_jets=4):
+def nn_score_sums(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta_hw, class_labels, n_jets=4):
     #Btag input list for first 4 jets
     btag_inputs = [{
         'basic_input': np.asarray(jet_nn_inputs[:, i]),
         'jet_pt_log': np.asarray(jet_pt_log[:, i]),
-        'jet_eta': np.asarray(jet_eta[:, i]),
+        'jet_eta': np.asarray(jet_eta_hw[:, i]),
         }
         for i in range(0, n_jets)]
 
@@ -870,8 +870,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--signal', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/GluGluHHTo2B2Tau_PU200.root' , help = 'Signal sample for HH->bbtt')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-s', '--signal', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/GluGluHHTo2B2Tau_PU200.root' , help = 'Signal sample for HH->bbtt')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveRate', action='store_true', help='derive the rate for the baseline bbtt seeds')

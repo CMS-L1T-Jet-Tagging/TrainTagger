@@ -409,7 +409,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     return train_data, test_data, class_labels, input_vars, extra_vars
 
 def make_data(
-    infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/All200.root',
+    infile='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/All200_part0.root',
     outdir='training_data/',
     extra_basic_inputs=[],
     use_pu=False,

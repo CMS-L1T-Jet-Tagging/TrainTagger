@@ -205,4 +205,3 @@ if __name__ == "__main__":
     layer_names = [model.jet_model.layers[i].name for i in range(len(model.jet_model.layers))]
     if 'pt_weights_output' in layer_names:
         pt_weights_plotting(model, test_dict, y_test, 'pt_weights_output', output_dir)
-

@@ -39,7 +39,7 @@ if __name__ == "__main__":
     extended_basic_inp = config['inputs']['basic_input_config']
     use_pu = config['training_config']['pileup']
 
-    # make_data(infile=args.input, extra_basic_inputs = extended_basic_inp, use_pu=use_pu, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    make_data(infile=args.input, extra_basic_inputs = extended_basic_inp, use_pu=use_pu, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:

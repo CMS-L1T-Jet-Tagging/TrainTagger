@@ -786,7 +786,7 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
         if 'jet_features' in layer_order_class:
             shap_values_jet = explainer.shap_values(list_inp_class)[layer_order_class.index('jet_features')]
             shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
-            feature_names = model.input_vars + model.inputs['custom_features']
+            feature_names = model.input_vars + model.inputs['jet_features']
         else:
             shap_values = shap_values_basic
             feature_names = model.input_vars
@@ -810,7 +810,7 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
         if 'jet_features' in layer_order_reg:
             shap_values_jet = explainer.shap_values(list_inp_reg)[layer_order_reg.index('jet_features')]
             shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
-            feature_names = model.input_vars + model.inputs['custom_features']
+            feature_names = model.input_vars + model.inputs['jet_features']
         else:
             shap_values = shap_values_basic
             feature_names = model.input_vars
@@ -1056,13 +1056,12 @@ def basic(model, signal_dirs):
         else:
             signal_indices, sample_train, sample_test = filter_process(test_dict['basic_input'], model, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_reco_pt_log = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
-            sample_reco_eta = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)
             sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
+            sample_jet_features = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
             sample_raw_inputs = {
                 'basic_input': sample_data,
-                'jet_pt_log': sample_reco_pt_log,
-                'jet_eta': sample_reco_eta,
+                'jet_pt_log': sample_jet_features['jet_pt_log'],
+                'jet_eta': sample_jet_features['jet_eta'],
             }
             sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]

@@ -128,7 +128,7 @@ def _split_flavor(data):
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
 
     # Set pt correction target of pileup jets to 1.0
-    data['target_pt'] = ak.where(data['class_label'] == pileup_idx, -1., data['target_pt']) # set target pt to zero
+    data['target_pt'] = ak.where(data['class_label'] == pileup_idx, -1., data['target_pt']) # set target pt to -1 for pileup jets, replced in loss, served as indicator pu punishment factor
     data['target_pt_phys'] = ak.where(data['class_label'] == pileup_idx, data['jet_pt_phys'], data['target_pt_phys'])
 
     # Apply pt_cut

@@ -23,7 +23,7 @@ inputs:
     "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
     "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality"] # features to use in the basic_input
   basic_features: ['basic_input']
-  custom_features: [] # will later be concatenated into one jet features input
+  jet_features: [] # will later be concatenated into one jet features input
 
 training_config:
   weight_method: ["onlyclass", "onlyclass"]
@@ -32,8 +32,8 @@ training_config:
   learning_rate : 0.001
   validation_split : 0.1
 
-  loss_weights : [1, 1]
-  huber_weights : [0, 0] # pu, alpha
+  loss_weights : [1, 1] # class, regression: weights to blance losses, empiracally [1, 65] achieve rough numerical balance
+  huber_weights : [0, 0] # pu, alpha: weights for pileup and undestimation punishment, pu should always be 0 for models wo pileup category
 
   initial_sparsity : 0.0
   final_sparsity : 0.1

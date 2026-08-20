@@ -54,14 +54,14 @@ def doPlots(model, outputdir, inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_pt_hw, jet_eta_hw, jet_pt_log = to_ML(data, class_labels)
+    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_features_dict = to_ML(data, class_labels)
 
     labels = list(class_labels.keys())
 
     raw_inputs_dict = {
         "basic_input": X_test,
-        "jet_eta": jet_eta_hw,
-        "jet_pt_log": jet_pt_log,
+        "jet_eta": jet_features_dict['jet_eta'],
+        "jet_pt_log": jet_features_dict['jet_pt_log'],
     }
 
     model.firmware_convert("temp", build=False)
@@ -106,11 +106,11 @@ def doPlots(model, outputdir, inputdir):
     figure.savefig("%s/%s_score_2D.pdf" % (outputdir, "Regression"), bbox_inches='tight')
     plt.close()
 
-    wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
-    ap.savefig(outputdir + "/model_activations_profile.png")
-    wp.savefig(outputdir + "/model_weights_profile.png")
-    aph.savefig(outputdir + "/model_activations_profile_opt.png")
-    wph.savefig(outputdir + "/model_weights_profile_opt.png")
+    # wp, wph, ap, aph = profiling.numerical(model=model.jet_model, hls_model=model.hls_jet_model, X=hls_inputs)
+    # ap.savefig(outputdir + "/model_activations_profile.png")
+    # wp.savefig(outputdir + "/model_weights_profile.png")
+    # aph.savefig(outputdir + "/model_activations_profile_opt.png")
+    # wph.savefig(outputdir + "/model_weights_profile_opt.png")
 
     y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
 

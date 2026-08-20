@@ -56,7 +56,7 @@ class DeepSetModel(QKerasModel):
                 "inputs" : {  # <-- add this
                     "basic_input_config": list,
                     "basic_features": list,
-                    "custom_features": list}
+                    "jet_features": list}
             }
     )
 

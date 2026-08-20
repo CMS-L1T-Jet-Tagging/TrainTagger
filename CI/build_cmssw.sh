@@ -75,4 +75,3 @@ if [[ "$PROC" == "QCD_Pt15To3000_PU200" ]]; then
     python3 scripts/makeJecs.py QCD_Pt15To3000_PU200/perfNano.root -A -o jecs.root
     cp jecs.root ${OUTPATH}/jecs.root
 fi
-

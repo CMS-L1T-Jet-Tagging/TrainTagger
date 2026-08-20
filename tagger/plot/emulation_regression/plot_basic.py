@@ -379,6 +379,3 @@ if __name__ == "__main__":
         # # response and rms
         response(proc_collections[p], p, f"{plot_path}/{p}/response")
         rms(proc_collections[p], p, f"{plot_path}/{p}/rms")
-
-
-

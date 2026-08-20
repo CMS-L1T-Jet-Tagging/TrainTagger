@@ -159,5 +159,3 @@ if __name__ == "__main__":
     # Plot Turn on cuves
     for s in args.signal:
         turn_on_curve(proc_collections[s], proc_collections['MinBias_PU200'], s, args.observables, target_rates, plot_dir=f"{plot_path}/{s}/turn_ons")
-
-

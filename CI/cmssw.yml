@@ -11,7 +11,7 @@ emulate:
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
-    - ./CI/setup_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
+    - ./CI/setup_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION}
   timeout: 2h
   artifacts:
     when: always

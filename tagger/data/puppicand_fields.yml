@@ -1,7 +1,7 @@
 puppicand_fields_all:
   - puppiweight
   - pt_rel
-  # - pt_rel_log
+  - pt_rel_log
   - pt
   - dxy
   - id
@@ -57,14 +57,17 @@ baseline_hardware_inputs:
   - puppiweight
   - emid
   - quality
+  - eta
 
-extra_fields:
-  - jet_pt_phys
-  - jet_genmatch_pt
+jet_nn_fields:
   - jet_pt
   - jet_eta
   - jet_phi
   - jet_pt_log
+
+extra_fields:
+  - jet_pt_phys
+  - jet_genmatch_pt
 
 extra_emulation_fields:
   - jet_SC4NGJet_score_b

@@ -21,7 +21,6 @@ if __name__ == "__main__":
         '-e', '--extras', default='extra_fields', help='Which extra fields to add to output tuples, in puppicand_fields.yml'
     )
     parser.add_argument('-t', '--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
-    parser.add_argument('-m', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
 
     parser.add_argument(
         '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
@@ -33,25 +32,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # fields to add to basic input and whether to add pileup info are specified in the yaml config file
-    with open(args.yaml_config, "r") as f:
-        config = yaml.safe_load(f)
-    extended_basic_inp = config['inputs']['basic_input_config']
-    use_pu = config['training_config']['pileup']
-
-    make_data(infile=args.input, extra_basic_inputs = extended_basic_inp, use_pu=use_pu, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:
         signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
-        print(signal_input)
+        print("making signal inputs for basic plotting:", signal_input)
         signal_output = os.path.join("signal_process_data", signal_process)
         if not os.path.exists(signal_output):
             make_data(
                 infile=signal_input,
                 outdir=signal_output,
-                extra_basic_inputs=extended_basic_inp,
-                use_pu=use_pu,
                 step_size=args.step,
                 extras=args.extras,
                 ratio=args.ratio,

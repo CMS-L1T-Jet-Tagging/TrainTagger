@@ -19,7 +19,9 @@ quantization_config:
   pt_output_quantization : [16,2]
 
 inputs:
-  basic_input_config: ['eta'] # features to add to the basic input
+  basic_input_config: ["pt", "pt_rel", "pt_log", "deta", "dphi", "mass", "isPhoton", "isElectronPlus",
+    "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
+    "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality", "eta"] # features to use in the basic_input
   basic_features: ['basic_input', 'constituent_fraction', 'pt_mask']
   custom_features: ['jet_pt_log', 'jet_eta'] # will later be concatenated into one jet features input
 

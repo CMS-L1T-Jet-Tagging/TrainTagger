@@ -44,6 +44,7 @@ variables:
     CMSSW_VERSION: 'CMSSW_17_0_0_pre2'
     CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_17_0_0_pre2_NGJet_plus_correlator'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
+    FASTPUPPI_VERSION: 'CMSSW_17_0_0_pre2_NGJet_plus_correlator'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
@@ -79,7 +80,7 @@ data:
   - eos cp $EOS_DATA_DIR/${TRAIN} .
   - eos cp $EOS_DATA_DIR/${SIGNAL}.root .
   - cd ..
-  - python tagger/data/make_data.py -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL -m tagger/model/configs/$Model.yaml
+  - python tagger/data/make_data.py -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
   - tar -cf training_data_$Inputs.tgz training_data
   - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
@@ -260,7 +261,7 @@ run_processes:
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   parallel:
     matrix:
       - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]

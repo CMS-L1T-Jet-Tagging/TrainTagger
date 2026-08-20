@@ -4,7 +4,6 @@ from argparse import ArgumentParser
 # Third parties
 import numpy as np
 import tensorflow as tf
-import json
 
 # Import from other modules
 from tagger.data.tools import load_data, to_ML, constituents_mask
@@ -12,14 +11,13 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt, jet_pt_hw, jet_eta_hw):
+def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
     np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
     np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
     np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
     np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt)
-    np.save(os.path.join(out_dir, "testing_data/reco_pt_hw_test.npy"), jet_pt_hw)
 
     print(f"Test labels saved to {out_dir}")
 
@@ -131,7 +129,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
 def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, extra_vars = load_data("training_data/", percentage=percent)
+    data_train, data_test, jet_features_train, jet_features_test, class_labels, input_vars, extra_vars = load_data("training_data/", percent, model)
     model.set_labels(
         input_vars,
         extra_vars,
@@ -139,25 +137,25 @@ def train(model, out_dir, percent):
     )
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, truth_pt_train, reco_pt_train, jet_pt_hw_train, jet_eta_hw_train, jet_pt_log_train = to_ML(data_train, class_labels)
+    X_train, y_train, pt_target_train, _, reco_pt_train, jet_features_train = to_ML(data_train, class_labels, jet_features_train)
 
     # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test, jet_pt_log_test = to_ML(data_test, class_labels)
+    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_features_test = to_ML(data_test, class_labels, jet_features_test)
 
     # collect all possible train and test inputs
     raw_inputs_train = {
         'basic_input': X_train,
-        'jet_pt_log': jet_pt_log_train,
-        'jet_eta': jet_eta_hw_train,
+        'jet_pt_log': jet_features_train['jet_pt_log'],
+        'jet_eta': jet_features_train['jet_eta'],
     }
 
     raw_inputs_test = {
         'basic_input': X_test,
-        'jet_pt_log': jet_pt_log_test,
-        'jet_eta': jet_eta_hw_test,
+        'jet_pt_log': jet_features_test['jet_pt_log'],
+        'jet_eta': jet_features_test['jet_eta'],
     }
     test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys
-    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test, jet_pt_hw_test, jet_eta_hw_test)
+    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
     jet_weights = []

@@ -186,6 +186,7 @@ class DeepSetModel(QKerasModel):
         for layer in self.jet_model.layers:
             layer_name = layer.__class__.__name__
             if layer_name in ["BatchNormalization", "InputLayer"]:
+                from IPython import embed; embed()  # for debugging
                 for k in self.firmware_config['input_precision'].keys():
                     if k in layer.name:
                         precision = self.firmware_config['input_precision'][k]

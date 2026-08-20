@@ -969,12 +969,12 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
 # Helper functions for signal specific plotting
 
 
-def filter_process(test_data, process_dir):
+def filter_process(test_data, model, process_dir):
     """
     Filter jets from specific signal process to create plots for specified signal processes.
     Comparison done through concatenation of sets to be compared and np unique to check for duplicates.
     """
-    train, test, class_labels = load_data(os.path.join("signal_process_data", process_dir), percentage=100)[:3]
+    train, test, class_labels = load_data(os.path.join("signal_process_data", process_dir), model, percentage=100)[:3]
     train, test = to_ML(train, class_labels), to_ML(test, class_labels)
 
     # apply unique to sets to be compared, since there tend to be duplicates
@@ -1054,7 +1054,7 @@ def basic(model, signal_dirs):
             y_p, y_t = y_pred, y_test
             process_label = None
         else:
-            signal_indices, sample_train, sample_test = filter_process(test_dict['basic_input'], signal_dirs[i])
+            signal_indices, sample_train, sample_test = filter_process(test_dict['basic_input'], model, signal_dirs[i])
             sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
             sample_reco_pt_log = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
             sample_reco_eta = np.concatenate((sample_train[-2], sample_test[-2]), axis=0)

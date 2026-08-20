@@ -41,7 +41,7 @@ def doPlots(model, outputdir, inputdir):
 
     modelsAndNames = {"model": model}
 
-    data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
+    data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
     X_test, Y_test, pt_target, truth_pt, jet_pt_phys, jet_pt_hw, jet_eta_hw, jet_pt_log = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())

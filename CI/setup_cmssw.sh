@@ -13,6 +13,7 @@ if [[ "$1" == "-run" ]]; then RUN=true; shift; fi;
 
 CMSSW_VERSION=$1
 CMSSW_L1CT=$2
+FASTPUPPI_VERSION=$3
 
 scram p CMSSW ${CMSSW_VERSION}
 cd ${CMSSW_VERSION}/src
@@ -46,7 +47,7 @@ make
 make install
 cd ..
 
-git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b CMSSW_17_0_0_pre2_NGJet_plus_correlator
+git clone https://github.com/CMS-L1T-Jet-Tagging/FastPUPPI.git -b ${FASTPUPPI_VERSION}
 
 
 if [[ "$COMPILE" == "false" ]]; then exit 0; fi

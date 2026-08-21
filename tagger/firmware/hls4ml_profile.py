@@ -113,7 +113,7 @@ def doPlots(model, outputdir, inputdir):
     y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
 
     # Run prediction to get activations
-    keras_trace_model = model.get_keras_model()
+    keras_trace_model = model.get_keras_trace_model()
     keras_activations = keras_trace_model.predict(model_dict)
 
     # Convert keras activations to a dict keyed by layer name

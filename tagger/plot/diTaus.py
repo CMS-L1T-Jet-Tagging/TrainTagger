@@ -214,7 +214,8 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
-    nn_inputs, raw_jet_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries))
+    nn_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    nn_inputs, raw_jet_inputs = np.asarray(nn_inputs), np.asarray(raw_jet_inputs)
 
     #Get the NN predictions
     selected_nn_inputs = nn_inputs[eta_selection]
@@ -357,7 +358,8 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
-    nn_inputs, jet_nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries))
+    nn_inputs, jet_nn_inputs = extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries)
+    nn_inputs, jet_nn_inputs = np.asarray(nn_inputs), np.asarray(jet_nn_inputs)
     raw_inputs_dict = {
         'basic_input': nn_inputs,
         'jet_features': jet_nn_inputs,
@@ -388,10 +390,6 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
         outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
         outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
         outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
-
-
-
-
 
     #Get the needed attributes
     #Basically we want to bin the selected truth pt and divide it by the overall count

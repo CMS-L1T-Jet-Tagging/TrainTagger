@@ -139,7 +139,8 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries).to_numpy()
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs, raw_jet_features = np.asarray(extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries))
+    raw_inputs, raw_jet_features = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_features = np.asarray(raw_inputs), np.asarray(raw_jet_features)
     raw_inputs_dict = {
         'basic_input': raw_inputs,
         'jet_features': raw_jet_features
@@ -304,7 +305,8 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
     raw_cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
 
-    raw_inputs, raw_jet_features = np.asarray(extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries))
+    raw_inputs, raw_jet_features = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_features = np.asarray(raw_inputs), np.asarray(raw_jet_features)
     raw_inputs_dict = {
         'basic_input': raw_inputs,
         'jet_features': raw_jet_features,
@@ -441,7 +443,8 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
     raw_cmssw_taupt = extract_array(signal, 'jet_taupt', n_entries)[pt_mask]
 
     #NN related
-    raw_inputs, raw_jet_features = np.asarray(extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries))[pt_mask]
+    raw_inputs, raw_jet_features = extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_features = np.asarray(raw_inputs)[pt_mask], np.asarray(raw_jet_features)[pt_mask]
     raw_inputs_dict = {
         'basic_input': raw_inputs,
         'jet_features': raw_jet_features,

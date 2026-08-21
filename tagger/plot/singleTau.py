@@ -61,8 +61,6 @@ def tau_score(preds, class_labels):
 
     return tau / (tau + bkg)
 
-
-
 def pick_and_plot_tau(rate_list, pt_list, nn_list, model, target_rate = 31, RateRange = 1.0, label=""):
     """
     Pick the working points and plot
@@ -247,7 +245,8 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
-    nn_inputs, jet_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries))
+    nn_inputs, jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    nn_inputs, jet_inputs = np.asarray(nn_inputs), np.asarray(jet_inputs)
 
     #Get the NN predictions
     selected_basic_inputs, selected_jet_inputs = nn_inputs[eta_selection], jet_inputs[eta_selection]
@@ -384,7 +383,8 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
-    nn_inputs, jet_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries))
+    nn_inputs, jet_inputs = extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries)
+    nn_inputs, jet_inputs = np.asarray(nn_inputs), np.asarray(jet_inputs)
     raw_inputs_dict = {
         'basic_input': nn_inputs,
         'jet_features': jet_inputs

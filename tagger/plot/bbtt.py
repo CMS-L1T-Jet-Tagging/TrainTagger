@@ -428,7 +428,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, asic_nn_inputs, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
     bscore_sums, tscore_sums, tau_indices = nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, model.class_labels)
     def_sels = [default_selection(jet_pt, jet_eta, tau_indices[0], apply_sel),

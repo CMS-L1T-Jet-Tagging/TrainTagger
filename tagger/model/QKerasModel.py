@@ -19,8 +19,9 @@ from schema import Schema, And, Use, Optional
 from qkeras.quantizers import quantized_bits
 from qkeras.utils import load_qmodel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras import Model
 
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator
+from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, huber_loss
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.data.tools import constituents_mask
 
@@ -88,7 +89,7 @@ class QKerasModel(JetTagModel):
         # Add pruning callback
         self.callbacks.append(tfmot.sparsity.keras.UpdatePruningStep())
 
-    def compile_model(self, num_samples: int, loss_weights: list = [1.0, 1.0], huber_weights: list = [0., 0.]):
+    def compile_model(self, num_samples: int):
         """compile the model generating callbacks and loss function
         Args:
             num_samples (int): Number of samples in the training set used for scheduling
@@ -113,45 +114,16 @@ class QKerasModel(JetTagModel):
         if 'initial_sparsity' in self.training_config:
             self._prune_model(num_samples)
 
-        def huber_loss(delta=.1, pu=2., alpha=3.):
-            """
-            Huber loss with asymmetric penalization.
-
-            Args:
-                delta: Huber threshold.
-                alpha: Weight for underestimation (y_true > y_pred).
-            """
-            def loss(y_true, y_pred):
-                # Minbias: punish overestimation
-                pu_punish = tf.where(
-                    (y_true == -1) & (y_pred > 1),
-                    pu * (y_pred - 1.0), # scaling proportional to excess
-                    0.)
-                pu_mask = y_true == -1
-                y_true = tf.where(pu_mask, 0.95, y_true)
-
-                # punish underestimation more for all other samples
-                residual = y_true - y_pred
-                overest = tf.where((residual > 0) & (~pu_mask), (abs(residual) * alpha), 0.)  # Penalize overestimation more
-                weights = overest + pu_punish + 1.0  # Add 1 as base value
-
-                abs_res = tf.abs(residual)
-                quadratic = tf.minimum(abs_res, delta)
-                linear = abs_res - quadratic
-
-                return weights * (0.5 * quadratic**2 + delta * linear)
-
-            return loss
-
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
             optimizer='adam',
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
-                # self.loss_name + self.output_pt_name: tf.keras.losses.Huber(),
-                self.loss_name + self.output_pt_name: huber_loss(),
+                self.loss_name + self.output_pt_name: huber_loss(
+                    pu=self.training_config['huber_weights'][0],
+                    alpha=self.training_config['huber_weights'][1]),
             },
-            loss_weights=loss_weights,
+            loss_weights=self.training_config['loss_weights'],
             metrics={
                 self.loss_name + self.output_id_name: 'categorical_accuracy',
                 self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
@@ -199,11 +171,9 @@ class QKerasModel(JetTagModel):
         Returns:
             dict: Dictionary of required input arrays
         """
-        with open("tagger/data/puppicand_fields.yml", "r") as file:
-            puppicand_fields = yaml.safe_load(file)
 
         # get relevant feature indices
-        pt_rel_idx = puppicand_fields['baseline_hardware_inputs'].index("pt_rel")
+        pt_rel_idx = self.input_vars.index("pt_rel")
 
         # build all possible inputs, add here if ever in need of new ones
         input_dict = {
@@ -225,6 +195,12 @@ class QKerasModel(JetTagModel):
         input_shapes = {k: v.shape[1:] for k, v in input_dict.items()}
 
         return input_dict, input_shapes
+
+    def get_keras_trace_model(self):
+        # Create a sub-model that outputs all intermediate layers and get keras trace
+        layer_outputs = [layer.output for layer in self.jet_model.layers]
+        keras_trace_model = Model(inputs=self.jet_model.input, outputs=layer_outputs)
+        return keras_trace_model
 
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator

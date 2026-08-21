@@ -52,7 +52,7 @@ class DeepSetModel(QKerasModel):
                                     "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                     "fpga_part" : str,
                                     "project_name" : str},
-                "inputs" : { # add new types of inputs here
+                "inputs" : {
                     "basic_input_config": list,
                     "basic_features": list,
                     "jet_features": list}
@@ -175,6 +175,10 @@ class DeepSetModel(QKerasModel):
         config['IOType'] = 'io_parallel'
         for layer in self.firmware_config['input_precision']:
             config['LayerName'][layer]['Precision']['result'] = self.firmware_config['input_precision'][layer]
+
+        # Check that the input layers in the model match the input_precision keys in the firmware config
+        input_layer_names = [layer.name for layer in self.jet_model.layers if isinstance(layer, tf.keras.layers.InputLayer)]
+        assert set(input_layer_names) == set(self.firmware_config['input_precision'].keys())
 
         # Configuration for conv1d layers
         # hls4ml does not !!! automatically figure out the paralellization factor, this leads to csim, hdl sim errors

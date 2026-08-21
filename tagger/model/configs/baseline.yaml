@@ -34,7 +34,7 @@ training_config:
   learning_rate : 0.001
   validation_split : 0.1
 
-  loss_weights : [1, 1] # class, regression: weights to blance losses, empiracally [1, 65] achieve rough numerical balance
+  loss_weights : [1, 1] # class, regression: weights to blance losses, must be tested empirically for each model
   huber_weights : [0, 0] # pu, alpha: weights for pileup and undestimation punishment, pu should always be 0 for models wo pileup category
 
   initial_sparsity : 0.0
@@ -49,6 +49,7 @@ training_config:
   pileup: False
 
 firmware_config:
+  # input precisions dict keys must macth the input layer name in model build method
   input_precision: {'basic_input': 'ap_fixed<24,12,AP_RND,AP_SAT>'}
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'

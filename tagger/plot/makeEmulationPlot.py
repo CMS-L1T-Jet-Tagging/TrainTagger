@@ -42,16 +42,15 @@ def doPlots(model, outputdir, inputdir):
     modelsAndNames = {"model": model}
 
     data, _, class_labels, input_vars, jet_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, jet_pt_phys, _ = to_ML(data, class_labels)  # Last thing was reconstructed pt
+    X_test, Y_test, pt_target, truth_pt, jet_pt_phys, jet_features = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
     labels.remove("pileup") if "pileup" in labels else None # remove once there is proper handling of pilup score in cmssw
     model.firmware_convert("temp", build=False)
 
     raw_inputs_dict = {
-        "basic_input": np.ascontiguousarray(X_test),
-        "jet_pt_log": np.ascontiguousarray(data['jet_pt_log']),
-        "jet_eta": np.ascontiguousarray(data['jet_eta']),
+        "basic_input": X_test,
+        "jet_features": jet_features,
     }
 
     model_dict, _ = model.prepare_inputs(raw_inputs_dict)
@@ -71,9 +70,6 @@ def doPlots(model, outputdir, inputdir):
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
     cmssw_pred = np.stack([data[f'jet_SC4NGJet_score_{label}'] for label in labels], axis=1)
     single = [i[0:1] for i in hls_inputs]
-    print('single:', model.hls_jet_model.predict(single))
-    print('cmssw:', data[f'jet_SC4NGJet_score_regression'][0])
-    print('y_ptreg_hls:', y_ptreg_hls[0])
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
@@ -81,7 +77,6 @@ def doPlots(model, outputdir, inputdir):
                 print_class = True
         if print_class:
             print("=== " + str(iJet) + " ===")
-            print(f"Inputs: {raw_inputs_dict['jet_eta'][iJet]} {raw_inputs_dict['jet_pt_log'][iJet]}")
             for i, label in enumerate(labels):
                 print(label + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_' + label])[iJet]))
                 print(label + ": hls : " + str(y_hls[iJet][i]))

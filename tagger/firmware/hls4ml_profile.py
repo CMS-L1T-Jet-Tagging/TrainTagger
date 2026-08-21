@@ -1,7 +1,6 @@
 import os
 from argparse import ArgumentParser
 from pathlib import Path
-from tensorflow.keras import Model
 
 import hls4ml
 import matplotlib.pyplot as plt
@@ -113,11 +112,8 @@ def doPlots(model, outputdir, inputdir):
 
     y_hls, hls4ml_trace = model.hls_jet_model.trace(hls_inputs)
 
-    # Create a sub-model that outputs all intermediate layers
-    layer_outputs = [layer.output for layer in model.jet_model.layers]
-    keras_trace_model = Model(inputs=model.jet_model.input, outputs=layer_outputs)
-
     # Run prediction to get activations
+    keras_trace_model = model.get_keras_model()
     keras_activations = keras_trace_model.predict(model_dict)
 
     # Convert keras activations to a dict keyed by layer name

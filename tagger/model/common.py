@@ -9,6 +9,7 @@ import os
 import shutil
 
 import tensorflow as tf
+import numpy as np
 import tensorflow_model_optimization as tfmot
 import yaml
 from qkeras.qlayers import QDense
@@ -207,3 +208,33 @@ def fromFolder(save_path: str, newoutput_dir: str = "None") -> JetTagModel:
     model = fromYaml(yaml_path, folder, recreate=recreate)
     model.load(folder)
     return model
+
+def huber_loss(delta=.1, pu=2., alpha=3.):
+    """
+    Huber loss with asymmetric penalization.
+
+    Args:
+        delta: Huber threshold.
+        alpha: Weight for underestimation (y_true > y_pred).
+    """
+    def loss(y_true, y_pred):
+        # Minbias: punish overestimation
+        pu_punish = tf.where(
+            (y_true == -1) & (y_pred > 1),
+            pu * (y_pred - 1.0), # scaling proportional to excess
+            0.)
+        pu_mask = y_true == -1
+        y_true = tf.where(pu_mask, 0.95, y_true)
+
+        # punish underestimation more for all other samples
+        residual = y_true - y_pred
+        overest = tf.where((residual > 0) & (~pu_mask), (abs(residual) * alpha), 0.)  # Penalize overestimation more
+        weights = overest + pu_punish + 1.0  # Add 1 as base value
+
+        abs_res = tf.abs(residual)
+        quadratic = tf.minimum(abs_res, delta)
+        linear = abs_res - quadratic
+
+        return weights * (0.5 * quadratic**2 + delta * linear)
+
+    return loss

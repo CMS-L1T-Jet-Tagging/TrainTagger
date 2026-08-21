@@ -178,7 +178,7 @@ def train(model, out_dir, percent):
     # Train it with a pruned model
     num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    model.compile_model(num_samples, model.training_config['loss_weights'], model.training_config['huber_weights'])
+    model.compile_model(num_samples)
     model.fit(train_dict, y_train, pt_target_train, jet_weights)
 
     # Finished training, save model
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     )
     parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
     parser.add_argument(
-        '-y', '--yaml_config', default='tagger/model/configs/weightedAverage.yaml', help='YAML config for model'
+        '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
     )
 
     # Basic ploting

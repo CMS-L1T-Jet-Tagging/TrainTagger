@@ -41,8 +41,8 @@ def doPlots(model, outputdir, inputdir):
 
     modelsAndNames = {"model": model}
 
-    data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, jet_pt_phys, jet_pt_hw, jet_eta_hw, jet_pt_log = to_ML(data, class_labels)  # Last thing was reconstructed pt
+    data, _, class_labels, input_vars, jet_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
+    X_test, Y_test, pt_target, truth_pt, jet_pt_phys, _ = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
     labels.remove("pileup") if "pileup" in labels else None # remove once there is proper handling of pilup score in cmssw
@@ -284,8 +284,6 @@ if __name__ == "__main__":
     if args.remake:
         make_data(infile=args.input,
                   outdir="emulation_data/",
-                  extra_basic_inputs = model.inputs['basic_input_config'],
-                  use_pu= model.training_config['pileup'],
                   extras='extra_emulation_fields',
                   tree="outnano/Jets"
                   )

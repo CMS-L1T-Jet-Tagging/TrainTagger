@@ -32,6 +32,7 @@ class JetTagModel(ABC):
         self.hls_jet_model = None
 
         self.input_vars = []
+        self.jet_vars = []
         self.extra_vars = []
         self.class_labels = []
 
@@ -132,6 +133,9 @@ class JetTagModel(ABC):
             # Dump input variables
             with open(os.path.join(out_dir, "input_vars.json"), "w") as f:
                 json.dump(self.input_vars, f, indent=4)
+            # Dump jet variables
+            with open(os.path.join(out_dir, "jet_vars.json"), "w") as f:
+                json.dump(self.jet_vars, f, indent=4)
             # Dump extra variables
             with open(os.path.join(out_dir, "extra_vars.json"), "w") as f:
                 json.dump(self.extra_vars, f, indent=4)
@@ -162,6 +166,9 @@ class JetTagModel(ABC):
             # Dump input variables
             with open(os.path.join(out_dir, "input_vars.json"), "r") as f:
                 self.input_vars = json.load(f)
+            # Dump jet variables
+            with open(os.path.join(out_dir, "jet_vars.json"), "r") as f:
+                self.jet_vars = json.load(f)
             # Dump extra variables
             with open(os.path.join(out_dir, "class_labels.json"), "r") as f:
                 self.class_labels = json.load(f)
@@ -173,15 +180,17 @@ class JetTagModel(ABC):
 
         return wrapper
 
-    def set_labels(self, input_vars: str, extra_vars: str, class_labels: str):
+    def set_labels(self, input_vars: str, jet_vars: str, extra_vars: str, class_labels: str):
         """Set internal labels
 
         Args:
             input_vars (str): Input variable names
+            jet_vars (str): Jet variable names
             extra_vars (str): Extra variable names
             class_labels (str): Class label names
         """
         self.input_vars = input_vars
+        self.jet_vars = jet_vars
         self.extra_vars = extra_vars
         self.class_labels = class_labels
 

@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 import mplhep as hep
 import tagger.plot.style as style
-from tagger.data.tools import constituents_mask
 from tagger.model.common import fromFolder
 
 from tensorflow.keras.models import Model

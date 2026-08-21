@@ -19,6 +19,8 @@ quantization_config:
   pt_output_quantization : [16,6]
 
 inputs:
+  # Specify inputs for the model here, order is defined in data/puppicand.yaml. New inputs should always
+  # be added here and in puppicands yaml
   basic_input_config: ["pt", "pt_rel", "pt_log", "deta", "dphi", "mass", "isPhoton", "isElectronPlus",
     "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
     "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality"] # features to use in the basic_input

@@ -218,12 +218,9 @@ class QKerasModel(JetTagModel):
             if key not in self.inputs['basic_features']:
                 del input_dict[key]
 
-        # build the jet level features
+        # add jet features if specified in model config
         if len(self.inputs['jet_features']) > 0:
-            jet_features = np.empty((raw_inputs['basic_input'].shape[0], len(self.inputs['jet_features'])))
-            for i, k in enumerate(self.inputs['jet_features']):
-                jet_features[:, i] = raw_inputs[k]
-            input_dict['jet_features'] = jet_features
+            input_dict['jet_features'] = raw_inputs['jet_features']
 
         input_shapes = {k: v.shape[1:] for k, v in input_dict.items()}
 

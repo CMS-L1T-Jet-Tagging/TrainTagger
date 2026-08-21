@@ -91,7 +91,6 @@ INPUT_FEATURE_RANGES = {
     'pt': (0, 150),
     'pt_rel': (0, 1),
     'pt_log': (0, 5),
-    'log_pt': (0, 5),
     'eta': (-3, 3),
     'deta': (-3, 3),
     'dphi': (-3.5, 3.5),
@@ -108,16 +107,21 @@ INPUT_FEATURE_RANGES = {
     'z0': (-0.5, 0.5),
     'dxy': (-0.2, 0.2),
     'isfilled': (0, 1),
-    'is_filled': (0, 1),
     'puppiweight': (0, 1),
-    'puppi_weight': (0, 1),
-    'puppi_weight': (0, 1),
     'quality': (0, 15),
     'emid': (0, 1),
     'charge': (-2, 2),
     'id': (-1, 10),
     'eta_phys': (-3, 3),
     'phi_phys': (-3.5, 3.5),
+}
+
+PROCESS_STYLE = {
+        'TT_PU200': r't$\bar{t}$',
+        'ggHHbbbb_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$b$\bar{b}$',
+        'VBFHtt_PU200': r'VBF $\rightarrow$ H $\rightarrow$ t$\bar{t}$',
+        'ggHHbbtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$t$\bar{t}$',
+        'ggHtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ t$\bar{t}$',
 }
 
 def set_style():

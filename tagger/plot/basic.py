@@ -23,7 +23,7 @@ import numpy as np
 import shap
 from sklearn.metrics import auc, roc_curve
 
-from tagger.data.tools import load_data, to_ML, constituents_mask
+from tagger.data.tools import load_data, to_ML
 from tagger.plot import style
 
 from .common import PT_BINS, plot_histo
@@ -786,7 +786,7 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
         if 'jet_features' in layer_order_class:
             shap_values_jet = explainer.shap_values(list_inp_class)[layer_order_class.index('jet_features')]
             shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
-            feature_names = model.input_vars + model.inputs['jet_features']
+            feature_names = model.input_vars + model.jet_vars
         else:
             shap_values = shap_values_basic
             feature_names = model.input_vars
@@ -967,40 +967,23 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
 
 
 # Helper functions for signal specific plotting
-
-
 def filter_process(test_data, model, process_dir):
     """
     Filter jets from specific signal process to create plots for specified signal processes.
     Comparison done through concatenation of sets to be compared and np unique to check for duplicates.
     """
-    train, test, class_labels = load_data(os.path.join("signal_process_data", process_dir), model, percentage=100)[:3]
-    train, test = to_ML(train, class_labels), to_ML(test, class_labels)
+    train, _, class_labels = load_data(os.path.join("signal_process_data", process_dir), 100, model, test_ratio=0)[:3]
+    train = to_ML(train, class_labels)
 
     # apply unique to sets to be compared, since there tend to be duplicates
-    process_data = np.unique(np.concatenate((train[0], test[0]), axis=0), axis=0)
+    process_data = np.unique(train[0], axis=0)
     unique_test_data, indices_unique_test_data = np.unique(test_data, axis=0, return_index=True)
     comparison_data = np.concatenate((unique_test_data, process_data), axis=0)
     u, index, counts = np.unique(comparison_data, axis=0, return_index=True, return_counts=True)
     process_indices = index[counts == 2]
     filtered_indices = indices_unique_test_data[process_indices]
 
-    return filtered_indices, train, test
-
-
-# fancy signal process labels
-
-
-def process_labels(process_key):
-    processes = {
-        'TT_PU200': r't$\bar{t}$',
-        'ggHHbbbb_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$b$\bar{b}$',
-        'VBFHtt_PU200': r'VBF $\rightarrow$ H $\rightarrow$ t$\bar{t}$',
-        'ggHHbbtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$t$\bar{t}$',
-        'ggHtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ t$\bar{t}$',
-    }
-
-    return processes[process_key]
+    return filtered_indices, train
 
 
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
@@ -1020,7 +1003,6 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-
     model_outputs = model.jet_model.predict(test_dict)
 
     # Get classification outputs
@@ -1054,18 +1036,14 @@ def basic(model, signal_dirs):
             y_p, y_t = y_pred, y_test
             process_label = None
         else:
-            signal_indices, sample_train, sample_test = filter_process(test_dict['basic_input'], model, signal_dirs[i])
-            sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_jet_features = np.concatenate((sample_train[-1], sample_test[-1]), axis=0)
+            signal_indices, sample_data = filter_process(test_dict['basic_input'], model, signal_dirs[i])
             sample_raw_inputs = {
-                'basic_input': sample_data,
-                'jet_pt_log': sample_jet_features['jet_pt_log'],
-                'jet_eta': sample_jet_features['jet_eta'],
+                'basic_input': sample_data[0],
+                'jet_features': sample_data[-1]
             }
             sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
-            process_label = process_labels(signal_dirs[i])
+            process_label = style.PROCESS_STYLE[signal_dirs[i]]
             os.makedirs(binary_dir, exist_ok=True)
 
         # Plot the binary ROCs for each class pair
@@ -1074,7 +1052,7 @@ def basic(model, signal_dirs):
             ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
+                ROC_binary(sample_preds, sample_data[1], model.class_labels, binary_dir, class_pair, process_label)
 
         # Add light vs b/charm/gluon combined plot
         binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
@@ -1083,8 +1061,8 @@ def basic(model, signal_dirs):
 
         if i != -1:
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-            ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
-            ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+            ROC_jets(sample_preds, sample_data[1], model.class_labels, binary_dir_full, process_label)
+            ROC_taus(sample_preds, sample_data[1], model.class_labels, binary_dir_full, process_label)
 
 
     # Plot input distributions

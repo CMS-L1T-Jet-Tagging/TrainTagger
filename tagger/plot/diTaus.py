@@ -21,7 +21,7 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, constituents_mask
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
 
@@ -107,11 +107,9 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
-    raw_jet_pt_log = extract_array(minbias, 'jet_pt_log', n_entries)
-    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
 
 
     #Count number of total event
@@ -119,11 +117,11 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_jet_phi, raw_inputs, num_elements=2)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, raw_jet_inputs, num_elements=2)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_pt_log, jet_eta, jet_eta_hw, jet_phi, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, jet_phi, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
     #calculate delta_r
     eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
@@ -137,21 +135,18 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
 
     #Get inputs and pts for processing
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
-    logpt1_uncorrected, logpt2_uncorrected = np.asarray(jet_pt_log[:, 0][cuts]), np.asarray(jet_pt_log[:,1][cuts])
     eta1_cuts, eta2_cuts = np.asarray(jet_eta[:, 0][cuts]), np.asarray(jet_eta[:,1][cuts])
-    eta1_hw_cuts, eta2_hw_cuts = np.asarray(jet_eta_hw[:, 0][cuts]), np.asarray(jet_eta_hw[:,1][cuts])
-    input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
+    jet_input1, jet_input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
+    basic_input1, basic_input2 = np.asarray(basic_nn_inputs[:, 0][cuts]), np.asarray(basic_nn_inputs[:, 1][cuts])
 
     raw_inputs1_dict = {
-        'basic_input': input1,
-        'jet_pt_log': logpt1_uncorrected,
-        'jet_eta': eta1_hw_cuts,
+        'basic_input': basic_input1,
+        'jet_features': jet_input1,
     }
 
     raw_inputs2_dict = {
-        'basic_input': input2,
-        'jet_pt_log': logpt2_uncorrected,
-        'jet_eta': eta2_hw_cuts,
+        'basic_input': basic_input2,
+        'jet_features': jet_input2,
     }
     #Get the NN predictions
     pred_score1, ratio1 = model.predict(model.prepare_inputs(raw_inputs1_dict)[0])
@@ -214,22 +209,20 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
 
     #Impose eta cuts
     jet_eta =  extract_array(minbias, 'jet_eta_phys', n_entries).to_numpy()
-    jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries).to_numpy()
     jet_pt =  extract_array(minbias, 'jet_pt_phys', n_entries).to_numpy()
-    jet_pt_log = extract_array(minbias, 'jet_pt_log', n_entries).to_numpy()
     jet_pt_hw = extract_array(minbias, 'jet_pt', n_entries).to_numpy()
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
-    nn_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
+    nn_inputs, raw_jet_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries))
 
     #Get the NN predictions
     selected_nn_inputs = nn_inputs[eta_selection]
-    selected_jet_pt_hw, selected_jet_eta_hw, selected_jet_pt_log = jet_pt_hw[eta_selection], jet_eta_hw[eta_selection], jet_pt_log[eta_selection]
+    selected_jet_inputs = raw_jet_inputs[eta_selection]
+    selected_jet_pt_hw = jet_pt_hw[eta_selection]
     raw_inputs_dict = {
         'basic_input': selected_nn_inputs,
-        'jet_pt_log': selected_jet_pt_log,
-        'jet_eta': selected_jet_eta_hw,
+        'jet_features': selected_jet_inputs,
     }
     pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
     model_tau = tau_score(pred_score, model.class_labels )
@@ -360,17 +353,14 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     gen_dr_raw = extract_array(signal, 'jet_genmatch_dR', n_entries)
 
     l1_pt_raw = extract_array(signal, 'jet_pt', n_entries).to_numpy()
-    l1_jet_pt_log = extract_array(signal, 'jet_pt_log', n_entries).to_numpy()
-    l1_eta_hw_raw = extract_array(signal, 'jet_eta', n_entries).to_numpy()
     jet_taupt_raw= extract_array(signal, 'jet_taupt', n_entries)
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
-    nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
+    nn_inputs, jet_nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries))
     raw_inputs_dict = {
         'basic_input': nn_inputs,
-        'jet_pt_log': l1_jet_pt_log,
-        'jet_eta': l1_eta_hw_raw,
+        'jet_features': jet_nn_inputs,
     }
     pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 

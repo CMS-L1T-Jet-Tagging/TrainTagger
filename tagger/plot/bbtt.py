@@ -24,7 +24,7 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, constituents_mask
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
 from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
 
@@ -153,12 +153,11 @@ def max_tau_sum(taup_preds, taum_preds):
 
     return tau_scores2, tau_idxs
 
-def nn_score_sums(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta_hw, class_labels, n_jets=4):
+def nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, class_labels, n_jets=4):
     #Btag input list for first 4 jets
     btag_inputs = [{
-        'basic_input': np.asarray(jet_nn_inputs[:, i]),
-        'jet_pt_log': np.asarray(jet_pt_log[:, i]),
-        'jet_eta': np.asarray(jet_eta_hw[:, i]),
+        'basic_input': np.asarray(basic_nn_inputs[:, i]),
+        'jet_features': np.asarray(jet_nn_inputs[:, i])
         }
         for i in range(0, n_jets)]
 
@@ -344,23 +343,21 @@ def make_predictions(data_path, model, n_entries, tree='outnano/Jets', njets=4):
 
     raw_event_id = extract_array(data, 'event', n_entries)
     raw_jet_pt = extract_array(data, 'jet_pt', n_entries)
-    jet_pt_log = extract_array(data, 'jet_pt_log', n_entries)
     raw_jet_eta = extract_array(data, 'jet_eta_phys', n_entries)
-    raw_jet_eta_hw = extract_array(data, 'jet_eta', n_entries)
-    raw_inputs = extract_nn_inputs(data, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(data, model.input_vars, model.jet_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, raw_jet_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_pt_log, jet_eta_hw, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
     #Calculate the output sums
-    bscore_sums, tscore_sums, tau_indices = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta_hw, model.class_labels, n_jets=4)
+    bscore_sums, tscore_sums, tau_indices = nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, model.class_labels, n_jets=4)
 
     return bscore_sums, tscore_sums, tau_indices, jet_pt, jet_eta, n_events
 
@@ -418,10 +415,8 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
-    jet_pt_log = extract_array(minbias, 'jet_pt_log', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_jet_eta_hw = extract_array(minbias, 'jet_eta', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
 
     #Count number of total event
     global n_events
@@ -429,13 +424,13 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, raw_jet_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_pt_log, jet_eta, jet_eta_hw, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, asic_nn_inputs, jet_nn_inputs = grouped_arrays
 
-    bscore_sums, tscore_sums, tau_indices = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta_hw, model.class_labels)
+    bscore_sums, tscore_sums, tau_indices = nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, model.class_labels)
     def_sels = [default_selection(jet_pt, jet_eta, tau_indices[0], apply_sel),
                 default_selection(jet_pt, jet_eta, tau_indices[1], apply_sel)]
 
@@ -572,9 +567,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, target_rate = 14, n_e
     raw_event_id = extract_array(signal, 'event', n_entries)
     raw_jet_genpt = extract_array(signal, 'jet_genmatch_pt', n_entries)
     raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)
-    jet_pt_log = extract_array(signal, 'jet_pt_log', n_entries)
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
-    raw_jet_eta_hw = extract_array(signal, 'jet_eta', n_entries)
     raw_tau_pt = extract_array(signal, 'jet_taupt', n_entries)
     #Emulator tau score
     raw_cmssw_tau = extract_array(signal, 'jet_tauscore', n_entries)
@@ -591,18 +584,18 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, target_rate = 14, n_e
         raw_gen_mHH, all_event_gen_mHH = None, None
     all_jet_genht = ak.sum(grouped_gen_arrays[-1], axis=1)
 
-    raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_vars = extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries)
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
     if all_event_gen_mHH is not None:
-        event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_tau_pt, raw_cmssw_tau, raw_gen_mHH, raw_inputs, num_elements=4)
-        jet_genpt, jet_pt, jet_pt_log, jet_eta, jet_eta_hw, tau_pt, cmssw_tau, gen_mHH, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_cmssw_tau, raw_gen_mHH, raw_inputs, raw_jet_vars, num_elements=4)
+        jet_genpt, jet_pt, jet_eta, tau_pt, cmssw_tau, gen_mHH, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
         #Just pick the first entry of jet mHH arrays
         gen_mHH = ak.firsts(gen_mHH)
     else:
-        event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, jet_pt_log, raw_jet_eta, raw_jet_eta_hw, raw_tau_pt, raw_cmssw_tau, raw_inputs, num_elements=4)
-        jet_genpt, jet_pt, jet_pt_log, jet_eta, jet_eta_hw, tau_pt, cmssw_tau, jet_nn_inputs = grouped_arrays
+        event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_cmssw_tau, raw_inputs, raw_jet_vars, num_elements=4)
+        jet_genpt, jet_pt, jet_eta, tau_pt, cmssw_tau, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
 
     #Calculate the ht
@@ -617,7 +610,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, target_rate = 14, n_e
     ditau_selection = ditau_seed(tau_pt, cmssw_tau, jet_eta)
     ditau_efficiency = np.round(np.sum(ditau_selection) / n_events, 2)
 
-    model_bscore_sums, model_tscore_sums, tau_indices = nn_score_sums(model, jet_nn_inputs, jet_pt, jet_pt_log, jet_eta_hw, model.class_labels)
+    model_bscore_sums, model_tscore_sums, tau_indices = nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, model.class_labels)
 
     # use either raw or vs light scores
     if score_type == 'raw':

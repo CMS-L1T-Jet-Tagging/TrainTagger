@@ -20,7 +20,6 @@ from qkeras import QConv1D
 from qkeras.qlayers import QActivation, QDense
 from qkeras.quantizers import quantized_bits, quantized_relu
 from tensorflow.keras.layers import Activation, BatchNormalization
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
@@ -53,7 +52,7 @@ class DeepSetModel(QKerasModel):
                                     "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                     "fpga_part" : str,
                                     "project_name" : str},
-                "inputs" : {  # <-- add this
+                "inputs" : { # add new types of inputs here
                     "basic_input_config": list,
                     "basic_features": list,
                     "jet_features": list}
@@ -186,7 +185,6 @@ class DeepSetModel(QKerasModel):
         for layer in self.jet_model.layers:
             layer_name = layer.__class__.__name__
             if layer_name in ["BatchNormalization", "InputLayer"]:
-                from IPython import embed; embed()  # for debugging
                 for k in self.firmware_config['input_precision'].keys():
                     if k in layer.name:
                         precision = self.firmware_config['input_precision'][k]

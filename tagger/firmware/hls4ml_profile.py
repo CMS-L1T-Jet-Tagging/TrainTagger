@@ -53,15 +53,14 @@ def getReports(indir):
 def doPlots(model, outputdir, inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
-    data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_features_dict = to_ML(data, class_labels)
+    data, _, class_labels, input_vars, jet_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
+    X_test, Y_test, pt_target, truth_pt, reco_pt, jet_features = to_ML(data, class_labels)
 
     labels = list(class_labels.keys())
 
     raw_inputs_dict = {
         "basic_input": X_test,
-        "jet_eta": jet_features_dict['jet_eta'],
-        "jet_pt_log": jet_features_dict['jet_pt_log'],
+        "jet_features": jet_features,
     }
 
     model.firmware_convert("temp", build=False)
@@ -172,8 +171,6 @@ if __name__ == "__main__":
     if args.remake:
         make_data(infile=args.input,
                   outdir="profiling_data/",
-                  extra_basic_inputs = model.inputs['basic_input_config'],
-                  use_pu=model.training_config['pileup'],
                   extras='extra_emulation_fields',
                   tree="outnano/Jets")
 

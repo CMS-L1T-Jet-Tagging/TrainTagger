@@ -36,6 +36,7 @@ puppicand_fields_all:
   - jet_pt_phys
   - jet_genmatch_pt
 
+# new inputs should always be added at the end here and in jet_nn_fields to simplify emulation.
 baseline_hardware_inputs:
   - pt
   - pt_rel

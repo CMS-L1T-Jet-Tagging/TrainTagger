@@ -8,17 +8,16 @@ import tensorflow as tf
 from schema import Schema, And, Use, Optional
 import tensorflow_model_optimization as tfmot
 
-from tagger.model.common import choose_aggregator, initialise_tensorflow
+from tagger.model.common import initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
 from qkeras import QConv1D
 from qkeras.utils import load_qmodel
 from qkeras.qlayers import QActivation, QDense
-from qkeras.quantizers import quantized_bits, quantized_relu, quantized_linear
+from qkeras.quantizers import quantized_bits, quantized_relu
 from tensorflow.keras.layers import Activation, BatchNormalization
 from tagger.model.DeepSetModel import DeepSetModel
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('WeightedAverageSimpleModel')

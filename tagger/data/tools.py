@@ -186,10 +186,10 @@ def _make_nn_inputs(data_split, tag, jet_fields, n_parts):
     inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
 
-    jet_features = _get_puppicand_fields(jet_fields)
-    data_split['nn_jet_features'] = ak.zip({
-        f: data_split[f] for f in jet_features
-    })
+    # jet inputs
+    jet_fields = _get_puppicand_fields(jet_fields)
+    inputs_jets = ak.concatenate([data_split[jet_field][:, np.newaxis] for jet_field in jet_fields], axis=1)
+    data_split['nn_jet_features'] = inputs_jets
 
     return
 
@@ -272,7 +272,7 @@ def extract_array(tree, field, entry_stop):
     return tree[field].array(entry_stop=entry_stop)
 
 
-def extract_nn_inputs(data, input_vars, n_parts=16, n_entries=None):
+def extract_nn_inputs(data, input_vars, jet_vars, n_parts=16, n_entries=None):
     """
     Extract nn inputs based on the input_vars list
     """
@@ -290,7 +290,15 @@ def extract_nn_inputs(data, input_vars, n_parts=16, n_entries=None):
     # batch_size, n_particles, n_features
     inputs = ak.concatenate(inputs_list, axis=2)
 
-    return inputs
+    # Jet Inputs
+    jet_inputs_list = []
+    for jet_field in jet_vars:
+        jet_array = extract_array(data, jet_field, n_entries)
+        jet_inputs_list.append(jet_array[:, np.newaxis])
+
+    jet_inputs = ak.concatenate(jet_inputs_list, axis=1)
+
+    return inputs, jet_inputs
 
 
 def group_id_values(event_id, *arrays, num_elements=2):
@@ -317,7 +325,7 @@ def group_id_values(event_id, *arrays, num_elements=2):
     return grouped_id[mask], filtered_grouped_arrays
 
 
-def to_ML(data, class_labels, jet_features):
+def to_ML(data, class_labels):
     """
     Take in the data from make_data (loaded by load_data) and make them ready for training.
     """
@@ -327,12 +335,9 @@ def to_ML(data, class_labels, jet_features):
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     jet_pt_phys = np.asarray(data['jet_pt_phys'])
-    jet_features_dict = {
-        field: ak.to_numpy(jet_features[field])
-        for field in jet_features.fields
-    }
+    jet_features = np.asarray(data['nn_jet_features'])
 
-    return X, y, pt_target, truth_pt, jet_pt_phys, jet_features_dict
+    return X, y, pt_target, truth_pt, jet_pt_phys, jet_features
 
 
 def constituents_mask(x, features_dim):
@@ -395,12 +400,21 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
         variables = json.load(f)
         class_labels = variables['outputs']
         input_vars = variables['inputs']
+        jet_vars = variables['jet_fields']
         extra_vars = variables['extras']
 
     # Pile up masking and basic input configuration filtering based on model config
     pu_mask = (data['class_label'] == class_labels['pileup'])
-    fields_to_remove = [i for i, x in enumerate(input_vars) if x not in model.inputs['basic_input_config']]
-    data['nn_inputs'] = np.delete(data['nn_inputs'], fields_to_remove, axis=2)
+
+    # remove unwanted basic input variables
+    remove_basic_fields = [i for i, x in enumerate(input_vars) if x not in model.inputs['basic_input_config']]
+    data['nn_inputs'] = np.delete(data['nn_inputs'], remove_basic_fields, axis=2)
+
+    # remove unwanted jet features
+    remove_jet_fields = [i for i, x in enumerate(jet_vars) if x not in model.inputs['jet_features']]
+    data['nn_jet_features'] = np.delete(data['nn_jet_features'], remove_jet_fields, axis=1)
+
+    # pileup masking if not training on pileup
     if not model.training_config['pileup']:
         class_labels.pop('pileup', None)  # Remove pileup from class_labels if not training on it
         data = data[~pu_mask]
@@ -418,16 +432,7 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
     train_data = data[train_indices]
     test_data = data[test_indices]
 
-    # jet features
-    nn_jet_features = ak.zip({
-        field.removeprefix("nn_jet_features_"): data[field]
-        for field in data.fields
-        if field.startswith("nn_jet_features_")
-    })
-    train_jet_features = nn_jet_features[train_indices]
-    test_jet_features = nn_jet_features[test_indices]
-
-    return train_data, test_data, train_jet_features, test_jet_features, class_labels, input_vars, extra_vars
+    return train_data, test_data, class_labels, input_vars, jet_vars, extra_vars
 
 def make_data(
     infile='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/All200_part0.root',

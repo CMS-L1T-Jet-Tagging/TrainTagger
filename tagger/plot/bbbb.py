@@ -259,7 +259,7 @@ def load_inputs(path, n_entries=100000, tree='outnano/Jets', model=None):
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, raw_jet_inputs num_elements=4)
+    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, raw_jet_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
@@ -361,7 +361,7 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
     if raw_gen_mHH is not None:
-        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, raw_jet_inputs num_elements=4)
+        event_id, grouped_arrays = group_id_values(raw_event_id, raw_gen_mHH, raw_jet_genpt, raw_jet_geneta, raw_jet_pt, raw_jet_eta, raw_cmssw_bscore, raw_inputs, raw_jet_inputs, num_elements=4)
         event_gen_mHH, jet_genpt, jet_geneta, jet_pt, jet_eta, cmssw_bscore, jet_nn_inputs, jet_inputs = grouped_arrays
 
         #Just pick the first entry of jet mHH arrays

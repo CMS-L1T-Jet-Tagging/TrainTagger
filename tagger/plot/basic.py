@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 
 # Third parties
-import pandas
+import pandas as pd
 import tensorflow as tf
 from matplotlib.pyplot import cm
 from scipy.stats import norm
+import keras
 
 setattr(collections, "MutableMapping", collections.abc.MutableMapping)
 import histbook
@@ -31,7 +32,7 @@ from matplotlib.colors import LogNorm
 from tagger.data.tools import load_data, to_ML
 from tagger.plot import style
 
-from .common import PT_BINS, plot_histo
+from tagger.plot.common import PT_BINS, plot_histo
 
 matplotlib.use('Agg')
 
@@ -328,6 +329,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
     colormap = cm.get_cmap('Set1', len(class_labels))
+    
 
     # Create a plot for ROC curves
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -990,8 +992,113 @@ def plot_latent_vs_variable(variable,embedding, labels, label_style, variable_na
     cbar.ax.tick_params(labelsize=9)
     plt.savefig(plot_dir+'/latent_vs_'+variable_name+'.png', dpi=100, bbox_inches="tight") 
     plt.close(fig)
+
+def plot_latent_vs_class(z, labels, global_range, printing_labels, plot_dir):
+    
+    os.makedirs(plot_dir, exist_ok=True)
+    
+    colormap = cm.get_cmap('Set1', len(printing_labels))
+    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
+    scatter = ax.scatter(z[:, 0], z[:, 1], c=labels, cmap= colormap, alpha=0.6)
+    cbar = plt.colorbar(scatter, ticks=range(len(printing_labels)))
+    cbar.ax.set_yticklabels(printing_labels)
+    
+    ax.set_title("Output Embeddings",y=1.0, pad=84)
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, 'output_embeddings.png'))
+    
+    n = len(printing_labels) 
+    titles = list(printing_labels.keys())
+    
+    # Determine grid dimensions
+    ncols = int(np.ceil(np.sqrt(n)))
+    nrows = int(np.ceil(n / ncols))
         
-def plot_PCA(principle_components, labels, global_range,printing_labels,plot_dir):
+    arrays = []
+    for iclass in range(n):
+        indices = np.squeeze(np.argwhere(labels==iclass))
+        arrays.append((z[indices,0], z[indices,1]))
+
+    ranges = [global_range] * len(arrays)
+    
+    all_counts = []
+    for (x, y), rng in zip(arrays, ranges):
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        if len(x) > 0:
+            counts, _, _ = np.histogram2d(x, y, bins=50, range=rng)
+            pos = counts[counts > 0]
+            all_counts.append(pos)
+ 
+    if all_counts:
+        flat = np.concatenate(all_counts)
+        vmin = float(flat.min())
+        vmax = float(flat.max())
+    else:
+        vmin, vmax = 1, 10   # fallback for all-zero data
+ 
+    norm = LogNorm(vmin=vmin, vmax=vmax)
+    figsize=(10 * ncols, 8 * nrows)
+     
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+ 
+    # constrained_layout automatically prevents tick labels / titles overlapping
+    fig, axes_grid = plt.subplots(
+        nrows, ncols,
+        figsize=figsize,
+        layout="constrained",
+        squeeze=False,
+    )
+ 
+    axes = np.empty((nrows, ncols), dtype=object)
+ 
+    for i, ((x, y), rng) in enumerate(zip(arrays, ranges)):
+        row, col = divmod(i, ncols)
+        ax = axes_grid[row, col]
+        axes[row, col] = ax
+        
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        if len(x) > 0:
+            ax.hist2d(x, y, range=rng, bins=50, norm=norm, cmap='jet')
+ 
+        ax.set_title(printing_labels[titles[i]], fontsize=20, pad=6)
+        ax.set_xlabel('PCA dim #1', fontsize=15)
+        ax.set_ylabel('PCA dim #2', fontsize=15)
+        ax.tick_params(labelsize=8)
+ 
+    # Hide unused axes
+    for i in range(n, nrows * ncols):
+        row, col = divmod(i, ncols)
+        fig.add_subplot(axes_grid[row, col]).set_visible(False)
+
+ 
+    # ── 3. Shared colorbar in the reserved column ────────────────────────────
+    fig.draw_without_rendering()
+ 
+    # Top of the top-left subplot, bottom of the bottom-right subplot
+    # (in figure-fraction coordinates).
+    top    = axes_grid[0, 0].get_position().y1
+    bottom = axes_grid[nrows - 1, ncols - 1].get_position().y0
+    right  = axes_grid[nrows - 1, ncols - 1].get_position().x1
+ 
+    cbar_pad   = 0.01   # gap between grid and colorbar (figure fraction)
+    cbar_width = 0.02
+ 
+    cbar_ax = fig.add_axes([right + cbar_pad, bottom, cbar_width, top - bottom])
+    
+    sm = plt.cm.ScalarMappable(cmap='jet', norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+    cbar.set_label('# Events', fontsize=20)
+    cbar.ax.tick_params(labelsize=9)
+
+    plt.savefig(os.path.join(plot_dir, 'output_embeddings_2D.png'), bbox_inches="tight")
+
+
+def plot_PCA(principle_components, labels, global_range, printing_labels, plot_dir):
     
     os.makedirs(plot_dir, exist_ok=True)
     
@@ -1096,80 +1203,143 @@ def plot_PCA(principle_components, labels, global_range,printing_labels,plot_dir
     plt.savefig(plot_dir+'/PCA_2D.png', bbox_inches="tight")
 
 
-def plot_tnse(features):
-    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, init='random', random_state=42,verbose=1)
-    embeddings_2d = tsne.fit_transform(features)
+def plot_TSNE(tsne_components, labels, global_range, printing_labels, plot_dir):
     
-    colormap = cm.get_cmap('Set1', len(labels))
-    colours = [np.where(y_test[i]==1) for i in range(len(y_test))]
+    os.makedirs(plot_dir, exist_ok=True)
     
+    colormap = cm.get_cmap('Set1', len(printing_labels))
     fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
-    scatter = ax.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=colours, cmap= colormap, alpha=0.6)
-    cbar = plt.colorbar(scatter, ticks=range(len(labels)))
-    cbar.ax.set_yticklabels(labels)
+    scatter = ax.scatter(tsne_components[:, 0], tsne_components[:, 1], c=labels, cmap= colormap, alpha=0.6)
+    cbar = plt.colorbar(scatter, ticks=range(len(printing_labels)))
+    cbar.ax.set_yticklabels(printing_labels)
     
     ax.set_title("t-SNE of Pooling Layer embeddings",y=1.0, pad=84)
     
     plt.tight_layout()
-    plt.savefig(plot_dir+'/Embedding_2D.png')
-    plt.savefig(plot_dir+'/Embedding_2D.pdf')
+    plt.savefig(plot_dir+'/TSNE_scatter.png')
     
-    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
-    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
-    scatter = ax.scatter(features[:, 0], features[:, 1], c=colours, cmap= colormap, alpha=0.6)
-    cbar = plt.colorbar(scatter, ticks=range(len(labels)))
-    cbar.ax.set_yticklabels(labels)
+    n = len(printing_labels) 
+    titles = list(printing_labels.keys())
     
-    ax.set_title("First two latent dimensions",y=1.0, pad=84)
-    
-    plt.tight_layout()
-    plt.savefig(plot_dir+'/LatentDim12.png')
-    
-    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
-    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
-    scatter = ax.scatter(features[:, 2], features[:, 3], c=colours, cmap= colormap, alpha=0.6)
-    cbar = plt.colorbar(scatter, ticks=range(len(labels)))
-    cbar.ax.set_yticklabels(labels)
-    
-    ax.set_title("Second two latent dimensions",y=1.0, pad=84)
-    
-    plt.tight_layout()
-    plt.savefig(plot_dir+'/LatentDim34.png')
-    
-    
-    # And for the classifier
-    features_class,features_regress = model.jet_model(X_test)
-    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, init='random', random_state=42,verbose=1)
-    embeddings_2d = tsne.fit_transform(features_class.numpy())
+    # Determine grid dimensions
+    ncols = int(np.ceil(np.sqrt(n)))
+    nrows = int(np.ceil(n / ncols))
+        
+    arrays = []
+    for iclass in range(n):
+        indices = np.squeeze(np.argwhere(labels==iclass))
+        arrays.append((tsne_components[indices,0], tsne_components[indices,1]))
 
-    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
-    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
-    scatter = plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=colours, cmap= colormap, alpha=0.6)
-    cbar = plt.colorbar(scatter, ticks=range(len(labels)))
-    cbar.ax.set_yticklabels(labels)
-    ax.set_title("t-SNE of classification output",y=1.0, pad=84)
+    ranges = [global_range] * len(arrays)
     
-    plt.tight_layout()
-    plt.savefig(plot_dir+'/2D_class_finetune.png')
-    plt.savefig(plot_dir+'/2D_class_finetune.pdf')
-    
-    # And for the regression
-    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, init='random', random_state=42,verbose=1)
-    embeddings_2d = tsne.fit_transform(features_regress.numpy())
+    all_counts = []
+    for (x, y), rng in zip(arrays, ranges):
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        if len(x) > 0:
+            counts, _, _ = np.histogram2d(x, y, bins=50, range=rng)
+            pos = counts[counts > 0]
+            all_counts.append(pos)
+ 
+    if all_counts:
+        flat = np.concatenate(all_counts)
+        vmin = float(flat.min())
+        vmax = float(flat.max())
+    else:
+        vmin, vmax = 1, 10   # fallback for all-zero data
+ 
+    norm = LogNorm(vmin=vmin, vmax=vmax)
+    figsize=(10 * ncols, 8 * nrows)
+     
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+ 
+    # constrained_layout automatically prevents tick labels / titles overlapping
+    fig, axes_grid = plt.subplots(
+        nrows, ncols,
+        figsize=figsize,
+        layout="constrained",
+        squeeze=False,
+    )
+ 
+    axes = np.empty((nrows, ncols), dtype=object)
+ 
+    for i, ((x, y), rng) in enumerate(zip(arrays, ranges)):
+        row, col = divmod(i, ncols)
+        ax = axes_grid[row, col]
+        axes[row, col] = ax
+        
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        if len(x) > 0:
+            ax.hist2d(x, y, range=rng, bins=50, norm=norm, cmap='jet')
+ 
+        ax.set_title(printing_labels[titles[i]], fontsize=20, pad=6)
+        ax.set_xlabel('t-SNE dim #1', fontsize=15)
+        ax.set_ylabel('t-SNE dim #2', fontsize=15)
+        ax.tick_params(labelsize=8)
+ 
+    # Hide unused axes
+    for i in range(n, nrows * ncols):
+        row, col = divmod(i, ncols)
+        fig.add_subplot(axes_grid[row, col]).set_visible(False)
 
-    fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0]*1.2,style.FIGURE_SIZE[1]*1.2))
-    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, fontsize=style.CMSHEADER_SIZE)
-    scatter = plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=y_pt, cmap='jet', norm=matplotlib.colors.LogNorm(),alpha=0.6)
-    cbar = plt.colorbar(scatter)
-    #cbar.ax.set_yticklabels(labels)
-    ax.set_title("t-SNE of regression output",y=1.0, pad=84)
+ 
+    # ── 3. Shared colorbar in the reserved column ────────────────────────────
+    fig.draw_without_rendering()
+ 
+    # Top of the top-left subplot, bottom of the bottom-right subplot
+    # (in figure-fraction coordinates).
+    top    = axes_grid[0, 0].get_position().y1
+    bottom = axes_grid[nrows - 1, ncols - 1].get_position().y0
+    right  = axes_grid[nrows - 1, ncols - 1].get_position().x1
+ 
+    cbar_pad   = 0.01   # gap between grid and colorbar (figure fraction)
+    cbar_width = 0.02
+ 
+    cbar_ax = fig.add_axes([right + cbar_pad, bottom, cbar_width, top - bottom])
     
-    plt.tight_layout()
-    plt.savefig(plot_dir+'/2D_regress_finetune.png')
-    plt.savefig(plot_dir+'/2D_regress_finetune.pdf')
+    sm = plt.cm.ScalarMappable(cmap='jet', norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+    cbar.set_label('# Events', fontsize=20)
+    cbar.ax.tick_params(labelsize=9)
+
+    plt.savefig(plot_dir+'/TSNE_2D.png', bbox_inches="tight")
+
+def plot_embeddings(z_test, y_test, class_labels, plot_dir):
+    labels = list(class_labels.keys())
+
+    # ----- Embedding Visualization -----
     
-    
+    # y_test is OHE, so we need to convert it to class indices
+    y_test = np.argmax(y_test, axis=1)
+
+    # Plot PCA embeddings
+    pca = PCA(n_components=2)
+    pca_embeddings = pca.fit_transform(z_test)
+    xmin, xmax = pca_embeddings[:, 0].min(), pca_embeddings[:, 0].max()
+    ymin, ymax = pca_embeddings[:, 1].min(), pca_embeddings[:, 1].max()
+    global_range = [[xmin, xmax],[ymin, ymax]]
+    plot_PCA(pca_embeddings, y_test, global_range, class_labels, plot_dir)
+
+    # Plot t-SNE embeddings
+
+    # Sample a subset of the data for t-SNE if it's too large, as t-SNE can be slow on large datasets
+    if len(z_test) > 10000:
+        rng = np.random.default_rng(seed=42)
+        sample_indices = rng.choice(z_test.shape[0], 10000, replace=False)
+        z_test = z_test[sample_indices]
+        y_test = y_test[sample_indices]
+
+    tsne = TSNE(n_components=2, random_state=42)
+    tsne_embeddings = tsne.fit_transform(z_test)
+    xmin, xmax = tsne_embeddings[:, 0].min(), tsne_embeddings[:, 0].max()
+    ymin, ymax = tsne_embeddings[:, 1].min(), tsne_embeddings[:, 1].max()
+    global_range = [[xmin, xmax],[ymin, ymax]]
+    plot_TSNE(tsne_embeddings, y_test, global_range, class_labels, plot_dir)
+
+
 def plot_output_scores(y_pred, labels, label_style, plot_dir):
     
     n = len(label_style) 
@@ -1214,21 +1384,6 @@ def plot_output_scores(y_pred, labels, label_style, plot_dir):
         fig.add_subplot(axes_grid[row, col]).set_visible(False)
 
     plt.savefig(plot_dir+'/ModelOutput.png', bbox_inches="tight")
-
-
-def plot_embeddings(model, X_test, y_test, X_jets, event, y_pt, class_labels, plot_dir):
-    labels = list(class_labels.keys())
-    
-    plot_dir = os.path.join(plot_dir, 'embeddings')
-    os.makedirs(plot_dir, exist_ok=True)
-    # ----- Embedding Visualization -----
-    # Extract features and apply t-SNE
-    features = model.embedding_predict(X_test,X_jets,event).numpy()
-    
-    data_labels = [np.where(y_test[i]==1) for i in range(len(y_test))]
-    
-    plot_PCA(features,y_test,plot_dir,class_labels)
-    
     
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
@@ -1307,9 +1462,9 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
         df_wp_loose = h_wp_loose.pandas("wp_loose", error="normal")
         df_wp_medium = h_wp_medium.pandas("wp_medium", error="normal")
         df_wp_tight = h_wp_tight.pandas("wp_tight", error="normal")
-        df_wp_loose["midpoints"] = [x[0].mid if isinstance(x[0], pandas.Interval) else np.nan for x in df_wp_loose.index]
-        df_wp_medium["midpoints"] = [x[0].mid if isinstance(x[0], pandas.Interval) else np.nan for x in df_wp_medium.index]
-        df_wp_tight["midpoints"] = [x[0].mid if isinstance(x[0], pandas.Interval) else np.nan for x in df_wp_tight.index]
+        df_wp_loose["midpoints"] = [x[0].mid if isinstance(x[0], pd.Interval) else np.nan for x in df_wp_loose.index]
+        df_wp_medium["midpoints"] = [x[0].mid if isinstance(x[0], pd.Interval) else np.nan for x in df_wp_medium.index]
+        df_wp_tight["midpoints"] = [x[0].mid if isinstance(x[0], pd.Interval) else np.nan for x in df_wp_tight.index]
 
         plot_name = f"{key}_efficiency"
         plot_efficiency(df_wp_loose, df_wp_medium, df_wp_tight, plot_name)
@@ -1415,32 +1570,108 @@ def process_labels(process_key):
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
 
 
+
+def make_plots(model, X_test, y_test, truth_pt_test, reco_pt_test):
+    """
+    Make all the plots for the model
+    """
+
+    plot_dir = os.path.join(model.output_directory, "plots/training")
+    os.makedirs(plot_dir, exist_ok=True)
+
+    # # Plot input distributions
+    # plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, pt_dir)
+
+    model_outputs = model.predict(X_test, batch_size=20000, verbose=1)
+    y_pred = model_outputs[0]
+    pt_pred = model_outputs[1]
+    z_pred = model.embedding_predict(X_test, batch_size=20000, verbose=1)
+
+    # ============================
+    # Plot Jet ID ROCs, efficiencies, confusion matrices
+    # ============================
+    print("Plotting ROC curves, efficiencies, and confusion matrices...")
+    jet_id_dir = os.path.join(plot_dir, "jet_id")
+    os.makedirs(jet_id_dir, exist_ok=True)
+
+    # Plot ROC curves
+    ROC_dict = {class_label: 0 for class_label in model.class_labels}
+    ROC_dict = ROC(y_pred, y_test, model.class_labels, jet_id_dir, ROC_dict)
+
+    # Save the ROC dictionary to a csv and text file
+    df_roc = pd.DataFrame.from_dict(ROC_dict, orient='index', columns=['AUC'])
+    df_roc.to_csv(os.path.join(jet_id_dir, "ROC_AUC.csv"))
+    with open(os.path.join(jet_id_dir, "ROC_AUC.txt"), "w") as f:
+        f.write(df_roc.to_string())
+
+    # Efficiencies
+    efficiency(y_pred, y_test, reco_pt_test, model.class_labels, jet_id_dir)
+
+    # Confusion matrix
+    confusion(y_pred, y_test, model.class_labels, jet_id_dir)
+
+    # ============================
+    # Plot pt regression
+    # ============================
+    print("Plotting pt regression...")
+    pt_dir = os.path.join(plot_dir, "pt_regression")
+    os.makedirs(pt_dir, exist_ok=True)
+
+    # # Plot pt corrections
+    # pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, pt_dir)
+
+    # Plot inclusive response and individual flavor
+    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_pred, pt_dir)
+
+    # Plot the rms of the residuals vs pt
+    rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_pred, pt_dir)
+
+    # ============================
+    # Plot embeddings
+    # ============================
+    print("Plotting embeddings...")
+    embedding_dir = os.path.join(plot_dir, "embeddings")
+    os.makedirs(embedding_dir, exist_ok=True)
+    
+    # Plot the embedding space of the model
+    plot_embeddings(z_pred, y_test, model.class_labels, embedding_dir)
+
+    # ============================
+    # Plot shaply feature importance
+    # ============================
+    # print("Plotting shaply feature importance...")
+    # Plot the shaply feature importance
+    # shap_dir = os.path.join(plot_dir, "shaply")
+    # os.makedirs(shap_dir, exist_ok=True)
+    # plot_shaply(model, X_test, model.class_labels, model.input_vars, shap_dir)
+
+    return ROC_dict
+
+
+
 def basic(model, signal_dirs):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     Returns a dictionary of ROCs for each class
     """
 
-    plot_dir = os.path.join(model.output_directory, "plots/training")
-
-    ROC_dict = {class_label: 0 for class_label in model.class_labels}
-
     # Load the testing data
     X_test = np.load(f"{model.output_directory}/testing_data/X_test.npy")
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-    jet_features = np.load(f"{model.output_directory}/testing_data/jet_X_test.npy")
-    event = np.load(f"{model.output_directory}/testing_data/event.npy")
-    event_info = np.load(f"{model.output_directory}/testing_data/bonus_event_info.npy")
-    model_outputs = model.predict(X_test,jet_features.T,event)
+    # jet_features = np.load(f"{model.output_directory}/testing_data/jet_X_test.npy")
+    # event = np.load(f"{model.output_directory}/testing_data/event.npy")
+    # event_info = np.load(f"{model.output_directory}/testing_data/bonus_event_info.npy")
 
-    # Get classification outputs
-    y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1]
+    # OHE the labels for ROC plotting
+    y_test = keras.utils.to_categorical(y_test, num_classes=len(model.class_labels))
 
-    # Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
+    # Make plots
+    ROC_dict = make_plots(model, X_test, y_test, truth_pt_test, reco_pt_test)
+
+
+
     # class_pairs = []
     # # Generate all possible pairs of classes
     # for i in model.class_labels.keys():
@@ -1482,28 +1713,4 @@ def basic(model, signal_dirs):
     #         ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
     #         ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
 
-    # Efficiencies
-    # efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
 
-    # # Confusion matrix
-    # confusion(y_pred, y_test, model.class_labels, plot_dir)
-
-    # # Plot pt corrections
-    # pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
-
-    # # Plot input distributions
-    # plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, plot_dir)
-
-    # # Plot inclusive response and individual flavor
-    # response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-
-    # # Plot the rms of the residuals vs pt
-    # rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-
-    # # Plot the shaply feature importance
-    # plot_shaply(model, X_test, model.class_labels, model.input_vars, plot_dir)
-    
-    # Plot the embedding space of the model
-    plot_embeddings(model, X_test, y_test, jet_features, event, truth_pt_test, model.class_labels, plot_dir )
-
-    return ROC_dict

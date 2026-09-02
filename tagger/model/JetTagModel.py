@@ -12,6 +12,7 @@ import numpy as np
 import numpy.typing as npt
 import yaml
 from schema import Schema, And, Use, Optional
+import keras
 
 from tagger.plot.basic import loss_history
 
@@ -31,6 +32,8 @@ class JetTagModel(ABC):
         self.jet_model = None
         self.hls_jet_model = None
 
+        self.backbone_model = None
+
         self.input_vars = []
         self.extra_vars = []
         self.class_labels = []
@@ -41,8 +44,8 @@ class JetTagModel(ABC):
         self.training_config = {}
         self.firmware_config = {}
 
-        self.output_id_name = 'jet_id_output'
-        self.output_pt_name = 'pT_output'
+        self.output_id_name = 'jet_id'
+        self.output_pt_name = 'pT'
         self.loss_name = ''
 
         self.callbacks = []
@@ -107,19 +110,36 @@ class JetTagModel(ABC):
         Must be written for child class if you want to run the synthesis steps
         """
 
-    def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
+    def predict(self, X_test: npt.NDArray[np.float64], batch_size: int = 10_000, verbose: int = 1) -> tuple:
         """Predict method for model
 
         Args:
             X_test (npt.NDArray[np.float64]): Input X test
+            batch_size (int): Batch size for prediction
+            verbose (int): Verbosity level
 
         Returns:
             tuple: (class_predictions , pt_ratio_predictions)
         """
-        model_outputs = self.jet_model.predict(X_test)
-        class_predictions = model_outputs[0]
-        pt_ratio_predictions = model_outputs[1].flatten()
+        model_outputs = self.jet_model.predict(X_test, batch_size=batch_size, verbose=verbose)
+        class_predictions = model_outputs['jet_id']
+        pt_ratio_predictions = model_outputs['pT'].flatten()
         return (class_predictions, pt_ratio_predictions)
+
+    def embedding_predict(self, X_test: npt.NDArray[np.float64], batch_size: int = 10_000, verbose: int = 1) -> npt.NDArray[np.float64]:
+        """Predict method for model embeddings
+
+        Args:
+            X_test (npt.NDArray[np.float64]): Input X test
+            batch_size (int): Batch size for prediction
+            verbose (int): Verbosity level
+        Returns:
+            npt.NDArray[np.float64]: Model embeddings
+        """
+        if self.backbone_model is None:
+            self.backbone_model = keras.Model(self.jet_model.input, self.jet_model.get_layer('pool').output)
+        model_outputs = self.backbone_model.predict(X_test, batch_size=batch_size, verbose=verbose)
+        return model_outputs
 
     def save_decorator(save_func):
         """Decorator used to include additional

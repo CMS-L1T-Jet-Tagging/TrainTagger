@@ -1,0 +1,39 @@
+
+model: TransformerModelHGQ2
+run_config :
+  verbose : 2
+  debug : True
+  num_threads : 24
+
+model_config :
+  name : transformer_HGQ2
+  embedding_layers : 1
+  transformer_blocks : 2
+  transformer_dim : 32
+  num_heads : 2
+  classification_layers : [32, 16]
+  classification_parallelisation_factor : [32,16]
+  regression_layers : [16, 8]
+  regression_parallelisation_factor : [16, 8]
+  kernel_initializer: "lecun_uniform"
+  aggregator: "mean"
+  target_ebops: 350000
+  
+quantization_config:
+
+training_config :
+  weight_method: "onlyclass"
+  epochs: 500
+  batch_size: 2048
+  learning_rate: 0.001
+  validation_split: 0.1
+  loss_weights: {"jet_id": 1.0, "pT": 1.0}
+
+  EarlyStopping_patience: 50
+  ReduceLROnPlateau_factor: 0.5
+  ReduceLROnPlateau_patience: 20
+  ReduceLROnPlateau_min_lr: 0.000001
+
+  beta: 0.00000001
+
+firmware_config:

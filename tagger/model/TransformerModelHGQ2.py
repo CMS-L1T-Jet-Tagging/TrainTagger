@@ -1,16 +1,24 @@
 import json
 import os
-import gc
 from schema import Schema, And, Use, Optional
+from collections import defaultdict
+from math import log2
+from tqdm import tqdm
 
 import numpy as np
 import numpy.typing as npt
-from sklearn.model_selection import train_test_split
+import tensorflow as tf
 import keras
 from keras.models import load_model
-from keras.layers import BatchNormalization, Input, Activation, Dense, ReLU
-from hgq.layers import QDense, QBatchNormalization, QGlobalAveragePooling1D, QAdd
-from hgq.utils.sugar import FreeEBOPs, BetaPID
+from keras.layers import BatchNormalization, GlobalMaxPooling1D, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten, Rescaling, Dense, Add, ReLU, UpSampling1D, Permute
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from keras.optimizers.schedules import CosineDecay
+from hgq.layers import QDense, QBatchNormDense, QBatchNormalization, QGlobalMaxPooling1D, QMultiHeadAttention, QSoftmax, QGlobalAveragePooling1D, QAdd
+from hgq.layers.activation import QUnaryFunctionLUT
+from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
+from hgq.regularizers import MonoL1
+from hgq.constraints import MinMax
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule, BetaPID
 import hls4ml
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
@@ -20,54 +28,56 @@ from tagger.train.pretraining.augmentations import AugmentationLayer
 from tagger.train.pretraining.losses import get_loss_function
 from tagger.train.pretraining.trainer import ContrastiveTrainer, EmbeddingDiagnostics, InnerModelCallback
 
-@JetModelFactory.register('JEDILinearHGQ2')
-class JEDILinearHGQ2(JetTagModel):
+@JetModelFactory.register('TransformerHGQ2Model')
+class TransformerHGQ2Model(JetTagModel):
 
     schema = Schema(
             {
                 "model": str,
+                ## generic run config coniguration
                 "run_config" : JetTagModel.run_schema,
-                "model_config" : {
-                    "name" : str,
-                    "embedding_layers" : list,
-                    "local_layers" : list,
-                    "global_layers" : list,
-                    "interaction_layers" : list,
-                    "classification_layers" : list,
-                    "regression_layers" : list,
-                    "kernel_initializer": str,
-                    "aggregator" : And(str, lambda s: s in ["mean", "max"]),
-                    "target_ebops": And(int, lambda s: s > 0),
-                },
+                "model_config" : {"name" : str,
+                                  "emb_layers" : int,
+                                  "transformer_blocks" : And(int, lambda s: s >= 1),
+                                  "transformer_dim" : And(int, lambda s: s >= 1),
+                                  "num_heads" : And(int, lambda s: s >= 1),
+                                  "projection_layers" : And(list, lambda s: len(s) >= 1),
+                                  "classification_layers" : list,
+                                  "classification_parallelisation_factor" : list,
+                                  "regression_layers" : list,
+                                  "regression_parallelisation_factor" : list,
+                                  "beta": float,
+                                  "kernel_initializer": str,
+                                  "aggregator" : And(str, lambda s: s in ["mean", "max"]),},
                 "quantization_config" : {'pt_output_quantization' : list},
-                "training_config" :     {
-                    "weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
-                    "validation_split" : And(float, lambda s: s > 0.0),
-                    "epochs" : And(int, lambda s: s >= 1),
-                    "batch_size" : And(int, lambda s: s >= 1),
-                    "learning_rate": And(float, lambda s: s > 0.0),
-                    "loss_weights" : And(dict, lambda s: len(s) == 2),
-                    "EarlyStopping_patience" : And(int, lambda s: s > 0),
-                    "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
-                    "ReduceLROnPlateau_patience" : int,
-                    "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0),
-                    "beta": And(float, lambda s: 1.0 >= s >= 0.0),
-                },
-                "firmware_config" : {
-                    "input_precision" : str,
-                    "class_precision" : str,
-                    "reg_precision": str,
-                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
-                    "fpga_part" : str,
-                    "project_name" : str
-                }
+                "training_config" : {
+                                     "loss": dict,
+                                     "weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
+                                     "validation_split" : And(float, lambda s: s > 0.0),
+                                     "embedding_epochs" : And(int, lambda s: s >= 1),
+                                     "finetuning_epochs" : And(int, lambda s: s >= 1),
+                                     "freeze_backbone" : bool,
+                                     "batch_size" : And(int, lambda s: s >= 1),
+                                     "learning_rate" : And(float, lambda s: s > 0.0),
+                                     "embedding_lr" : And(float, lambda s: s > 0.0),
+                                     "loss_weights" : And(list, lambda s: len(s) == 2),
+                                     "EarlyStopping_patience" : And(int, lambda s: s > 0),
+                                     "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                     "ReduceLROnPlateau_patience" : int,
+                                     "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)},
+                ## generic hls4ml configuration
+                "firmware_config" : {"input_precision" : str,
+                                    "class_precision" : str,
+                                    "reg_precision": str,
+                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
+                                    "fpga_part" : str,
+                                    "project_name" : str}
             }
     )
 
-    @quantization_decorator
-    def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
+    def build_model(self, inputs_shape, outputs_shape):
         
-        # initialise_tensorflow(self.run_config['num_threads'])
+        initialise_tensorflow(self.run_config['num_threads'])
 
         self.common_args = {
             'kernel_initializer': self.model_config['kernel_initializer'],
@@ -76,31 +86,29 @@ class JEDILinearHGQ2(JetTagModel):
         N_constituents = inputs_shape[0]
         n_features = inputs_shape[1]
 
-        inputs = keras.layers.Input((N_constituents, n_features),name='model_input')
-        main = QBatchNormalization()(inputs)
+        tdim = self.model_config['transformer_dim']
+        nheads = self.model_config['num_heads']
 
-        # ----- Main Branch -----
-        # Feature embedding
-        for iembed, depth_embed in enumerate(self.model_config['embedding_layers']):
-            main = QDense(depth_embed, activation='relu', parallelization_factor=depth_embed, name='dense_embed_' + str(iembed + 1), **self.common_args)(main)
+        inputs = keras.layers.Input((N_constituents, n_features), name='model_input')
+        main = QBatchNormalization(name='norm_input', iq_conf=iq_conf)(inputs)
 
-        # Local feature mixing
-        local_cxt = main
-        for ilocal, depth_local in enumerate(self.model_config['local_layers']):
-            local_cxt = QDense(depth_local, activation='relu', parallelization_factor=depth_local, name='dense_local_' + str(ilocal + 1), **self.common_args)(local_cxt) # (batch, n_constituents, depth_local)
+        # ----- Main branch -----                                
+        # Embedding
+        for i in range(self.model_config['emb_layers']):
+            main = QDense(tdim, activation='relu', parallelization_factor=tdim, name='emb_'+str(i+1), **self.common_args)(main)
 
-        # Global feature mixing
-        global_cxt = QGlobalAveragePooling1D(name='pool_global')(main)
-        for iglobal, depth_global in enumerate(self.model_config['global_layers']):
-            global_cxt = QDense(depth_global, activation='relu', parallelization_factor=depth_global, name='dense_global_' + str(iglobal + 1), **self.common_args)(global_cxt) # (batch, depth_global)
+        # Transformer blocks
+        for i in range(self.model_config['transformer_blocks']):
+            norm1 = QBatchNormalization(name='norm_mha_'+str(i+1))(main)
+            mha = QMultiHeadAttention(nheads, tdim//nheads, parallelization_factor=tdim, name='mha_'+str(i+1))(norm1, norm1)
+            main = QAdd(name='res_mha_'+str(i+1))([main, mha])
+            ff = QBatchNormDense(tdim*2, activation='relu', parallelization_factor=2*tdim, name='dense_'+str(i+1)+'_1', **self.common_args)(main)
+            ff = QDense(tdim, activation=None, parallelization_factor=tdim, name='dense_'+str(i+1)+'_2', **self.common_args)(ff)
+            main = QAdd(name='res_ff_'+str(i+1))([main, ff])
 
-        # Combine local and global context
-        interaction = QAdd(name='add_interaction')([local_cxt, global_cxt])
-        for iinter, depth_inter in enumerate(self.model_config['interaction_layers']):
-            interaction = QDense(depth_inter, activation='relu', parallelization_factor=depth_inter, name='dense_interaction_' + str(iinter + 1), **self.common_args)(interaction)
-
-        main = QGlobalAveragePooling1D(name='pool')(interaction)
-                
+        # Global pooling
+        main = QGlobalAveragePooling1D(name='pool')(main)
+            
         # ---- Output heads -----
         bn_main = QBatchNormalization(name='norm_embedding')(main)
 
@@ -108,7 +116,7 @@ class JEDILinearHGQ2(JetTagModel):
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             jet_id = QDense(
                 units=depthclass, 
-                parallelization_factor=depthclass, 
+                parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], 
                 name='Dense_' + str(iclass + 1) + '_jet_id', 
                 activation='relu', 
                 **self.common_args,
@@ -121,7 +129,7 @@ class JEDILinearHGQ2(JetTagModel):
         for ireg, depthreg in enumerate(self.model_config['regression_layers']):
             pt_regress = QDense(
                 units=depthreg, 
-                parallelization_factor=depthreg, 
+                parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], 
                 name='Dense_' + str(ireg + 1) + '_pT', 
                 activation='relu', 
                 **self.common_args,
@@ -229,7 +237,7 @@ class JEDILinearHGQ2(JetTagModel):
         # val_finetune_ds = make_finetuning_dataset(x_val, y_val, pt_val, w_val, self.training_config['batch_size'], self.output_id_name, self.output_pt_name, train=False)
 
         self.jet_model.compile(
-            optimizer=self.optimizer,
+            optimizer=self.fine_tuning_optimizer,
             loss=self.jet_loss,
             loss_weights=self.jet_loss_weights,
             metrics=self.jet_metrics,
@@ -247,7 +255,7 @@ class JEDILinearHGQ2(JetTagModel):
             epochs=self.training_config["epochs"],
             batch_size=self.training_config["batch_size"],
             verbose=self.run_config["verbose"],
-            callbacks=self.callbacks,
+            callbacks=self.fine_tune_callbacks,
         )
         self.history = history.history
 
@@ -281,61 +289,57 @@ class JEDILinearHGQ2(JetTagModel):
         # Load the model
         self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
 
-
-@JetModelFactory.register('JEDILinearHGQ2EmbeddingModel')
-class JEDILinearHGQ2EmbeddingModel(JetTagModel):
+@JetModelFactory.register('TransformerHGQ2EmbeddingModel')
+class TransformerHGQ2EmbeddingModel(JetTagModel):
 
     schema = Schema(
             {
                 "model": str,
                 ## generic run config coniguration
                 "run_config" : JetTagModel.run_schema,
-                "model_config" : {
-                    "name" : str,
-                    "embedding_layers" : list,
-                    "local_layers" : list,
-                    "global_layers" : list,
-                    "interaction_layers" : list,
-                    "projection_layers" : list,
-                    "classification_layers" : list,
-                    "regression_layers" : list,
-                    "kernel_initializer": str,
-                    "aggregator" : And(str, lambda s: s in ["mean", "max"]),
-                    "target_ebops_encoder": And(int, lambda s: s > 0),
-                    "target_ebops_output": And(int, lambda s: s > 0),
-                },
+                "model_config" : {"name" : str,
+                                  "emb_layers" : int,
+                                  "transformer_blocks" : And(int, lambda s: s >= 1),
+                                  "transformer_dim" : And(int, lambda s: s >= 1),
+                                  "num_heads" : And(int, lambda s: s >= 1),
+                                  "projection_layers" : And(list, lambda s: len(s) >= 1),
+                                  "classification_layers" : list,
+                                  "classification_parallelisation_factor" : list,
+                                  "regression_layers" : list,
+                                  "regression_parallelisation_factor" : list,
+                                  "beta": float,
+                                  "kernel_initializer": str,
+                                  "aggregator" : And(str, lambda s: s in ["mean", "max"]),},
                 "quantization_config" : {'pt_output_quantization' : list},
                 "training_config" : {
-                    "loss": dict,
-                    "weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
-                    "validation_split" : And(float, lambda s: s > 0.0),
-                    "embedding_epochs" : And(int, lambda s: s >= 1),
-                    "finetuning_epochs" : And(int, lambda s: s >= 1),
-                    "freeze_backbone" : bool,
-                    "batch_size" : And(int, lambda s: s >= 1),
-                    "learning_rate" : And(float, lambda s: s > 0.0),
-                    "embedding_lr" : And(float, lambda s: s > 0.0),
-                    "loss_weights" : And(dict, lambda s: len(s) == 2),
-                    "EarlyStopping_patience" : And(int, lambda s: s > 0),
-                    "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
-                    "ReduceLROnPlateau_patience" : int,
-                    "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0),
-                    "beta": And(float, lambda s: 1.0 >= s >= 0.0),
-                },
-                "firmware_config" : {
-                    "input_precision" : str,
-                    "class_precision" : str,
-                    "reg_precision": str,
-                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
-                    "fpga_part" : str,
-                    "project_name" : str
-                }
+                                     "loss": dict,
+                                     "weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
+                                     "validation_split" : And(float, lambda s: s > 0.0),
+                                     "embedding_epochs" : And(int, lambda s: s >= 1),
+                                     "finetuning_epochs" : And(int, lambda s: s >= 1),
+                                     "freeze_backbone" : bool,
+                                     "batch_size" : And(int, lambda s: s >= 1),
+                                     "learning_rate" : And(float, lambda s: s > 0.0),
+                                     "embedding_lr" : And(float, lambda s: s > 0.0),
+                                     "loss_weights" : And(list, lambda s: len(s) == 2),
+                                     "EarlyStopping_patience" : And(int, lambda s: s > 0),
+                                     "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                     "ReduceLROnPlateau_patience" : int,
+                                     "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)},
+                ## generic hls4ml configuration
+                "firmware_config" : {"input_precision" : str,
+                                    "class_precision" : str,
+                                    "reg_precision": str,
+                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
+                                    "fpga_part" : str,
+                                    "project_name" : str}
             }
     )
 
-    @quantization_decorator
     def build_model(self, inputs_shape, outputs_shape):
         
+        initialise_tensorflow(self.run_config['num_threads'])
+
         self.common_args = {
             'kernel_initializer': self.model_config['kernel_initializer'],
         }
@@ -343,31 +347,29 @@ class JEDILinearHGQ2EmbeddingModel(JetTagModel):
         N_constituents = inputs_shape[0]
         n_features = inputs_shape[1]
 
-        inputs = keras.layers.Input((N_constituents, n_features),name='model_input')
-        main = QBatchNormalization()(inputs)
+        tdim = self.model_config['transformer_dim']
+        nheads = self.model_config['num_heads']
 
-        # ----- Main Branch -----
-        # Feature embedding
-        for iembed, depth_embed in enumerate(self.model_config['embedding_layers']):
-            main = QDense(depth_embed, activation='relu', parallelization_factor=depth_embed, name='dense_embed_' + str(iembed + 1), **self.common_args)(main)
+        inputs = keras.layers.Input((N_constituents, n_features), name='model_input')
+        main = QBatchNormalization(name='norm_input')(inputs)
 
-        # Local feature mixing
-        local_cxt = main
-        for ilocal, depth_local in enumerate(self.model_config['local_layers']):
-            local_cxt = QDense(depth_local, activation='relu', parallelization_factor=depth_local, name='dense_local_' + str(ilocal + 1), **self.common_args)(local_cxt) # (batch, n_constituents, depth_local)
+        # ----- Main branch -----                                
+        # Embedding
+        for i in range(self.model_config['emb_layers']):
+            main = QDense(tdim, activation='relu', parallelization_factor=tdim, name='emb_'+str(i+1), **self.common_args)(main)
 
-        # Global feature mixing
-        global_cxt = QGlobalAveragePooling1D(name='pool_global')(main)
-        for iglobal, depth_global in enumerate(self.model_config['global_layers']):
-            global_cxt = QDense(depth_global, activation='relu', parallelization_factor=depth_global, name='dense_global_' + str(iglobal + 1), **self.common_args)(global_cxt) # (batch, depth_global)
+        # Transformer blocks
+        for i in range(self.model_config['transformer_blocks']):
+            norm1 = QBatchNormalization(name='norm_mha_'+str(i+1))(main)
+            mha = QMultiHeadAttention(nheads, tdim//nheads, parallelization_factor=tdim, name='mha_'+str(i+1))(norm1, norm1)
+            main = QAdd(name='res_mha_'+str(i+1))([main, mha])
+            ff = QBatchNormDense(tdim*2, activation='relu', parallelization_factor=2*tdim, name='dense_'+str(i+1)+'_1', **self.common_args)(main)
+            ff = QDense(tdim, activation=None, parallelization_factor=tdim, name='dense_'+str(i+1)+'_2', **self.common_args)(ff)
+            main = QAdd(name='res_ff_'+str(i+1))([main, ff])
 
-        # Combine local and global context
-        interaction = QAdd(name='add_interaction')([local_cxt, global_cxt])
-        for iinter, depth_inter in enumerate(self.model_config['interaction_layers']):
-            interaction = QDense(depth_inter, activation='relu', parallelization_factor=depth_inter, name='dense_interaction_' + str(iinter + 1), **self.common_args)(interaction)
-
-        main = QGlobalAveragePooling1D(name='pool')(interaction)
-
+        # Global pooling
+        main = QGlobalAveragePooling1D(name='pool')(main)
+            
         # ----- Embedding Projection branch -----
         # Thrown away after pre-training
         z = BatchNormalization(name='norm_projection')(main)
@@ -385,7 +387,7 @@ class JEDILinearHGQ2EmbeddingModel(JetTagModel):
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             jet_id = QDense(
                 units=depthclass, 
-                parallelization_factor=depthclass, 
+                parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], 
                 name='Dense_' + str(iclass + 1) + '_jet_id', 
                 activation='relu', 
                 **self.common_args,
@@ -398,7 +400,7 @@ class JEDILinearHGQ2EmbeddingModel(JetTagModel):
         for ireg, depthreg in enumerate(self.model_config['regression_layers']):
             pt_regress = QDense(
                 units=depthreg, 
-                parallelization_factor=depthreg, 
+                parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], 
                 name='Dense_' + str(ireg + 1) + '_pT', 
                 activation='relu', 
                 **self.common_args,

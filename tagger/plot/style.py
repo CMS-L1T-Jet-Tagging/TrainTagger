@@ -34,11 +34,13 @@ MARKERSIZE = 20
 
 FIGURE_SIZE = (17, 17)
 
-CMSHEADER_LEFT = "Phase 2 Simulation Preliminary"
+# CMSHEADER_LEFT = "Phase 2 Simulation"
+# CMSHEADER_LEFT = "Phase 2 Simulation Preliminary"
+CMSHEADER_LEFT = "Phase 2 Simulation Work in Progress"
 CMSHEADER_RIGHT = "PU 200 (14 TeV)"
 CMSHEADER_SIZE = BIGGER_SIZE
 
-class_labels = ['b','c','light','gluon','taum','taup''electron','muon']
+class_labels = ['b','c','light','gluon','taum','taup','electron','muon']
 
 CLASS_LABEL_STYLE = {
     'b': 'b',
@@ -88,6 +90,19 @@ INPUT_FEATURE_STYLE = {
     'puppiweight': 'PUPPI Weight',
     'quality': 'Track Quality',
     'emid': 'ElectroMagnetic ID',
+}
+
+PROCESS_LABEL_STYLE = {
+    'MinBias': 'MinBias',
+    'QCD': 'QCD',
+    'DY': 'DY',
+    'Wjets': 'W+jets',
+    'TT': '$t\\bar{t}$',
+    'HH_4b': '$HH(4b)$',
+    'HH_2b2tau': '$HH(2b2\\tau)$',
+    'VBFHToInvisible': 'VBF $H\\rightarrow$ invisible',
+    'SVJ_250': 'SVJ (M=250 GeV)',
+    'SVJ_500': 'SVJ (M=500 GeV)',
 }
 
 

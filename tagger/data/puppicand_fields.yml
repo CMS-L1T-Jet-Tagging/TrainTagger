@@ -43,6 +43,14 @@ baseline_hardware_inputs:
   - deta
   - dphi
   - mass
+  - isPhoton
+  - isElectronPlus
+  - isElectronMinus
+  - isMuonPlus
+  - isMuonMinus
+  - isNeutralHadron
+  - isChargedHadronPlus
+  - isChargedHadronMinus
   - z0
   - dxy
   - isfilled
@@ -51,8 +59,18 @@ baseline_hardware_inputs:
   - quality
 
 extra_fields:
+  - event
   - jet_pt_phys
+  - jet_eta_phys
+  - jet_phi_phys
+  - jet_npuppicand
+  - jet_SC4NGJet_score_b
+  - jet_SC4NGJet_score_charm
+  - jet_SC4NGJet_score_regression
   - jet_genmatch_pt
+  - jet_genmatch_eta
+  - jet_genmatch_phi
+  - jet_reject
 
 extra_emulation_fields:
   - jet_SC4NGJet_score_b

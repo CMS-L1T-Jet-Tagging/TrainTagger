@@ -1,0 +1,45 @@
+model: JEDILinearHGQ2
+run_config:
+  verbose: 2
+  debug: True
+  num_threads: 46
+
+model_config:
+  name: JEDILinear_HGQ2
+  embedding_layers: [32]
+  local_layers: [32, 32]
+  global_layers: [32, 32]
+  interaction_layers: [32, 32]
+  classification_layers: [32, 16]
+  regression_layers: [16, 8]
+  kernel_initializer: "lecun_uniform"
+  aggregator: "mean"
+  target_ebops: 350000
+
+quantization_config:
+  pt_output_quantization: [16, 6]
+
+training_config:
+  weight_method: "onlyclass"
+  epochs: 500
+  batch_size: 2048
+  learning_rate: 0.001
+  validation_split: 0.1
+  loss_weights: { "jet_id": 1.0, "pT": 1.0 }
+
+  EarlyStopping_patience: 50
+  ReduceLROnPlateau_factor: 0.5
+  ReduceLROnPlateau_patience: 20
+  ReduceLROnPlateau_min_lr: 0.000001
+
+  beta: 0.00000001
+
+firmware_config:
+  input_precision: "ap_fixed<24,12,AP_RND,AP_SAT>"
+  class_precision: "ap_ufixed<24,12,AP_RND,AP_SAT>"
+  reg_precision: "ap_fixed<16,6,AP_RND,AP_SAT>"
+
+  clock_period: 2.5
+  fpga_part: "xcvu13p-flga2577-2-e"
+
+  project_name: "L1TSC4NGJetModel"

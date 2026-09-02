@@ -8,7 +8,6 @@ import awkward as ak
 
 # Third party
 import numpy as np
-import tensorflow as tf
 import uproot
 import yaml
 from tqdm import tqdm
@@ -17,6 +16,28 @@ from tqdm import tqdm
 from .config import EXTRA_FIELDS, FILTER_PATTERN, INPUT_TAG, N_PARTICLES
 
 gc.set_threshold(0)
+
+def get_puppicand_fields(tag):
+
+    # Get the directory of the current file (tools.py)
+    current_dir = os.path.dirname(__file__)
+
+    # Construct the path to puppicand_fields.yml relative to tools.py
+    puppicand_fields_path = os.path.join(current_dir, "puppicand_fields.yml")
+
+    # Load the YAML file as a dictionary
+    with open(puppicand_fields_path, "r") as file:
+        puppicand_fields = yaml.safe_load(file)
+
+    return puppicand_fields[tag]
+
+def get_valid_jets(pt, eta, reject):
+    valid = (
+        (pt > 15)
+        & (np.abs(eta) < 2.4)
+        & (reject == 0)
+    )
+    return valid
 
 # >>>>>>>>>>>>>>>>>>>PRIVATE FUNCTIONS<<<<<<<<<<<<<<<<<<<<<<
 
@@ -31,7 +52,7 @@ def _add_response_vars(data):
         data['jet_pt_raw'] / data['jet_genmatch_pt'], copy=True, nan=0.0, posinf=0.0, neginf=0.0
     )
 
-def _split_flavor(data):
+def _split_flavor(data, include_unmatched=False):
     """
     Splits data by particle flavor and applies conditions for each category. Also creates the pT target.
 
@@ -126,6 +147,10 @@ def _split_flavor(data):
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
 
+    # return early to include unmatched jets
+    if include_unmatched:
+        return data, class_labels 
+
     # Apply pt_cut
     jet_ptmin_gen = data['target_pt_phys'] > 5.0
     for key in conditions:
@@ -141,22 +166,6 @@ def _split_flavor(data):
 
     return data[jet_ptmin_gen], class_labels
 
-def _get_puppicand_fields(tag):
-
-    # Get the directory of the current file (tools.py)
-    current_dir = os.path.dirname(__file__)
-
-    # Construct the path to puppicand_fields.yml relative to tools.py
-    puppicand_fields_path = os.path.join(current_dir, "puppicand_fields.yml")
-
-    # Load the YAML file as a dictionary
-    with open(puppicand_fields_path, "r") as file:
-        puppicand_fields = yaml.safe_load(file)
-
-    return puppicand_fields[tag]
-
-
-
 def _pad_fill(array, target):
     '''
     pad an array to target length and then fill it with 0s
@@ -166,7 +175,7 @@ def _pad_fill(array, target):
 
 def _make_nn_inputs(data_split, tag, n_parts):
 
-    features = _get_puppicand_fields(tag)
+    features = get_puppicand_fields(tag)
     # Concatenate all the inputs
     inputs_list = []
 
@@ -212,8 +221,8 @@ def _save_dataset_metadata(outdir, class_labels, tag, extras):
 
     metadata = {
         "outputs": class_labels,
-        "inputs": _get_puppicand_fields(tag),
-        "extras": _get_puppicand_fields(extras),
+        "inputs": get_puppicand_fields(tag),
+        "extras": get_puppicand_fields(extras),
     }
 
     with open(dataset_metadata_file, "w") as f:
@@ -228,14 +237,18 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
     """
 
     # Create the NN inputs
-    _make_nn_inputs(data_split, tag, n_parts)
-    extra_features = _get_puppicand_fields(extras)
+    input_features = get_puppicand_fields(tag)
+    extra_features = get_puppicand_fields(extras)
 
     # Save them to a root file
-    save_fields = ['nn_inputs', 'class_label', 'target_pt', 'target_pt_phys'] + extra_features
+    save_fields = ['class_label', 'target_pt', 'target_pt_phys'] + extra_features
 
     # Filter the data_split to only include save_fields
-    filtered_data = {field: data_split[field] for field in save_fields}
+    filtered_data = {field: data_split[field] for field in save_fields }
+    filtered_data = {
+        **filtered_data, 
+        **{f"jet_puppicand_{field}": data_split["jet_puppicand"][field][:, :n_parts] for field in input_features}
+    }
 
     # Save chunk to files
     outfile = os.path.join(outdir, f'data_chunk_{chunk}.root')
@@ -252,6 +265,58 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
 
     return
 
+def _split_on_jets(data, test_ratio=0.1, seed=42):
+
+    # Shuffle the data indices
+    total_data_len = len(data)
+    indices = np.arange(total_data_len)
+    rng = np.random.default_rng(seed)
+    rng.shuffle(indices)
+
+    # Split indices based on test_ratio
+    split_index = int((1 - test_ratio) * total_data_len)
+    train_indices, test_indices = indices[:split_index], indices[split_index:]
+
+    return train_indices, test_indices
+
+def _split_on_events(data, test_ratio=0.1, seed=42):
+    """
+    Split the data into training and testing sets based on unique event IDs.
+
+    Parameters:
+        data (awkward array): The input data to split.
+        test_ratio (float): The ratio of the dataset to be used for testing.
+
+    Returns:
+        tuple: A tuple containing the training and testing indices.
+    """
+
+    assert 'event' in data.fields, "The 'event' field is required in the data to split on events."
+
+    # Extract unique event IDs and their corresponding indices
+    event = np.asarray(data['event']).copy()
+    unique_event_ids, _ = np.unique(event, return_index=True)
+
+    # Shuffle the unique event IDs
+    rng = np.random.default_rng(seed)
+    rng.shuffle(unique_event_ids)
+
+    # Determine the split index based on the test_ratio
+    split_index = int((1 - test_ratio) * len(unique_event_ids))
+
+    # Split the unique event IDs into training and testing sets
+    train_event_ids = unique_event_ids[:split_index]
+    test_event_ids = unique_event_ids[split_index:]
+
+    # Create boolean masks for training and testing events
+    train_mask = np.isin(data['event'], train_event_ids)
+    test_mask = np.isin(data['event'], test_event_ids)
+
+    # Get the indices for training and testing data based on the masks
+    train_indices = np.where(train_mask)[0]
+    test_indices = np.where(test_mask)[0]
+
+    return train_indices, test_indices
 
 # >>>>>>FUNCTIONS THAT SHOULD BE USED EXTERNALLY!<<<<<<<
 
@@ -307,27 +372,53 @@ def group_id_values(event_id, *arrays, num_elements=2):
 
     return grouped_id[mask], filtered_grouped_arrays
 
+def make_unique_event_ids(sample_name: str, event_ids: np.ndarray,) -> np.ndarray:
+    """
+    Create deterministic uint64 event IDs from a sample name and original IDs.
+    """
+    import hashlib
+    event_ids = np.asarray(event_ids, dtype=np.uint64)
 
-def to_ML(data, class_labels):
+    # Stable 64-bit hash of the sample name.
+    sample_hash = np.uint64(
+        int.from_bytes(
+            hashlib.blake2b(sample_name.encode("utf-8"), digest_size=8,).digest(),
+            byteorder="little",
+        )
+    )
+
+    # Combine sample hash and event ID.
+    x = event_ids ^ sample_hash
+
+    # SplitMix64-style mixing.
+    x = x + np.uint64(0x9E3779B97F4A7C15)
+    x = (x ^ (x >> np.uint64(30))) * np.uint64(0xBF58476D1CE4E5B9)
+    x = (x ^ (x >> np.uint64(27))) * np.uint64(0x94D049BB133111EB)
+    x = x ^ (x >> np.uint64(31))
+
+    return x
+
+
+def to_ML(data, class_labels, extra_vars=None, tag=INPUT_TAG, n_parts=N_PARTICLES):
     """
     Take in the data from make_data (loaded by load_data) and make them ready for training.
     """
 
-    X = np.asarray(data['nn_inputs'])
-    y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
-    pt_target = np.asarray(data['target_pt'])
-    truth_pt = np.asarray(data['target_pt_phys'])
-    reco_pt = np.asarray(data['jet_pt_phys'])
-    reco_eta = np.asarray(data['jet_eta_phys'])
-    reco_phi =np.asarray(data['jet_phi_phys'])
-    event =np.asarray(data['event'])
-    
-    jet_features = np.stack([reco_pt,reco_eta,reco_phi])
+    # Merge the jet_puppicand fields into a single array for X
+    input_features = get_puppicand_fields(tag)
+    X = np.zeros((len(data), n_parts, len(input_features)), dtype=np.float32)
+    for i, field in enumerate(input_features):
+        X[:, :, i] = _pad_fill(data[f'jet_puppicand_{field}'], n_parts)
 
-    return X, y, pt_target, truth_pt, reco_pt, jet_features,event
+    y = np.asarray(data['class_label'], dtype=np.int32)
+    pt_target = np.asarray(data['target_pt'], dtype=np.float32)
+
+    extras = {field: np.asarray(data[field]) for field in extra_vars} if extra_vars is not None else {}
+
+    return X, y, pt_target, extras
 
 
-def load_data(outdir, percentage, test_ratio=0.1, fields=None):
+def load_data(outdir, percentage, test_ratio=0.1, fields=None, seed=42):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -341,9 +432,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         awkward.Array: Concatenated data arrays from selected chunks.
     """
 
-    print("Loading data from: ", outdir)
-    print("Loading percentage: ", percentage)
-    print("With test ratio of: ", test_ratio)
+    print(f"Loading {percentage}% of data from: {outdir}. Test ratio: {test_ratio}")
 
     # Load metadata to determine chunks to load
     metadata_file = os.path.join(outdir, "metadata.json")
@@ -359,16 +448,13 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
 
-    # Shuffle the data indices
-    total_data_len = len(data)
-    indices = np.arange(total_data_len)
-    np.random.shuffle(indices)
-
-    # Split indices based on test_ratio
-    split_index = int((1 - test_ratio) * total_data_len)
-    train_indices, test_indices = indices[:split_index], indices[split_index:]
-
     # Split the data into training and testing sets
+    if 'event' in data.fields:
+        train_indices, test_indices = _split_on_events(data, test_ratio, seed=seed)
+    else:
+        print("Warning: 'event' field not found in data --> splitting on jets instead. Some events may have jets in both datasets.")
+        train_indices, test_indices = _split_on_jets(data, test_ratio, seed=seed)
+
     train_data = data[train_indices]
     test_data = data[test_indices]
 
@@ -378,7 +464,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
         variables = json.load(f)
         class_labels = variables['outputs']
         input_vars = variables['inputs']
-        extra_vars = variables['extras']
+        extra_vars = variables['extras'] + ['target_pt_phys']
 
     return train_data, test_data, class_labels, input_vars, extra_vars
 
@@ -392,7 +478,9 @@ def make_data(
     ratio=1.0,
     step_size="100MB",
     tree="outnano/jets",
-    num_workers=8
+    num_workers=8,
+    remove_unmatched=True,
+    apply_cuts=True,
 ):
     """
     Process the data set in chunks from the input ntuples file.
@@ -433,13 +521,14 @@ def make_data(
         num_entries_done += len(data)  # count before cuts
 
         # Define jet kinematic cuts
-        jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
-        data = data[jet_cut]
+        if apply_cuts:
+            valid_jets = get_valid_jets(data['jet_pt_phys'], data['jet_eta_phys'], data['jet_reject'])
+            data = data[valid_jets]
 
         # Add additional response variables
         # _add_response_vars(data)
         # Split data into all the training classes
-        data_split, class_labels = _split_flavor(data)
+        data_split, class_labels = _split_flavor(data, include_unmatched=not remove_unmatched)
 
         # If first chunk then save metadata of the dataset
         if chunk == 0:

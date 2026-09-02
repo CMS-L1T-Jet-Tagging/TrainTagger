@@ -1,0 +1,51 @@
+model: TransformerEmbeddingModel
+run_config :
+  verbose : 2
+  debug : True
+  num_threads : 46
+
+model_config :
+  name : transformer_contrastive
+  embedding_layers : [32]
+  transformer_layers : [[2, 32]]
+  projection_layers : [64, 64]
+  classification_layers : [32, 16]
+  regression_layers : [16, 8]
+  kernel_initializer: "lecun_uniform"
+  aggregator: "mean"
+
+quantization_config:
+  pt_output_quantization: [16, 6]
+
+training_config :
+  loss:
+    name: SupCon
+    params:
+      temperature: 0.1
+  weight_method: "onlyclass"
+  embedding_epochs: 80
+  finetuning_epochs: 250
+  freeze_backbone: True
+  batch_size: 2048
+  learning_rate: 0.001
+  embedding_lr: 0.001
+  validation_split: 0.1
+  loss_weights: {"jet_id": 1.0, "pT": 1.0}
+
+  EarlyStopping_patience: 50
+  ReduceLROnPlateau_factor: 0.5
+  ReduceLROnPlateau_patience: 20
+  ReduceLROnPlateau_min_lr: 0.000001
+
+firmware_config:
+  input_precision: "ap_fixed<24,12,AP_RND,AP_SAT>"
+  class_precision: "ap_ufixed<24,12,AP_RND,AP_SAT>"
+  reg_precision: "ap_fixed<16,6,AP_RND,AP_SAT>"
+
+  clock_period: 2.5
+  fpga_part: "xcvu13p-flga2577-2-e"
+
+  project_name: "L1TSC4NGJetModel_test"
+
+# best performing {'embedding_learning_rate': 0.02224002777017712, 'learning_rate': 0.011585881732365359, 'projection_dims': 8, 'projection_blocks': 5, 'masking_probability': 0.19352447006728993, 'batch_size': 1024, 'loss_temperature': 0.4911345114327149, 'loss_weights': [1, 4]}
+# worst performing {'embedding_learning_rate': 0.08323060157756956, 'learning_rate': 0.08449580432571031, 'projection_dims': 4, 'projection_blocks': 2, 'masking_probability': 0.5262856777469976, 'batch_size': 512, 'loss_temperature': 0.2608464898372992, 'loss_weights': [2, 1]}

@@ -5,11 +5,12 @@ from schema import Schema, And, Use, Optional
 
 import numpy as np
 import numpy.typing as npt
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 import keras
 from keras.models import load_model
 from keras.layers import BatchNormalization, Input, Activation, Dense, ReLU
-from hgq.layers import QDense, QBatchNormalization, QGlobalAveragePooling1D, QAdd
+from hgq.layers import QDense, QBatchNormDense, QBatchNormalization, QLinformerAttention, QGlobalAveragePooling1D, QAdd
 from hgq.utils.sugar import FreeEBOPs, BetaPID
 import hls4ml
 
@@ -20,8 +21,8 @@ from tagger.train.pretraining.augmentations import AugmentationLayer
 from tagger.train.pretraining.losses import get_loss_function
 from tagger.train.pretraining.trainer import ContrastiveTrainer, EmbeddingDiagnostics, InnerModelCallback
 
-@JetModelFactory.register('JEDILinearHGQ2')
-class JEDILinearHGQ2(JetTagModel):
+@JetModelFactory.register('LinformerModelHGQ2')
+class LinformerModelHGQ2(JetTagModel):
 
     schema = Schema(
             {
@@ -29,13 +30,14 @@ class JEDILinearHGQ2(JetTagModel):
                 "run_config" : JetTagModel.run_schema,
                 "model_config" : {
                     "name" : str,
-                    "embedding_layers" : list,
-                    "local_layers" : list,
-                    "global_layers" : list,
-                    "interaction_layers" : list,
+                    "embedding_layers" : int,
+                    "transformer_blocks" : And(int, lambda s: s >= 1),
+                    "transformer_dim" : And(int, lambda s: s >= 1),
+                    "num_heads" : And(int, lambda s: s >= 1),
+                    "kv_proj_dim": int,
                     "classification_layers" : list,
                     "regression_layers" : list,
-                    "kernel_initializer": str,
+                    "kernel_initializer" : str,
                     "aggregator" : And(str, lambda s: s in ["mean", "max"]),
                     "target_ebops": And(int, lambda s: s > 0),
                 },
@@ -65,7 +67,7 @@ class JEDILinearHGQ2(JetTagModel):
     )
 
     @quantization_decorator
-    def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
+    def build_model(self, inputs_shape, outputs_shape):
         
         # initialise_tensorflow(self.run_config['num_threads'])
 
@@ -76,30 +78,28 @@ class JEDILinearHGQ2(JetTagModel):
         N_constituents = inputs_shape[0]
         n_features = inputs_shape[1]
 
-        inputs = keras.layers.Input((N_constituents, n_features),name='model_input')
-        main = QBatchNormalization()(inputs)
+        tdim = self.model_config['transformer_dim']
+        nheads = self.model_config['num_heads']
 
-        # ----- Main Branch -----
-        # Feature embedding
-        for iembed, depth_embed in enumerate(self.model_config['embedding_layers']):
-            main = QDense(depth_embed, activation='relu', parallelization_factor=depth_embed, name='dense_embed_' + str(iembed + 1), **self.common_args)(main)
+        inputs = keras.layers.Input((N_constituents, n_features), name='model_input')
+        main = QBatchNormalization(name='norm_input')(inputs)
 
-        # Local feature mixing
-        local_cxt = main
-        for ilocal, depth_local in enumerate(self.model_config['local_layers']):
-            local_cxt = QDense(depth_local, activation='relu', parallelization_factor=depth_local, name='dense_local_' + str(ilocal + 1), **self.common_args)(local_cxt) # (batch, n_constituents, depth_local)
+        # ----- Main branch -----                                
+        # Embedding
+        for i in range(self.model_config['embedding_layers']):
+            main = QDense(tdim, activation='relu', parallelization_factor=tdim, name='emb_'+str(i+1), **self.common_args)(main)
 
-        # Global feature mixing
-        global_cxt = QGlobalAveragePooling1D(name='pool_global')(main)
-        for iglobal, depth_global in enumerate(self.model_config['global_layers']):
-            global_cxt = QDense(depth_global, activation='relu', parallelization_factor=depth_global, name='dense_global_' + str(iglobal + 1), **self.common_args)(global_cxt) # (batch, depth_global)
+        # Transformer blocks
+        for i in range(self.model_config['transformer_blocks']):
+            norm1 = QBatchNormalization(name='norm_mha_'+str(i+1))(main)
+            mha = QLinformerAttention(nheads, self.model_config["kv_proj_dim"], tdim//nheads, parallelization_factor=tdim, name='mha_'+str(i+1))(norm1, norm1)
+            main = QAdd(name='res_mha_'+str(i+1))([main, mha])
+            ff = QBatchNormDense(tdim, activation='relu', parallelization_factor=tdim, name='dense_'+str(i+1)+'_1', **self.common_args)(main)
+            ff = QDense(tdim, activation=None, parallelization_factor=tdim, name='dense_'+str(i+1)+'_2', **self.common_args)(ff)
+            main = QAdd(name='res_ff_'+str(i+1))([main, ff])
 
-        # Combine local and global context
-        interaction = QAdd(name='add_interaction')([local_cxt, global_cxt])
-        for iinter, depth_inter in enumerate(self.model_config['interaction_layers']):
-            interaction = QDense(depth_inter, activation='relu', parallelization_factor=depth_inter, name='dense_interaction_' + str(iinter + 1), **self.common_args)(interaction)
-
-        main = QGlobalAveragePooling1D(name='pool')(interaction)
+        # Global pooling
+        main = QGlobalAveragePooling1D(name='pool', oq_conf=None)(main)
                 
         # ---- Output heads -----
         bn_main = QBatchNormalization(name='norm_embedding')(main)
@@ -282,21 +282,21 @@ class JEDILinearHGQ2(JetTagModel):
         self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
 
 
-@JetModelFactory.register('JEDILinearHGQ2EmbeddingModel')
-class JEDILinearHGQ2EmbeddingModel(JetTagModel):
+@JetModelFactory.register('LinformerHGQ2EmbeddingModel')
+class LinformerHGQ2EmbeddingModel(JetTagModel):
 
     schema = Schema(
             {
                 "model": str,
-                ## generic run config coniguration
                 "run_config" : JetTagModel.run_schema,
                 "model_config" : {
                     "name" : str,
-                    "embedding_layers" : list,
-                    "local_layers" : list,
-                    "global_layers" : list,
-                    "interaction_layers" : list,
-                    "projection_layers" : list,
+                    "embedding_layers" : int,
+                    "transformer_blocks" : And(int, lambda s: s >= 1),
+                    "transformer_dim" : And(int, lambda s: s >= 1),
+                    "num_heads" : And(int, lambda s: s >= 1),
+                    "kv_proj_dim": int,
+                    "projection_layers" : And(list, lambda s: len(s) >= 1),
                     "classification_layers" : list,
                     "regression_layers" : list,
                     "kernel_initializer": str,
@@ -343,31 +343,35 @@ class JEDILinearHGQ2EmbeddingModel(JetTagModel):
         N_constituents = inputs_shape[0]
         n_features = inputs_shape[1]
 
-        inputs = keras.layers.Input((N_constituents, n_features),name='model_input')
-        main = QBatchNormalization()(inputs)
+        tdim = self.model_config['transformer_dim']
+        nheads = self.model_config['num_heads']
 
-        # ----- Main Branch -----
-        # Feature embedding
-        for iembed, depth_embed in enumerate(self.model_config['embedding_layers']):
-            main = QDense(depth_embed, activation='relu', parallelization_factor=depth_embed, name='dense_embed_' + str(iembed + 1), **self.common_args)(main)
+        inputs = keras.layers.Input((N_constituents, n_features), name='model_input')
+        main = QBatchNormalization(name='norm_input')(inputs)
 
-        # Local feature mixing
-        local_cxt = main
-        for ilocal, depth_local in enumerate(self.model_config['local_layers']):
-            local_cxt = QDense(depth_local, activation='relu', parallelization_factor=depth_local, name='dense_local_' + str(ilocal + 1), **self.common_args)(local_cxt) # (batch, n_constituents, depth_local)
+        # ----- Main branch -----                                
+        # Embedding
+        for i in range(self.model_config['embedding_layers']):
+            main = QDense(tdim, activation='relu', parallelization_factor=tdim, name='emb_'+str(i+1), **self.common_args)(main)
 
-        # Global feature mixing
-        global_cxt = QGlobalAveragePooling1D(name='pool_global')(main)
-        for iglobal, depth_global in enumerate(self.model_config['global_layers']):
-            global_cxt = QDense(depth_global, activation='relu', parallelization_factor=depth_global, name='dense_global_' + str(iglobal + 1), **self.common_args)(global_cxt) # (batch, depth_global)
+        # Linformer blocks
+        for i in range(self.model_config['transformer_blocks']):
+            norm1 = QBatchNormalization(name='norm_mha_'+str(i+1))(main)
+            mha = QLinformerAttention(
+                num_heads=nheads, 
+                lin_kv_proj_dim=self.model_config["kv_proj_dim"], 
+                key_dim=tdim//nheads,
+                parallelization_factor=tdim, 
+                name='mha_'+str(i+1)
+            )(norm1, norm1)
+            main = QAdd(name='res_mha_'+str(i+1))([main, mha])
+            ff = QBatchNormDense(tdim, activation='relu', parallelization_factor=tdim, name='dense_'+str(i+1)+'_1', **self.common_args)(main)
+            ff = QDense(tdim, activation=None, parallelization_factor=tdim, name='dense_'+str(i+1)+'_2', **self.common_args)(ff)
+            main = QAdd(name='res_ff_'+str(i+1))([main, ff])
 
-        # Combine local and global context
-        interaction = QAdd(name='add_interaction')([local_cxt, global_cxt])
-        for iinter, depth_inter in enumerate(self.model_config['interaction_layers']):
-            interaction = QDense(depth_inter, activation='relu', parallelization_factor=depth_inter, name='dense_interaction_' + str(iinter + 1), **self.common_args)(interaction)
-
-        main = QGlobalAveragePooling1D(name='pool')(interaction)
-
+        # Global pooling
+        main = QGlobalAveragePooling1D(name='pool', oq_conf=None)(main)
+                
         # ----- Embedding Projection branch -----
         # Thrown away after pre-training
         z = BatchNormalization(name='norm_projection')(main)

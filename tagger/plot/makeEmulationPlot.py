@@ -42,14 +42,14 @@ def doPlots(model, outputdir, inputdir):
     modelsAndNames = {"model": model}
 
     data, _, class_labels, input_vars, jet_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, jet_pt_phys, jet_features = to_ML(data, class_labels)  # Last thing was reconstructed pt
+    particle_features_test, jet_features, Y_test, pt_target, truth_pt, jet_pt_phys = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
     labels.remove("pileup") if "pileup" in labels else None # remove once there is proper handling of pilup score in cmssw
     model.firmware_convert("temp", build=False)
 
     raw_inputs_dict = {
-        "basic_input": X_test,
+        "basic_input": particle_features_test,
         "jet_features": jet_features,
     }
 

@@ -109,7 +109,7 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
 
     #Count number of total event
@@ -214,7 +214,7 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
-    nn_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    nn_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
     nn_inputs, raw_jet_inputs = np.asarray(nn_inputs), np.asarray(raw_jet_inputs)
 
     #Get the NN predictions
@@ -358,7 +358,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
-    nn_inputs, jet_nn_inputs = extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries)
+    nn_inputs, jet_nn_inputs = extract_nn_inputs(signal, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
     nn_inputs, jet_nn_inputs = np.asarray(nn_inputs), np.asarray(jet_nn_inputs)
     raw_inputs_dict = {
         'basic_input': nn_inputs,

@@ -284,9 +284,10 @@ emulation_regression:
   - source activate tagger
   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
   - mkdir -p output/$Model/plots/emulation_regression
-  - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - cd tagger/plot
+  - python -m emulation_regression.plot_basic -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - python -m emulation_regression.plot_masses -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - python -m emulation_regression.plot_turnon -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   artifacts:
     paths:
       - output/$Model

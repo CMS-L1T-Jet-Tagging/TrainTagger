@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import mplhep as hep
+import numpy as np
 
 colours = ["black", "red", "orange", "green", "blue"]
 LINESTYLES = [
@@ -23,6 +24,17 @@ LINESTYLES = [
 ]
 
 color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+SHAP_COLORS = [
+        "#E41A1C",  # red
+        "#377EB8",  # blue
+        "#4DAF4A",  # green
+        "#984EA3",  # purple
+        "#FFFF33",  # yellow
+        "#A65628",  # brown
+        "#F781BF",  # pink
+        "#999999",  # gray
+        "#FF7F00",  # orange
+    ] # for future reproducibility of color and class combinations (style of first DP note)
 
 SMALL_SIZE = 25
 MEDIUM_SIZE = 28
@@ -30,7 +42,9 @@ BIGGER_SIZE = 35
 
 LEGEND_WIDTH = 20
 LINEWIDTH = 5
-MARKERSIZE = 20
+ELINEWIDTH = 3
+MARKERSIZE = 10
+CAPSIZE = 4
 
 FIGURE_SIZE = (17, 17)
 
@@ -122,7 +136,52 @@ PROCESS_STYLE = {
         'VBFHtt_PU200': r'VBF $\rightarrow$ H $\rightarrow$ t$\bar{t}$',
         'ggHHbbtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$t$\bar{t}$',
         'ggHtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ t$\bar{t}$',
+        'MinBias_PU200': 'MinBias',
+        'VBFHToBB_PU200': r"$VBF H \to b\bar{b}$",
+        'VBFHToCC_PU200': r"$VBF H \to c\bar{c}$",
+        'VBFHToInvisible_PU200': r"$VBF \to invisible$",
+        'QCD_Pt15To3000_PU200': r"QCD $(p_T: 15-3000 GeV)$",
+        'QCD_PtAll_PU200': r"QCD",
+        'XtoHH_MX_500To1000_PU200': r"$X \to HH$",
 }
+
+# Regression styles
+COLLECTION_KEYS = ['scPuppiL1TSC4NGJetJets', 'scPuppiExtendedJets'] # add collection keys here if you want to plot them in regression plots
+
+LABELS_DICT = {
+    'scPuppiL1TSC4NGJetJets': 'SC4 NN',
+    'scPuppiExtendedJets': 'SC4',
+    'scPuppiL1TSC4NGJetJets_raw': 'SC4 NN',
+    'scPuppiL1TSC4NGJetJets_jecs': 'SC4 NN JECs',
+    'scPuppiExtendedJets_raw': 'SC4 Raw',
+    'scPuppiExtendedJets_jecs': 'SC4 JECs',
+    'genjets': 'GenJets',
+    'ht': r'$HT^{Gen}$',
+    'jet1': r'Leading $p_{T}^{Gen}$ Jet',
+    'jet2': r'Subleading $p_{T}^{Gen}$ Jet',
+    'ht15': r'$HT^{Gen}$ ($p_{T}^{Gen}$ > 15 GeV)',
+    'ht30': r'$HT^{Gen}$ ($p_{T}^{Gen}$ > 30 GeV)',
+    'mjj': r'$m_{jj}^{Gen}$',
+    'max_mjj': r'$max(m_{jj}^{Gen})$',
+    'dijet': r'Leading two $p_{T}^{Gen}$ Jets',
+    'quadjet': r'Leading four $p_{T}^{Gen}$ Jets',
+}
+
+COLORS_DICT = {
+    'scPuppiL1TSC4NGJetJets_raw': '#964a8b',
+    'scPuppiL1TSC4NGJetJets_jecs': '#7a21dd',
+    'scPuppiExtendedJets_raw': '#e42536',
+    'scPuppiExtendedJets_jecs': '#f89c20',
+    'genjets': 'gray',
+}
+
+LINESTYLES_DICT = {
+    'scPuppiL1TSC4NGJetJets_raw': 'solid',
+    'scPuppiL1TSC4NGJetJets_jecs': 'dashdot',
+    'scPuppiExtendedJets_raw': 'dashed',
+    'scPuppiExtendedJets_jecs': 'dotted',
+}
+
 
 def set_style():
     # Setup plotting to CMS style

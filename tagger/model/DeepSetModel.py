@@ -12,7 +12,7 @@ import numpy.typing as npt
 import tensorflow as tf
 from schema import Schema, And, Use, Optional
 
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, initialise_tensorflow
+from tagger.model.common_tensorflow import choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
@@ -242,35 +242,3 @@ class DeepSetModel(QKerasModel):
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
-
-    def fit(
-        self,
-        X_train: dict,
-        y_train: npt.NDArray[np.float64],
-        pt_target_train: npt.NDArray[np.float64],
-        sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
-    ):
-        """Fit the model to the training dataset
-
-        Args:
-            X_train (npt.NDArray[np.float64]): X train dataset, containts inputs and pt
-            y_train (npt.NDArray[np.float64]): y train classification targets
-            pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
-            sample_weight (npt.NDArray[np.float64]): sample weighting
-        """
-
-        # Train the model using hyperparameters in yaml config
-        self.history = self.jet_model.fit(
-            X_train,
-            {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight={
-                'prune_low_magnitude_jet_id_output': sample_weight[0],
-                'prune_low_magnitude_pT_output': sample_weight[1],
-            },
-            epochs=self.training_config['epochs'],
-            batch_size=self.training_config['batch_size'],
-            verbose=self.run_config['verbose'],
-            validation_split=self.training_config['validation_split'],
-            callbacks=self.callbacks,
-            shuffle=True,
-        )

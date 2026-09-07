@@ -21,7 +21,7 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
+from common import MINBIAS_RATE, PT_CUT, ETA_CUT, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
 
 # Helpers
 
@@ -53,7 +53,7 @@ def nn_bscore_sum(model, basic_inputs, jet_inputs, jet_pt, jet_eta, apply_light,
     class_outputs, regression_outputs = ak.unflatten(class_outputs, og_shape), ak.unflatten(regression_outputs, og_shape)
 
     # Mask unwanted jets (i.e jets < 15 Gev and |eta| > 2.4), and set all scores to 0
-    selection_mask = (jet_pt > 15) & (abs(jet_eta) < 2.4)
+    selection_mask = (jet_pt > PT_BINS) & (abs(jet_eta) < ETA_BINS)
     regression_outputs = ak.where(selection_mask, regression_outputs, 1)
     mask_expanded = ak.broadcast_arrays(selection_mask, class_outputs)[0]
     class_outputs = ak.where(mask_expanded, class_outputs, 0)
@@ -162,7 +162,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -252,7 +252,7 @@ def load_inputs(path, n_entries=100000, tree='outnano/Jets', model=None):
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_cmssw_bscore = extract_array(minbias, 'jet_bjetscore', n_entries)
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries) if model is not None else None
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, n_entries=n_entries) if model is not None else None
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -346,7 +346,7 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
         raw_gen_mHH = None
 
     # Load the inputs
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(signal, model.particle_input_vars, n_entries=n_entries)
 
     #Group event_id, gen_mHH, and genpt separately
     if raw_gen_mHH is not None:

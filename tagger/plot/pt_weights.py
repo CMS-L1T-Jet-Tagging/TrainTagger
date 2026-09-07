@@ -54,7 +54,7 @@ def plot_1D_histogram(pt_weights, pt, eta, pt_correction, binning, save_path):
     # show distribution of pt weights
     pt_bins = [0, 0, 5, 15, 30, 80, np.inf]
     eta_bins = [0, 0, 0.5, 1, 1.5, 2, 2.5]
-    colors = ['#5790fc', '#f89c20', '#e42536', '#964a8b', '#9c9ca1', '#7a21dd']
+    colors = style.color_cycle
     pt_weights = np.clip(pt_weights, -np.inf, 200)
     for var_bins, var, var_name in zip([pt_bins, eta_bins], [pt, np.abs(eta)], ['pt', 'eta']):
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -149,30 +149,30 @@ def plot_2D_histogram(pt_weights, pt_corretion, x_var, var_name, mask, plot_para
 def pt_weights_plotting(model, inputs, y_test, layer_name, plot_path):
 
     # Unpack inputs
-    X_test = inputs['basic_input']
+    particle_features_test = inputs['basic_input']
     pt_correction_type = layer_name.split("_")[1] # 'weights' or 'offsets'
     pt_weights = get_pt_weights(model, inputs, layer_name)
 
     plot_path = os.path.join(plot_path, f"pt_weights")
     os.makedirs(plot_path, exist_ok=True)
 
-    mask = X_test[:, :, 0].flatten() != 0
+    mask = particle_features_test[:, :, 0].flatten() != 0
     plot_1D_histogram(
         pt_weights.flatten()[mask],
-        X_test[:, :, 0].flatten()[mask],
-        abs(X_test[:, :, 3].flatten())[mask] * np.pi / 720,
+        particle_features_test[:, :, 0].flatten()[mask],
+        abs(particle_features_test[:, :, 3].flatten())[mask] * np.pi / 720,
         pt_correction_type,
         20,
         plot_path,
         )
     class_labels = model.class_labels
     y_test = np.argmax(y_test, axis=1) # Convert one-hot to class indices
-    for i, input_var in enumerate(model.input_vars):
+    for i, input_var in enumerate(model.particle_input_vars):
         if input_var == "eta":
             scaling = np.pi / 720 if input_var == "eta" else 1.0
-            var_scaled = abs(X_test[:, :, i].flatten()) * scaling
+            var_scaled = abs(particle_features_test[:, :, i].flatten()) * scaling
         else:
-            var_scaled = X_test[:, :, i].flatten()
+            var_scaled = particle_features_test[:, :, i].flatten()
         plot_2D_histogram(
             pt_weights.flatten(),
             pt_correction_type,
@@ -194,9 +194,9 @@ if __name__ == "__main__":
     # Load testing data
     test_dict = np.load(f"{model.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
     test_dict = {k: test_dict[k] for k in test_dict.files}
-    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
-    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
-    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
+    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npz")["label"]
+    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npz")["truth_pt"]
+    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npz")["reco_pt"]
 
     output_dir = os.path.join(model.output_directory, "plots/training")
 

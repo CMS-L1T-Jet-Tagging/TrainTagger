@@ -9,18 +9,75 @@ from coffea.nanoevents.methods import vector
 from argparse import ArgumentParser
 from scipy.interpolate import interp1d
 from load_collections import load_collections
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, TwoSlopeNorm
 
 # plotting imports
-from extras import LABELS_DICT, COLORS_DICT, PROCS_DICT, COLLECTION_KEYS
+from styles import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, COLLECTION_KEYS
 
 # style from tagger
 import tagger.plot.style as style
-from tagger.plot.common import to_coffea, PT_BINS
+from tagger.plot.style import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, LINESTYLES_DICT, COLLECTION_KEYS
+from tagger.plot.common import to_coffea, PT_BINS, REGULAR_PT_BINS
 
 style.set_style()
 
 # Plotting functions
+def _plot_errorbars(data_coll, proc, ylabel, save_path
+                     legend_loc='best', xlim=None, ylim=None):
+
+    for l1 in ['log', 'linear']:
+        for l2 in ['log', 'linear']:
+            fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+            hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+
+            for coll_key, idx, err_idx, label_key in [
+                ('scPuppiL1TSC4NGJetJets', 0, 2, 'scPuppiL1TSC4NGJetJets_raw'),
+                ('scPuppiExtendedJets', 0, 2, 'scPuppiExtendedJets_raw'),
+                ('scPuppiExtendedJets', 1, 3, 'scPuppiExtendedJets_jecs'),
+            ]:
+                ax.errorbar(
+                    pt_points,
+                    data_coll[coll_key][idx],
+                    yerr=data_coll[coll_key][err_idx],
+                    fmt='o',
+                    label=LABELS_DICT[label_key],
+                    capsize=style.CAPSIZE,
+                    ms=style.MARKERSIZE,
+                    elinewidth=style.ELINEWIDTH,
+                    color=COLORS_DICT[label_key],
+                )
+
+            ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
+            ax.set_ylabel(ylabel)
+            ax.set_xscale(l1)
+            ax.set_yscale(l2)
+            ax.legend(title=PROCESS_STYLE[proc], fontsize=legend_fontsize, title_fontsize=title_fontsize, loc=legend_loc)
+            ax.grid(True, alpha=1, linestyle='-', lw=0.75)
+
+            if xlim is not None:
+                ax.set_xlim(*xlim)
+            if ylim is not None:
+                ax.set_ylim(*ylim)
+
+            plt.savefig(f"{save_path}_x{l1}_y{l2}.pdf", bbox_inches='tight')
+            plt.savefig(f"{save_path}_x{l1}_y{l2}.png", bbox_inches='tight')
+            plt.close()
+
+
+def plot_response(responses_colls, reduce, plot_name, proc):
+    _plot_errorbars(
+        responses_colls, proc, f"Response {reduce.capitalize()}(L1/Gen)", plot_name,
+        legend_loc='best', xlim=(0, 1000), ylim=None
+    )
+
+
+def plot_rms(rms_colls, proc, outpath):
+    plot_label = r"$\sigma(p_T^{\mathrm{L1}} - p_T^{\mathrm{Gen}})\, / \, \mathrm{Mean}(p_T^{\mathrm{Gen}})$"
+    _plot_errorbars(
+        rms_colls, proc, plot_label, f"{outpath}/residual_rms",
+        legend_loc='upper center', xlim=(0, 1000), ylim=None
+    )
+
 # Residuals
 def get_rms(truth_pt, reco_pt, pt_ratio):
 
@@ -66,9 +123,9 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     return rms_uncorr, rms_reg, rms_uncorr_err, rms_reg_err
 
 
-def rms(procs_dict, proc, plot_dir):
+def rms(PROCESS_STYLE, proc, plot_dir):
     os.makedirs(plot_dir, exist_ok=True)
-    jet_coll1, jet_coll2 = procs_dict[COLLECTION_KEYS[0]], procs_dict[COLLECTION_KEYS[1]]
+    jet_coll1, jet_coll2 = PROCESS_STYLE[COLLECTION_KEYS[0]], PROCESS_STYLE[COLLECTION_KEYS[1]]
     jet_coll1 = [jet_coll1['raw'].genpt, jet_coll1['raw'].pt, jet_coll1['pt_ratio']]
     coll1 = [ak.to_numpy(ak.flatten(i)) for i in jet_coll1]
     jet_coll2 = [jet_coll2['raw'].genpt, jet_coll2['raw'].pt, jet_coll2['pt_ratio']]
@@ -91,9 +148,9 @@ def rms(procs_dict, proc, plot_dir):
                     yerr=rms_colls['scPuppiL1TSC4NGJetJets'][2],
                     fmt='o',
                     label=r"{}".format(LABELS_DICT["scPuppiL1TSC4NGJetJets_raw"]),
-                    capsize=4,
-                    ms=10,
-                    elinewidth=3,
+                    capsize=style.CAPSIZE,
+                    ms=style.MARKERSIZE,
+                    elinewidth=style.ELINEWIDTH,
                     color=COLORS_DICT["scPuppiL1TSC4NGJetJets_raw"],
                 )
                 ax.errorbar(
@@ -102,9 +159,9 @@ def rms(procs_dict, proc, plot_dir):
                     yerr=rms_colls['scPuppiExtendedJets'][2],
                     fmt='o',
                     label=LABELS_DICT["scPuppiExtendedJets_raw"],
-                    capsize=4,
-                    ms=10,
-                    elinewidth=3,
+                    capsize=style.CAPSIZE,
+                    ms=style.MARKERSIZE,
+                    elinewidth=style.ELINEWIDTH,
                     color=COLORS_DICT["scPuppiExtendedJets_raw"],
                 )
                 ax.errorbar(
@@ -113,9 +170,9 @@ def rms(procs_dict, proc, plot_dir):
                     yerr=rms_colls['scPuppiExtendedJets'][3],
                     fmt='o',
                     label=LABELS_DICT["scPuppiExtendedJets_jecs"],
-                    capsize=4,
-                    ms=10,
-                    elinewidth=3,
+                    capsize=style.CAPSIZE,
+                    ms=style.MARKERSIZE,
+                    elinewidth=style.ELINEWIDTH,
                     color=COLORS_DICT["scPuppiExtendedJets_jecs"],
                 )
 
@@ -123,7 +180,7 @@ def rms(procs_dict, proc, plot_dir):
                 ax.set_ylabel(r"$\sigma(p_T^{\mathrm{L1}} - p_T^{\mathrm{Gen}})\, / \, \mathrm{Mean}(p_T^{\mathrm{Gen}})$")
                 ax.set_xscale(l1)
                 ax.set_yscale(l2)
-                ax.legend(title=PROCS_DICT[proc], fontsize=35, title_fontsize=35, loc='upper center')
+                ax.legend(title=PROCESS_STYLE[proc], fontsize=35, title_fontsize=35, loc='upper center')
                 ax.grid(True, alpha=1, linestyle='-', lw=0.75)
 
                 # Save the plot
@@ -142,7 +199,6 @@ def rms(procs_dict, proc, plot_dir):
 
 # Distributions
 def plot_distribution(proc_collection, proc, plot_dir):
-    bins = np.linspace(0., 1350, 55)
     for i in ['Leading', 'Full']:
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         if i == 'Leading':
@@ -163,16 +219,15 @@ def plot_distribution(proc_collection, proc, plot_dir):
         ]:
             # histogram
             data = ak.to_numpy(ak.flatten(data, axis=None))
-            data = np.clip(data, 0, np.max(bins) - 0.5)  # clip to bin edges to avoid outliers dominating the plot
-            ax.hist(data, bins=bins, weights=np.ones_like(data)/len(data),
+            data = np.clip(data, 0, np.max(REGULAR_PT_BINS) - 0.5)  # clip to bin edges to avoid outliers dominating the plot
+            ax.hist(data, bins=REGULAR_PT_BINS, weights=np.ones_like(data)/len(data),
                 histtype='step', label=LABELS_DICT[c], color=COLORS_DICT[c], linewidth=2)
 
         ax.set_xlabel(f"{i} Jet $p_T$ [GeV]")
         ax.set_ylabel("Fraction")
         ax.set_yscale('log')
-        ax.set_xlim(0, np.max(bins) + 50)
-        ax.legend(fontsize=35, title=PROCS_DICT[proc], title_fontsize=35)
-        ax.grid(True, alpha=1, linestyle='-', lw=0.75)
+        ax.legend(title=PROCESS_STYLE[proc])
+        ax.grid(True, linestyle='-')
 
         os.makedirs(plot_dir, exist_ok=True)
         fig.savefig(f"{plot_dir}/{i}_pt_distribution.pdf", bbox_inches='tight')
@@ -225,9 +280,9 @@ def get_response(truth_pt, reco_pt, pt_ratio, reduce):
 
     return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
 
-def response(procs_dict, proc, plot_dir):
+def response(PROCESS_STYLE, proc, plot_dir):
     os.makedirs(plot_dir, exist_ok=True)
-    jet_coll1, jet_coll2 = procs_dict[COLLECTION_KEYS[0]], procs_dict[COLLECTION_KEYS[1]]
+    jet_coll1, jet_coll2 = PROCESS_STYLE[COLLECTION_KEYS[0]], PROCESS_STYLE[COLLECTION_KEYS[1]]
     jet_coll1 = jet_coll1['raw'].genpt, jet_coll1['raw'].pt, jet_coll1['pt_ratio']
     coll1 = [ak.to_numpy(ak.flatten(i)) for i in jet_coll1]
     jet_coll2 = jet_coll2['raw'].genpt, jet_coll2['raw'].pt, jet_coll2['pt_ratio']
@@ -279,7 +334,7 @@ def response(procs_dict, proc, plot_dir):
 
                 ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
                 ax.set_ylabel(f"Response {reduce.capitalize()}(L1/Gen)")
-                ax.legend(title=PROCS_DICT[proc], fontsize=40, title_fontsize=35)
+                ax.legend(title=PROCESS_STYLE[proc], fontsize=40, title_fontsize=35)
                 ax.set_xscale(l1)
                 ax.set_yscale(l2)
                 ax.grid(alpha=1, linestyle='-', lw=0.75)
@@ -311,12 +366,11 @@ def distribution_heatmaps(l1jets, plot_dir):
     for coll in COLLECTION_KEYS:
         t = 'raw' if coll == 'scPuppiL1TSC4NGJetJets' else 'jecs'
         jets = l1jets[coll][t]
-        pt_bins = np.linspace(0, 1000, 50)
         matched_jets = (jets.genpt != 0)
         gen_pt = ak.to_numpy(np.clip(ak.flatten(jets.genpt[matched_jets], axis=None), 0, 1000))
         reco_pt = ak.to_numpy(np.clip(ak.flatten(jets.pt[matched_jets], axis=None), 0, 1000))
-        fig, ax = plt.subplots(figsize=(22, 25))
-        h = ax.hist2d(gen_pt, reco_pt, bins=pt_bins)
+        fig, ax = plt.subplots(figsize=style.FIGURE_SIZE)
+        h = ax.hist2d(gen_pt, reco_pt, bins=REGULAR_PT_BINS)
         ratios.append(h)
         plt.close()
         y_label = LABELS_DICT[f'{coll}_{t}']
@@ -329,8 +383,7 @@ def distribution_heatmaps(l1jets, plot_dir):
         f"{plot_dir}/ratio_heatmap", plot_ratio=True)
 
 def plot_heatmap(ratio, y_label, label, plot_dir, plot_ratio=False):
-    from matplotlib.colors import TwoSlopeNorm
-    fig, ax = plt.subplots(figsize=(22, 25))
+    fig, ax = plt.subplots(figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
 
     if plot_ratio:

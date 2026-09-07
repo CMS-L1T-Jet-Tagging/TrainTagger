@@ -15,6 +15,8 @@ model_config :
 quantization_config:
   quantizer_bits : 9
   quantizer_bits_int : 2
+  reg_quantizer_bits : 11
+  reg_quantizer_bits_int : 2
   quantizer_alpha_val : 1.0
   pt_output_quantization : [16,6]
 
@@ -29,7 +31,7 @@ inputs:
 
 training_config:
   weight_method: ["onlyclass", "onlyclass"]
-  epochs : 3
+  epochs : 100
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1

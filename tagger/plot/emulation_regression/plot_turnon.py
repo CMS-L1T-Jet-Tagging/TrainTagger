@@ -10,11 +10,11 @@ from argparse import ArgumentParser
 from scipy.interpolate import make_interp_spline
 
 # plotting imports
-from extras import LABELS_DICT, COLORS_DICT, PROCS_DICT, LINESTYLES_DICT, COLLECTION_KEYS
 from load_collections import load_collections
 
 # style from tagger
 import tagger.plot.style as style
+from tagger.plot.style import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, LINESTYLES_DICT, COLLECTION_KEYS
 from tagger.plot.common import to_coffea, MINBIAS_RATE
 
 style.set_style()
@@ -24,37 +24,56 @@ def inv_helper(jet1, jet2):
     return (jet1 + jet2).mass
 
 def get_obj(coll, n_reco, n_gen, obj):
+    """
+    Args:
+        coll: coffea collection of jets
+        n_reco: number of reco jets
+        n_gen: number of gen jets
+    Returns:
+        obj: the object to get (jet1, etc.) and the corresponding pt array, bins, and bin_cut for plotting
+    """
     coll = to_coffea(coll)
-    if obj == 'jet1':
-        num_cut = (n_reco > 0) & (n_gen > 0)
-        return ak.max(coll.pt[num_cut], axis=1), np.arange(80, 500, 0.25), 500
-    elif obj == 'jet2':
-        num_cut = (n_reco > 1) & (n_gen > 1)
-        return ak.sort(coll.pt[num_cut], ascending=False)[:,1], np.arange(50, 320, 0.25), 500
-    elif obj == 'jet3':
-        num_cut = (n_reco > 2) & (n_gen > 2)
-        return ak.sort(coll.pt[num_cut], ascending=False)[:,2], np.arange(5, 100, 0.25), 300
-    elif obj == 'ht15':
-        return ak.sum(coll.pt[coll.pt > 15], axis=1), np.arange(100, 550, 0.25), 1200
-    elif obj == 'ht30':
-        return ak.sum(coll.pt[coll.pt > 30], axis=1), np.arange(100, 550, 0.25), 1000
 
-    # invarinat masses
-    elif obj == 'mjj':
-        num_cut = (n_reco > 1) & (n_gen > 1)
-        return (coll[num_cut][:, 0] + coll[num_cut][:, 1]).mass, np.arange(400, 2200, 0.25), 1500
-    elif obj == 'max_mjj':
-        num_cut = (n_reco > 1) & (n_gen > 1)
-        mjjs = coll[num_cut].metric_table(coll[num_cut], metric=inv_helper)
-        return ak.max(ak.max(mjjs, axis=-1), axis=-1), np.arange(400, 2800, 0.25), 2000
+    match obj:
+        case 'jet1':
+            num_cut = (n_reco > 0) & (n_gen > 0)
+            return ak.max(coll.pt[num_cut], axis=1), np.arange(80, 500, 0.25), 500
 
-    # symmetric di- and quad jet seeds
-    elif obj == 'dijet':
-        num_cut = (n_reco > 1) & (n_gen > 1)
-        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :2].pt, axis=1), np.arange(10, 500, 0.1), 400
-    elif obj == 'quadjet':
-        num_cut = (n_reco > 3) & (n_gen > 3)
-        return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :4].pt, axis=1), np.arange(1, 200, 0.05), 200
+        case 'jet2':
+            num_cut = (n_reco > 1) & (n_gen > 1)
+            return ak.sort(coll.pt[num_cut], ascending=False)[:, 1], np.arange(50, 320, 0.25), 500
+
+        case 'jet3':
+            num_cut = (n_reco > 2) & (n_gen > 2)
+            return ak.sort(coll.pt[num_cut], ascending=False)[:, 2], np.arange(5, 100, 0.25), 300
+
+        case 'ht15':
+            return ak.sum(coll.pt[coll.pt > 15], axis=1), np.arange(100, 550, 0.25), 1200
+
+        case 'ht30':
+            return ak.sum(coll.pt[coll.pt > 30], axis=1), np.arange(100, 550, 0.25), 1000
+
+        # invariant masses
+        case 'mjj':
+            num_cut = (n_reco > 1) & (n_gen > 1)
+            return (coll[num_cut][:, 0] + coll[num_cut][:, 1]).mass, np.arange(400, 2200, 0.25), 1500
+
+        case 'max_mjj':
+            num_cut = (n_reco > 1) & (n_gen > 1)
+            mjjs = coll[num_cut].metric_table(coll[num_cut], metric=inv_helper)
+            return ak.max(ak.max(mjjs, axis=-1), axis=-1), np.arange(400, 2800, 0.25), 2000
+
+        # symmetric di- and quad jet seeds
+        case 'dijet':
+            num_cut = (n_reco > 1) & (n_gen > 1)
+            return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :2].pt, axis=1), np.arange(10, 500, 0.1), 400
+
+        case 'quadjet':
+            num_cut = (n_reco > 3) & (n_gen > 3)
+            return ak.min(ak.sort(coll[num_cut], axis=1, ascending=False)[:, :4].pt, axis=1), np.arange(1, 200, 0.05), 200
+
+        case _:
+            raise ValueError(f"Unknown obj: {obj!r}")
 
 def get_rate_wps(reco, target_rates, obj):
     wps = {}
@@ -124,7 +143,7 @@ def turn_on_curve(tt_collection, minbias_collection, proc, turn_on_quantity, rat
 
             # Unify all collections in one plot
             x_lim = bins[bins >= bin_cut][0] if np.max(bins) >= bin_cut else bins[-1]
-            ax.legend(title=PROCS_DICT[proc], fontsize=40, title_fontsize=40)
+            ax.legend(title=PROCESS_STYLE[proc], fontsize=40, title_fontsize=40)
             ax.set_xlim(0, x_lim)
             ax.set_ylim(0, 1.05)
             ax.set_xlabel(f"{LABELS_DICT[t]} [GeV]", fontsize=44)

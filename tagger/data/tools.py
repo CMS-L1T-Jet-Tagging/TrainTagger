@@ -330,14 +330,14 @@ def to_ML(data, class_labels):
     Take in the data from make_data (loaded by load_data) and make them ready for training.
     """
     X = np.asarray(data['nn_inputs'])
+    jet_features = np.asarray(data['nn_jet_features'])
     labels = np.asarray(data["class_label"], dtype=int)
     y = np.eye(len(class_labels), dtype=np.float32)[labels] # one-hot encoding
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
     jet_pt_phys = np.asarray(data['jet_pt_phys'])
-    jet_features = np.asarray(data['nn_jet_features'])
 
-    return X, y, pt_target, truth_pt, jet_pt_phys, jet_features
+    return X, jet_features, y, pt_target, truth_pt, jet_pt_phys
 
 
 def constituents_mask(x, features_dim):

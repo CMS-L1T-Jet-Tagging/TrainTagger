@@ -21,7 +21,7 @@ from qkeras.utils import load_qmodel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras import Model
 
-from tagger.model.common import AAtt, AttentionPooling, choose_aggregator, huber_loss
+from tagger.model.common_tensorflow import huber_loss, AAtt, AttentionPooling, choose_aggregator
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.data.tools import constituents_mask
 
@@ -34,6 +34,8 @@ class QKerasModel(JetTagModel):
 
     quantization_schema = {'quantizer_bits' : And(int, lambda s: 64 >= s >= 0),
                            'quantizer_bits_int' : And(int, lambda s: 32 >= s >= 0),
+                           'reg_quantizer_bits' : And(int, lambda s: 64 >= s >= 0),
+                           'reg_quantizer_bits_int' : And(int, lambda s: 32 >= s >= 0),
                            'quantizer_alpha_val' : And(float, lambda s: 1.0 >= s >= 0.0),
                            'pt_output_quantization' : list,
                            # 'pt_layers_bits': list,
@@ -136,24 +138,28 @@ class QKerasModel(JetTagModel):
 
     def fit(
         self,
-        train_dict: dict,
+        particle_features_train: dict,
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
-        sample_weight: npt.NDArray[np.float64],
+        sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
     ):
         """Fit the model to the training dataset
 
         Args:
-            X_train (npt.NDArray[np.float64]): X train dataset
+            particle_features_train (npt.NDArray[np.float64]): X train dataset, containts inputs and pt
             y_train (npt.NDArray[np.float64]): y train classification targets
             pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
+
         # Train the model using hyperparameters in yaml config
         self.history = self.jet_model.fit(
-            train_dict,
+            particle_features_train,
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight=sample_weight,
+            sample_weight={
+                'prune_low_magnitude_jet_id_output': sample_weight[0],
+                'prune_low_magnitude_pT_output': sample_weight[1],
+            },
             epochs=self.training_config['epochs'],
             batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],
@@ -173,7 +179,7 @@ class QKerasModel(JetTagModel):
         """
 
         # get relevant feature indices
-        pt_rel_idx = self.input_vars.index("pt_rel")
+        pt_rel_idx = self.particle_input_vars.index("pt_rel")
 
         # build all possible inputs, add here if ever in need of new ones
         input_dict = {
@@ -201,6 +207,49 @@ class QKerasModel(JetTagModel):
         layer_outputs = [layer.output for layer in self.jet_model.layers]
         keras_trace_model = Model(inputs=self.jet_model.input, outputs=layer_outputs)
         return keras_trace_model
+
+    @staticmethod
+    def _get_branch_inputs(output_tensor):
+        """
+        Return only keras Input tensors that ACTUALLY feed into output_tensor.
+        """
+        visited = set()
+        inputs = {}
+        stack = [output_tensor]
+
+        while stack:
+            t = stack.pop()
+            key = t.ref()
+            if key in visited:
+                continue
+            visited.add(key)
+
+            kh = t._keras_history
+            layer = kh.layer
+            node_index = kh.node_index
+
+            # If this tensor comes from an InputLayer
+            if isinstance(layer, tf.keras.layers.InputLayer):
+                inputs[layer.name] = layer.output
+                continue
+
+            # Follow ONLY the node that produced this tensor
+            node = layer._inbound_nodes[node_index]
+            inbound_tensors = tf.nest.flatten(node.input_tensors)
+            stack.extend(inbound_tensors)
+
+        return list(inputs.values())
+
+    def get_branch_model(self, branch):
+        """
+        Build a standalone sub-model for one output branch of self.jet_model,
+        plus the matching ordered list of input arrays from test_dict.
+        """
+        output_tensor = self.jet_model.get_layer(branch).output
+        input_layers = self._get_branch_inputs(output_tensor)
+        branch_model = tf.keras.Model(input_layers, output_tensor)
+
+        return branch_model
 
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator

@@ -5,7 +5,9 @@ import os
 from coffea.nanoevents.methods import vector
 
 # plotting imports
-from extras import COLLECTION_KEYS, ETA_BINS
+import tagger.plot.style as style
+from tagger.plot.style import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, LINESTYLES_DICT, COLLECTION_KEYS
+from tagger.plot.common import to_coffea, PT_CUT, ETA_CUT, ETA_BINS
 
 def apply_jecs(jets_pt, jecs_x, jecs_y):
     p1, p0 = np.polyfit(jecs_x, jecs_y, deg=1)
@@ -32,8 +34,8 @@ def load_collections(procs, base_path):
         # run individual collections
         for coll in COLLECTION_KEYS:
             reco = jets.arrays(filter_name=f'/({coll})_(pt|eta|phi|mass|nDau|genpt|gendr)/', how='zip')[coll]
-            eta_mask = abs(reco.eta) < 2.4
-            pt_mask = reco.pt > 15 if (coll == 'scPuppiExtendedJets') else reco.pt > 0 # mimic NG jets training conditions
+            eta_mask = abs(reco.eta) < ETA_CUT
+            pt_mask = reco.pt > PT_CUT if (coll == 'scPuppiExtendedJets') else reco.pt > 0 # mimic NG jets training conditions
             mask = pt_mask & eta_mask
             reco = reco[mask]
             reco_eta, reco_pt = ak.flatten(abs(reco.eta)), ak.flatten(reco.pt)

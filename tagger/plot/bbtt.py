@@ -344,7 +344,7 @@ def make_predictions(data_path, model, n_entries, tree='outnano/Jets', njets=4):
     raw_event_id = extract_array(data, 'event', n_entries)
     raw_jet_pt = extract_array(data, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(data, 'jet_eta_phys', n_entries)
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(data, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(data, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -416,7 +416,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
     #Count number of total event
     global n_events
@@ -584,7 +584,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, target_rate = 14, n_e
         raw_gen_mHH, all_event_gen_mHH = None, None
     all_jet_genht = ak.sum(grouped_gen_arrays[-1], axis=1)
 
-    raw_inputs, raw_jet_vars = extract_nn_inputs(signal, model.input_vars, model.jet_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_vars = extract_nn_inputs(signal, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
     if all_event_gen_mHH is not None:

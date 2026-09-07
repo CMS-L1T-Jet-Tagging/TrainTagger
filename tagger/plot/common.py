@@ -18,6 +18,17 @@ MINBIAS_RATE = N_BUNCHES * REVOLUTION_FREQUENCY / 1000  # in kHz
 
 # Define pT bins
 PT_BINS = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 1000])
+REGULAR_PT_BINS = np.linspace(0, 1000, 50)
+
+# must be updatted if eta bins for jecs in FastPUPPI are changed
+ETA_BINS = [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]
+
+PT_CUT = 15
+ETA_CUT = 2.4
+
+# matching parameters
+DELTA_R = 0.4
+REL_PT = 0.5
 
 WPs_CMSSW = {
     # Tau working points as defined here

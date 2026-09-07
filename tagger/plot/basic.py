@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import math
 import json
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Cropping1D, Reshape, Permute
 
 # Third parties
 import pandas
@@ -291,12 +289,12 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     return
 
 
-def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
+def plot_input_vars(particle_features_test, y_test, input_vars, class_labels, plot_dir):
 
     save_dir = os.path.join(plot_dir, 'inputs')
     os.makedirs(save_dir, exist_ok=True)
 
-    is_filled = (X_test[:, :, 16] == 1)
+    is_filled = (particle_features_test[:, :, 16] == 1)
     for i in range(len(input_vars)):
         inputs = []
         labels = []
@@ -304,7 +302,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
             labels.append(style.INPUT_FEATURE_STYLE[input_vars[i]] + " " + style.CLASS_LABEL_STYLE[class_label])
             # Filter by class (use [:,None] to ignore the candidate dimension) and by if is_filled is 1
             # don't want all 0 inputs in our plots but also want to preserve real 0s in the plots
-            input_per_class = X_test[:, :, i][(y_test[:, iclass] == 1)[:,None] & is_filled ].flatten()
+            input_per_class = particle_features_test[:, :, i][(y_test[:, iclass] == 1)[:,None] & is_filled ].flatten()
             inputs.append(input_per_class)
         plot_histo(
             inputs,
@@ -313,7 +311,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
             style.INPUT_FEATURE_STYLE[input_vars[i]],
             'a.u',
             log = 'log',
-            x_range=(np.min(X_test[:, :, i]), np.max(X_test[:, :, i])),
+            x_range=(np.min(particle_features_test[:, :, i]), np.max(particle_features_test[:, :, i])),
         )
         save_path = os.path.join(save_dir, input_vars[i]+"_split")
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
@@ -322,7 +320,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
 
     for i in range(len(input_vars)):
         plot_histo(
-            [X_test[:, :, i][is_filled].flatten()],
+            [particle_features_test[:, :, i][is_filled].flatten()],
             [style.INPUT_FEATURE_STYLE[input_vars[i]]],
             '',
             style.INPUT_FEATURE_STYLE[input_vars[i]],
@@ -339,7 +337,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
 
     multiplicities = {i : [] for i in range(len(class_labels)+1)}
 
-    for ibatch,batch in enumerate(X_test):
+    for ibatch,batch in enumerate(particle_features_test):
         for iclass, class_label in enumerate(class_labels):
             num_candidates = (batch[(y_test[ibatch, iclass] == 1) & (batch[:,16] != 0)]).shape[0]
             if num_candidates > 0:
@@ -614,9 +612,9 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
             yerr=uncorrected_rms_err,
             fmt='o',
             label=r"Uncorrected $\sigma$- {}".format(style.CLASS_LABEL_STYLE[flavor]),
-            capsize=4,
-            ms=8,
-            elinewidth=3,
+            capsize=style.CAPSIZE,
+            ms=style.MARKERSIZE,
+            elinewidth=style.ELINEWIDTH,
         )
         ax.errorbar(
             pt_points,
@@ -624,9 +622,9 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
             yerr=regressed_rms_err,
             fmt='o',
             label=r"Regressed $\sigma$ - {}".format(style.CLASS_LABEL_STYLE[flavor]),
-            capsize=4,
-            ms=8,
-            elinewidth=3,
+            capsize=style.CAPSIZE,
+            ms=style.MARKERSIZE,
+            elinewidth=style.ELINEWIDTH,
         )
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
@@ -687,17 +685,7 @@ def shapPlot(shap_values, feature_names, class_names):
 
     axis_color = "#333333"
     class_inds = range(len(class_names))
-    colormap = [
-        "#E41A1C",  # red
-        "#377EB8",  # blue
-        "#4DAF4A",  # green
-        "#984EA3",  # purple
-        "#FFFF33",  # yellow
-        "#A65628",  # brown
-        "#F781BF",  # pink
-        "#999999",  # gray
-        "#FF7F00",  # orange
-    ] # for future reproducibility of color and class combinations (style of first DP note)
+    colormap = style.SHAP_COLORS
 
     for i, ind in enumerate(class_inds):
         global_shap_values = np.abs(shap_values[ind]).mean(0)
@@ -728,51 +716,12 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.set_xlabel("mean (|Shapley value|)", fontsize=30)
     plt.tight_layout()
 
-import tensorflow as tf
-
-def get_branch_inputs(output_tensor):
-    """
-    Return only keras Input tensors that ACTUALLY feed into output_tensor.
-    """
-    visited = set()
-    inputs = {}
-
-    def traverse(t):
-        key = t.ref()
-        if key in visited:
-            return
-        visited.add(key)
-
-        kh = t._keras_history
-        layer = kh.layer
-        node_index = kh.node_index
-
-        # If this tensor comes from an InputLayer
-        if isinstance(layer, tf.keras.layers.InputLayer):
-            inputs[layer.name] = layer.output
-            return
-
-        # Follow ONLY the node that produced this tensor
-        node = layer._inbound_nodes[node_index]
-        inbound_tensors = tf.nest.flatten(node.input_tensors)
-
-        for it in inbound_tensors:
-            traverse(it)
-
-    traverse(output_tensor)
-    return list(inputs.values())
-
-
 def plot_shaply(model, test_dict, class_labels, plot_dir):
     njets = 10
-    input_layers_class = get_branch_inputs(model.jet_model.output[0])
-    input_layers_reg = get_branch_inputs(model.jet_model.output[1])
-    layer_order_class = [layer.name for layer in input_layers_class]
-    layer_order_reg = [layer.name for layer in input_layers_reg]
-    list_inp_class = [test_dict[k][:njets] for k in layer_order_class]
-    list_inp_reg = [test_dict[k][:njets] for k in layer_order_reg]
-    model_class = tf.keras.Model(input_layers_class, model.jet_model.output[0])
-    model_reg = tf.keras.Model(input_layers_reg, model.jet_model.output[1])
+    model_class = model.get_branch_model('jet_id_output')
+    model_reg = model.get_branch_model('pT_output')
+    list_inp_class = [test_dict[inp][:njets] for inp in model_class.input_names]
+    list_inp_reg = [test_dict[inp][:njets] for inp in model_reg.input_names]
     for explainer, name in [
         (shap.GradientExplainer(model_class, list_inp_class), "GradientExplainer"),
     ]:
@@ -781,15 +730,15 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
         list_inp_class = list_inp_class[0] if n_class_inp == 1 else list_inp_class
         shap_values_basic = explainer.shap_values(list_inp_class)
         if n_class_inp > 1:
-            shap_values_basic = shap_values_basic[layer_order_class.index('basic_input')]
+            shap_values_basic = shap_values_basic[model_class.input_names.index('basic_input')]
         shap_values_basic = np.sum(shap_values_basic, axis=1)
-        if 'jet_features' in layer_order_class:
-            shap_values_jet = explainer.shap_values(list_inp_class)[layer_order_class.index('jet_features')]
+        if 'jet_features' in model_class.input_names:
+            shap_values_jet = explainer.shap_values(list_inp_class)[model_class.input_names.index('jet_features')]
             shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
-            feature_names = model.input_vars + model.jet_vars
+            feature_names = model.particle_input_vars + model.jet_input_vars
         else:
             shap_values = shap_values_basic
-            feature_names = model.input_vars
+            feature_names = model.particle_input_vars
         print("... shap summary_plot classification")
         plt.clf()
         labels = list(class_labels.keys())
@@ -805,15 +754,15 @@ def plot_shaply(model, test_dict, class_labels, plot_dir):
         list_inp_reg = list_inp_reg[0] if n_reg_inp == 1 else list_inp_reg
         shap_values_basic = explainer.shap_values(list_inp_reg)
         if n_reg_inp > 1:
-            shap_values_basic = shap_values_basic[layer_order_reg.index('basic_input')]
+            shap_values_basic = shap_values_basic[model_reg.input_names.index('basic_input')]
         shap_values_basic = np.sum(shap_values_basic, axis=1)
-        if 'jet_features' in layer_order_reg:
-            shap_values_jet = explainer.shap_values(list_inp_reg)[layer_order_reg.index('jet_features')]
+        if 'jet_features' in model_reg.input_names:
+            shap_values_jet = explainer.shap_values(list_inp_reg)[model_reg.input_names.index('jet_features')]
             shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
-            feature_names = model.input_vars + model.inputs['jet_features']
+            feature_names = model.particle_input_vars + model.inputs['jet_features']
         else:
             shap_values = shap_values_basic
-            feature_names = model.input_vars
+            feature_names = model.particle_input_vars
         print("... shap summary_plot regression")
         plt.clf()
         labels = ["Regression"]
@@ -1000,9 +949,9 @@ def basic(model, signal_dirs):
     # Load the testing data
     test_dict = np.load(f"{model.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
     test_dict = {k: test_dict[k] for k in test_dict.files}
-    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
-    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
-    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
+    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npz")["label"]
+    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npz")["truth_pt"]
+    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npz")["reco_pt"]
     model_outputs = model.jet_model.predict(test_dict)
 
     # Get classification outputs
@@ -1039,7 +988,7 @@ def basic(model, signal_dirs):
             signal_indices, sample_data = filter_process(test_dict['basic_input'], model, signal_dirs[i])
             sample_raw_inputs = {
                 'basic_input': sample_data[0],
-                'jet_features': sample_data[-1]
+                'jet_features': sample_data[1]
             }
             sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
@@ -1052,7 +1001,7 @@ def basic(model, signal_dirs):
             ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_data[1], model.class_labels, binary_dir, class_pair, process_label)
+                ROC_binary(sample_preds, sample_data[2], model.class_labels, binary_dir, class_pair, process_label)
 
         # Add light vs b/charm/gluon combined plot
         binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
@@ -1061,12 +1010,12 @@ def basic(model, signal_dirs):
 
         if i != -1:
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-            ROC_jets(sample_preds, sample_data[1], model.class_labels, binary_dir_full, process_label)
-            ROC_taus(sample_preds, sample_data[1], model.class_labels, binary_dir_full, process_label)
+            ROC_jets(sample_preds, sample_data[2], model.class_labels, binary_dir_full, process_label)
+            ROC_taus(sample_preds, sample_data[2], model.class_labels, binary_dir_full, process_label)
 
 
     # Plot input distributions
-    plot_input_vars(test_dict['basic_input'], y_test, model.input_vars, model.class_labels, plot_dir)
+    plot_input_vars(test_dict['basic_input'], y_test, model.particle_input_vars, model.class_labels, plot_dir)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)

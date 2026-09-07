@@ -7,11 +7,12 @@ from coffea.nanoevents.methods import vector
 from argparse import ArgumentParser
 
 # plotting imports
-from extras import LABELS_DICT, COLORS_DICT, PROCS_DICT, COLLECTION_KEYS
+from styles import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, COLLECTION_KEYS
 from load_collections import load_collections
 
 import tagger.plot.style as style
-from tagger.plot.common import to_coffea
+from tagger.plot.style import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, LINESTYLES_DICT, COLLECTION_KEYS
+from tagger.plot.common import to_coffea, DELTA_R, REL_PT
 
 style.set_style()
 
@@ -35,7 +36,7 @@ def smallest_interval(data, fraction=0.68):
 
 # Matching and plotting
 # match genjets to partons
-def match_genjets(daughters, genjets, dr_max=0.4, rel_pt_max=0.5):
+def match_genjets(daughters, genjets, dr_max=style.DELTA_R, rel_pt_max=style.REL_PT):
     matched_parts = []
     matched_jets = []
     dR_matrix = daughters.metric_table(genjets)
@@ -124,6 +125,22 @@ def match_to_reco(proc_coll, daughter_pdgId):
     return recos
 
 # Match top and W partons to genjets and then to reco jets, use only hadronic decays
+def get_daughters(particles, mothers, pdgId_mother):
+    mask = (((particles.status == 22) | (particles.status == 23))
+        & (mothers == pdgId_mother))
+
+    return particles[mask], mask
+
+def decay_mode(particles):
+    pdg = abs(particles.pdgId)
+    is_quark = (pdg >= 1) & (pdg <= 6)
+    is_lepton = (pdg == 11) | (pdg == 13) | (pdg == 15)
+
+    decay_mode = ['unknown'] * len(particles)
+    decay_mode = np.where(ak.sum(is_quark, axis=1) == 2, ['hadronic'] * len(decay_mode), decay_mode)
+    decay_mode = np.where(ak.sum(is_lepton, axis=1) == 2, ['leptonic'] * len(decay_mode), decay_mode)
+    return decay_mode
+
 def find_top_daughters(gen, colls):
     genparts = to_coffea(gen['genparts'])
     genjets = to_coffea(gen['genjets'])
@@ -134,25 +151,6 @@ def find_top_daughters(gen, colls):
         (abs(genparts.pdgId) == 6)
         & (genparts.status == 22)
     ]
-
-    def get_daughters(particles, mothers, pdgId_mother):
-        mask = (((particles.status == 22) | (particles.status == 23))
-            & (mothers == pdgId_mother))
-
-        return particles[mask], mask
-
-    def decay_mode(particles):
-        pdg = abs(particles.pdgId)
-
-        def is_quark(pdg):
-            return (pdg >= 1) & (pdg <= 6)
-        def is_lepton(id):
-            return (pdg == 11) | (pdg == 13) | (pdg == 15)
-
-        decay_mode = ['unknown'] * len(particles)
-        decay_mode = np.where(ak.sum(is_quark(pdg), axis=1) == 2, ['hadronic'] * len(decay_mode), decay_mode)
-        decay_mode = np.where(ak.sum(is_lepton(pdg), axis=1) == 2, ['leptonic'] * len(decay_mode), decay_mode)
-        return decay_mode
 
     top_results = []
     w_results = []
@@ -259,7 +257,7 @@ def plot_mjj(mjjs, gen, p, p_info, proc, plot_dir):
 
     ax.set_xlabel(p_info['x_label'])
     ax.set_ylabel("Fraction")
-    ax.legend(title=PROCS_DICT[proc], fontsize=28, title_fontsize=28)
+    ax.legend(title=PROCESS_STYLE[proc], fontsize=28, title_fontsize=28)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT,
                 ax=ax, fontsize=style.CMSHEADER_SIZE)
 

@@ -14,9 +14,9 @@ def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
     np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
-    np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
-    np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
-    np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt)
+    np.savez_compressed(os.path.join(out_dir, "testing_data/y_test.npz"), label=y_test)
+    np.savez_compressed(os.path.join(out_dir, "testing_data/truth_pt_test.npz"), truth_pt=truth_pt_test)
+    np.savez_compressed(os.path.join(out_dir, "testing_data/reco_pt_test.npz"), reco_pt=reco_pt)
 
     print(f"Test labels saved to {out_dir}")
 
@@ -139,19 +139,19 @@ def train(model, out_dir, percent):
     )
 
     # Make into ML-like data for training
-    X_train, y_train, pt_target_train, _, reco_pt_train, jet_features_train = to_ML(data_train, class_labels)
+    particle_features_train, jet_features_train, y_train, pt_target_train, _, reco_pt_train = to_ML(data_train, class_labels)
 
-    # Save X_test, y_test, and truth_pt_test for plotting later
-    X_test, y_test, _, truth_pt_test, reco_pt_test, jet_features_test = to_ML(data_test, class_labels)
+    # Save particle_features_test, y_test, and truth_pt_test for plotting later
+    particle_features_test, jet_features_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
 
     # collect all possible train and test inputs
     raw_inputs_train = {
-        'basic_input': X_train,
+        'basic_input': particle_features_train,
         'jet_features': jet_features_train,
     }
 
     raw_inputs_test = {
-        'basic_input': X_test,
+        'basic_input': particle_features_test,
         'jet_features': jet_features_test,
     }
     test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys
@@ -176,7 +176,7 @@ def train(model, out_dir, percent):
     model.build_model(input_shapes, output_shape)
 
     # Train it with a pruned model
-    num_samples = X_train.shape[0] * (1 - model.training_config['validation_split'])
+    num_samples = particle_features_train.shape[0] * (1 - model.training_config['validation_split'])
 
     model.compile_model(num_samples)
     model.fit(train_dict, y_train, pt_target_train, jet_weights)

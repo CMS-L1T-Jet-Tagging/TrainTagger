@@ -17,7 +17,7 @@ import hls4ml
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
-from tagger.model.common import initialise_tensorflow
+from tagger.model.common_tensorflow import initialise_tensorflow
 
 
 @JetModelFactory.register('DeepSetModelHGQ')

@@ -190,10 +190,10 @@ This `JetModelFactory.register('MyModel')` allows you to generate your model cla
 The rest of the MyModel.py is up to you but you must include the following methods with the following arguments:
 ```
 build_model(input_shape,output_shape)
-# Shape of the input and output of the model, derived from the X_train.shape[1:]  and y_train.shape[1:] (avoiding the batch size dimension)
+# Shape of the input and output of the model, derived from the particle_features_train.shape[1:]  and y_train.shape[1:] (avoiding the batch size dimension)
 compile_model(num_samples)
 # Number of samples in the training data (for scheduling purposes)
-fit( X_train, y_train, pt_target_train, sample_weight)
+fit( particle_features_train, y_train, pt_target_train, sample_weight)
 # Each passed as a numpy array
 @JetTagModel.save_decorator
 save(out_dir)

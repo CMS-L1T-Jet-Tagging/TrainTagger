@@ -6,27 +6,51 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 from schema import Schema, And, Use, Optional
-import tensorflow_model_optimization as tfmot
 
-from tagger.model.common import initialise_tensorflow
+from tagger.model.common_tensorflow import choose_aggregator, initialise_tensorflow
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKerasModel import QKerasModel
 
 from qkeras import QConv1D
-from qkeras.utils import load_qmodel
 from qkeras.qlayers import QActivation, QDense
 from qkeras.quantizers import quantized_bits, quantized_relu
 from tensorflow.keras.layers import Activation, BatchNormalization
-from tagger.model.DeepSetModel import DeepSetModel
 
 # Register the model in the factory with the string name corresponding to what is in the yaml config
 @JetModelFactory.register('WeightedAverageSimpleModel')
-class WeightedAverageSimpleModel(DeepSetModel):
+class WeightedAverageSimpleModel(QKerasModel):
     """WeightedAverageSimpleModel class
 
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
     """
+
+    schema = Schema(
+            {
+                "model": str,
+                ## generic run config coniguration
+                "run_config" : JetTagModel.run_schema,
+                "model_config" : {"name" : str,
+                                  "conv1d_layers" : list,
+                                  "classification_layers" : list,
+                                  "regression_layers" : list,
+                                  "kernel_initializer" : str,
+                                  "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])},
+                "quantization_config" : QKerasModel.quantization_schema,
+                "training_config" : QKerasModel.training_config_schema,
+                ## generic hls4ml configuration
+                "firmware_config" : {"input_precision" : dict,
+                                    "class_precision" : str,
+                                    "reg_precision": str,
+                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
+                                    "fpga_part" : str,
+                                    "project_name" : str},
+                "inputs" : {
+                    "basic_input_config": list,
+                    "basic_features": list,
+                    "jet_features": list}
+            }
+    )
 
     def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
@@ -123,11 +147,11 @@ class WeightedAverageSimpleModel(DeepSetModel):
         # Make fully connected dense layers for regression task
         pt_weights = QDense(16, name='Dense_pt_weights_output_0', **self.common_args)(pt_weights)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 2),
+            activation=quantized_relu(self.quantization_config['reg_quantizer_bits'] , self.quantization_config['reg_quantizer_bits_int']),
             name='pt_weights_output_0')(pt_weights)
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
-            activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 2),
+            activation=quantized_relu(self.quantization_config['reg_quantizer_bits'] , self.quantization_config['reg_quantizer_bits_int']),
             name='pt_weights_output')(pt_weights)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
@@ -144,38 +168,6 @@ class WeightedAverageSimpleModel(DeepSetModel):
         self.jet_model = tf.keras.Model(inputs=[inputs, pt, jet_features, pt_mask], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
-
-    def fit(
-        self,
-        X_train: dict,
-        y_train: npt.NDArray[np.float64],
-        pt_target_train: npt.NDArray[np.float64],
-        sample_weight: [npt.NDArray[np.float64], npt.NDArray[np.float64]],
-    ):
-        """Fit the model to the training dataset
-
-        Args:
-            X_train (npt.NDArray[np.float64]): X train dataset, containts inputs and pt
-            y_train (npt.NDArray[np.float64]): y train classification targets
-            pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
-            sample_weight (npt.NDArray[np.float64]): sample weighting
-        """
-
-        # Train the model using hyperparameters in yaml config
-        self.history = self.jet_model.fit(
-            X_train,
-            {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
-            sample_weight={
-                'prune_low_magnitude_jet_id_output': sample_weight[0],
-                'prune_low_magnitude_pT_output': sample_weight[1],
-            },
-            epochs=self.training_config['epochs'],
-            batch_size=self.training_config['batch_size'],
-            verbose=self.run_config['verbose'],
-            validation_split=self.training_config['validation_split'],
-            callbacks=self.callbacks,
-            shuffle=True,
-        )
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
         """Run the hls4ml model conversion
@@ -263,19 +255,3 @@ class WeightedAverageSimpleModel(DeepSetModel):
         if build:
             # build the project
             self.hls_jet_model.build(csim=False, reset=True)
-
-    # Override load to allow node edge projection to also be loaded
-    @JetTagModel.load_decorator
-    def load(self, out_dir: str = "None"):
-        """Load the model file
-
-        Args:
-            out_dir (str, optional): Where to load it if not in the output_directory. Defaults to "None".
-        """
-
-        # Additional custom objects for attention layers
-        custom_objects_ = {
-        }
-
-        # Load the model
-        self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)

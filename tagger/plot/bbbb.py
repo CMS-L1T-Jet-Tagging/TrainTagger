@@ -178,8 +178,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     basic_nn_inputs, jet_nn_inputs = basic_nn_inputs[def_sel], jet_nn_inputs[def_sel]
     jet_pt_sel, jet_eta_sel = jet_pt[def_sel], jet_eta[def_sel]
 
-
-    bscore_sum, regression = nn_bscore_sum(model, basic_nn_inputs, jet_pt_sel, jet_eta_sel, apply_light, model.class_labels)
+    bscore_sum, regression = nn_bscore_sum(model, basic_nn_inputs, jet_nn_inputs, jet_pt_sel, jet_eta_sel, apply_light, model.class_labels)
     jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
 
     assert(len(bscore_sum) == len(jet_ht))

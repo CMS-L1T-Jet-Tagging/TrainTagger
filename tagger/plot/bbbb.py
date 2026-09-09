@@ -251,7 +251,7 @@ def load_inputs(path, n_entries=100000, tree='outnano/Jets', model=None):
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_cmssw_bscore = extract_array(minbias, 'jet_bjetscore', n_entries)
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, n_entries=n_entries) if model is not None else None
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries) if model is not None else None
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
@@ -345,7 +345,7 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
         raw_gen_mHH = None
 
     # Load the inputs
-    raw_inputs, raw_jet_inputs = extract_nn_inputs(signal, model.particle_input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(signal, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
     #Group event_id, gen_mHH, and genpt separately
     if raw_gen_mHH is not None:

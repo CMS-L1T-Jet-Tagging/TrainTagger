@@ -25,6 +25,7 @@ ETA_BINS = [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]
 
 PT_CUT = 15
 ETA_CUT = 2.4
+HT_CUT = 30 # cut applied on jets that contribute to HT calculation, in GeV
 
 # matching parameters
 DELTA_R = 0.4

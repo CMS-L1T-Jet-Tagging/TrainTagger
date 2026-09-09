@@ -21,7 +21,7 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, PT_CUT, ETA_CUT, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
+from common import MINBIAS_RATE, PT_CUT, ETA_CUT, HT_CUT, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
 
 # Helpers
 
@@ -53,7 +53,7 @@ def nn_bscore_sum(model, basic_inputs, jet_inputs, jet_pt, jet_eta, apply_light,
     class_outputs, regression_outputs = ak.unflatten(class_outputs, og_shape), ak.unflatten(regression_outputs, og_shape)
 
     # Mask unwanted jets (i.e jets < 15 Gev and |eta| > 2.4), and set all scores to 0
-    selection_mask = (jet_pt > PT_BINS) & (abs(jet_eta) < ETA_BINS)
+    selection_mask = (jet_pt > PT_CUT) & (abs(jet_eta) < ETA_CUT)
     regression_outputs = ak.where(selection_mask, regression_outputs, 1)
     mask_expanded = ak.broadcast_arrays(selection_mask, class_outputs)[0]
     class_outputs = ak.where(mask_expanded, class_outputs, 0)
@@ -179,7 +179,7 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     jet_pt_sel, jet_eta_sel = jet_pt[def_sel], jet_eta[def_sel]
 
     bscore_sum, regression = nn_bscore_sum(model, basic_nn_inputs, jet_nn_inputs, jet_pt_sel, jet_eta_sel, apply_light, model.class_labels)
-    jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    jet_ht = ak.sum(jet_pt[(jet_pt > HT_CUT) & (np.abs(jet_eta) < ETA_CUT)], axis=1)
 
     assert(len(bscore_sum) == len(jet_ht))
 
@@ -297,7 +297,7 @@ def load_all_bbbb_WPs(model, apply_sel, apply_light):
 def get_logical_or_seed(minbias_path, model, model_wps, ht_wp, n_entries=100000, tree='outnano/Jets', apply_sel=True, apply_light=False):
     n_events, basic_inp, jet_inp, jet_pt, jet_eta = load_inputs(minbias_path, n_entries, tree, model)
     b_sums, regression = nn_bscore_sum(model, basic_inp, jet_inp, jet_pt, jet_eta, apply_light, model.class_labels, n_jets=4)
-    jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    jet_ht = ak.sum(jet_pt[(jet_pt > HT_CUT) & (np.abs(jet_eta) < ETA_CUT)], axis=1)
     ht_selection = (jet_ht > ht_wp)
     model_b_wp, model_ht_wp = model_wps
     model_selection = (jet_ht > model_ht_wp) & (b_sums > model_b_wp) & default_selection(jet_pt, jet_eta, apply_sel)
@@ -372,8 +372,8 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
         event_gen_mHH = None
 
     #Calculate the ht
-    jet_genht = ak.sum(jet_genpt[(jet_genpt > 30) & (np.abs(jet_geneta) < 2.4)], axis=1)
-    jet_ht = ak.sum(jet_pt[(jet_pt > 30) & (np.abs(jet_eta) < 2.4)], axis=1)
+    jet_genht = ak.sum(jet_genpt[(jet_genpt > HT_CUT) & (np.abs(jet_geneta) < ETA_CUT)], axis=1)
+    jet_ht = ak.sum(jet_pt[(jet_pt > HT_CUT) & (np.abs(jet_eta) < ETA_CUT)], axis=1)
 
     #B score from cmssw emulator
     cmsssw_bscore_sum = ak.sum(cmssw_bscore[:,:4], axis=1) #Only sum up the first four

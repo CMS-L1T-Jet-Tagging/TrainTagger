@@ -1,8 +1,3 @@
-"""DeepSet model child class
-
-Written 28/05/2025 cebrown@cern.ch
-"""
-
 import json
 import os
 
@@ -21,12 +16,10 @@ from qkeras.qlayers import QActivation, QDense
 from qkeras.quantizers import quantized_bits, quantized_relu
 from tensorflow.keras.layers import Activation, BatchNormalization
 
-
 # Register the model in the factory with the string name corresponding to what is in the yaml config
-@JetModelFactory.register('DeepSetModel')
-class DeepSetModel(QKerasModel):
-
-    """DeepSetModel class
+@JetModelFactory.register('WeightedAverageSimpleModel')
+class WeightedAverageSimpleModel(QKerasModel):
+    """WeightedAverageSimpleModel class
 
     Args:
         JetTagModel (_type_): Base class of a JetTagModel
@@ -59,7 +52,7 @@ class DeepSetModel(QKerasModel):
             }
     )
 
-    def build_model(self, inputs_shape: dict, outputs_shape: tuple):
+    def build_model(self, inputs_shape: tuple, outputs_shape: tuple):
         """build model override, makes the model layer by layer
 
         Args:
@@ -89,11 +82,28 @@ class DeepSetModel(QKerasModel):
             'kernel_initializer': self.model_config['kernel_initializer'],
         }
 
+        self.pt_args = {
+            'kernel_quantizer': quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            ),
+            'bias_quantizer' : quantized_bits(
+                self.quantization_config['pt_output_quantization'][0],
+                self.quantization_config['pt_output_quantization'][1],
+                alpha=self.quantization_config['quantizer_alpha_val'],
+            )
+        }
+
         # Initialize inputs
         inputs = tf.keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
+        pt = tf.keras.layers.Input(shape=inputs_shape['constituent_fraction'], name='constituent_fraction')
+        jet_features = tf.keras.layers.Input(shape=inputs_shape['jet_features'], name='jet_features')
+        pt_mask = tf.keras.layers.Input(shape=inputs_shape['pt_mask'], name='pt_mask')
 
         # Main branch
-        main = BatchNormalization(name='norm_input')(inputs)
+        main = BatchNormalization(name='norm_basic_input')(inputs)
+        jet_features_norm = BatchNormalization(name='norm_jet_features')(jet_features)
 
         # Make Conv1D layers
         for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
@@ -103,13 +113,18 @@ class DeepSetModel(QKerasModel):
             )(main)
             # ToDo: fix the bits_int part later, ie use the default not 0
 
-        # Linear activation to change HLS bitwidth to fix overflow in AveragePooling
+        # Make the pT weights and corrections
+        pt_weights = QConv1D(filters=1, kernel_size=1, name='Conv1D_pt_weights', **self.common_args)(main)
+        pt_weights = tf.keras.layers.Flatten(name='Conv1D_pt_weights_flat')(pt_weights)  # shape: (batch, timesteps)
+        pt_weights = QActivation(activation=quantized_relu(self.quantization_config['quantizer_bits'] +2 , 3), name='Conv1D_pt_weights_relu')(pt_weights)  # Ensure positive weights
+        pt_weights = tf.keras.layers.Multiply(name='apply_pt_mask_weights')([pt_weights, pt_mask])
+
+        # Weighted Global Average Pooling
         main = QActivation(activation='quantized_bits(18,8)', name='act_pool')(main)
-        agg = choose_aggregator(choice=self.model_config['aggregator'], name="pool")
-        main = agg(main)
+        main = tf.keras.layers.GlobalAveragePooling1D(name='avg_pooling')(main)
+        main = tf.keras.layers.Concatenate(name='concat_jet_features')([main, jet_features_norm])
 
         # Now split into jet ID and pt regression
-
         # Make fully connected dense layers for classification task
         for iclass, depthclass in enumerate(self.model_config['classification_layers']):
             if iclass == 0:
@@ -126,35 +141,31 @@ class DeepSetModel(QKerasModel):
         jet_id = QDense(outputs_shape[0], name='Dense_' + str(iclass + 2) + '_jetID', **self.common_args)(jet_id)
         jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-        # Make fully connected dense layers for pt regression task
-        for ireg, depthreg in enumerate(self.model_config['regression_layers']):
-            if ireg == 0:
-                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', **self.common_args)(main)
-            else:
-                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', **self.common_args)(pt_regress)
-            pt_regress = QActivation(
-                activation=quantized_relu(self.quantization_config['quantizer_bits'], 0),
-                name='relu_' + str(ireg + 1) + '_pT',
-            )(pt_regress)
+        # concat jet features to pt weights
+        pt_weights = tf.keras.layers.Concatenate(name='concat_jet_features_pt_weights')([pt_weights, jet_features_norm])
 
-        pt_regress = QDense(
-            1,
-            name='pT_output',
-            kernel_quantizer=quantized_bits(
-                self.quantization_config['pt_output_quantization'][0],
-                self.quantization_config['pt_output_quantization'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            bias_quantizer=quantized_bits(
-                self.quantization_config['pt_output_quantization'][0],
-                self.quantization_config['pt_output_quantization'][1],
-                alpha=self.quantization_config['quantizer_alpha_val'],
-            ),
-            kernel_initializer='lecun_uniform',
-            )(pt_regress)
+        # Make fully connected dense layers for regression task
+        pt_weights = QDense(16, name='Dense_pt_weights_output_0', **self.common_args)(pt_weights)
+        pt_weights = QActivation(
+            activation=quantized_relu(self.quantization_config['reg_quantizer_bits'] , self.quantization_config['reg_quantizer_bits_int']),
+            name='pt_weights_output_0')(pt_weights)
+        pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
+        pt_weights = QActivation(
+            activation=quantized_relu(self.quantization_config['reg_quantizer_bits'] , self.quantization_config['reg_quantizer_bits_int']),
+            name='pt_weights_output')(pt_weights)
+
+        weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
+        pt_output_dense = QDense(1, name='pT_output_dense',
+            kernel_initializer=tf.keras.initializers.Ones(), # all weights set to 1 to perform a sum
+            use_bias = False,
+            trainable=False,
+            **self.pt_args)(weighted_pt) # fix weights at 1 to perform sum, not updated during training
+        pt_output = QActivation(
+            activation=quantized_relu(16 , 2),
+            name='pT_output')(pt_output_dense)  # Ensure positive output, and cap
 
         # Define the model using both branches
-        self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
+        self.jet_model = tf.keras.Model(inputs=[inputs, pt, jet_features, pt_mask], outputs=[jet_id, pt_output])
 
         print(self.jet_model.summary())
 
@@ -184,6 +195,8 @@ class DeepSetModel(QKerasModel):
         # hls4ml does not !!! automatically figure out the paralellization factor, this leads to csim, hdl sim errors
         config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
         config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
+        config['LayerName']['Conv1D_pt_weights']['ParallelizationFactor'] = 16
+        config['LayerName']['apply_pt_weights']['ParallelizationFactor'] = 16
 
         # Additional config
         for layer in self.jet_model.layers:

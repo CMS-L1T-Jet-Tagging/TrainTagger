@@ -136,11 +136,16 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
     minbias = uproot.open(minbias_path)[tree]
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries).to_numpy()
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_inputs, raw_jet_features = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_features = np.asarray(raw_inputs), np.asarray(raw_jet_features)
+    raw_inputs_dict = {
+        'basic_input': raw_inputs,
+        'jet_features': raw_jet_features
+    }
+    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 
     apply_light = True
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
@@ -294,14 +299,19 @@ def plot_bkg_rate_ditau_topo(model, minbias_path, n_entries=100, tree='jetntuple
         raise Exception("Working point does not exist. Run with --deriveWPs first.")
 
     raw_event_id = extract_array(minbias, 'event', n_entries)
-    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
+    raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries).to_numpy()
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_cmssw_tau = extract_array(minbias, 'jet_tauscore', n_entries)
     raw_cmssw_taupt = extract_array(minbias, 'jet_taupt', n_entries)
 
-    raw_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_inputs, raw_jet_features = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_features = np.asarray(raw_inputs), np.asarray(raw_jet_features)
+    raw_inputs_dict = {
+        'basic_input': raw_inputs,
+        'jet_features': raw_jet_features,
+    }
+    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 
     apply_light = True
     raw_tau_score_sum = raw_pred_score[:,model.class_labels['taup']] + raw_pred_score[:, model.class_labels['taum']]
@@ -422,7 +432,7 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
 
     raw_jet_genpt = raw_jet_genpt[pt_mask]
     raw_event_id = extract_array(signal, 'event', n_entries)[pt_mask]
-    raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)[pt_mask]
+    raw_jet_pt = extract_array(signal, 'jet_pt', n_entries)[pt_mask].to_numpy()
     raw_jet_genmass = extract_array(signal, 'jet_genmatch_mass', n_entries)[pt_mask]
     raw_jet_geneta = extract_array(signal, 'jet_genmatch_eta', n_entries)[pt_mask]
     raw_jet_genphi = extract_array(signal, 'jet_genmatch_phi', n_entries)[pt_mask]
@@ -433,8 +443,14 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
     raw_cmssw_taupt = extract_array(signal, 'jet_taupt', n_entries)[pt_mask]
 
     #NN related
-    raw_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))[pt_mask]
-    raw_pred_score, raw_pt_correction = model.predict(raw_inputs)
+    raw_inputs, raw_jet_features = extract_nn_inputs(signal, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
+    raw_inputs = np.asarray(raw_inputs)[pt_mask]
+    raw_jet_features = np.asarray(raw_jet_features)[pt_mask] if model.jet_input_vars else None
+    raw_inputs_dict = {
+        'basic_input': raw_inputs,
+        'jet_features': raw_jet_features,
+    }
+    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 
     #Check if the working point have been derived
     WP_path = os.path.join(model.output_directory, "plots/physics/tautau_topo/working_point.json")
@@ -620,8 +636,8 @@ if __name__ == "__main__":
     """
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')
@@ -630,7 +646,7 @@ if __name__ == "__main__":
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=10000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
-    parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
 
     args = parser.parse_args()
 

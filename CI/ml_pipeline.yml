@@ -11,6 +11,13 @@ stages:
   - emulate
   - emulation-evaluate
   - profile
+  - run_processes
+  - run_TT_PU200
+  - run_VBFHToBB_PU200
+  - run_VBFHToCC_PU200
+  - run_MinBias_PU200
+  - run_QCD_Pt15To3000_PU200
+  - emulation_regression
   - upload
   - test
 
@@ -23,23 +30,25 @@ variables:
     TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
-    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/
+    BBBB_EOS_DIR: /eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/
     BBTT: GluGluHHTo2B2Tau_PU200.root
-    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/
+    BBTT_EOS_DIR: /eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/
     VBFHTAUTAU: VBFHToTauTau_PU200.root
     NTUPLE_TREE: outnano/Jets
     SIGNAL: TT_PU200
-    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_191125_151X/
+    EOS_DATA_DIR: /eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
-    CMSSW_VERSION: 'CMSSW_15_1_0_pre4'
-    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:L1PF_15_1_X_L1TSC4NGJetTagger'
+    EOS_STORAGE_PROCSDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/FPOutput
+    CMSSW_VERSION: 'CMSSW_17_0_0_pre2'
+    CMSSW_L1CT: 'CMS-L1T-Jet-Tagging:CMSSW_17_0_0_pre2_NGJet_plus_correlator'
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
+    FASTPUPPI_VERSION: 'CMSSW_17_0_0_pre2_NGJet_plus_correlator'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    TAG: 'v0.0.0'
+    TAG: 'v1.0.1'
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -49,7 +58,7 @@ variables:
     - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-gpu]
   # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
   #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
   #      when: on_success
@@ -58,14 +67,11 @@ data:
   extends:
     - .template
   stage: data
-  tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 2
-  rules:
-    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-        - tagger/data/**
-      when: manual
+  tags: [cern-nextgen-gpu]
+  #rules:
+  #  - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+  #      - tagger/data/**
+  #    when: manual
   script:
   - source activate tagger
   - mkdir data
@@ -86,6 +92,7 @@ train:
   extends:
     - .template
   stage: train
+  tags: [cern-nextgen-gpu]
   needs:
     - job : data
       optional: true
@@ -93,7 +100,7 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - ./CI/run_training.sh $RERUN_ON_TAG
+  - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING
   artifacts:
     paths:
       - output
@@ -105,7 +112,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [cern-nextgen-h100]
+  tags: [cern-nextgen-gpu]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -118,6 +125,8 @@ evaluate:
   - eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
+  - echo "pT weights plots"
+  - python tagger/plot/pt_weights.py -m output/$Model
   - echo "bbtt performance"
   - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model
@@ -132,7 +141,7 @@ evaluate:
   - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - echo "bbbb performance"
   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbbb.py --eff -s data/$BBBB -n 500000 --tree $NTUPLE_TREE -m output/$Model
+  - python tagger/plot/bbbb.py --eff -s data/$BBBB --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
   - echo "Single tau performance"
   - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
@@ -145,10 +154,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [cern-nextgen-h100]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 32Gi
-    KUBERNETES_CPU_REQUEST: 4
+  tags: [cern-nextgen-gpu]
   extends:
     - .template
   rules:
@@ -158,6 +164,11 @@ hls4ml:
     - job : train
       optional: true
   script:
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .
+  - cd ..
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
@@ -189,15 +200,17 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
+  tags: [cern-nextgen-gpu]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
   dependencies: [emulate,train,hls4ml]
   script:
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .
+  - cd ..
   - mkdir data
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
@@ -213,38 +226,76 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 8Gi
-    KUBERNETES_CPU_REQUEST: 2
-  needs: [emulate,synth,train]
-  dependencies: [emulate,synth,train]
+  tags: [cern-nextgen-gpu]
+  needs: [emulate,train,hls4ml,synth]
+  dependencies: [emulate,train,hls4ml,synth]
   rules:
     - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
   script:
+  - pip uninstall hls4ml
+  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
+  - cd hls4ml
+  - pip install .
+  - cd ..
   - source activate tagger
+  - pip install hls4ml[profiling]
   - mkdir data
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
-  - pip uninstall hls4ml -y
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger
-  - cd hls4ml
-  - pip install .[profiling]
-  - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
+  artifacts:
+    expire_in: 1 day
+
+run_processes:
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
+  stage: run_processes
+  tags: [cern-nextgen-gpu]
+  needs:
+    - job : hls4ml
+      optional: true
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  before_script:
+    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+    - source /cvmfs/cms.cern.ch/cmsset_default.sh
+    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+  script:
+  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  parallel:
+    matrix:
+      - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
+  artifacts:
+    paths:
+      - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
+    expire_in: 2 day
+
+emulation_regression:
+  extends:
+    - .template
+  stage: emulation_regression
+  tags: [cern-nextgen-gpu]
+  needs:
+    - job : run_processes
+      optional: true
+  rules:
+    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+  script:
+  - source activate tagger
+  - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
+  - mkdir -p output/$Model/plots/emulation_regression
+  - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   artifacts:
     paths:
       - output/$Model
-    expire_in: 1 day
+    expire_in: 2 day
 
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
-  tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_CPU_REQUEST: 1
+  tags: [k8s-default]
   rules:
     - if: $RERUN_ON_TAG == "False"
   needs:
@@ -260,6 +311,8 @@ upload_new_model:
       optional: true
     - job: profile
       optional: true
+    - job: emulation_regression
+      optional: false
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -270,30 +323,30 @@ upload_new_model:
       - $Name
     expire_in: 1 day
 
-
 upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
   tags: [k8s-gpu]
-  variables:
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_CPU_REQUEST: 1
-  needs: [emulation-evaluate,hls4ml,train,evaluate,profile]
-  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile]
+  needs: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
+  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
   rules:
     - if: $RERUN_ON_TAG == "True"
   before_script:
+    - export EOS_MGM_URL=root://eosproject.cern.ch
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
   script:
     - source activate tagger
+    - echo ${EOS_STORAGE_DIR}/tags/${TAG}
+    - eos ls ${EOS_STORAGE_DIR}/tags/${TAG}
+    - ls ${EOS_STORAGE_DIR}/tags/${TAG}
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots
     - mkdir $Name
-    - cd tagger/firmware
+    - cd output/$Model/firmware
     - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
     - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
-    - cd ../..
+    - cd ../../..
     - mkdir $Name/plots
     - mv output/$Model/plots/emulation $Name/plots
     - mv output/$Model/plots/profile $Name/plots

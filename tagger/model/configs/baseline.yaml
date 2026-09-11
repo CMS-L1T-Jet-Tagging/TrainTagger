@@ -15,17 +15,29 @@ model_config :
 quantization_config:
   quantizer_bits : 9
   quantizer_bits_int : 2
+  reg_quantizer_bits : 11
+  reg_quantizer_bits_int : 2
   quantizer_alpha_val : 1.0
   pt_output_quantization : [16,6]
 
-training_config :
-  weight_method: "onlyclass"
+inputs:
+  # Specify inputs for the model here, order is defined in data/puppicand.yaml. New inputs should always
+  # be added here and in puppicands yaml
+  basic_input_config: ["pt", "pt_rel", "pt_log", "deta", "dphi", "mass", "isPhoton", "isElectronPlus",
+    "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
+    "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality"] # features to use in the basic_input
+  basic_features: ['basic_input']
+  jet_features: [] # will later be concatenated into one jet features input
+
+training_config:
+  weight_method: ["onlyclass", "onlyclass"]
   epochs : 100
   batch_size : 1024
   learning_rate : 0.001
   validation_split : 0.1
 
-  loss_weights : [1,1]
+  loss_weights : [1, 1] # class, regression: weights to blance losses, must be tested empirically for each model
+  huber_weights : [0, 0] # pu, alpha: weights for pileup and undestimation punishment, pu should always be 0 for models wo pileup category
 
   initial_sparsity : 0.0
   final_sparsity : 0.1
@@ -36,8 +48,11 @@ training_config :
   ReduceLROnPlateau_patience : 5
   ReduceLROnPlateau_min_lr : 0.00001
 
+  pileup: False
+
 firmware_config:
-  input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
+  # input precisions dict keys must macth the input layer name in model build method
+  input_precision: {'basic_input': 'ap_fixed<24,12,AP_RND,AP_SAT>'}
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
 

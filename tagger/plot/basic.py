@@ -6,6 +6,8 @@ import awkward as ak
 import matplotlib
 import matplotlib.pyplot as plt
 import mplhep as hep
+import math
+import json
 
 # Third parties
 import pandas
@@ -178,7 +180,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
 def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
-    colormap = cm.get_cmap('Set1', len(class_labels))
+    colormap = matplotlib.colormaps.get_cmap('Set1')
 
     # Create a plot for ROC curves
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -270,7 +272,6 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     """
     Plot the histograms of truth pt, reconstructed (uncorrected) pt, and corrected pt
     """
-
     plot_histo(
         [truth_pt_test, reco_pt_test, np.multiply(reco_pt_test, pt_ratio)],
         ['Truth', 'Reconstructed', 'NN Predicted'],
@@ -288,12 +289,12 @@ def pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir):
     return
 
 
-def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
+def plot_input_vars(particle_features_test, y_test, input_vars, class_labels, plot_dir):
 
     save_dir = os.path.join(plot_dir, 'inputs')
     os.makedirs(save_dir, exist_ok=True)
 
-    is_filled = (X_test[:, :, 16] == 1)
+    is_filled = (particle_features_test[:, :, 16] == 1)
     for i in range(len(input_vars)):
         inputs = []
         labels = []
@@ -301,7 +302,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
             labels.append(style.INPUT_FEATURE_STYLE[input_vars[i]] + " " + style.CLASS_LABEL_STYLE[class_label])
             # Filter by class (use [:,None] to ignore the candidate dimension) and by if is_filled is 1
             # don't want all 0 inputs in our plots but also want to preserve real 0s in the plots
-            input_per_class = X_test[:, :, i][(y_test[:, iclass] == 1)[:,None] & is_filled ].flatten()
+            input_per_class = particle_features_test[:, :, i][(y_test[:, iclass] == 1)[:,None] & is_filled ].flatten()
             inputs.append(input_per_class)
         plot_histo(
             inputs,
@@ -310,7 +311,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
             style.INPUT_FEATURE_STYLE[input_vars[i]],
             'a.u',
             log = 'log',
-            x_range=(np.min(X_test[:, :, i]), np.max(X_test[:, :, i])),
+            x_range=(np.min(particle_features_test[:, :, i]), np.max(particle_features_test[:, :, i])),
         )
         save_path = os.path.join(save_dir, input_vars[i]+"_split")
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
@@ -319,13 +320,13 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
 
     for i in range(len(input_vars)):
         plot_histo(
-            [X_test[:, :, i][is_filled].flatten()],
+            [particle_features_test[:, :, i][is_filled].flatten()],
             [style.INPUT_FEATURE_STYLE[input_vars[i]]],
             '',
             style.INPUT_FEATURE_STYLE[input_vars[i]],
             'a.u',
             log = 'log',
-            x_range=(np.min(X_test[:, :, i]), np.max(X_test[:, :, i])),
+            x_range=style.INPUT_FEATURE_RANGES[input_vars[i]],
         )
         save_path = os.path.join(save_dir, input_vars[i])
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
@@ -336,7 +337,7 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
 
     multiplicities = {i : [] for i in range(len(class_labels)+1)}
 
-    for ibatch,batch in enumerate(X_test):
+    for ibatch,batch in enumerate(particle_features_test):
         for iclass, class_label in enumerate(class_labels):
             num_candidates = (batch[(y_test[ibatch, iclass] == 1) & (batch[:,16] != 0)]).shape[0]
             if num_candidates > 0:
@@ -372,7 +373,6 @@ def plot_input_vars(X_test, y_test, input_vars, class_labels, plot_dir):
     plt.savefig(f"{save_path}.png", bbox_inches='tight')
     plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
     plt.close()
-
 
 
 def get_response(truth_pt, reco_pt, pt_ratio):
@@ -416,6 +416,35 @@ def get_response(truth_pt, reco_pt, pt_ratio):
             regressed_errors.append(0)
 
     return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
+
+def hist_response(pt_ratio, y_test, class_labels, plot_dir):
+    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    colormap = matplotlib.colormaps.get_cmap('Set1')
+    save_path = os.path.join(plot_dir, "hist_response")
+    os.makedirs(save_path, exist_ok=True)
+    for i, (k, v) in enumerate(class_labels.items()):
+        mask = y_test[:, v] == 1
+
+        # Plot the histogram of pt_ratio
+        ax.hist(
+            pt_ratio[mask],
+            bins=10,
+            range=(0, 2),
+            weights=np.ones_like(pt_ratio[mask]) / len(pt_ratio[mask]),
+            histtype='step',
+            linewidth=style.LINEWIDTH,
+            label=f'{k} Jets',
+            color=colormap(i),
+        )
+
+    ax.set_xlabel(r'$p_T$ Ratio')
+    ax.set_ylabel('Normalized Entries')
+    ax.legend(loc='upper right')
+    ax.grid(True)
+
+    plt.savefig(f"{save_path}/{k}_response.pdf", bbox_inches='tight')
+    plt.savefig(f"{save_path}/{k}_response.png", bbox_inches='tight')
+    plt.close()
 
 
 def response(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
@@ -523,7 +552,7 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     regressed_pt = np.multiply(reco_pt, pt_ratio)
 
     # Get the residuals
-    un_corrected_res = reco_pt - truth_pt
+    uncorrected_res = reco_pt - truth_pt
     regressed_res = regressed_pt - truth_pt
 
     rms_uncorr = []
@@ -535,17 +564,18 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     for i in range(len(PT_BINS) - 1):
         pt_min = PT_BINS[i]
         pt_max = PT_BINS[i + 1]
-        pt_avg = np.mean((pt_min, pt_max))
 
         selection = (truth_pt > pt_min) & (truth_pt < pt_max)
+        pt_avg = np.mean(abs(truth_pt[selection] - reco_pt[selection]))
 
-        # Fit a Gaussian to the residuals and extract the standard deviation
-        mu_uncorr, sigma_uncorr = norm.fit(un_corrected_res[selection] / pt_avg)
-        mu_reg, sigma_reg = norm.fit(regressed_res[selection] / pt_avg)
+        mu_uncorr = np.mean(uncorrected_res[selection])
+        sigma_uncorr = np.std(uncorrected_res[selection])
+        mu_reg = np.mean(regressed_res[selection])
+        sigma_reg = np.std(regressed_res[selection])
 
         # Get the errors for the standard deviation
         # Standard error of the standard deviation for a normal distribution
-        n_uncorr = len(un_corrected_res[selection])
+        n_uncorr = len(uncorrected_res[selection])
         n_reg = len(regressed_res[selection])
 
         if n_uncorr <= 1 or n_reg <= 1:
@@ -582,9 +612,9 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
             yerr=uncorrected_rms_err,
             fmt='o',
             label=r"Uncorrected $\sigma$- {}".format(style.CLASS_LABEL_STYLE[flavor]),
-            capsize=4,
-            ms=8,
-            elinewidth=3,
+            capsize=style.CAPSIZE,
+            ms=style.MARKERSIZE,
+            elinewidth=style.ELINEWIDTH,
         )
         ax.errorbar(
             pt_points,
@@ -592,13 +622,13 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
             yerr=regressed_rms_err,
             fmt='o',
             label=r"Regressed $\sigma$ - {}".format(style.CLASS_LABEL_STYLE[flavor]),
-            capsize=4,
-            ms=8,
-            elinewidth=3,
+            capsize=style.CAPSIZE,
+            ms=style.MARKERSIZE,
+            elinewidth=style.ELINEWIDTH,
         )
 
         ax.set_xlabel(r"Jet $p_T^{Gen}$ [GeV]")
-        ax.set_ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})/p_T^{Gen}}$")
+        ax.set_ylabel(r"$\sigma_{(p_T^{Gen} - p_T^{Reco})}$")
         ax.legend()
         ax.grid(True)
 
@@ -646,6 +676,7 @@ def rms(class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir):
 
 def shapPlot(shap_values, feature_names, class_names):
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
     feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
     num_features = shap_values[0].shape[1]
     feature_inds = feature_order
@@ -653,9 +684,8 @@ def shapPlot(shap_values, feature_names, class_names):
     left_pos = np.zeros(len(feature_inds))
 
     axis_color = "#333333"
-    class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
-    # Use 'tab10' with enough colors
-    colormap = cm.get_cmap('Set1', len(class_names))
+    class_inds = range(len(class_names))
+    colormap = style.SHAP_COLORS
 
     for i, ind in enumerate(class_inds):
         global_shap_values = np.abs(shap_values[ind]).mean(0)
@@ -667,11 +697,10 @@ def shapPlot(shap_values, feature_names, class_names):
             left=left_pos,
             align='center',
             label=label,
-            color=colormap(class_inds[i]),
+            color=colormap[ind],
         )
         left_pos += global_shap_values[feature_inds]
 
-    # ax.set_yticklabels([style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_inds])
     ax.legend(loc='lower right', fontsize=30)
 
     ax.xaxis.set_ticks_position('bottom')
@@ -684,43 +713,63 @@ def shapPlot(shap_values, feature_names, class_names):
     ax.set_yticks(
         range(len(feature_order)), [style.INPUT_FEATURE_STYLE[feature_names[i]] for i in feature_order], fontsize=30
     )
-    ax.set_xlabel("mean (Shapley value) - (average impact on model output magnitude)", fontsize=30)
+    ax.set_xlabel("mean (|Shapley value|)", fontsize=30)
     plt.tight_layout()
 
-
-def plot_shaply(model, X_test, class_labels, input_vars, plot_dir):
-
-    labels = list(class_labels.keys())
-    model2 = tf.keras.Model(model.jet_model.input, model.jet_model.output[0])
-    model3 = tf.keras.Model(model.jet_model.input, model.jet_model.output[1])
-
+def plot_shaply(model, test_dict, class_labels, plot_dir):
+    njets = 10
+    model_class = model.get_branch_model('jet_id_output')
+    model_reg = model.get_branch_model('pT_output')
+    list_inp_class = [test_dict[inp][:njets] for inp in model_class.input_names]
+    list_inp_reg = [test_dict[inp][:njets] for inp in model_reg.input_names]
     for explainer, name in [
-        (shap.GradientExplainer(model2, X_test[:1000]), "GradientExplainer"),
+        (shap.GradientExplainer(model_class, list_inp_class), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(X_test[:1000])
-        new = np.sum(shap_values, axis=1)
+        n_class_inp = len(list_inp_class)
+        list_inp_class = list_inp_class[0] if n_class_inp == 1 else list_inp_class
+        shap_values_basic = explainer.shap_values(list_inp_class)
+        if n_class_inp > 1:
+            shap_values_basic = shap_values_basic[model_class.input_names.index('basic_input')]
+        shap_values_basic = np.sum(shap_values_basic, axis=1)
+        if 'jet_features' in model_class.input_names:
+            shap_values_jet = explainer.shap_values(list_inp_class)[model_class.input_names.index('jet_features')]
+            shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
+            feature_names = model.particle_input_vars + model.jet_input_vars
+        else:
+            shap_values = shap_values_basic
+            feature_names = model.particle_input_vars
         print("... shap summary_plot classification")
         plt.clf()
-        new = np.transpose(new, (2, 0, 1))
-        shapPlot(new, input_vars, labels)
+        labels = list(class_labels.keys())
+        new = np.transpose(shap_values, (2, 0, 1))
+        shapPlot(new, feature_names, labels)
         plt.savefig(plot_dir + "/shap_summary_class.pdf", bbox_inches='tight')
         plt.savefig(plot_dir + "/shap_summary_class.png", bbox_inches='tight')
-
     for explainer, name in [
-        (shap.GradientExplainer(model3, X_test[:1000]), "GradientExplainer"),
+        (shap.GradientExplainer(model_reg, list_inp_reg), "GradientExplainer"),
     ]:
         print("... {0}: explainer.shap_values(X)".format(name))
-        shap_values = explainer.shap_values(X_test[:1000])
-        new = np.sum(shap_values, axis=1)
+        n_reg_inp = len(list_inp_reg)
+        list_inp_reg = list_inp_reg[0] if n_reg_inp == 1 else list_inp_reg
+        shap_values_basic = explainer.shap_values(list_inp_reg)
+        if n_reg_inp > 1:
+            shap_values_basic = shap_values_basic[model_reg.input_names.index('basic_input')]
+        shap_values_basic = np.sum(shap_values_basic, axis=1)
+        if 'jet_features' in model_reg.input_names:
+            shap_values_jet = explainer.shap_values(list_inp_reg)[model_reg.input_names.index('jet_features')]
+            shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
+            feature_names = model.particle_input_vars + model.inputs['jet_features']
+        else:
+            shap_values = shap_values_basic
+            feature_names = model.particle_input_vars
         print("... shap summary_plot regression")
         plt.clf()
         labels = ["Regression"]
-        new = np.transpose(new, (2, 0, 1))
-        shapPlot(new, input_vars, labels)
+        new = np.transpose(shap_values, (2, 0, 1))
+        shapPlot(new, feature_names, labels)
         plt.savefig(plot_dir + "/shap_summary_reg.pdf", bbox_inches='tight')
         plt.savefig(plot_dir + "/shap_summary_reg.png", bbox_inches='tight')
-
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
@@ -867,45 +916,26 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
 
 
 # Helper functions for signal specific plotting
-
-
-def filter_process(test_data, process_dir):
+def filter_process(test_data, model, process_dir):
     """
     Filter jets from specific signal process to create plots for specified signal processes.
     Comparison done through concatenation of sets to be compared and np unique to check for duplicates.
     """
-    train, test, class_labels = load_data(os.path.join("signal_process_data", process_dir), percentage=100)[:3]
-    train, test = to_ML(train, class_labels), to_ML(test, class_labels)
+    train, _, class_labels = load_data(os.path.join("signal_process_data", process_dir), 100, model, test_ratio=0)[:3]
+    train = to_ML(train, class_labels)
 
     # apply unique to sets to be compared, since there tend to be duplicates
-    process_data = np.unique(np.concatenate((train[0], test[0]), axis=0), axis=0)
+    process_data = np.unique(train[0], axis=0)
     unique_test_data, indices_unique_test_data = np.unique(test_data, axis=0, return_index=True)
     comparison_data = np.concatenate((unique_test_data, process_data), axis=0)
     u, index, counts = np.unique(comparison_data, axis=0, return_index=True, return_counts=True)
     process_indices = index[counts == 2]
     filtered_indices = indices_unique_test_data[process_indices]
 
-    return filtered_indices, train, test
-
-
-# fancy signal process labels
-
-
-def process_labels(process_key):
-    processes = {
-        'TT_PU200': r't$\bar{t}$',
-        'ggHHbbbb_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$b$\bar{b}$',
-        'VBFHtt_PU200': r'VBF $\rightarrow$ H $\rightarrow$ t$\bar{t}$',
-        'ggHHbbtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ b$\bar{b}$t$\bar{t}$',
-        'ggHtt_PU200': r'gg $\rightarrow$ HH $\rightarrow$ t$\bar{t}$',
-    }
-
-    return processes[process_key]
+    return filtered_indices, train
 
 
 # <<<<<<<<<<<<<<<<< end of plotting functions, call basic to plot all of them
-
-
 def basic(model, signal_dirs):
     """
     Plot the basic ROCs for different classes. Does not reflect L1 rate
@@ -917,16 +947,26 @@ def basic(model, signal_dirs):
     ROC_dict = {class_label: 0 for class_label in model.class_labels}
 
     # Load the testing data
-    X_test = np.load(f"{model.output_directory}/testing_data/X_test.npy")
-    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npy")
-    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npy")
-    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npy")
-
-    model_outputs = model.predict(X_test)
+    test_dict = np.load(f"{model.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
+    test_dict = {k: test_dict[k] for k in test_dict.files}
+    y_test = np.load(f"{model.output_directory}/testing_data/y_test.npz")["label"]
+    truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npz")["truth_pt"]
+    reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npz")["reco_pt"]
+    model_outputs = model.jet_model.predict(test_dict)
 
     # Get classification outputs
     y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1]
+    pt_ratio = model_outputs[1][:, 0]
+
+    # Plot SHAP values
+    plot_shaply(model, test_dict, model.class_labels, plot_dir)
+
+    # Plot inclusive response and individual flavor
+    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
+
+    if "pileup" in model.class_labels.keys():
+        pu_mask = y_test[:, model.class_labels['pileup']] == 1
+        hist_response(pt_ratio, y_test, model.class_labels, plot_dir)
 
     # Plot ROC curves
     ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
@@ -945,12 +985,14 @@ def basic(model, signal_dirs):
             y_p, y_t = y_pred, y_test
             process_label = None
         else:
-            signal_indices, sample_train, sample_test = filter_process(X_test, signal_dirs[i])
-            sample_data = np.concatenate((sample_train[0], sample_test[0]), axis=0)
-            sample_labels = np.concatenate((sample_train[1], sample_test[1]), axis=0)
-            sample_preds = model.predict(sample_data)[0]
+            signal_indices, sample_data = filter_process(test_dict['basic_input'], model, signal_dirs[i])
+            sample_raw_inputs = {
+                'basic_input': sample_data[0],
+                'jet_features': sample_data[1]
+            }
+            sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
-            process_label = process_labels(signal_dirs[i])
+            process_label = style.PROCESS_STYLE[signal_dirs[i]]
             os.makedirs(binary_dir, exist_ok=True)
 
         # Plot the binary ROCs for each class pair
@@ -959,7 +1001,7 @@ def basic(model, signal_dirs):
             ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_labels, model.class_labels, binary_dir, class_pair, process_label)
+                ROC_binary(sample_preds, sample_data[2], model.class_labels, binary_dir, class_pair, process_label)
 
         # Add light vs b/charm/gluon combined plot
         binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
@@ -968,8 +1010,12 @@ def basic(model, signal_dirs):
 
         if i != -1:
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
-            ROC_jets(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
-            ROC_taus(sample_preds, sample_labels, model.class_labels, binary_dir_full, process_label)
+            ROC_jets(sample_preds, sample_data[2], model.class_labels, binary_dir_full, process_label)
+            ROC_taus(sample_preds, sample_data[2], model.class_labels, binary_dir_full, process_label)
+
+
+    # Plot input distributions
+    plot_input_vars(test_dict['basic_input'], y_test, model.particle_input_vars, model.class_labels, plot_dir)
 
     # Efficiencies
     efficiency(y_pred, y_test, reco_pt_test, model.class_labels, plot_dir)
@@ -977,19 +1023,10 @@ def basic(model, signal_dirs):
     # Confusion matrix
     confusion(y_pred, y_test, model.class_labels, plot_dir)
 
-    # Plot pt corrections
-    pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
-
-    # Plot input distributions
-    plot_input_vars(X_test, y_test, model.input_vars, model.class_labels, plot_dir)
-
-    # Plot inclusive response and individual flavor
-    response(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
-
     # Plot the rms of the residuals vs pt
     rms(model.class_labels, y_test, truth_pt_test, reco_pt_test, pt_ratio, plot_dir)
 
-    # Plot the shaply feature importance
-    plot_shaply(model, X_test, model.class_labels, model.input_vars, plot_dir)
+    # Plot pt corrections
+    pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
     return ROC_dict

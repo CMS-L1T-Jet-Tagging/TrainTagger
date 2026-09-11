@@ -8,13 +8,12 @@ import awkward as ak
 
 # Third party
 import numpy as np
-import tensorflow as tf
 import uproot
 import yaml
 from tqdm import tqdm
 
 # Dataset configuration
-from .config import EXTRA_FIELDS, FILTER_PATTERN, INPUT_TAG, N_PARTICLES
+from .config import EXTRA_FIELDS, FILTER_PATTERN, INPUT_TAG, JET_NN_FIELDS, N_PARTICLES
 
 gc.set_threshold(0)
 
@@ -105,9 +104,11 @@ def _split_flavor(data):
 
     # Automatically generate class labels based on the order of keys in conditions
     class_labels = {label: idx for idx, label in enumerate(conditions)}
+    pileup_idx = len(class_labels)
+    class_labels['pileup'] = pileup_idx
 
-    # Initialize the new array in data for numeric labels with default -1 for unmatched entries
-    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], -1)
+    # Initialize the new array in data for numeric labels with default for pileup entries
+    data['class_label'] = ak.full_like(data['jet_genmatch_pt'], pileup_idx)
 
     # Assign numeric values based on conditions using awkward's where function
     for label, condition in conditions.items():
@@ -126,6 +127,10 @@ def _split_flavor(data):
     data['target_pt'] = np.clip(hadrons * hadron_pt_ratio + leptons * lepton_pt_ratio, 0.3, 2)
     data['target_pt_phys'] = hadrons * hadron_pt + leptons * lepton_pt
 
+    # Set pt correction target of pileup jets to 1.0
+    data['target_pt'] = ak.where(data['class_label'] == pileup_idx, -1., data['target_pt']) # set target pt to -1 for pileup jets, replced in loss, served as indicator pu punishment factor
+    data['target_pt_phys'] = ak.where(data['class_label'] == pileup_idx, data['jet_pt_phys'], data['target_pt_phys'])
+
     # Apply pt_cut
     jet_ptmin_gen = data['target_pt_phys'] > 5.0
     for key in conditions:
@@ -133,9 +138,10 @@ def _split_flavor(data):
 
     # Sanity check for data consistency
     split_data_sum = sum(sum(conditions[label]) for label, condition in conditions.items())
-    if split_data_sum != len(data[jet_ptmin_gen]):
+    matched_entries =  data['class_label'] != pileup_idx
+    if split_data_sum != len(data[jet_ptmin_gen & matched_entries]):
         raise ValueError(
-            f"""Data splitting error: Total entries ({split_data_sum})
+            f"""Data splitting error: Total matched entries ({split_data_sum})
             do not match the filtered data length ({len(data[jet_ptmin_gen])})."""
         )
 
@@ -152,7 +158,6 @@ def _get_puppicand_fields(tag):
     # Load the YAML file as a dictionary
     with open(puppicand_fields_path, "r") as file:
         puppicand_fields = yaml.safe_load(file)
-
     return puppicand_fields[tag]
 
 
@@ -162,7 +167,7 @@ def _pad_fill(array, target):
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
 
-def _make_nn_inputs(data_split, tag, n_parts):
+def _make_nn_inputs(data_split, tag, jet_fields, n_parts):
 
     features = _get_puppicand_fields(tag)
     # Concatenate all the inputs
@@ -180,6 +185,11 @@ def _make_nn_inputs(data_split, tag, n_parts):
     # batch_size, n_particles, n_features
     inputs = ak.concatenate(inputs_list, axis=2)
     data_split['nn_inputs'] = inputs
+
+    # jet inputs
+    jet_fields = _get_puppicand_fields(jet_fields)
+    inputs_jets = ak.concatenate([data_split[jet_field][:, np.newaxis] for jet_field in jet_fields], axis=1)
+    data_split['nn_jet_features'] = inputs_jets
 
     return
 
@@ -204,13 +214,14 @@ def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
     return
 
 
-def _save_dataset_metadata(outdir, class_labels, tag, extras):
+def _save_dataset_metadata(outdir, class_labels, tag, jet_fields, extras):
 
     dataset_metadata_file = os.path.join(outdir, 'variables.json')
 
     metadata = {
         "outputs": class_labels,
         "inputs": _get_puppicand_fields(tag),
+        "jet_fields": _get_puppicand_fields(jet_fields),
         "extras": _get_puppicand_fields(extras),
     }
 
@@ -220,17 +231,17 @@ def _save_dataset_metadata(outdir, class_labels, tag, extras):
     return
 
 
-def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
+def _process_chunk(data_split, tag, jet_fields, extras, n_parts, chunk, outdir):
     """
     Process chunk of data_split to save/parse it for training datasets
     """
 
     # Create the NN inputs
-    _make_nn_inputs(data_split, tag, n_parts)
+    _make_nn_inputs(data_split, tag, jet_fields, n_parts)
     extra_features = _get_puppicand_fields(extras)
 
     # Save them to a root file
-    save_fields = ['nn_inputs', 'class_label', 'target_pt', 'target_pt_phys'] + extra_features
+    save_fields = ['nn_inputs', 'nn_jet_features', 'class_label', 'target_pt', 'target_pt_phys'] + extra_features
 
     # Filter the data_split to only include save_fields
     filtered_data = {field: data_split[field] for field in save_fields}
@@ -261,7 +272,7 @@ def extract_array(tree, field, entry_stop):
     return tree[field].array(entry_stop=entry_stop)
 
 
-def extract_nn_inputs(data, input_vars, n_parts=16, n_entries=None):
+def extract_nn_inputs(data, input_vars, jet_vars, n_parts=16, n_entries=None):
     """
     Extract nn inputs based on the input_vars list
     """
@@ -279,7 +290,15 @@ def extract_nn_inputs(data, input_vars, n_parts=16, n_entries=None):
     # batch_size, n_particles, n_features
     inputs = ak.concatenate(inputs_list, axis=2)
 
-    return inputs
+    # Jet Inputs
+    jet_inputs_list = []
+    for jet_field in jet_vars:
+        jet_array = extract_array(data, jet_field, n_entries)
+        jet_inputs_list.append(jet_array[:, np.newaxis])
+
+    jet_inputs = ak.concatenate(jet_inputs_list, axis=1) if jet_inputs_list else ak.Array(np.empty((0, 0)))
+
+    return inputs, jet_inputs
 
 
 def group_id_values(event_id, *arrays, num_elements=2):
@@ -310,17 +329,35 @@ def to_ML(data, class_labels):
     """
     Take in the data from make_data (loaded by load_data) and make them ready for training.
     """
-
     X = np.asarray(data['nn_inputs'])
-    y = tf.keras.utils.to_categorical(np.asarray(data['class_label']), num_classes=len(class_labels))
+    jet_features = np.asarray(data['nn_jet_features'])
+    labels = np.asarray(data["class_label"], dtype=int)
+    y = np.eye(len(class_labels), dtype=np.float32)[labels] # one-hot encoding
     pt_target = np.asarray(data['target_pt'])
     truth_pt = np.asarray(data['target_pt_phys'])
-    reco_pt = np.asarray(data['jet_pt_phys'])
+    jet_pt_phys = np.asarray(data['jet_pt_phys'])
 
-    return X, y, pt_target, truth_pt, reco_pt
+    return X, jet_features, y, pt_target, truth_pt, jet_pt_phys
 
 
-def load_data(outdir, percentage, test_ratio=0.1, fields=None):
+def constituents_mask(x, features_dim):
+    x = ak.to_numpy(x)
+
+    # 1 if the entire constituent feature vector is zero
+    all_zero = np.all(x == 0, axis=-1, keepdims=True)
+
+    # 1 for real constituents, 0 for zero-padded constituents
+    mask = (~all_zero).astype(x.dtype)
+
+    # Broadcast to all features
+    mask = np.broadcast_to(
+        mask,
+        (mask.shape[0], mask.shape[1], features_dim)
+    )
+
+    return mask
+
+def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -340,6 +377,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
 
     # Load metadata to determine chunks to load
     metadata_file = os.path.join(outdir, "metadata.json")
+    print("Loading metadata from: ", metadata_file)
     with open(metadata_file, "r") as f:
         metadata = json.load(f)
 
@@ -347,10 +385,39 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     chunks_to_load = int(np.ceil((percentage / 100) * total_chunks))
 
     # Collect the file paths for the chunks to load
-    chunk_files = [metadata[i]["file"] for i in range(chunks_to_load)]
+    chunk_files = [f"{metadata[i]['file']}:data" for i in range(chunks_to_load)]
 
     # Use uproot.concatenate to load and combine data from multiple files
-    data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")
+    data = uproot.concatenate(
+        [f"{file}" for file in chunk_files],
+        filter_name=fields,
+        library="ak"
+    )
+
+    # Load corresponding metadata for classlabels/input variables
+    data_metadata_file = os.path.join(outdir, "variables.json")
+    with open(data_metadata_file, "r") as f:
+        variables = json.load(f)
+        class_labels = variables['outputs']
+        input_vars = variables['inputs']
+        jet_vars = variables['jet_fields']
+        extra_vars = variables['extras']
+
+    # Pile up masking and basic input configuration filtering based on model config
+    pu_mask = (data['class_label'] == class_labels['pileup'])
+
+    # remove unwanted basic input variables
+    remove_basic_fields = [i for i, x in enumerate(input_vars) if x not in model.inputs['basic_input_config']]
+    data['nn_inputs'] = np.delete(data['nn_inputs'], remove_basic_fields, axis=2)
+
+    # remove unwanted jet features
+    remove_jet_fields = [i for i, x in enumerate(jet_vars) if x not in model.inputs['jet_features']]
+    data['nn_jet_features'] = np.delete(data['nn_jet_features'], remove_jet_fields, axis=1)
+
+    # pileup masking if not training on pileup
+    if not model.training_config['pileup']:
+        class_labels.pop('pileup', None)  # Remove pileup from class_labels if not training on it
+        data = data[~pu_mask]
 
     # Shuffle the data indices
     total_data_len = len(data)
@@ -365,21 +432,13 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     train_data = data[train_indices]
     test_data = data[test_indices]
 
-    # Load corresponding metadata for classlabels/input variables
-    data_metadata_file = os.path.join(outdir, "variables.json")
-    with open(data_metadata_file, "r") as f:
-        variables = json.load(f)
-        class_labels = variables['outputs']
-        input_vars = variables['inputs']
-        extra_vars = variables['extras']
-
-    return train_data, test_data, class_labels, input_vars, extra_vars
-
+    return train_data, test_data, class_labels, input_vars, jet_vars, extra_vars
 
 def make_data(
-    infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_ntuples_v131Xv9/baselineTRK_4param_221124/All200.root',
+    infile='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/All200_part0.root',
     outdir='training_data/',
     tag=INPUT_TAG,
+    jet_fields=JET_NN_FIELDS,
     extras=EXTRA_FIELDS,
     n_parts=N_PARTICLES,
     ratio=1.0,
@@ -394,6 +453,7 @@ def make_data(
         infile (str): The input file path.
         outdir (str): The output directory.
         tag (str): Input tags to use from puppicands, defined in puppicand_fields.yml.
+        jet_fields (list): List of jet NN fields to use for training.
         extras (str): Extra fields to store for plotting, defined in puppicand_fields.yml
         n_parts (int): Number of constituent particles to use for tagging.
         fraction (float) : fraction from (0-1) of data to process for training/testing
@@ -436,10 +496,10 @@ def make_data(
 
         # If first chunk then save metadata of the dataset
         if chunk == 0:
-            _save_dataset_metadata(outdir, class_labels, tag, extras)
+            _save_dataset_metadata(outdir, class_labels, tag, jet_fields, extras)
 
         # Process and save training data for a given feature set
-        _process_chunk(data_split, tag=tag, extras=extras, n_parts=n_parts, chunk=chunk, outdir=outdir)
+        _process_chunk(data_split, tag=tag, jet_fields=jet_fields, extras=extras, n_parts=n_parts, chunk=chunk, outdir=outdir)
 
         # Number of chunk for indexing files
         chunk += 1

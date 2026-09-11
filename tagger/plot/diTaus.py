@@ -478,7 +478,7 @@ if __name__ == "__main__":
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
-    parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
 
     args = parser.parse_args()
 

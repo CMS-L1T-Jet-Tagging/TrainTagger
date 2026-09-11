@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 from coffea.nanoevents.methods import vector
 from argparse import ArgumentParser
-
-# plotting imports
-from styles import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, COLLECTION_KEYS
 from load_collections import load_collections
 
 import tagger.plot.style as style
@@ -36,7 +33,7 @@ def smallest_interval(data, fraction=0.68):
 
 # Matching and plotting
 # match genjets to partons
-def match_genjets(daughters, genjets, dr_max=style.DELTA_R, rel_pt_max=style.REL_PT):
+def match_genjets(daughters, genjets, dr_max=DELTA_R, rel_pt_max=REL_PT):
     matched_parts = []
     matched_jets = []
     dR_matrix = daughters.metric_table(genjets)

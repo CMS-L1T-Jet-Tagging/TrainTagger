@@ -296,7 +296,7 @@ def extract_nn_inputs(data, input_vars, jet_vars, n_parts=16, n_entries=None):
         jet_array = extract_array(data, jet_field, n_entries)
         jet_inputs_list.append(jet_array[:, np.newaxis])
 
-    jet_inputs = ak.concatenate(jet_inputs_list, axis=1)
+    jet_inputs = ak.concatenate(jet_inputs_list, axis=1) if jet_inputs_list else ak.Array(np.empty((0, 0)))
 
     return inputs, jet_inputs
 

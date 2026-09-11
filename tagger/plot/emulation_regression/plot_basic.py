@@ -11,9 +11,6 @@ from scipy.interpolate import interp1d
 from load_collections import load_collections
 from matplotlib.colors import LogNorm, TwoSlopeNorm
 
-# plotting imports
-from styles import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, COLLECTION_KEYS
-
 # style from tagger
 import tagger.plot.style as style
 from tagger.plot.style import LABELS_DICT, COLORS_DICT, PROCESS_STYLE, LINESTYLES_DICT, COLLECTION_KEYS
@@ -22,7 +19,7 @@ from tagger.plot.common import to_coffea, PT_BINS, REGULAR_PT_BINS
 style.set_style()
 
 # Plotting functions
-def _plot_errorbars(data_coll, proc, ylabel, save_path
+def _plot_errorbars(data_coll, proc, ylabel, save_path,
                      legend_loc='best', xlim=None, ylim=None):
 
     for l1 in ['log', 'linear']:
@@ -123,9 +120,9 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
     return rms_uncorr, rms_reg, rms_uncorr_err, rms_reg_err
 
 
-def rms(PROCESS_STYLE, proc, plot_dir):
+def rms(procs_data, proc, plot_dir):
     os.makedirs(plot_dir, exist_ok=True)
-    jet_coll1, jet_coll2 = PROCESS_STYLE[COLLECTION_KEYS[0]], PROCESS_STYLE[COLLECTION_KEYS[1]]
+    jet_coll1, jet_coll2 = procs_data[COLLECTION_KEYS[0]], procs_data[COLLECTION_KEYS[1]]
     jet_coll1 = [jet_coll1['raw'].genpt, jet_coll1['raw'].pt, jet_coll1['pt_ratio']]
     coll1 = [ak.to_numpy(ak.flatten(i)) for i in jet_coll1]
     jet_coll2 = [jet_coll2['raw'].genpt, jet_coll2['raw'].pt, jet_coll2['pt_ratio']]
@@ -180,7 +177,7 @@ def rms(PROCESS_STYLE, proc, plot_dir):
                 ax.set_ylabel(r"$\sigma(p_T^{\mathrm{L1}} - p_T^{\mathrm{Gen}})\, / \, \mathrm{Mean}(p_T^{\mathrm{Gen}})$")
                 ax.set_xscale(l1)
                 ax.set_yscale(l2)
-                ax.legend(title=PROCESS_STYLE[proc], fontsize=35, title_fontsize=35, loc='upper center')
+                ax.legend(title=PROCESS_STYLE[proc], loc='upper center')
                 ax.grid(True, alpha=1, linestyle='-', lw=0.75)
 
                 # Save the plot
@@ -280,9 +277,9 @@ def get_response(truth_pt, reco_pt, pt_ratio, reduce):
 
     return uncorrected_response, regressed_response, uncorrected_errors, regressed_errors
 
-def response(PROCESS_STYLE, proc, plot_dir):
+def response(procs_data, proc, plot_dir):
     os.makedirs(plot_dir, exist_ok=True)
-    jet_coll1, jet_coll2 = PROCESS_STYLE[COLLECTION_KEYS[0]], PROCESS_STYLE[COLLECTION_KEYS[1]]
+    jet_coll1, jet_coll2 = procs_data[COLLECTION_KEYS[0]], procs_data[COLLECTION_KEYS[1]]
     jet_coll1 = jet_coll1['raw'].genpt, jet_coll1['raw'].pt, jet_coll1['pt_ratio']
     coll1 = [ak.to_numpy(ak.flatten(i)) for i in jet_coll1]
     jet_coll2 = jet_coll2['raw'].genpt, jet_coll2['raw'].pt, jet_coll2['pt_ratio']
@@ -342,8 +339,8 @@ def response(PROCESS_STYLE, proc, plot_dir):
                 ax.set_ylim(0.6, 1.7)
 
                 # Save the plot
-                plt.savefig(f"{plot_name}_x{l1}_y{l2}.pdf", bbox_inches='tight', transparent=True)
-                plt.savefig(f"{plot_name}_x{l1}_y{l2}.png", bbox_inches='tight', transparent=True)
+                plt.savefig(f"{plot_name}_x{l1}_y{l2}.pdf", bbox_inches='tight')
+                plt.savefig(f"{plot_name}_x{l1}_y{l2}.png", bbox_inches='tight')
                 plt.close()
 
     # Inclusive response
@@ -384,7 +381,7 @@ def distribution_heatmaps(l1jets, plot_dir):
 
 def plot_heatmap(ratio, y_label, label, plot_dir, plot_ratio=False):
     fig, ax = plt.subplots(figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.MEDIUM_SIZE)
 
     if plot_ratio:
         max_dev = max(abs(ratio.min() - 1), abs(ratio.max() - 1))

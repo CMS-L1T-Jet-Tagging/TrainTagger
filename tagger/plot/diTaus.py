@@ -219,8 +219,7 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
 
     #Get the NN predictions
     selected_nn_inputs = nn_inputs[eta_selection]
-    selected_jet_inputs = raw_jet_inputs[eta_selection]
-    selected_jet_pt_hw = jet_pt_hw[eta_selection]
+    selected_jet_inputs = raw_jet_inputs[eta_selection] if model.jet_input_vars else None
     raw_inputs_dict = {
         'basic_input': selected_nn_inputs,
         'jet_features': selected_jet_inputs,

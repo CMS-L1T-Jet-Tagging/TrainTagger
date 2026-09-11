@@ -444,7 +444,8 @@ def topo_eff(model, tau_eff_filepath, target_rate=28, tree='jetntuple/Jets', n_e
 
     #NN related
     raw_inputs, raw_jet_features = extract_nn_inputs(signal, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
-    raw_inputs, raw_jet_features = np.asarray(raw_inputs)[pt_mask], np.asarray(raw_jet_features)[pt_mask]
+    raw_inputs = np.asarray(raw_inputs)[pt_mask]
+    raw_jet_features = np.asarray(raw_jet_features)[pt_mask] if model.jet_input_vars else None
     raw_inputs_dict = {
         'basic_input': raw_inputs,
         'jet_features': raw_jet_features,

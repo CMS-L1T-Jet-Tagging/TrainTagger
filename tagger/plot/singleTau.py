@@ -173,7 +173,8 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
         all_scores = ak.where(~cuts, all_scores, 0.)
 
     else: #scores from new model
-        selected_jet_inputs, selected_basic_inputs = jet_inputs[cuts], basic_inputs[cuts]
+        selected_basic_inputs = basic_inputs[cuts]
+        selected_jet_inputs = jet_inputs[cuts] if model.jet_input_vars else None
         raw_inputs_dict = {
             'basic_input': selected_basic_inputs,
             'jet_features': selected_jet_inputs
@@ -249,8 +250,8 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
     nn_inputs, jet_inputs = np.asarray(nn_inputs), np.asarray(jet_inputs)
 
     #Get the NN predictions
-    selected_basic_inputs, selected_jet_inputs = nn_inputs[eta_selection], jet_inputs[eta_selection]
-    selected_jet_pt, selected_jet_eta = jet_pt[eta_selection], jet_eta[eta_selection]
+    selected_basic_inputs = nn_inputs[eta_selection]
+    selected_jet_inputs = jet_inputs[eta_selection] if model.jet_input_vars else None
     raw_inputs_dict = {
         'basic_input': selected_basic_inputs,
         'jet_features': selected_jet_inputs,

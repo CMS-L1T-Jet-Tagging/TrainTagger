@@ -293,7 +293,6 @@ def plot_input_vars(particle_features_test, y_test, input_vars, class_labels, pl
 
     save_dir = os.path.join(plot_dir, 'inputs')
     os.makedirs(save_dir, exist_ok=True)
-
     is_filled = (particle_features_test[:, :, 16] == 1)
     for i in range(len(input_vars)):
         inputs = []
@@ -311,7 +310,7 @@ def plot_input_vars(particle_features_test, y_test, input_vars, class_labels, pl
             style.INPUT_FEATURE_STYLE[input_vars[i]],
             'a.u',
             log = 'log',
-            x_range=(np.min(particle_features_test[:, :, i]), np.max(particle_features_test[:, :, i])),
+            x_range=style.INPUT_FEATURE_RANGES[input_vars[i]],
         )
         save_path = os.path.join(save_dir, input_vars[i]+"_split")
         plt.savefig(f"{save_path}.png", bbox_inches='tight')
@@ -1012,7 +1011,6 @@ def basic(model, signal_dirs):
             binary_dir_full = os.path.join(sample_plot_dir, "full_sample")
             ROC_jets(sample_preds, sample_data[2], model.class_labels, binary_dir_full, process_label)
             ROC_taus(sample_preds, sample_data[2], model.class_labels, binary_dir_full, process_label)
-
 
     # Plot input distributions
     plot_input_vars(test_dict['basic_input'], y_test, model.particle_input_vars, model.class_labels, plot_dir)

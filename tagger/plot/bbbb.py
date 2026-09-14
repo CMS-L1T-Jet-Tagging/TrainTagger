@@ -391,7 +391,6 @@ def bbbb_eff(model, signal_path, minbias_path, apply_sel, apply_light, n_entries
     model_ht_wp = -1.0
     model_btag_wp = -1.0
 
-
     #Find model WP that maximizes efficiency
     HT_range = np.arange(150, 250, 5)
 

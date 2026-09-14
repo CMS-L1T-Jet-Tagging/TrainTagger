@@ -21,7 +21,7 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from common import MINBIAS_RATE, PT_CUTS, ETA_CUTS, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
 
 # Helpers
 def bbtt_seed(jet_pt, tau_pt):
@@ -59,32 +59,39 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
         event_mask = np.ones(len(jet_pt), dtype=bool)
     return event_mask
 
-def nn_score_sums(model, jet_nn_inputs, class_labels, n_jets=4):
-    #Btag input list for first 4 jets
-    nn_outputs = [model.predict(np.asarray(jet_nn_inputs[:, i]))[0] for i in range(0,n_jets)]
+def nn_bscore_sum(model, basic_inputs, jet_pt, jet_pt_log, jet_eta, jet_eta_hw, apply_light, class_labels, n_jets=4):
+    b_index=class_labels['b']
+    l_index=class_labels['light']
+    g_index=class_labels['gluon']
 
-    #Calculate the output sum
-    b_idx = class_labels['b']
-    l_idx = class_labels['light']
-    g_idx = class_labels['gluon']
+    #Get the inputs for the first n_jets
+    og_shape = ak.num(jet_pt)
+    model_inputs = {
+        'basic_input': np.asarray(ak.flatten(basic_inputs)),
+        'jet_pt_log': np.asarray(ak.flatten(jet_pt_log)),
+        'jet_eta': np.asarray(ak.flatten(jet_eta_hw)),
+        }
 
-    # get sums of 2 leading b scores
-    rows = np.arange(len(nn_outputs[0])).reshape((-1, 1))
 
-    # raw preds
-    b_preds = np.transpose([pred_score[:, b_idx] for pred_score in nn_outputs])
-    b_preds_arg = np.argsort(b_preds, axis=1)[:,-2:]
-    b_preds_sums = np.sum(b_preds[rows, b_preds_arg], axis=1)
+    #Get the nn outputs
+    class_outputs, regression_outputs = model.predict(model.prepare_inputs(model_inputs)[0])
+    class_outputs, regression_outputs = ak.unflatten(class_outputs, og_shape), ak.unflatten(regression_outputs, og_shape)
 
-    # vs light preds
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    b_vs_qg_arg = np.argsort(b_vs_qg, axis=1)[:,-2:]
-    b_vs_qg_sums = np.sum(b_vs_qg[rows, b_vs_qg_arg], axis=1)
+    # Mask unwanted jets (i.e jets < 15 Gev and |eta| > 2.4), and set all scores to 0
+    selection_mask = (jet_pt > PT_CUT) & (abs(jet_eta) < ETA_CUT)
+    regression_outputs = ak.where(selection_mask, regression_outputs, 0)
+    mask_expanded = ak.broadcast_arrays(selection_mask, class_outputs)[0]
+    class_outputs = ak.where(mask_expanded, class_outputs, 0)
 
-    bscore_sums = [b_preds_sums, b_vs_qg_sums]
-    bscore_idxs = [b_preds_arg, b_vs_qg_arg]
+    # 4 leading jets for b tag scores
+    class_outputs = [class_outputs[:,i] for i in range(n_jets)]
 
-    return bscore_sums, bscore_idxs
+    #Sum them together
+    bscore_sum = sum(
+            [x_vs_y(pred_score[:, b_index],  pred_score[:,l_index] + pred_score[:,g_index] , apply_light) for pred_score in class_outputs]
+        )
+
+    return bscore_sum, regression_outputs
 
 def pick_and_plot(target_rate_idx, ht_list, bb_list, raw_score, apply_sel, model, tree):
     """
@@ -177,20 +184,20 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     raw_event_id = extract_array(minbias, 'event', n_entries)
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, num_elements=4)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta_hw, raw_jet_eta_hw, raw_inputs, raw_jet_inputs, num_elements=4)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
-    bscore_sums, bscore_idxs = nn_score_sums(model, jet_nn_inputs, model.class_labels)
+    bscore_sums, bscore_idxs = nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, model.class_labels)
     def_sels = [default_selection(jet_pt, jet_eta, bscore_idxs[0], apply_sel),
                default_selection(jet_pt, jet_eta, bscore_idxs[1], apply_sel)]
 
@@ -287,11 +294,11 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
     raw_jet_eta = extract_array(signal, 'jet_eta_phys', n_entries)
     raw_tau_pt = extract_array(signal, 'jet_taupt', n_entries)
 
-    raw_inputs = extract_nn_inputs(signal, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(signal, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
     #Group these attributes by event id, and filter out groups that don't have at least 4 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, num_elements=4)
-    jet_genpt, jet_pt, jet_eta, tau_pt, jet_nn_inputs = grouped_arrays
+    event_id, grouped_arrays = group_id_values(raw_event_id, raw_jet_genpt, raw_jet_pt, raw_jet_eta, raw_tau_pt, raw_inputs, raw_jet_inputs, num_elements=4)
+    jet_genpt, jet_pt, jet_eta, jet_eta_hw, tau_pt, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
     #Calculate the ht
     jet_genht = ak.sum(jet_genpt, axis=1)
@@ -299,7 +306,7 @@ def bbtt_eff_HT(model, signal_path, score_type, apply_sel, n_entries=100000, tre
 
     # Result from the baseline selection, multiclass tagger and ht only working point
     baseline_selection, _ = bbtt_seed(jet_pt, tau_pt)
-    model_bscore_sums, bscore_indices = nn_score_sums(model, jet_nn_inputs, model.class_labels)
+    model_bscore_sums, bscore_indices = nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, model.class_labels)
 
     # use either raw or vs light scores
     if score_type == 'raw':
@@ -395,8 +402,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-s', '--signal', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/GluGluHHTo2B2Tau_PU200.root' , help = 'Signal sample for HH->bbtt')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-s', '--signal', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/GluGluHHTo2B2Tau_PU200.root' , help = 'Signal sample for HH->bbtt')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
     parser.add_argument('--deriveRate', action='store_true', help='derive the rate for the bbtt seed')
 
     #Different modes

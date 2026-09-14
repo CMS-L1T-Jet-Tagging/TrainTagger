@@ -1,5 +1,6 @@
 import os
 from argparse import ArgumentParser
+import yaml
 
 # Import from other modules
 from tagger.data.tools import make_data
@@ -11,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-i',
         '--input',
-        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/All200.root',
+        default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/All200_part0.root',
         help='Path to input training data',
     )
     parser.add_argument('-r', '--ratio', default=1, type=float, help='Ratio (0-1) of the input data root file to process')
@@ -36,6 +37,7 @@ if __name__ == "__main__":
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:
         signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
+        print("making signal inputs for basic plotting:", signal_input)
         signal_output = os.path.join("signal_process_data", signal_process)
         if not os.path.exists(signal_output):
             make_data(

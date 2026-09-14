@@ -36,27 +36,40 @@ def quantize(value, bits):
 def rms(array):
     return np.sqrt(np.mean(array**2))
 
-
 def doPlots(model, outputdir, inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
     modelsAndNames = {"model": model}
 
-    data, _, class_labels, input_vars, extra_vars = load_data(inputdir, percentage=100, test_ratio=0.0)
-    X_test, Y_test, pt_target, truth_pt, _ = to_ML(data, class_labels)  # Last thing was reconstructed pt
+    data, _, class_labels, input_vars, jet_vars, extra_vars = load_data(inputdir, percentage=100, model=model, test_ratio=0.0)
+    particle_features_test, jet_features, Y_test, pt_target, truth_pt, jet_pt_phys = to_ML(data, class_labels)  # Last thing was reconstructed pt
 
     labels = list(class_labels.keys())
+    labels.remove("pileup") if "pileup" in labels else None # remove once there is proper handling of pilup score in cmssw
     model.firmware_convert("temp", build=False)
 
-    y_hls, y_ptreg_hls = model.hls_jet_model.predict(np.ascontiguousarray(X_test))
-    y_class, y_ptreg = model.jet_model.predict(np.ascontiguousarray(X_test))
-    jet_pt_phys = np.array(data['jet_pt_phys'])
+    raw_inputs_dict = {
+        "basic_input": particle_features_test,
+        "jet_features": jet_features,
+    }
+
+    model_dict, _ = model.prepare_inputs(raw_inputs_dict)
+    model_dict = {k: np.ascontiguousarray(v, dtype=np.float64) for k, v in model_dict.items()}
+    hls_inputs = []
+    for var in model.hls_jet_model.get_input_variables():
+        name = var.name
+        hls_inputs.append(np.ascontiguousarray(model_dict[name], dtype=np.float64))
+    hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
+    y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_inputs)
+    y_class, y_ptreg = model.jet_model.predict(model_dict)
 
     modelsAndNames["Y_predict"] = y_class
     modelsAndNames["Y_predict_reg"] = y_ptreg
     y_quant_hls = np.array([[quantize(i,8) for i in xi] for xi in y_hls])
     modelsAndNames["Y_hls_predict"] = y_quant_hls
     modelsAndNames["Y_hls_predict_reg"] = y_ptreg_hls
+    cmssw_pred = np.stack([data[f'jet_SC4NGJet_score_{label}'] for label in labels], axis=1)
+    single = [i[0:1] for i in hls_inputs]
     for iJet in range(y_hls.shape[0]):
         print_class = False
         for i, label in enumerate(labels):
@@ -64,7 +77,6 @@ def doPlots(model, outputdir, inputdir):
                 print_class = True
         if print_class:
             print("=== " + str(iJet) + " ===")
-            print("Inputs: " + str(X_test[iJet]))
             for i, label in enumerate(labels):
                 print(label + ": cmssw : " + str(np.array(data['jet_SC4NGJet_score_' + label])[iJet]))
                 print(label + ": hls : " + str(y_hls[iJet][i]))
@@ -254,7 +266,7 @@ def doPlots(model, outputdir, inputdir):
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('-m', '--model_path', default='output/baseline', help='Input model path for comparison')
+    parser.add_argument('-m', '--model_path', default='output/baseline/firmware/L1TSC4NGJetModel/firmware', help='Input model path for comparison')
     parser.add_argument('-o', '--outpath', default='output/baseline/plots/emulation', help='Jet tagger plotting directory')
     parser.add_argument('-i', '--input', default='data/jetTuple_extended_5.root', help='Path to emulation data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake emulation data? ')
@@ -265,6 +277,11 @@ if __name__ == "__main__":
     model = fromFolder(args.model_path)
 
     if args.remake:
-        make_data(infile=args.input, outdir="emulation_data/", extras='extra_emulation_fields', tree="outnano/Jets")
+        make_data(infile=args.input,
+                  outdir="emulation_data/",
+                  extras='extra_emulation_fields',
+                  tree="outnano/Jets"
+                  )
 
+    print('done remake')
     doPlots(model, args.outpath, "emulation_data/")

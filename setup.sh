@@ -18,3 +18,5 @@ export VBFHTAUTAU=VBFHToTauTau_PU200.root
 export NTUPLE_TREE=outnano/Jets
 export SIGNAL=TT_PU200
 export EOS_DATA_DIR='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/'
+export CI_PROJECT_NAME='TrainTagger'
+export EOS_STORAGE_DIR='/eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}'

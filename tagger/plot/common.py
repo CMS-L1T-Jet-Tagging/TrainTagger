@@ -4,6 +4,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
+import awkward as ak
+from coffea.nanoevents.methods import vector
 
 from tagger.plot import style
 
@@ -16,6 +18,18 @@ MINBIAS_RATE = N_BUNCHES * REVOLUTION_FREQUENCY / 1000  # in kHz
 
 # Define pT bins
 PT_BINS = np.array([15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154, 195, 246, 311, 393, 496, 627, 792, 1000])
+REGULAR_PT_BINS = np.linspace(0, 1000, 50)
+
+# must be updatted if eta bins for jecs in FastPUPPI are changed
+ETA_BINS = [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]
+
+PT_CUT = 15
+ETA_CUT = 2.4
+HT_CUT = 30 # cut applied on jets that contribute to HT calculation, in GeV
+
+# matching parameters
+DELTA_R = 0.4
+REL_PT = 0.5
 
 WPs_CMSSW = {
     # Tau working points as defined here
@@ -28,7 +42,7 @@ WPs_CMSSW = {
     'l1_pt_sc_endcap': 121,  # GeV
     # Slide 19 here: https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
     'btag': 2.32,
-    'btag_l1_ht': 220,
+    'btag_l1_ht': 220
 }
 
 # FUNCTIONS
@@ -83,13 +97,11 @@ def plot_ratio(all_events, selected_events, plot=False):
 
     return eff
 
-
 def get_bar_patch_data(artists):
     x_data = [artists.bar.patches[i].get_x() for i in range(len(artists.bar.patches))]
     y_data = [artists.bar.patches[i].get_y() for i in range(len(artists.bar.patches))]
     err_data = [artists.bar.patches[i].get_height() for i in range(len(artists.bar.patches))]
     return x_data, y_data, err_data
-
 
 def plot_2d(variable_one, variable_two, range_one, range_two, name_one, name_two, title):
     fig, ax = plt.subplots(1, 1, figsize=(style.FIGURE_SIZE[0] + 2, style.FIGURE_SIZE[1]))
@@ -111,16 +123,16 @@ def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
     ## If we are histogramming by class and so want class colours
+
     if len(variable) > len(style.colours):
         colours = style.color_cycle
         linestyle = ['-' for i in range(len(variable))]
     else:
         colours = style.colours
-        linestyle = style.LINESTYLES
+        linestyle = [style.LINESTYLES[i] for i in range(len(variable))]
     colour_list = []
     for i, histo in enumerate(variable):
         colour_list.append(colours[i])
-
     ax.hist(
             variable,
             bins=bins,
@@ -130,9 +142,10 @@ def plot_histo(variable, name, title, xlabel, ylabel, log = 'log', x_range=(0, 1
             color=[colours[i] for i in range(len(variable))],
             label=name,
             linewidth=style.LINEWIDTH - 1.5,
-            linestyle=linestyle,
+            linestyle=linestyle[::-1],
             density=True,
         )
+
     ax.grid(True)
     ax.set_yscale(log)
     ax.set_xlabel(xlabel, ha="right", x=1)
@@ -179,3 +192,6 @@ def x_vs_y(x, y, apply_light=True):
         return s
     else:
         return x
+
+def to_coffea(array):
+    return ak.Array(array, behavior=vector.behavior, with_name="PtEtaPhiMLorentzVector")

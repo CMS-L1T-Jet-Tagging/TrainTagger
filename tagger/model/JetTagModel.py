@@ -31,7 +31,8 @@ class JetTagModel(ABC):
         self.jet_model = None
         self.hls_jet_model = None
 
-        self.input_vars = []
+        self.particle_input_vars = []
+        self.jet_input_vars = []
         self.extra_vars = []
         self.class_labels = []
 
@@ -40,6 +41,7 @@ class JetTagModel(ABC):
         self.quantization_config = {}
         self.training_config = {}
         self.firmware_config = {}
+        self.inputs = {}
 
         self.output_id_name = 'jet_id_output'
         self.output_pt_name = 'pT_output'
@@ -68,6 +70,7 @@ class JetTagModel(ABC):
         self.model_config = yaml_dict['model_config']
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
+        self.inputs = yaml_dict['inputs']
         if "firmware_config" in yaml_dict:
             self.firmware_config = yaml_dict['firmware_config']
 
@@ -97,16 +100,16 @@ class JetTagModel(ABC):
         Must be written for child class if you want to run the synthesis steps
         """
 
-    def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
+    def predict(self, particle_features_test: npt.NDArray[np.float64]) -> tuple:
         """Predict method for model
 
         Args:
-            X_test (npt.NDArray[np.float64]): Input X test
+            particle_features_test (npt.NDArray[np.float64]): Input X test
 
         Returns:
             tuple: (class_predictions , pt_ratio_predictions)
         """
-        model_outputs = self.jet_model.predict(X_test)
+        model_outputs = self.jet_model.predict(particle_features_test)
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)
@@ -128,8 +131,11 @@ class JetTagModel(ABC):
                 out_dir = self.output_directory
             # Save additional jsons associated with model
             # Dump input variables
-            with open(os.path.join(out_dir, "input_vars.json"), "w") as f:
-                json.dump(self.input_vars, f, indent=4)
+            with open(os.path.join(out_dir, "particle_input_vars.json"), "w") as f:
+                json.dump(self.particle_input_vars, f, indent=4)
+            # Dump jet variables
+            with open(os.path.join(out_dir, "jet_input_vars.json"), "w") as f:
+                json.dump(self.jet_input_vars, f, indent=4)
             # Dump extra variables
             with open(os.path.join(out_dir, "extra_vars.json"), "w") as f:
                 json.dump(self.extra_vars, f, indent=4)
@@ -158,8 +164,11 @@ class JetTagModel(ABC):
                 out_dir = self.output_directory
             # Save additional jsons associated with model
             # Dump input variables
-            with open(os.path.join(out_dir, "input_vars.json"), "r") as f:
-                self.input_vars = json.load(f)
+            with open(os.path.join(out_dir, "particle_input_vars.json"), "r") as f:
+                self.particle_input_vars = json.load(f)
+            # Dump jet variables
+            with open(os.path.join(out_dir, "jet_input_vars.json"), "r") as f:
+                self.jet_input_vars = json.load(f)
             # Dump extra variables
             with open(os.path.join(out_dir, "class_labels.json"), "r") as f:
                 self.class_labels = json.load(f)
@@ -171,15 +180,17 @@ class JetTagModel(ABC):
 
         return wrapper
 
-    def set_labels(self, input_vars: str, extra_vars: str, class_labels: str):
+    def set_labels(self, particle_input_vars: str, jet_input_vars: str, extra_vars: str, class_labels: str):
         """Set internal labels
 
         Args:
-            input_vars (str): Input variable names
+            particle_input_vars (str): Input variable names
+            jet_input_vars (str): Jet variable names
             extra_vars (str): Extra variable names
             class_labels (str): Class label names
         """
-        self.input_vars = input_vars
+        self.particle_input_vars = particle_input_vars
+        self.jet_input_vars = jet_input_vars
         self.extra_vars = extra_vars
         self.class_labels = class_labels
 

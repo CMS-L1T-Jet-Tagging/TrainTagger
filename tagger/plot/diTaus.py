@@ -109,7 +109,7 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
-    raw_inputs = extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries)
+    raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
 
     #Count number of total event
@@ -117,11 +117,11 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, num_elements=2)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, raw_jet_inputs, num_elements=2)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_phi, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, jet_phi, basic_nn_inputs, jet_nn_inputs = grouped_arrays
 
     #calculate delta_r
     eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
@@ -135,11 +135,22 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
 
     #Get inputs and pts for processing
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
-    input1, input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
+    eta1_cuts, eta2_cuts = np.asarray(jet_eta[:, 0][cuts]), np.asarray(jet_eta[:,1][cuts])
+    jet_input1, jet_input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
+    basic_input1, basic_input2 = np.asarray(basic_nn_inputs[:, 0][cuts]), np.asarray(basic_nn_inputs[:, 1][cuts])
 
+    raw_inputs1_dict = {
+        'basic_input': basic_input1,
+        'jet_features': jet_input1,
+    }
+
+    raw_inputs2_dict = {
+        'basic_input': basic_input2,
+        'jet_features': jet_input2,
+    }
     #Get the NN predictions
-    pred_score1, ratio1 = model.predict(input1)
-    pred_score2, ratio2 = model.predict(input2)
+    pred_score1, ratio1 = model.predict(model.prepare_inputs(raw_inputs1_dict)[0])
+    pred_score2, ratio2 = model.predict(model.prepare_inputs(raw_inputs2_dict)[0])
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())
@@ -197,14 +208,23 @@ def plot_bkg_rate_ditau(model, minbias_path, n_entries=500000, tree='jetntuple/J
     minbias = uproot.open(minbias_path)[tree]
 
     #Impose eta cuts
-    jet_eta =  extract_array(minbias, 'jet_eta_phys', n_entries)
+    jet_eta =  extract_array(minbias, 'jet_eta_phys', n_entries).to_numpy()
+    jet_pt =  extract_array(minbias, 'jet_pt_phys', n_entries).to_numpy()
+    jet_pt_hw = extract_array(minbias, 'jet_pt', n_entries).to_numpy()
     eta_selection = np.abs(jet_eta) < 2.5
 
     #
-    nn_inputs = np.asarray(extract_nn_inputs(minbias, model.input_vars, n_entries=n_entries))
+    nn_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
+    nn_inputs, raw_jet_inputs = np.asarray(nn_inputs), np.asarray(raw_jet_inputs)
 
     #Get the NN predictions
-    pred_score, ratio = model.predict(nn_inputs[eta_selection])
+    selected_nn_inputs = nn_inputs[eta_selection]
+    selected_jet_inputs = raw_jet_inputs[eta_selection] if model.jet_input_vars else None
+    raw_inputs_dict = {
+        'basic_input': selected_nn_inputs,
+        'jet_features': selected_jet_inputs,
+    }
+    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
     model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score
@@ -332,15 +352,20 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     gen_eta_raw = extract_array(signal, 'jet_genmatch_eta', n_entries)
     gen_dr_raw = extract_array(signal, 'jet_genmatch_dR', n_entries)
 
-    l1_pt_raw = extract_array(signal, 'jet_pt', n_entries)
+    l1_pt_raw = extract_array(signal, 'jet_pt', n_entries).to_numpy()
     jet_taupt_raw= extract_array(signal, 'jet_taupt', n_entries)
     jet_tauscore_raw = extract_array(signal, 'jet_tauscore', n_entries)
 
     #Get the model prediction
-    nn_inputs = np.asarray(extract_nn_inputs(signal, model.input_vars, n_entries=n_entries))
-    pred_score, ratio = model.predict(nn_inputs)
+    nn_inputs, jet_nn_inputs = extract_nn_inputs(signal, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
+    nn_inputs, jet_nn_inputs = np.asarray(nn_inputs), np.asarray(jet_nn_inputs)
+    raw_inputs_dict = {
+        'basic_input': nn_inputs,
+        'jet_features': jet_nn_inputs,
+    }
+    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
 
-    nn_tauscore_raw = tau_score(pred_score, model.class_labels )
+    nn_tauscore_raw = tau_score(pred_score, model.class_labels)
     nn_taupt_raw = np.multiply(l1_pt_raw, ratio.flatten())
 
     #selecting the eta region
@@ -364,10 +389,6 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
         outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
         outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
         outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
-
-
-
-
 
     #Get the needed attributes
     #Basically we want to bin the selected truth pt and divide it by the overall count
@@ -445,8 +466,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('-m','--model_dir', default='output/baseline', help = 'Input model')
-    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125_addGenH/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus')
-    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_090125/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
+    parser.add_argument('-v', '--vbf_sample', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/VBFHToTauTau_PU200.root' , help = 'Signal sample for VBF -> ditaus')
+    parser.add_argument('--minbias', default='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/MinBias_PU200.root' , help = 'Minbias sample for deriving rates')
 
     #Different modes
     parser.add_argument('--deriveWPs', action='store_true', help='derive the working points for di-taus')
@@ -456,7 +477,7 @@ if __name__ == "__main__":
 
     #Other controls
     parser.add_argument('-n','--n_entries', type=int, default=500000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
-    parser.add_argument('--tree', default='jetntuple/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
 
     args = parser.parse_args()
 

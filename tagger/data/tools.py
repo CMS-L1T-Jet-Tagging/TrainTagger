@@ -347,7 +347,7 @@ def load_data(outdir, percentage, test_ratio=0.1, fields=None):
     chunks_to_load = int(np.ceil((percentage / 100) * total_chunks))
 
     # Collect the file paths for the chunks to load
-    chunk_files = [metadata[i]["file"] for i in range(chunks_to_load)]
+    chunk_files = [f"{metadata[i]['file']}:data" for i in range(chunks_to_load)]
 
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(chunk_files, filter_name=fields, library="ak")

@@ -86,6 +86,7 @@ train:
   extends:
     - .template
   stage: train
+  tags: [cern-nextgen-gpu]
   needs:
     - job : data
       optional: true

@@ -371,11 +371,14 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     #selecting the eta region
     gen_eta_selection = eta_region_selection(gen_eta_raw, eta_region)
 
-    #Denominator & numerator selection for efficiency
-    tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & gen_eta_selection
-    tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP)
-    tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP) & (nn_tauscore_raw > model_NN_WP)
-    tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt']) & (jet_tauscore_raw > WPs_CMSSW['tau'])
+    #Denominator & numerator selection for efficiency.
+    #The gen matching requirement is part of the denominator: a gen tau that no jet was matched to
+    #is a reconstruction inefficiency, not a trigger inefficiency, and counting it in the numerators
+    #only would fold the two together.
+    tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & (np.abs(gen_dr_raw) < 0.4) & gen_eta_selection
+    tau_nume_seedcone = tau_deno & (nn_taupt_raw > model_pt_WP)
+    tau_nume_nn = tau_deno & (nn_taupt_raw > model_pt_WP) & (nn_tauscore_raw > model_NN_WP)
+    tau_nume_cmssw = tau_deno & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt']) & (jet_tauscore_raw > WPs_CMSSW['tau'])
 
 
     #write out total eff to text file
@@ -426,7 +429,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     hep.cms.label(llabel=style.CMSHEADER_LEFT,rlabel=style.CMSHEADER_RIGHT,ax=ax,fontsize=style.MEDIUM_SIZE)
 
     # Set the eta label if needed
-    eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < 2.5)'
+    eta_label = r'Barrel ($|\eta| < 1.5$)' if eta_region == 'barrel' else r'EndCap (1.5 < $|\eta|$ < {})'.format(TAU_ETA_CUT)
     if eta_region != 'none':
         # Add an invisible plot to include the eta label in the legend
         ax.plot([], [], 'none', label=eta_label)
@@ -491,4 +494,6 @@ if __name__ == "__main__":
         plot_bkg_rate_ditau(model, args.minbias, n_entries=args.n_entries, tree=args.tree)
     elif args.eff:
         eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='barrel', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
-        eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)
+        #tau_endcap, not endcap: the rate is derived with tau candidates restricted to TAU_ETA_CUT,
+        #so measuring the efficiency out to 2.5 would not correspond to the same seed
+        eff_ditau(model, args.vbf_sample, n_entries=args.n_entries, eta_region='tau_endcap', tree=args.tree, inc_seeded_cone=args.seedcone_eff)

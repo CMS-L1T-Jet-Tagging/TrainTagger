@@ -373,7 +373,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
 
     #Denominator & numerator selection for efficiency
     tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & gen_eta_selection
-    tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > model_pt_WP)
+    tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP)
     tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > model_pt_WP) & (nn_tauscore_raw > model_NN_WP)
     tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > WPs_CMSSW['tau_l1_pt']) & (jet_tauscore_raw > WPs_CMSSW['tau'])
 
@@ -386,7 +386,7 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
     outname = plot_dir + "/TotalEff_%s.txt" % eta_region
     with open(outname, "w") as outfile:
         outfile.write("Total diTau Eff \n")
-        outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
+        outfile.write("SeededCone + pt regression, no ID cut (Multiclass limit) %.4f \n" % total_eff_seedcone)
         outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
         outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
 
@@ -433,7 +433,9 @@ def eff_ditau(model, signal_path, eta_region='barrel', tree='jetntuple/Jets', n_
 
     # Plot errorbars for both sets of efficiencies
     if(inc_seeded_cone):
-        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
+        #Bounds the multiclass tagger only: it is that tagger's own kinematic selection with the
+        #ID cut removed. It is not a bound on the CMSSW emulator, which corrects the pT differently.
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone + $p_T$ regression, no ID cut')
     ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 28kHz')
     ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 28kHz')
 

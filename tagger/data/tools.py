@@ -301,10 +301,22 @@ def extract_nn_inputs(data, input_vars, jet_vars, n_parts=16, n_entries=None):
     return inputs, jet_inputs
 
 
-def group_id_values(event_id, *arrays, num_elements=2):
+def sort_arrays(sorting_val, *arrays):
+    '''
+    Sort arrays in descending order of sorting_val, along the last axis
+    '''
+
+    sort_index = ak.argsort(sorting_val, ascending=False)
+    arrays_sorted = [arr[sort_index] for arr in arrays]
+
+    return arrays_sorted
+
+
+def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
     '''
     Group values according to event id.
     Filter out events that has less than num_elements
+    Sort the grouped arrays in descending order of ordering_var if it is provided
     '''
 
     # Use ak.argsort to sort based on event_id
@@ -317,6 +329,11 @@ def group_id_values(event_id, *arrays, num_elements=2):
     # Use ak.unflatten to group the arrays by counts
     grouped_id = ak.unflatten(sorted_event_id, counts)
     grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
+
+    if ordering_var is not None:
+        # Sort the jets within each event by the ordering variable
+        grouped_ordering_var = ak.unflatten(ordering_var[sorted_indices], counts)
+        grouped_arrays = sort_arrays(grouped_ordering_var, *grouped_arrays)
 
     # Filter out groups that don't have at least num_elements elements
     mask = ak.num(grouped_id) >= num_elements

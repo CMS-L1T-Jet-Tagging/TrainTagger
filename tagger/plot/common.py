@@ -25,6 +25,9 @@ ETA_BINS = [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]
 
 PT_CUT = 15
 ETA_CUT = 2.4
+# additional eta restriction on taus, slide 7 here:
+# https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
+TAU_ETA_CUT = 2.172
 HT_CUT = 30 # cut applied on jets that contribute to HT calculation, in GeV
 
 # matching parameters
@@ -58,9 +61,8 @@ def eta_region_selection(eta_array, eta_region):
 
     if eta_region == 'barrel': return np.abs(eta_array) < 1.5
     elif eta_region == 'endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.5)
-    #additional eta restriction on taus
-    #slide 7 here https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdfa
-    elif eta_region == 'tau-endcap': return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < 2.172)
+    #additional eta restriction on taus, see TAU_ETA_CUT above
+    elif eta_region in ('tau-endcap', 'tau_endcap'): return (np.abs(eta_array) > 1.5) & (np.abs(eta_array) < TAU_ETA_CUT)
     else: return np.abs(eta_array) > 0.0 #Select everything
 
 def delta_r(eta1, phi1, eta2, phi2):
@@ -184,6 +186,18 @@ def plot_roc(
     ax.grid(True)
     ax.legend(loc='best')
     return fig
+
+
+def pileup_score(preds, class_labels):
+    """
+    Pileup class probability for each jet.
+
+    Models configured with training_config['pileup'] = False have no pileup output,
+    in which case this contributes nothing to the background scores below.
+    """
+    if 'pileup' not in class_labels:
+        return np.zeros(len(preds))
+    return preds[:, class_labels['pileup']]
 
 
 def x_vs_y(x, y, apply_light=True):

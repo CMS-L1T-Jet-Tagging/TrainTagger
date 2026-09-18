@@ -456,7 +456,10 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
             model_effs.append(0.)
             cmssw_effs.append(0.)
         else:
-            tau_nume_seedcone = tau_deno & (l1_pt_raw > pt_cut)
+            #The model's kinematic selection with a perfect identifier, i.e. no score cut. Cutting
+            #on the raw jet pT here instead would not bound the model at all, since the regression
+            #can push a jet over the threshold that the raw pT does not reach.
+            tau_nume_seedcone = tau_deno & (nn_taupt_raw > pt_cut)
             tau_nume_nn = tau_deno & (nn_taupt_raw > pt_cut) & (nn_tauscore_raw > model_cut)
             tau_nume_cmssw = tau_deno & (jet_taupt_raw > pt_cut) & (jet_tauscore_raw > cmssw_cut)
 
@@ -479,7 +482,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
     ax.plot([],[], linestyle='none', label=r'$|\eta| < 2.172$')
 
-    ax.plot(pT_edges, seeded_cone_effs, c=style.color_cycle[2], label=r'Raw Seeded Cone Eff.', linewidth=style.LINEWIDTH)
+    ax.plot(pT_edges, seeded_cone_effs, c=style.color_cycle[2], label=r'SeededCone + $p_T$ regression, no ID cut', linewidth=style.LINEWIDTH)
     ax.plot(pT_edges, model_effs, c=style.color_cycle[0], label=r'SeedCone Tau Tagger Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
     ax.plot(pT_edges, cmssw_effs, c=style.color_cycle[1],label=r'CMSSW PuppiTau Emulator Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
 
@@ -530,7 +533,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         model_cut = model_WP_interp(pt_WP)
         cmssw_cut = cmssw_WP_interp(pt_WP)
 
-        tau_nume_seedcone = tau_deno & (l1_pt_raw > pt_WP)
+        tau_nume_seedcone = tau_deno & (nn_taupt_raw > pt_WP)
         tau_nume_nn = tau_deno & (nn_taupt_raw > pt_WP) & (nn_tauscore_raw > model_cut)
         tau_nume_cmssw = tau_deno & (jet_taupt_raw > pt_WP) & (jet_tauscore_raw > cmssw_cut)
 
@@ -542,7 +545,7 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         outname = plot_dir + "/TotalEff_%s.txt" % eta_region
         with open(outname, "w") as outfile:
             outfile.write("Total Tau Eff \n")
-            outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
+            outfile.write("SeededCone + pt regression, no ID cut (Multiclass limit) %.4f \n" % total_eff_seedcone)
             outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
             outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
 
@@ -598,7 +601,9 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
         # Plot errorbars for both sets of efficiencies, quoting the integrated efficiency as well
         eff_str = r"$\int \epsilon$"
-        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit, {}={}'.format(eff_str, round(total_eff_seedcone, 2))) #Theoretical limit, uncomment for common sense check.
+        #Bounds the multiclass tagger only: it is that tagger's own kinematic selection with the
+        #ID cut removed. It is not a bound on the CMSSW emulator, which corrects the pT differently.
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone + $p_T$ regression, no ID cut, {}={}'.format(eff_str, round(total_eff_seedcone, 2)))
         ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 31kHz, {}={}'.format(eff_str, round(total_eff_cmssw, 2)))
         ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 31kHz, {}={}'.format(eff_str, round(total_eff_nn, 2)))
 

@@ -21,15 +21,15 @@ style.set_style()
 from scipy.interpolate import interp1d
 
 #Imports from other modules
-from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
+from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values, sort_arrays
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, x_vs_y
+from common import MINBIAS_RATE, TAU_ETA_CUT, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, pileup_score, x_vs_y
 
 def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum']]
 
     tau = sum([preds[:,idx] for idx in tau_index] )
-    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']] + pileup_score(preds, class_labels)
 
     return x_vs_y(tau, bkg)
 
@@ -116,72 +116,72 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
+    #Evaluate the model on every jet up front, the tau candidates are picked from these below
+    raw_inputs, raw_jet_inputs = np.asarray(raw_inputs), np.asarray(raw_jet_inputs)
+    raw_inputs_dict = {
+        'basic_input': raw_inputs,
+        'jet_features': raw_jet_inputs if model.jet_input_vars else None,
+    }
+    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
+
+    raw_tau_score = tau_score(raw_pred_score, model.class_labels)
+    raw_corrected_jet_pt = raw_jet_pt * raw_pt_correction.flatten()
+
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, raw_jet_inputs, num_elements=2)
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_corrected_jet_pt, raw_jet_eta, raw_jet_phi, raw_tau_score, num_elements=2)
 
     # Extract the grouped arrays
-    # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_phi, basic_nn_inputs, jet_nn_inputs = grouped_arrays
-
-    #calculate delta_r
-    eta1, eta2 = jet_eta[:, 0], jet_eta[:, 1]
-    phi1, phi2 = jet_phi[:, 0], jet_phi[:, 1]
-    delta_r_values = delta_r(eta1, phi1, eta2, phi2)
+    jet_pt, jet_eta, jet_phi, jet_tau_score = grouped_arrays
 
     # Additional cuts recommended here:
     # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
     # Slide 7
-    cuts = (np.abs(eta1) < 2.172) & (np.abs(eta2) < 2.172) & (delta_r_values > 0.5)
-
-    #Get inputs and pts for processing
-    pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
-    eta1_cuts, eta2_cuts = np.asarray(jet_eta[:, 0][cuts]), np.asarray(jet_eta[:,1][cuts])
-    jet_input1, jet_input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
-    basic_input1, basic_input2 = np.asarray(basic_nn_inputs[:, 0][cuts]), np.asarray(basic_nn_inputs[:, 1][cuts])
-
-    raw_inputs1_dict = {
-        'basic_input': basic_input1,
-        'jet_features': jet_input1,
-    }
-
-    raw_inputs2_dict = {
-        'basic_input': basic_input2,
-        'jet_features': jet_input2,
-    }
-    #Get the NN predictions
-    pred_score1, ratio1 = model.predict(model.prepare_inputs(raw_inputs1_dict)[0])
-    pred_score2, ratio2 = model.predict(model.prepare_inputs(raw_inputs2_dict)[0])
-
-    #Correct the pT and add the score
-    pt1 = pt1_uncorrected*(ratio1.flatten())
-    pt2 = pt2_uncorrected*(ratio2.flatten())
-
-    tau_score1 = tau_score(pred_score1, model.class_labels)
-    tau_score2 = tau_score(pred_score2, model.class_labels)
-
-    #Put them together
-    NN_score = np.vstack([tau_score1, tau_score2]).transpose()
-    NN_score_min = np.min(NN_score, axis=1)
-
-    pt = np.vstack([pt1, pt2]).transpose()
-    pt_min = np.min(pt, axis=1)
+    #Jets outside the tau acceptance can never be tau candidates, so drop their score
+    jet_tau_score = ak.where(np.abs(jet_eta) > TAU_ETA_CUT, 0., jet_tau_score)
 
     #Define the histograms (pT edge and NN Score edge)
-    pT_edges = list(np.arange(0,100,2)) + [1500] #Make sure to capture everything
-    NN_edges = list([round(i,2) for i in np.arange(0, 1.01, 0.01)])
+    pT_edges = list(np.arange(20,100,2)) + [1500] #Make sure to capture everything
+    NN_edges = list([round(i,3) for i in np.arange(0, 1.01, 0.005)])
 
     RateHist = Hist(hist.axis.Variable(pT_edges, name="pt", label="pt"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
-
-    RateHist.fill(pt = pt_min, nn = NN_score_min)
 
     #Derive the rate
     rate_list = []
     pt_list = []
     nn_list = []
 
-    #Loop through the edges and integrate
+    #Loop through the edges and integrate.
+    #The seed takes the two highest tau score jets that pass the pT threshold, so the pair of tau
+    #candidates depends on the threshold and the rate histogram is refilled for each one. The score
+    #zeroing below accumulates across the loop, which is what we want as the thresholds only increase.
     for pt in pT_edges[:-1]:
+
+        #Zero the score of jets below the threshold so that they are never picked as candidates
+        jet_tau_score = ak.where(jet_pt < pt, 0., jet_tau_score)
+
+        #Sort by tau score and take the two leading jets as the tau candidates
+        jet_tau_sorted, jet_pt_sorted, jet_eta_sorted, jet_phi_sorted = sort_arrays(jet_tau_score, jet_tau_score, jet_pt, jet_eta, jet_phi)
+
+        #calculate delta_r
+        eta1, eta2 = jet_eta_sorted[:, 0], jet_eta_sorted[:, 1]
+        phi1, phi2 = jet_phi_sorted[:, 0], jet_phi_sorted[:, 1]
+        delta_r_values = delta_r(eta1, phi1, eta2, phi2)
+
+        cuts = (np.abs(eta1) < TAU_ETA_CUT) & (np.abs(eta2) < TAU_ETA_CUT) & (delta_r_values > 0.5)
+
+        #min pT of the two tau candidates
+        pt1, pt2 = np.asarray(jet_pt_sorted[:,0][cuts]), np.asarray(jet_pt_sorted[:,1][cuts])
+        pt_min = np.min(np.vstack([pt1, pt2]).transpose(), axis=1)
+
+        #min NN score of the two tau candidates
+        score1, score2 = np.asarray(jet_tau_sorted[:,0][cuts]), np.asarray(jet_tau_sorted[:,1][cuts])
+        NN_score_min = np.min(np.vstack([score1, score2]).transpose(), axis=1)
+
+        #Fill the histogram for this choice of tau candidates
+        RateHist.reset()
+        RateHist.fill(pt = pt_min, nn = NN_score_min)
+
         for NN in NN_edges[:-1]:
 
             #Calculate the rate

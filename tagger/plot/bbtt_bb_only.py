@@ -21,7 +21,7 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, PT_CUTS, ETA_CUTS, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from common import MINBIAS_RATE, PT_CUTS, ETA_CUTS, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, pileup_score
 
 # Helpers
 def bbtt_seed(jet_pt, tau_pt):
@@ -88,7 +88,7 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_pt_log, jet_eta, jet_eta_hw, 
 
     #Sum them together
     bscore_sum = sum(
-            [x_vs_y(pred_score[:, b_index],  pred_score[:,l_index] + pred_score[:,g_index] , apply_light) for pred_score in class_outputs]
+            [x_vs_y(pred_score[:, b_index],  pred_score[:,l_index] + pred_score[:,g_index] + pileup_score(pred_score, class_labels), apply_light) for pred_score in class_outputs]
         )
 
     return bscore_sum, regression_outputs

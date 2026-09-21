@@ -26,7 +26,7 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y
+from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data, x_vs_y, pileup_score
 
 # Helpers
 def bbtt_seed(jet_pt, tau_eta, tau_pt, tau_scores, ht_thresh=380):
@@ -172,10 +172,10 @@ def nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, class_labels, n
     l_idx = class_labels['light']
     g_idx = class_labels['gluon']
 
-    # vs light preds
-    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
-    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx]) for pred_score in nn_outputs])
+    # vs light preds, pileup counts as background along with the light quarks and gluons
+    taup_vs_qg = np.transpose([x_vs_y(pred_score[:, tp_idx], pred_score[:, l_idx] + pred_score[:, g_idx] + pileup_score(pred_score, class_labels)) for pred_score in nn_outputs])
+    taum_vs_qg = np.transpose([x_vs_y(pred_score[:, tm_idx], pred_score[:, l_idx] + pred_score[:, g_idx] + pileup_score(pred_score, class_labels)) for pred_score in nn_outputs])
+    b_vs_qg = np.transpose([x_vs_y(pred_score[:, b_idx], pred_score[:, l_idx] + pred_score[:, g_idx] + pileup_score(pred_score, class_labels)) for pred_score in nn_outputs])
 
     # raw preds
     taup_preds = np.transpose([pred_score[:, tp_idx] for pred_score in nn_outputs])

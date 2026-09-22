@@ -38,6 +38,7 @@ training_config:
 
   loss_weights : [1, 1] # class, regression: weights to blance losses, must be tested empirically for each model
   huber_weights : [0, 0] # pu, alpha: weights for pileup and undestimation punishment, pu should always be 0 for models wo pileup category
+  huber_delta: 1. # delta for huber loss, switch between quadratic and linear loss
 
   initial_sparsity : 0.0
   final_sparsity : 0.1

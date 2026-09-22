@@ -435,8 +435,8 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
     return train_data, test_data, class_labels, input_vars, jet_vars, extra_vars
 
 def make_data(
-    infile='/eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/All200_part0.root',
-    outdir='training_data/',
+    infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/All200_part0.root',
+    outdir='/eos/user/s/stella/TrainTagger/training_data/',
     tag=INPUT_TAG,
     jet_fields=JET_NN_FIELDS,
     extras=EXTRA_FIELDS,

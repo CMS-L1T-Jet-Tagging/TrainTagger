@@ -36,6 +36,7 @@ training_config :
 
   loss_weights : [1,65] # class, regression
   huber_weights : [2, 3] # pu, alpha
+  huber_delta: .1
 
   initial_sparsity : 0.0
   final_sparsity : 0.1

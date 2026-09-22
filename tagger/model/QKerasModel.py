@@ -58,7 +58,9 @@ class QKerasModel(JetTagModel):
                                  "ReduceLROnPlateau_patience" : int,
                                  "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0),
                                  "pileup": And(bool),
-                                 "huber_weights": And(list, lambda s: len(s) == 2),}
+                                 "huber_weights": And(list, lambda s: len(s) == 2),
+                                 "huber_delta": And(float, lambda s: s > 0.0),
+                                 }
 
     def _prune_model(self, num_samples: int):
         """Pruning setup for the model, internal model function called by compile
@@ -101,7 +103,6 @@ class QKerasModel(JetTagModel):
         self.callbacks = [
             EarlyStopping(monitor='val_loss',
                           patience=self.training_config['EarlyStopping_patience'],
-                          restore_best_weights=True,
                           verbose=2),
             ReduceLROnPlateau(
                 monitor='val_loss',
@@ -122,6 +123,7 @@ class QKerasModel(JetTagModel):
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: huber_loss(
+                    delta=self.training_config['huber_delta'],
                     pu=self.training_config['huber_weights'][0],
                     alpha=self.training_config['huber_weights'][1]),
             },

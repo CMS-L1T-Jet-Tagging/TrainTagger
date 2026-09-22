@@ -202,7 +202,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
             tpr,
             fpr,
             label=f'{style.CLASS_LABEL_STYLE[class_label]} (AUC = {roc_auc:.2f})',
-            color=colormap(i),
+            color=style.SHAP_COLORS[i],
             linewidth=style.LINEWIDTH,
         )
 

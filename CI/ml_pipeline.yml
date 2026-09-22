@@ -30,13 +30,13 @@ variables:
     TRAIN: All200.root
     MINBIAS: MinBias_PU200.root
     BBBB: GluGluHHTo4B_PU200.root
-    BBBB_EOS_DIR: /eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/
+    BBBB_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/
     BBTT: GluGluHHTo2B2Tau_PU200.root
-    BBTT_EOS_DIR: /eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/
+    BBTT_EOS_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/
     VBFHTAUTAU: VBFHToTauTau_PU200.root
     NTUPLE_TREE: outnano/Jets
     SIGNAL: TT_PU200
-    EOS_DATA_DIR: /eos/cms/store/cmst3/user/sewuchte/l1teg/fp_jettuples_100826_170X/
+    EOS_DATA_DIR: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/
     EOS_STORAGE_DIR: /eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}
     EOS_STORAGE_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/pipeline${CI_PIPELINE_ID}
     EOS_STORAGE_DATADIR: branches/${CI_COMMIT_REF_SLUG}/${Name}/TrainingFiles
@@ -106,7 +106,7 @@ train:
       - output
     exclude:
       - .npy
-    expire_in: 1 day
+    expire_in: 7 days
 
 evaluate:
   extends:
@@ -176,7 +176,7 @@ hls4ml:
   artifacts:
     paths:
       - output/$Model/firmware
-    expire_in: 1 day
+    expire_in: 7 days
 
 synth:
   tags:
@@ -194,7 +194,7 @@ synth:
   artifacts:
     paths:
       - output/$Model/firmware/L1TSC4NGJetModel
-    expire_in: 1 day
+    expire_in: 7 days
 
 emulation-evaluate:
   extends:
@@ -220,7 +220,7 @@ emulation-evaluate:
   artifacts:
     paths:
       - output/$Model
-    expire_in: 1 day
+    expire_in: 7 days
 
 profile:
   extends:
@@ -245,7 +245,7 @@ profile:
   - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
   artifacts:
-    expire_in: 1 day
+    expire_in: 7 days
 
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
@@ -268,7 +268,7 @@ run_processes:
   artifacts:
     paths:
       - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
-    expire_in: 2 day
+    expire_in: 7 days
 
 emulation_regression:
   extends:
@@ -290,7 +290,7 @@ emulation_regression:
   artifacts:
     paths:
       - output/$Model
-    expire_in: 2 day
+    expire_in: 7 days
 
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -321,7 +321,7 @@ upload_new_model:
   artifacts:
     paths:
       - $Name
-    expire_in: 1 day
+    expire_in: 7 days
 
 upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -363,7 +363,7 @@ upload_tagged_model:
   artifacts:
     paths:
       - $Name
-    expire_in: 1 day
+    expire_in: 7 days
 
 code_quality:
    tags:

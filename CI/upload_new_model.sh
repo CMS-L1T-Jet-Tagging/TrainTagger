@@ -43,6 +43,9 @@ pb_copy_index.py TrainTagger/${Name} --recursive
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive
 cd TrainTagger/$Name
 pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
-pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,json
+#pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,json
+ls ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
+eos cp -r plots/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
 eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
 eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}

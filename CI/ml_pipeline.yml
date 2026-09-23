@@ -122,15 +122,15 @@ evaluate:
   - cd data
   - eos cp $EOS_DATA_DIR/$MINBIAS .
   - eos cp $BBBB_EOS_DIR/$BBBB .
-  - eos cp $BBTT_EOS_DIR/$BBTT .
+  #- eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "pT weights plots"
   - python tagger/plot/pt_weights.py -m output/$Model
-  - echo "bbtt performance"
-  - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE -m output/$Model
+  #- echo "bbtt performance"
+  #- python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+  #- python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model
+  #- python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE -m output/$Model
   - echo "VBF tautau performance"
   - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
@@ -250,7 +250,7 @@ profile:
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
   stage: run_processes
-  tags: [k8s-gpu]
+  tags: [cern-nextgen-gpu]
   needs:
     - job : hls4ml
       optional: true

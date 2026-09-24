@@ -68,10 +68,10 @@ data:
     - .template
   stage: data
   tags: [cb_vivado]
-  #rules:
-  #  - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-  #      - tagger/data/**
-  #    when: manual
+  rules:
+   - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+       - tagger/data/**
+     when: manual
   script:
   - source activate tagger
   - mkdir data
@@ -122,7 +122,7 @@ evaluate:
   - cd data
   - eos cp $EOS_DATA_DIR/$MINBIAS .
   - eos cp $BBBB_EOS_DIR/$BBBB .
-  #- eos cp $BBTT_EOS_DIR/$BBTT .
+  - eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "pT weights plots"

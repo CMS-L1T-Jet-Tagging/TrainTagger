@@ -1,6 +1,6 @@
 emulate:
   tags: [ k8s-cvmfs ]
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al9-cms:latest
+  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
   stage: emulate
   needs: [hls4ml]
   rules:
@@ -10,9 +10,8 @@ emulate:
     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
     - source /cvmfs/cms.cern.ch/cmsset_default.sh
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - ls /eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/
   script:
-    - ./CI/setup_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT}
+    - ./CI/setup_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION}
   timeout: 2h
   artifacts:
     when: always

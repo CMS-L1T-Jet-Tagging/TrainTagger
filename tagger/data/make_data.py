@@ -8,7 +8,7 @@ from tagger.data.tools import make_data
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("config", help="Dataset YAML configuration")
+    parser.add_argument("--config", help="Dataset YAML configuration")
     args = parser.parse_args()
 
     with open(args.config) as stream:

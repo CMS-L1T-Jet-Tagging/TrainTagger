@@ -3,6 +3,7 @@ import gc
 import json
 import os
 import shutil
+from pathlib import Path
 
 import awkward as ak
 
@@ -185,7 +186,6 @@ def _make_nn_inputs(data_split, tag, n_parts):
 
     return
 
-
 def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     chunk_info = {"chunk": chunk, "entries": entries, "file": outfile}
@@ -251,6 +251,27 @@ def _process_chunk(data_split, tag, extras, n_parts, chunk, outdir):
     gc.collect()
 
     return
+
+def _uproot_source(infile, tree):
+    """
+    Creates a dictionary with 
+    {filepath/*/*.root: "outnano/Jets",} structure for uproot.iterate()
+    """
+    inputs = [infile] if isinstance(infile, (str, bytes, os.PathLike)) else infile
+    sources = {}
+
+    for item in inputs:
+        item = os.fsdecode(os.fspath(item))
+        if os.path.isdir(item):
+            files = sorted(Path(item).rglob("*.root"))
+            if not files:
+                raise FileNotFoundError(f"No ROOT files found in {item}")
+            for path in files:
+                sources[str(path)] = tree
+        else:
+            sources[item] = tree
+
+    return sources
 
 
 # >>>>>>FUNCTIONS THAT SHOULD BE USED EXTERNALLY!<<<<<<<
@@ -326,7 +347,6 @@ def to_ML(data, class_labels):
 
     return X, y, pt_target, truth_pt, reco_pt
 
-
 def load_data(outdir, percentage, test_ratio=0.0, fields=None):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
@@ -398,7 +418,7 @@ def make_data(
     Process the data set in chunks from the input ntuples file.
 
     Parameters:
-        infile (str): The input file path.
+        infile (str or iterable): ROOT file(s), folder(s), or wildcard pattern(s).
         outdir (str): The output directory.
         tag (str): Input tags to use from puppicands, defined in puppicand_fields.yml.
         extras (str): Extra fields to store for plotting, defined in puppicand_fields.yml
@@ -406,6 +426,15 @@ def make_data(
         fraction (float) : fraction from (0-1) of data to process for training/testing
         step_size (str): Step size for uproot iteration.
     """
+
+    # Count entries over the same sources that Uproot will iterate.
+    data_sources = _uproot_source(infile, tree)
+    num_entries = sum(
+        entry[-1] if isinstance(entry, tuple) else entry
+        for entry in uproot.num_entries(data_sources)
+    )
+    if num_entries == 0:
+        raise ValueError(f"No entries found in input: {infile}")
 
     # Check if output dir already exists, remove if so
     if os.path.exists(outdir):
@@ -422,12 +451,11 @@ def make_data(
     print("Output directory:", outdir)
 
     # Loop through the entries
-    num_entries = uproot.open(infile)[tree].num_entries
     print(num_entries)
     num_entries_done = 0
     chunk = 0
 
-    for data in (pbar := tqdm(uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=num_workers))):
+    for data in (pbar := tqdm(uproot.iterate(data_sources, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, num_workers=num_workers))):
         pbar.set_description(f'Processing chunk {chunk}')
 
         num_entries_done += len(data)  # count before cuts

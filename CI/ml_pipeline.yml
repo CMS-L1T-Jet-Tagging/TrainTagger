@@ -59,15 +59,15 @@ variables:
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags: [cern-nextgen-gpu]
-  # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
-  #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
-  #      when: on_success
+  rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
+      - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
+        when: on_success
 
 data:
   extends:
     - .template
   stage: data
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   rules:
    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
        - tagger/data/**
@@ -92,7 +92,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   needs:
     - job : data
       optional: true
@@ -112,7 +112,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -154,7 +154,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   extends:
     - .template
   rules:
@@ -200,7 +200,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -216,7 +216,7 @@ emulation-evaluate:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model
+  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -o output/$Model/plots/emulation
   artifacts:
     paths:
       - output/$Model
@@ -226,7 +226,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   needs: [emulate,train,hls4ml,synth]
   dependencies: [emulate,train,hls4ml,synth]
   rules:

@@ -29,17 +29,8 @@ git remote add l1ct https://github.com/${CMSSW_L1CT%%:*}/cmssw.git -t ${CMSSW_L1
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/Configuration
 
-git clone --quiet https://github.com/cms-hls4ml/hls4mlEmulatorExtras.git && \
-  cd hls4mlEmulatorExtras &&
-  git checkout -b v1.1.4 tags/v1.1.4
-make
-make install
-cd ..
-git clone --quiet https://github.com/Xilinx/HLS_arbitrary_Precision_Types.git hls
-
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout rework_v2_release
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
 ./setup.sh test $EMULATION_WRAPPER_VERSION

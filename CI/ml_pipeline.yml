@@ -190,7 +190,11 @@ synth:
     - cd output/$Model/firmware/L1TSC4NGJetModel
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
-    - cd ../../..
+    - cd ../../../..
+    - cp tagger/firmware/wrapper_generator.sh output/$Model/firmware/L1TSC4NGJetModel/firmware
+    - cd output/$Model/firmware/L1TSC4NGJetModel/firmware
+    - ./wrapper_generator.sh L1TSC4NGJetModel.h
+    - cd ../../../../..
   artifacts:
     paths:
       - output/$Model/firmware/L1TSC4NGJetModel

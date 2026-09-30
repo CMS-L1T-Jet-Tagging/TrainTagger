@@ -23,7 +23,7 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data
+from common import MINBIAS_RATE, TAU_ETA_CUT, WPs_CMSSW, find_rate, plot_ratio, delta_r, eta_region_selection, get_bar_patch_data, pileup_score
 
 def get_interp_func(WP_path):
     #Get derived working points
@@ -57,7 +57,7 @@ def tau_score(preds, class_labels):
     tau_index = [class_labels['taup'], class_labels['taum'], class_labels['electron']]
 
     tau = sum([preds[:,idx] for idx in tau_index] )
-    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']]
+    bkg = preds[:,class_labels['gluon']] + preds[:,class_labels['light']] + pileup_score(preds, class_labels)
 
     return tau / (tau + bkg)
 
@@ -137,22 +137,24 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
     raw_jet_phi = extract_array(minbias, 'jet_phi_phys', n_entries)
     raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
 
+    raw_cmssw_corr_pts = extract_array(minbias, 'jet_taupt', n_entries)
+    raw_cmssw_scores = extract_array(minbias, 'jet_tauscore', n_entries)
+
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
 
-    #Group these attributes by event id, and filter out groups that don't have at least 1 element
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, raw_jet_inputs, num_elements=1)
+    #Group these attributes by event id, and filter out groups that don't have at least 1 element.
+    #The CMSSW scores are grouped along with the rest so that they stay aligned with the jets.
+    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_jet_phi, raw_inputs, raw_jet_inputs, raw_cmssw_corr_pts, raw_cmssw_scores, num_elements=1)
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here
-    jet_pt, jet_eta, jet_phi, basic_nn_inputs, jet_nn_inputs = grouped_arrays
+    jet_pt, jet_eta, jet_phi, basic_nn_inputs, jet_nn_inputs, cmssw_corr_pts, cmssw_scores = grouped_arrays
 
     # Additional cuts recommended here:
     # https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
     # Slide 7
-    eta_cut = 2.172
-    pt_cut = 30.
 
     #flatten for NN eval
     jet_pts = np.asarray(ak.flatten(jet_pt))
@@ -160,60 +162,61 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
     jet_inputs = np.asarray(ak.flatten(jet_nn_inputs))
     basic_inputs = np.asarray(ak.flatten(basic_nn_inputs))
 
-    cuts = (jet_pts > pt_cut) & (np.abs(jet_etas) < eta_cut)
-
-
-    all_scores = np.zeros_like(jet_pts)
-    all_corr_pts = np.zeros_like(jet_pts)
+    cmssw_corr_pts = np.asarray(ak.flatten(cmssw_corr_pts))
+    cmssw_scores = np.asarray(ak.flatten(cmssw_scores))
 
     if(cmssw_model): #scores from CMSSW model
-        all_corr_pts = extract_array(minbias, 'jet_taupt', n_entries)
-        all_scores = extract_array(minbias, 'jet_tauscore', n_entries)
-
-        all_scores = ak.where(~cuts, all_scores, 0.)
+        all_corr_pts = cmssw_corr_pts
+        all_scores = cmssw_scores
 
     else: #scores from new model
-        selected_basic_inputs = basic_inputs[cuts]
-        selected_jet_inputs = jet_inputs[cuts] if model.jet_input_vars else None
+        #Every jet is scored, the pT threshold is scanned below so it cannot be applied up front
         raw_inputs_dict = {
-            'basic_input': selected_basic_inputs,
-            'jet_features': selected_jet_inputs
+            'basic_input': basic_inputs,
+            'jet_features': jet_inputs if model.jet_input_vars else None
         }
         pred_scores, pt_ratios = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
-        all_scores[cuts] = tau_score(pred_scores, model.class_labels)
-        all_corr_pts[cuts] = pt_ratios.flatten() * jet_pts[cuts]
+        all_scores = tau_score(pred_scores, model.class_labels)
+        all_corr_pts = pt_ratios.flatten() * jet_pts
+
+    #Jets outside the tau acceptance can never be tau candidates, so drop their score
+    all_scores = np.where(np.abs(jet_etas) < TAU_ETA_CUT, all_scores, 0.)
 
     #Reshape to orig shape
     all_scores = ak.unflatten(all_scores, ak.num(jet_pt))
     all_corr_pts = ak.unflatten(all_corr_pts, ak.num(jet_pt))
 
-    #find highest tau score per event
-    highest_score = ak.argmax(all_scores, axis=1, keepdims=True)
-
-    NN_scores = all_scores[highest_score]
-    NN_pt = all_corr_pts[highest_score]
-
-    NN_scores = np.asarray(NN_scores).flatten()
-    NN_pt = np.asarray(NN_pt).flatten()
-
-
-
     #Define the histograms (pT edge and NN Score edge)
-    pT_edges = list(np.arange(30,150,2)) + [1500] #Make sure to capture everything
+    pT_edges = list(np.arange(30,80,1)) + list(np.arange(80,150,2)) + [1500] #Make sure to capture everything
     NN_edges = list([round(i,4) for i in np.arange(0, 0.5, 0.002)]) + list([round(i,4) for i in np.arange(0.5, 1.01, 0.005)])
 
     RateHist = Hist(hist.axis.Variable(pT_edges, name="pt", label="pt"),
                     hist.axis.Variable(NN_edges, name="nn", label="nn"))
-
-    RateHist.fill(pt = NN_pt, nn = NN_scores)
 
     #Derive the rate
     rate_list = []
     pt_list = []
     nn_list = []
 
-    #Loop through the edges and integrate
+    #Loop through the edges and integrate.
+    #The seed fires on the highest tau score jet that passes the pT threshold, so the candidate
+    #depends on the threshold and the rate histogram is refilled for each one. The score zeroing
+    #below accumulates across the loop, which is what we want as the thresholds only increase.
     for pt in pT_edges[:-1]:
+
+        #Zero the score of jets below the threshold so that they are never picked as the candidate
+        all_scores = ak.where(all_corr_pts < pt, 0., all_scores)
+
+        #find highest tau score per event
+        highest_score = ak.argmax(all_scores, axis=1, keepdims=True)
+
+        NN_scores = np.asarray(all_scores[highest_score]).flatten()
+        NN_pt = np.asarray(all_corr_pts[highest_score]).flatten()
+
+        #Fill the histogram for this choice of tau candidate
+        RateHist.reset()
+        RateHist.fill(pt = NN_pt, nn = NN_scores)
+
         for NN in NN_edges[:-1]:
 
             #Calculate the rate
@@ -420,8 +423,11 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
     pT_edges = [0] + np.arange(30, 150, 2)
 
-    #Denominator & numerator selection for efficiency
-    eta_selection = np.abs(gen_eta_raw) < 2.172
+    #Denominator & numerator selection for efficiency.
+    #The gen matching requirement belongs in the denominator: a gen tau that no jet was matched to
+    #is a reconstruction inefficiency, not a trigger inefficiency, and counting it here folds the
+    #two together.
+    gen_cuts = (tau_flav == 1) & (np.abs(gen_eta_raw) < TAU_ETA_CUT) & (gen_pt_raw > 5.) & (np.abs(gen_dr_raw) < 0.4)
 
 
     seeded_cone_effs = [0.]
@@ -439,27 +445,27 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         cmssw_cut = max(cmssw_WP_interp(pt_cut), min_NN_cut)
 
 
-        tau_deno = (tau_flav==1) & (gen_pt_raw > pt_cut) & eta_selection
+        tau_deno = gen_cuts & (gen_pt_raw > pt_cut)
         denom = np.sum(tau_deno)
 
         denoms.append(denom)
 
-
-        if(np.sum(tau_deno) < min_mc):
+        if(denom < min_mc):
             #too few events, just put 0
             seeded_cone_effs.append(0.)
             model_effs.append(0.)
             cmssw_effs.append(0.)
         else:
-            tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > pt_cut)
-            tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > pt_cut) & (nn_tauscore_raw > model_cut)
-            tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > pt_cut) & (jet_tauscore_raw > cmssw_cut)
+            #The model's kinematic selection with a perfect identifier, i.e. no score cut. Cutting
+            #on the raw jet pT here instead would not bound the model at all, since the regression
+            #can push a jet over the threshold that the raw pT does not reach.
+            tau_nume_seedcone = tau_deno & (nn_taupt_raw > pt_cut)
+            tau_nume_nn = tau_deno & (nn_taupt_raw > pt_cut) & (nn_tauscore_raw > model_cut)
+            tau_nume_cmssw = tau_deno & (jet_taupt_raw > pt_cut) & (jet_tauscore_raw > cmssw_cut)
 
             seeded_cone_effs.append(np.sum(tau_nume_seedcone))
             model_effs.append(np.sum(tau_nume_nn))
             cmssw_effs.append(np.sum(tau_nume_cmssw))
-
-            #print(pt_cut, np.sum(tau_deno), np.sum(cmssw_cut), np.sum(model_cut))
 
 
     denoms = np.array(denoms)
@@ -476,9 +482,9 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
 
     ax.plot([],[], linestyle='none', label=r'$|\eta| < 2.172$')
 
-    ax.plot(pT_edges, seeded_cone_effs, c=style.color_cycle[2], label=r'Raw Seeded Cone Eff.', linewidth=style.LINEWIDTH)
-    ax.plot(pT_edges, model_effs, c=style.color_cycle[0], label=r'CMSSW PuppiTau Emulator Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
-    ax.plot(pT_edges, cmssw_effs, c=style.color_cycle[1],label=r'SeedCone Tau Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
+    ax.plot(pT_edges, seeded_cone_effs, c=style.color_cycle[2], label=r'SeededCone + $p_T$ regression, no ID cut', linewidth=style.LINEWIDTH)
+    ax.plot(pT_edges, model_effs, c=style.color_cycle[0], label=r'SeedCone Tau Tagger Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
+    ax.plot(pT_edges, cmssw_effs, c=style.color_cycle[1],label=r'CMSSW PuppiTau Emulator Eff., 31 kHz Rate', linewidth=style.LINEWIDTH)
 
 
     # Add uncertainty bands
@@ -522,24 +528,24 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         #Pick a single pt WP for comparison
         pt_WP = 75.
 
-        tau_deno = (tau_flav==1) & (gen_pt_raw > 1.) & eta_selection
+        tau_deno = gen_cuts & gen_eta_selection
 
         model_cut = model_WP_interp(pt_WP)
         cmssw_cut = cmssw_WP_interp(pt_WP)
 
-        tau_nume_seedcone = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (l1_pt_raw > pt_WP)
-        tau_nume_nn = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (nn_taupt_raw > pt_WP) & (nn_tauscore_raw > model_cut)
-        tau_nume_cmssw = tau_deno & (np.abs(gen_dr_raw) < 0.4) & (jet_taupt_raw > pt_WP) & (jet_tauscore_raw > cmssw_cut)
+        tau_nume_seedcone = tau_deno & (nn_taupt_raw > pt_WP)
+        tau_nume_nn = tau_deno & (nn_taupt_raw > pt_WP) & (nn_tauscore_raw > model_cut)
+        tau_nume_cmssw = tau_deno & (jet_taupt_raw > pt_WP) & (jet_tauscore_raw > cmssw_cut)
 
         ##write out total eff to text file
-        total_eff_nn = np.mean(tau_nume_nn) / np.mean(tau_deno)
-        total_eff_seedcone = np.mean(tau_nume_seedcone) / np.mean(tau_deno)
-        total_eff_cmssw = np.mean(tau_nume_cmssw) / np.mean(tau_deno)
+        total_eff_nn = np.sum(tau_nume_nn) / np.sum(tau_deno)
+        total_eff_seedcone = np.sum(tau_nume_seedcone) / np.sum(tau_deno)
+        total_eff_cmssw = np.sum(tau_nume_cmssw) / np.sum(tau_deno)
 
         outname = plot_dir + "/TotalEff_%s.txt" % eta_region
         with open(outname, "w") as outfile:
             outfile.write("Total Tau Eff \n")
-            outfile.write("SeededCone Inclusive (Eff Upper Limit) %.4f \n" % total_eff_seedcone)
+            outfile.write("SeededCone + pt regression, no ID cut (Multiclass limit) %.4f \n" % total_eff_seedcone)
             outfile.write("Multiclass NN %.4f \n" % total_eff_nn)
             outfile.write("CMSSW  %.4f \n" % total_eff_cmssw)
 
@@ -593,10 +599,13 @@ def eff_tau(model, signal_path, tree='jetntuple/Jets', n_entries=10000 ):
         nn_err = np.nan_to_num(nn_err, nan=0.)
 
 
-        # Plot errorbars for both sets of efficiencies
-        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone PuppiJet Efficiency Limit') #Theoretical limit, uncomment for common sense check.
-        ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 31kHz')
-        ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 31kHz')
+        # Plot errorbars for both sets of efficiencies, quoting the integrated efficiency as well
+        eff_str = r"$\int \epsilon$"
+        #Bounds the multiclass tagger only: it is that tagger's own kinematic selection with the
+        #ID cut removed. It is not a bound on the CMSSW emulator, which corrects the pT differently.
+        ax.errorbar(sc_x, sc_y, yerr=sc_err, fmt='o', c=style.color_cycle[2], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone + $p_T$ regression, no ID cut, {}={}'.format(eff_str, round(total_eff_seedcone, 2)))
+        ax.errorbar(cmssw_x, cmssw_y, yerr=cmssw_err, fmt='o', c=style.color_cycle[0], markersize=style.LINEWIDTH, linewidth=2, label=r'Tau CMSSW Emulator @ 31kHz, {}={}'.format(eff_str, round(total_eff_cmssw, 2)))
+        ax.errorbar(nn_x, nn_y, yerr=nn_err, fmt='o', c=style.color_cycle[1], markersize=style.LINEWIDTH, linewidth=2, label=r'SeededCone Tau Tagger @ 31kHz, {}={}'.format(eff_str, round(total_eff_nn, 2)))
 
         # Plot a horizontal dashed line at y=1
         ax.axhline(1, xmin=0, xmax=150, linestyle='dashed', color='black', linewidth=3)

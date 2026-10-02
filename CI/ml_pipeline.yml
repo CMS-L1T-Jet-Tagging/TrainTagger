@@ -78,7 +78,9 @@ data:
   - source activate tagger
   - export EOS_MGM_URL=root://eoscms.cern.ch
   - eos ls $EOS_DATA_DIR
-  - python tagger/data/make_data.py --config tagger/data/configs/data-config-baseline-17.yaml
+  - mkdir data
+  - eos cp $EOS_DATA_DIR/!(Al200*|MinBias_PU200)*.root data
+  - python tagger/data/make_data.py --config tagger/data/configs/data-config-baseline-17-ci.yaml
   - tar -cf training_data_$Inputs.tgz training_data
   - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch

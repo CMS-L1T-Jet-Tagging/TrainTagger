@@ -1,0 +1,48 @@
+input:
+  - data/DYToLL_M10To50_PU200.root
+  - data/DYToLL_M50_PTLL200To400_PU200.root
+  - data/DYToLL_M50_PTLL400To600_PU200.root
+  - data/DYToLL_M50_PTLL600ToInf_PU200.root
+  - data/DYToLL_M50_PU200.root
+  - data/GluGluHHTo2B2Tau_PU200.root
+  - data/GluGluHHTo4B_PU200.root
+  - data/GluGluHToGG_PU200.root
+  - data/GluGluHToTauTau_PU200.root
+  - data/QCD_Pt120To170_PU200.root
+  - data/QCD_Pt15To3000_PU200.root
+  - data/QCD_Pt170To300_PU200.root
+  - data/QCD_Pt20To30_PU200.root
+  - data/QCD_Pt300To470_PU200.root
+  - data/QCD_Pt30To50_PU200.root
+  - data/QCD_Pt470To600_PU200.root
+  - data/QCD_Pt50To80_PU200.root
+  - data/QCD_Pt600ToInf_PU200.root
+  - data/QCD_Pt80To120_PU200.root
+  - data/TTHto2B_PU200.root
+  - data/TTHto2C_PU200.root
+  - data/TT_PU200.root
+  - data/TTToSemileptonic_PU200.root
+  - data/VBFHToBB_PU200.root
+  - data/VBFHToCC_PU200.root
+  - data/VBFHToCC_ext1_PU200.root
+  - data/VBFHToInvisible_PU200.root
+  - data/VBFHToInvisible_ext1_PU200.root
+  - data/VBFHToTauTau_ext_PU200.root
+  - data/VBFHToTauTau_PU200.root
+  - data/WJetsToLNu_PU200.root
+  - data/WplusH_Hto2B_WtoLNu_PU200.root
+  - data/WplusH_Hto2C_WtoLNu_PU200.root
+  - data/XtoHH_MX_1000To4000_PU200.root
+  - data/XtoHH_MX_140To780_PU200.root
+  - data/ZH_Hto2C_Zto2L_PU200.root
+  - data/ZprimeToTauTau_M1500_PU200.root
+  - data/ZprimeToTauTau_M500_PU200.root
+
+output: training_data/
+tree: outnano/Jets
+step_size: 100MB
+ratio: 1.0
+num_workers: 8
+extras: extra_fields
+signal_processes: [{input: data/TT_PU200.root , 
+                    output: signal_process_data/TT_PU200}]

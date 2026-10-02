@@ -79,7 +79,7 @@ data:
   - export EOS_MGM_URL=root://eoscms.cern.ch
   - eos ls $EOS_DATA_DIR
   - mkdir data
-  - eos find "$EOS_DATA_DIR" -maxdepth 1 -name '*.root' ! -name 'All200*' ! -name 'MinBias*' -exec eos cp {} data/ \;
+  - eos find -f --maxdepth 1 "${EOS_DATA_DIR%/}/"   | grep -E '/[^/]+\.root$'   | grep -Ev '/(All200|MinBias)[^/]*$'   | xargs -d '\n' -I{} eos cp -p {} data/
   - ls data
   - python tagger/data/make_data.py --config tagger/data/configs/data-config-baseline-17-ci.yaml
   - tar -cf training_data_$Inputs.tgz training_data

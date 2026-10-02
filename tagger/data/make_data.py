@@ -14,15 +14,15 @@ if __name__ == "__main__":
     with open(args.config) as stream:
         config = yaml.safe_load(stream)
 
-    #make_data(
-    #    infile=config["input"],
-    #    outdir=config["output"],
-    #    step_size=config.get("step_size", "100MB"),
-    #    extras=config.get("extras", "extra_fields"),
-    #    ratio=config.get("ratio", 1.0),
-    #    tree=config.get("tree", "outnano/Jets"),
-    #    num_workers=config.get("num_workers", 8),
-    #)
+    make_data(
+       infile=config["input"],
+       outdir=config["output"],
+       step_size=config.get("step_size", "100MB"),
+       extras=config.get("extras", "extra_fields"),
+       ratio=config.get("ratio", 1.0),
+       tree=config.get("tree", "outnano/Jets"),
+       num_workers=config.get("num_workers", 8),
+    )
     # Format all the signal processes used for plotting later
     for signal in config.get("signal_processes", []):
         print(signal)

@@ -77,7 +77,6 @@ data:
   script:
   - source activate tagger
   - export EOS_MGM_URL=root://eoscms.cern.ch
-  - eos ls $EOS_DATA_DIR
   - mkdir data
   - eos find -f --maxdepth 1 "${EOS_DATA_DIR%/}/"   | grep -E '/[^/]+\.root$'   | grep -Ev '/(All200|MinBias)[^/]*$'   | xargs -d '\n' -I{} eos cp -p {} data/
   - ls data

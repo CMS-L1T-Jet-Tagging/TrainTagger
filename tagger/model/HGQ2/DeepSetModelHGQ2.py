@@ -15,7 +15,7 @@ from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule,EarlySto
 # Qkeras
 
 from keras.models import load_model
-#import hls4ml
+import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.HGQ2.HGQ2Model import HGQ2Model
@@ -40,35 +40,14 @@ class DeepSetModelHGQ2(HGQ2Model):
                                   "regression_parallelisation_factor" : list,
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
-
-                "quantization_config" : {'pt_output_quantization' : list},
                 
-                "input_config" : {"basic_input_config": list,
-                                  "basic_features": list,
-                                  "jet_features": list},
+                "input_config" : HGQ2Model.input_config,
                 
-                "training_config" :     {"weight_method": And(
-                                        list,
-                                        lambda lst: len(lst) == 2,
-                                        lambda lst: all(x in ["none", "ptref", "onlyclass"] for x in lst)
-                                            ),
-                                         "validation_split" : And(float, lambda s: s > 0.0),
-                                         "epochs" : And(int, lambda s: s >= 1),
-                                         "batch_size" : And(int, lambda s: s >= 1),
-                                         "learning_rate": And(float, lambda s: s > 0.0),
-                                         "loss_weights" : And(list, lambda s: len(s) == 2),
-                                         "target_ebops" : int,
-                                         "pileup": And(bool),
-                                         "huber_weights": And(list, lambda s: len(s) == 2),
-                                         "huber_delta": And(float, lambda s: s > 0.0),
-                                        },
+                "training_config" :  HGQ2Model.training_config,
 
-                "firmware_config" : {"input_precision" : dict,
-                                    "class_precision" : str,
-                                    "reg_precision": str,
-                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
-                                    "fpga_part" : str,
-                                    "project_name" : str}
+                "firmware_config" : HGQ2Model.firmware_config,
+                
+                "quantization_config" : None
             }
     )
 
@@ -132,7 +111,6 @@ class DeepSetModelHGQ2(HGQ2Model):
                 print(self.jet_model.summary())
                 
                 self.results_dict['num_parameters'] = self.jet_model.count_params()
-
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
             """Run the hls4ml model conversion

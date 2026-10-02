@@ -6,16 +6,23 @@ run_config :
 
 model_config :
   name : JEDILinear_HGQ2
-  conv1d_layers : [10,10]
-  classification_layers : [32,16]
-  regression_layers : [10]
+  embedding_layers : [64,64,64,64]
+  classification_layers : [64,32,16]
+  regression_layers : [64,32,16]
   beta: 1.1e-7
 
-quantization_config:
-  pt_output_quantization : [16,6]
+input_config:
+  # Specify inputs for the model here, order is defined in data/puppicand.yaml. New inputs should always
+  # be added here and in puppicands yaml
+  basic_input_config: ["pt", "pt_rel", "pt_log", "deta", "dphi", "mass", "isPhoton", "isElectronPlus",
+    "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
+    "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality"] # features to use in the basic_input
+  basic_features: ['basic_input']
+  jet_features: [] # will later be concatenated into one jet features input
+
 
 training_config :
-  weight_method: "onlyclass"
+  weight_method: ["onlyclass", "onlyclass"]
   epochs : 500
   batch_size : 150000
   learning_rate : 0.003
@@ -23,10 +30,14 @@ training_config :
 
   loss_weights : [1,1]
 
-  target_ebops : 300000
+  target_ebops : 1000000
+
+  pileup: False
+
+quantization_config:
 
 firmware_config:
-  input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
+  input_precision: {'basic_input': 'ap_fixed<24,12,AP_RND,AP_SAT>'}
   class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
   reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
 

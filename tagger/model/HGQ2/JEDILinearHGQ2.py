@@ -15,19 +15,17 @@ from hgq.constraints import MinMax
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
 
 from keras.models import load_model
-#import hls4ml
+import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
+from tagger.model.HGQ2.HGQ2Model import HGQ2Model
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.common import log_beta_schedule,cosine_decay_restarts
 from tagger.model.common_tensorflow import initialise_tensorflow
 
-#from da4ml.converter.hgq2.parser import trace_model
-#from da4ml.trace import comb_trace, HWConfig
-#from da4ml.codegen import HLSModel, VHDLModel
 
 @JetModelFactory.register('JEDILinearHGQ2')
-class JEDILinearHGQ2(JetTagModel):
+class JEDILinearHGQ2(HGQ2Model):
 
     schema = Schema(
             {
@@ -35,29 +33,19 @@ class JEDILinearHGQ2(JetTagModel):
                 ## generic run config coniguration
                 "run_config" : JetTagModel.run_schema,
                 "model_config" : {"name" : str,
-                                  "conv1d_layers" : list,
+                                  "embedding_layers" : list,
                                   "classification_layers" : list,
                                   "regression_layers" : list,
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
+                
+                "training_config" : HGQ2Model.training_config,
+                
+                "input_config" : HGQ2Model.input_config,
 
-                "quantization_config" : {'pt_output_quantization' : list},
-
-                "training_config" :     {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
-                                         "validation_split" : And(float, lambda s: s > 0.0),
-                                         "epochs" : And(int, lambda s: s >= 1),
-                                         "batch_size" : And(int, lambda s: s >= 1),
-                                         "learning_rate": And(float, lambda s: s > 0.0),
-                                         "loss_weights" : And(list, lambda s: len(s) == 2),
-                                         "target_ebops" : int
-                                        },
-
-                "firmware_config" : {"input_precision" : str,
-                                    "class_precision" : str,
-                                    "reg_precision": str,
-                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
-                                    "fpga_part" : str,
-                                    "project_name" : str}
+                "firmware_config" : HGQ2Model.firmware_config,
+                
+                "quantization_config" : None
             }
     )
 
@@ -87,28 +75,28 @@ class JEDILinearHGQ2(JetTagModel):
 
         with scope0, scope1, scope2:
 
-            N_constituents = inputs_shape[0]
-            n_features = inputs_shape[1]
+            N_constituents = inputs_shape['basic_input'][0]
+            n_features = inputs_shape['basic_input'][1]
 
             with (
                 QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT_SYM'),
                 QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
-                inp_b = keras.layers.Input((N_constituents, n_features),name='model_input')
+                inp_b = keras.layers.Input((N_constituents, n_features),name='basic_input')
                 #inp_b = QBatchNormalization()(inp)
                 pool_scale = 2.**-round(log2(N_constituents))
 
-                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 64), bias_axes='C', activation='relu')(inp_b)
-                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, 64), bias_axes='C', activation='relu', )(x)
+                x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][0]), bias_axes='C', activation='relu')(inp_b)
+                s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][1]), bias_axes='C', activation='relu', )(x)
 
                 s2 = AveragePooling1D(N_constituents)(x)
                 #s2 = Rescaling(pool_scale)(s2)
 
-                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, 64), bias_axes='C', activation='relu')(s2)
+                d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, self.model_config['embedding_layers'][2]), bias_axes='C', activation='relu')(s2)
 
                 x = QAdd()([s, d])
 
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC',
-                                          (N_constituents, 64),
+                                          (N_constituents, self.model_config['embedding_layers'][3]),
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
@@ -117,36 +105,22 @@ class JEDILinearHGQ2(JetTagModel):
                 #x = Flatten()(x)
                 #x = Rescaling(1/16)(x)
 
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',64, bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',32, bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',16, bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][2], bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
                 jet_id = Activation('linear', name='jet_id_output')(jet_id)
 
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 64, bias_axes='C', activation='relu', )(x)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 32, bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 16, bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][2], bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C')(pt_regress)
                 pt_regress = Activation('linear', name='pT_output')(pt_regress)
 
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
                 print(self.jet_model.summary())
-
-    # Redefine save and load for HGQ due to needing h5 format
-    @JetTagModel.save_decorator
-    def save(self, out_dir):
-        # Export the model
-        #model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
-        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
-        export_path = os.path.join(out_dir, "model/saved_model.keras")
-        self.jet_model.save(export_path)
-        print(f"Model saved to {export_path}")
-
-    @JetTagModel.load_decorator
-    def load(self, out_dir=None):
-        # Load model
-        self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
+                self.results_dict['num_parameters'] = self.jet_model.count_params()
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
             """Run the hls4ml model conversion
@@ -227,93 +201,3 @@ class JEDILinearHGQ2(JetTagModel):
             if build:
                 # build the project
                 self.hls_jet_model.build(csim=False, reset=True)
-
-
-
-    def compile_model(self, num_samples: int, ebops: int):
-
-        """compile the model generating callbacks and loss function
-        Args:
-            num_samples (int): Number of samples in the training set used for scheduling
-        """
-
-        scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch, 
-                                                                                                          initial_learning_rate=self.training_config['learning_rate'],
-                                                                                                          max_epochs=self.training_config['epochs']))
-        es = EarlyStoppingWithEbopsThres(monitor="val_loss",
-                                         patience=150,
-                                         verbose=1,
-                                         mode="min",
-                                         restore_best_weights=True,
-                                         start_from_epoch=75,
-                                         ebops_threshold=ebops + 100000
-                                        )
-        terminate_on_nan = keras.callbacks.TerminateOnNaN()
-
-        ebops_tracker = FreeEBOPs()
-        ebops_scheduler = BetaPID(
-            p=1, i=0.1, d=0,
-            target_ebops=ebops,
-            init_beta=1e-10, warmup=10,
-            max_beta=5e-6, damp_beta_on_target=0.5
-        )
-        # Define the callbacks using hyperparameters in the config
-        self.callbacks = [
-            scheduler,
-            ebops_tracker,
-            terminate_on_nan,
-            ebops_scheduler,
-            es
-
-        ]
-
-        # compile the tensorflow model setting the loss and metrics
-        self.jet_model.compile(
-            optimizer='adam',
-            loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
-                self.loss_name + self.output_pt_name: keras.losses.Huber(),
-            },
-            loss_weights=self.training_config['loss_weights'],
-            metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-            weighted_metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-        )
-    def fit(
-        self,
-        X_train: npt.NDArray[np.float64],
-        y_train: npt.NDArray[np.float64],
-        pt_target_train: npt.NDArray[np.float64],
-        sample_weight: npt.NDArray[np.float64],
-    ):
-        """Fit the model to the training dataset
-        Args:
-            X_train (npt.NDArray[np.float64]): X train dataset
-            y_train (npt.NDArray[np.float64]): y train classification targets
-            pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
-            sample_weight (npt.NDArray[np.float64]): sample weighting
-        """
-        keras.config.disable_traceback_filtering()
-        sample_weight_dict = {
-                            "jet_id_output": sample_weight,
-                            "pT_output": sample_weight,
-        }
-        # Train the model using hyperparameters in yaml config
-        history = self.jet_model.fit(
-            {'model_input': X_train},
-            [y_train,pt_target_train],
-            sample_weight = [sample_weight, sample_weight],
-            epochs=self.training_config['epochs'],
-            batch_size=self.training_config['batch_size'],
-            verbose=self.run_config['verbose'],
-            validation_split=self.training_config['validation_split'],
-            callbacks=self.callbacks,
-            shuffle=True,
-        )
-
-        self.history = history.history

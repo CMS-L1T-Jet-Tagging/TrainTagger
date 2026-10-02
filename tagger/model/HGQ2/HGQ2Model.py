@@ -23,52 +23,33 @@ from tagger.model.common import log_beta_schedule,cosine_decay_restarts
 from tagger.model.common_tensorflow import initialise_tensorflow, huber_loss
 
 class HGQ2Model(JetTagModel):
+    
+    
+    input_config = {"basic_input_config": list,
+                    "basic_features": list,
+                    "jet_features": list}
 
-    schema = Schema(
-            {
-                "model": str,
-                ## generic run config coniguration
-                "run_config" : JetTagModel.run_schema,
-                "model_config" : {"name" : str,
-                                  "conv1d_layers" : list,
-                                  "conv1d_parallelisation_factor" : list,
-                                  "classification_layers" : list,
-                                  "classification_parallelisation_factor" : list,
-                                  "regression_layers" : list,
-                                  "regression_parallelisation_factor" : list,
-                                  "beta": And(float, lambda s: 1.0 >= s >= 0.0),
-                                  },
-
-                "quantization_config" : {'pt_output_quantization' : list},
-                
-                "input_config" : {"basic_input_config": list,
-                                  "basic_features": list,
-                                  "jet_features": list},
-                
-                "training_config" :     {"weight_method": And(
+    training_config = { "weight_method": And(
                                         list,
                                         lambda lst: len(lst) == 2,
                                         lambda lst: all(x in ["none", "ptref", "onlyclass"] for x in lst)
                                             ),
-                                         "validation_split" : And(float, lambda s: s > 0.0),
-                                         "epochs" : And(int, lambda s: s >= 1),
-                                         "batch_size" : And(int, lambda s: s >= 1),
-                                         "learning_rate": And(float, lambda s: s > 0.0),
-                                         "loss_weights" : And(list, lambda s: len(s) == 2),
-                                         "target_ebops" : int,
-                                         "pileup": And(bool),
-                                         "huber_weights": And(list, lambda s: len(s) == 2),
-                                         "huber_delta": And(float, lambda s: s > 0.0),
-                                        },
+                        "validation_split" : And(float, lambda s: s > 0.0),
+                        "epochs" : And(int, lambda s: s >= 1),
+                        "batch_size" : And(int, lambda s: s >= 1),
+                        "learning_rate": And(float, lambda s: s > 0.0),
+                        "loss_weights" : And(list, lambda s: len(s) == 2),
+                        "target_ebops" : int,
+                        "pileup": And(bool),
+                        }
+    
+    firmware_config = { "input_precision" : dict,
+                        "class_precision" : str,
+                        "reg_precision": str,
+                        "clock_period" : And(float, lambda s: 0.0 < s <= 10),
+                        "fpga_part" : str,
+                        "project_name" : str}
 
-                "firmware_config" : {"input_precision" : dict,
-                                    "class_precision" : str,
-                                    "reg_precision": str,
-                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
-                                    "fpga_part" : str,
-                                    "project_name" : str}
-            }
-    )
 
     # Redefine save and load for HGQ due to needing h5 format
     @JetTagModel.save_decorator

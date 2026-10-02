@@ -46,13 +46,13 @@ DeepSet:baseline:
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 DeepSet:HGQ2:
-extends: .ml_pipeline
-variables:
-  Name: DeepSetHGQ2
-  Config: HGQ2/DeepSets_HGQ2.yaml
-  Model: baseline_larger_HGQ2
-  RERUN_ON_TAG: 'False'
-  RUN_EMULATION: 'False'
-  RUN_SYNTHESIS: 'True'
-  EMULATION_WRAPPER_VERSION: v2_0_0
-  IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+  extends: .ml_pipeline
+  variables:
+    Name: DeepSetHGQ2
+    Config: HGQ2/DeepSets_HGQ2.yaml
+    Model: baseline_larger_HGQ2
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'True'
+    EMULATION_WRAPPER_VERSION: v2_0_0
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu

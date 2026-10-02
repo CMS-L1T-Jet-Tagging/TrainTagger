@@ -77,7 +77,7 @@ data:
   script:
   - source activate tagger
   - export EOS_MGM_URL=root://eoscms.cern.ch
-  - ls $EOS_DATA_DIR
+  - eos ls $EOS_DATA_DIR
   - python tagger/data/make_data.py --config tagger/data/configs/data-config-baseline-17.yaml
   - tar -cf training_data_$Inputs.tgz training_data
   - tar -cf signal_process_data.tgz signal_process_data

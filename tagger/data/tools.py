@@ -194,7 +194,6 @@ def _make_nn_inputs(data_split, tag, jet_fields, n_parts):
 
     return
 
-
 def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     chunk_info = {"chunk": chunk, "entries": entries, "file": outfile}

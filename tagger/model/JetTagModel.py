@@ -14,6 +14,7 @@ import yaml
 from schema import Schema, And, Use, Optional
 
 from tagger.plot.basic import loss_history
+from tagger.data.tools import constituents_mask
 
 class JetTagModel(ABC):
     """Parent Class for Jet Tag Models
@@ -42,6 +43,8 @@ class JetTagModel(ABC):
         self.training_config = {}
         self.firmware_config = {}
         self.inputs = {}
+        
+        self.results_dict = {}
 
         self.output_id_name = 'jet_id_output'
         self.output_pt_name = 'pT_output'
@@ -70,7 +73,7 @@ class JetTagModel(ABC):
         self.model_config = yaml_dict['model_config']
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
-        self.inputs = yaml_dict['inputs']
+        self.input_config = yaml_dict['input_config']
         if "firmware_config" in yaml_dict:
             self.firmware_config = yaml_dict['firmware_config']
 
@@ -113,6 +116,19 @@ class JetTagModel(ABC):
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)
+    
+    
+    def save_results_dict(self,out_dir : str = "None"):
+        if out_dir == "None":
+            out_dir = self.output_directory
+        with open(os.path.join(out_dir, "results_dict.json"), "w") as f:
+            json.dump(self.results_dict,f, indent=4)
+            
+    def load_results_dict(self,out_dir : str = "None"):
+        if out_dir == "None":
+            out_dir = self.output_directory
+        with open(os.path.join(out_dir, "results_dict.json"), "r") as f:
+                self.results_dict = json.load(f)
 
     def save_decorator(save_func):
         """Decorator used to include additional
@@ -142,6 +158,10 @@ class JetTagModel(ABC):
             # Dump class variables
             with open(os.path.join(out_dir, "class_labels.json"), "w") as f:
                 json.dump(self.class_labels, f, indent=4)
+            
+            with open(os.path.join(out_dir, "results_dict.json"), "w") as f:
+                json.dump(self.results_dict,f, indent=4)
+                
             # Do the rest of the saving, defined in child class
             save_func(self, out_dir)
 
@@ -175,6 +195,9 @@ class JetTagModel(ABC):
             # Dump class variables
             with open(os.path.join(out_dir, "extra_vars.json"), "r") as f:
                 self.extra_vars = json.load(f)
+            # Load results dict  
+            with open(os.path.join(out_dir, "results_dict.json"), "r") as f:
+                self.results_dict = json.load(f)
             # Do the rest of the loading, defined in child class
             load_func(self, out_dir)
 
@@ -204,6 +227,39 @@ class JetTagModel(ABC):
         # Plot history
         loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
 
+    def prepare_inputs(self, raw_inputs: dict) -> dict:
+        """Prepare the input dictionary for the model from a list of arrays
+
+        Args:
+            raw_inputs: Dictionary of all possible input arrays (currently requires basic_input, jet_pt and jet_eta)
+
+        Returns:
+            dict: Dictionary of required input arrays
+        """
+
+        # get relevant feature indices
+        pt_rel_idx = self.particle_input_vars.index("pt_rel")
+
+        # build all possible inputs, add here if ever in need of new ones
+        input_dict = {
+            'basic_input': raw_inputs['basic_input'],
+            'basic_mask': constituents_mask(raw_inputs['basic_input'], 10),
+            'pt_mask': constituents_mask(raw_inputs['basic_input'], 10)[:, :, 0],
+            'constituent_fraction': raw_inputs['basic_input'][:, :, pt_rel_idx],
+        }
+
+        # remove unused inputs
+        for key in list(input_dict.keys()):
+            if key not in self.input_config['basic_features']:
+                del input_dict[key]
+
+        # add jet features if specified in model config
+        if len(self.input_config['jet_features']) > 0:
+            input_dict['jet_features'] = raw_inputs['jet_features']
+
+        input_shapes = {k: v.shape[1:] for k, v in input_dict.items()}
+
+        return input_dict, input_shapes
 
 class JetModelFactory:
     """The factory class for creating Jet Tag Models"""

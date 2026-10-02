@@ -1,0 +1,55 @@
+model: DeepSetModelHGQ2
+run_config :
+  verbose : 2
+  debug : True
+  num_threads : 24
+
+model_config :
+  name : DeepSets_HGQ2
+  conv1d_layers : [10,10]
+  conv1d_parallelisation_factor : [16,16]
+  classification_layers : [32,16]
+  classification_parallelisation_factor : [32,16]
+  regression_layers : [10]
+  regression_parallelisation_factor : [10]
+  beta: 1.1e-10
+
+quantization_config:
+  pt_output_quantization : [16,6]
+
+input_config:
+  # Specify inputs for the model here, order is defined in data/puppicand.yaml. New inputs should always
+  # be added here and in puppicands yaml
+  basic_input_config: ["pt", "pt_rel", "pt_log", "deta", "dphi", "mass", "isPhoton", "isElectronPlus",
+    "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
+    "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality"] # features to use in the basic_input
+  basic_features: ['basic_input']
+  jet_features: [] # will later be concatenated into one jet features input
+
+
+training_config :
+  weight_method: ["onlyclass", "onlyclass"]
+  epochs : 20
+  batch_size : 1024
+  learning_rate : 0.003
+  validation_split : 0.1
+
+  loss_weights : [1, 1] # class, regression: weights to blance losses, must be tested empirically for each model
+  huber_weights : [0, 0] # pu, alpha: weights for pileup and undestimation punishment, pu should always be 0 for models wo pileup category
+  huber_delta: 1. # delta for huber loss, switch between quadratic and linear loss
+
+  target_ebops : 1000000
+
+  pileup: False
+
+
+firmware_config:
+  # input precisions dict keys must macth the input layer name in model build method
+  input_precision: {'basic_input': 'ap_fixed<24,12,AP_RND,AP_SAT>'}
+  class_precision: 'ap_ufixed<24,12,AP_RND,AP_SAT>'
+  reg_precision: 'ap_fixed<16,6,AP_RND,AP_SAT>'
+
+  clock_period : 2.5
+  fpga_part : 'xcvu13p-flga2577-2-e'
+
+  project_name: 'L1TSC4NGJetModel'

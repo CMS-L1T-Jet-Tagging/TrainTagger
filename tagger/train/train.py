@@ -129,8 +129,8 @@ def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, jet_vars, extra_vars = load_data("training_data/", percent, model)
-    input_vars = [var for var in input_vars if var in model.inputs['basic_input_config']] # keep only the input variables that are in the model's input config
-    jet_vars = [var for var in jet_vars if var in model.inputs['jet_features']]
+    input_vars = [var for var in input_vars if var in model.input_config['basic_input_config']] # keep only the input variables that are in the model's input config
+    jet_vars = [var for var in jet_vars if var in model.input_config['jet_features']]
     model.set_labels(
         input_vars,
         jet_vars,
@@ -171,6 +171,19 @@ def train(model, out_dir, percent):
 
     # Get input shape and inputs dict
     train_dict, input_shapes = model.prepare_inputs(raw_inputs_train)
+    
+    print("Total jets for training: ", particle_features_train.shape[0] )
+    
+    model.results_dict['num_jets'] = particle_features_train.shape[0]
+    model.results_dict['num_candidates_per_jet'] = input_shapes['basic_input'][0]
+    model.results_dict['num_candidate_input_features'] = input_shapes['basic_input'][1]
+    try:
+        model.results_dict['num_jet_input_features'] = input_shapes['jet_features'][0]
+    except:
+        pass
+    model.results_dict['num_class_outputs'] = y_train.shape[1:]
+    model.results_dict['num_regression_outputs'] = pt_target_train.shape[1:]
+    
     output_shape = y_train.shape[1:]
 
     model.build_model(input_shapes, output_shape)
@@ -212,7 +225,7 @@ if __name__ == "__main__":
     if args.plot_basic:
         # All the basic plots!
         model = fromFolder(args.output)
-        results = basic(model, args.signal_processes)
+        basic(model, args.signal_processes)
 
     else:
         model = fromYaml(args.yaml_config, args.output)

@@ -45,8 +45,8 @@ def loss_history(plot_dir, loss_names, history):
 
         fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
         hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
-        ax.plot(history.history[metric], label='Train Loss', linewidth=style.LINEWIDTH)
-        ax.plot(history.history['val_' + metric], label='Validation Loss', linewidth=style.LINEWIDTH)
+        ax.plot(history[metric], label='Train Loss', linewidth=style.LINEWIDTH)
+        ax.plot(history['val_' + metric], label='Validation Loss', linewidth=style.LINEWIDTH)
         ax.grid(True)
         # ax.set_ylabel('Loss')
         ax.set_ylabel('Loss ' + metric)
@@ -97,9 +97,14 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
         (r'$\tau_h^{\pm}$ vs Electrons', electron_indices),
     ]:
         y_true, y_score = compute_roc_inputs(y_pred, y_test, tau_indices, bkg_indices)
-        fpr, tpr, _ = roc_curve(y_true, y_score)
-        roc_auc = auc(fpr, tpr)
-        roc_data.append((tpr, fpr, roc_auc, label))
+        mask = ~(np.isnan(y_true) | np.isnan(y_score))
+        y_true = y_true[mask]
+        y_score = y_score[mask]
+        
+        if len(y_true) > 0:
+            fpr, tpr, _ = roc_curve(y_true, y_score)
+            roc_auc = auc(fpr, tpr)
+            roc_data.append((tpr, fpr, roc_auc, label))
 
     # Plot all ROC curves in one figure
     plt.figure(figsize=style.FIGURE_SIZE)
@@ -122,11 +127,10 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     plt.close()
 
 
-def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=None):
+def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, results_dict, signal_proc=None):
     """
     Generate ROC curves comparing between two specific class labels.
     """
-
     save_dir = os.path.join(plot_dir, 'roc_binary')
     os.makedirs(save_dir, exist_ok=True)
 
@@ -145,43 +149,54 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     # Combine the labels and scores for binary classification
     selection = (y_true1 == 1) | (y_true2 == 1)
     y_true_binary = y_true1[selection]
-    # Normalized probabilities
-    y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
+    if (len(y_true_binary) > 0 and len(y_score1[selection]) > 0 and len(y_score2[selection]) > 0):
+    
+        # Normalized probabilities
+        y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
 
-    # Compute FPR, TPR, and AUC
-    fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
-    roc_auc = auc(fpr, tpr)
+        mask = ~(np.isnan(y_true_binary) | np.isnan(y_score_binary))
+        y_true_binary = y_true_binary[mask]
+        y_score_binary = y_score_binary[mask]
+        # Compute FPR, TPR, and AUC
+        if len(y_score_binary) > 0:
+            fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
+            idx = np.argmin(np.abs(tpr - 0.5))
+            roc_auc = auc(fpr, tpr)
+            if signal_proc == None:
+                print(f"FPR at TPR for {class_pair[0]} vs {class_pair[1]} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")
+                results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_FPR"] = fpr[idx]
+                results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_AUC"] = roc_auc
 
-    # Plot the ROC curve
-    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
-    ax.plot(
-        tpr,
-        fpr,
-        label=f'{style.CLASS_LABEL_STYLE[class_pair[0]]} vs {style.CLASS_LABEL_STYLE[class_pair[1]]} (AUC = {roc_auc:.2f})',
-        color='blue',
-        linewidth=5,
-    )
-    ax.grid(True)
-    ax.set_ylabel('Mistag Rate')
-    ax.set_xlabel('Signal Efficiency')
-    leg = ax.legend(loc='lower right', fontsize=style.SMALL_SIZE + 3, title=signal_proc)
-    leg._legend_box.align = "left"
-    ax.set_yscale('log')
-    ax.set_ylim([1e-3, 1.1])
+            # Plot the ROC curve
+            fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+            hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+            ax.plot(
+                tpr,
+                fpr,
+                label=f'{style.CLASS_LABEL_STYLE[class_pair[0]]} vs {style.CLASS_LABEL_STYLE[class_pair[1]]} (AUC = {roc_auc:.2f})',
+                color='blue',
+                linewidth=5,
+            )
+            ax.grid(True)
+            ax.set_ylabel('Mistag Rate')
+            ax.set_xlabel('Signal Efficiency')
+            leg = ax.legend(loc='lower right', fontsize=style.SMALL_SIZE + 3, title=signal_proc)
+            leg._legend_box.align = "left"
+            ax.set_yscale('log')
+            ax.set_ylim([1e-3, 1.1])
 
-    # Save the plot
-    save_path = os.path.join(save_dir, f"ROC_{class_pair[0]}_vs_{class_pair[1]}")
-    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
-    plt.savefig(f"{save_path}.png", bbox_inches='tight')
-    plt.close()
+            # Save the plot
+            save_path = os.path.join(save_dir, f"ROC_{class_pair[0]}_vs_{class_pair[1]}")
+            plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+            plt.savefig(f"{save_path}.png", bbox_inches='tight')
+            plt.close()
 
 
-def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
+def ROC(y_pred, y_test, class_labels, plot_dir, results_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
     colormap = matplotlib.colormaps.get_cmap('Set1')
-
+    ROC_dict={}
     # Create a plot for ROC curves
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
@@ -194,8 +209,13 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
 
         # Compute FPR, TPR, and AUC
         fpr, tpr, _ = roc_curve(y_true, y_score)
+        idx = np.argmin(np.abs(tpr - 0.5))
         roc_auc = auc(fpr, tpr)
 
+        print(f"FPR at TPR for {class_label} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")
+        results_dict[f"{class_label}_FPR"] = fpr[idx]
+        results_dict[f"{class_label}_AUC"] = roc_auc
+        
         ROC_dict[class_label] = roc_auc
         # Plot the ROC curve for the current class
         ax.plot(
@@ -714,61 +734,54 @@ def shapPlot(shap_values, feature_names, class_names):
     )
     ax.set_xlabel("mean (|Shapley value|)", fontsize=30)
     plt.tight_layout()
+    
+def get_input_names(model):
+        """Names of a functional model's inputs, in model.inputs order (Keras 2 or 3)."""
+        names = getattr(model, "input_names", None)   # Keras 2
+        if names:
+            return list(names)
+        out = []                                       # Keras 3
+        for t in model.inputs:
+            kh = t._keras_history
+            op = getattr(kh, "operation", None) or getattr(kh, "layer", None)
+            out.append(op.name)
+        return out
+
+def _shap_branch(branch_model, test_dict, particle_vars, jet_vars, njets=10):
+    names = get_input_names(branch_model)
+    inputs = [test_dict[n][:njets] for n in names]
+
+    explainer = shap.GradientExplainer(branch_model, inputs if len(inputs) > 1 else inputs[0])
+    sv = explainer.shap_values(inputs if len(inputs) > 1 else inputs[0])
+
+    if len(names) > 1:
+        sv_basic = sv[names.index('basic_input')]
+    else:
+        sv_basic = sv
+    sv_basic = np.sum(sv_basic, axis=1)
+
+    if 'jet_features' in names:
+        sv_jet = sv[names.index('jet_features')]
+        return np.concatenate((sv_basic, sv_jet), axis=1), particle_vars + jet_vars
+    return sv_basic, particle_vars
+
 
 def plot_shaply(model, test_dict, class_labels, plot_dir):
     njets = 10
-    model_class = model.get_branch_model('jet_id_output')
-    model_reg = model.get_branch_model('pT_output')
-    list_inp_class = [test_dict[inp][:njets] for inp in model_class.input_names]
-    list_inp_reg = [test_dict[inp][:njets] for inp in model_reg.input_names]
-    for explainer, name in [
-        (shap.GradientExplainer(model_class, list_inp_class), "GradientExplainer"),
-    ]:
-        print("... {0}: explainer.shap_values(X)".format(name))
-        n_class_inp = len(list_inp_class)
-        list_inp_class = list_inp_class[0] if n_class_inp == 1 else list_inp_class
-        shap_values_basic = explainer.shap_values(list_inp_class)
-        if n_class_inp > 1:
-            shap_values_basic = shap_values_basic[model_class.input_names.index('basic_input')]
-        shap_values_basic = np.sum(shap_values_basic, axis=1)
-        if 'jet_features' in model_class.input_names:
-            shap_values_jet = explainer.shap_values(list_inp_class)[model_class.input_names.index('jet_features')]
-            shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
-            feature_names = model.particle_input_vars + model.jet_input_vars
-        else:
-            shap_values = shap_values_basic
-            feature_names = model.particle_input_vars
-        print("... shap summary_plot classification")
+    jobs = [
+        ('jet_id_output', list(class_labels.keys()), "class"),
+        ('pT_output', ["Regression"], "reg"),
+    ]
+    for output_name, labels, tag in jobs:
+        branch = model.get_branch_model(output_name)
+        shap_values, feature_names = _shap_branch(
+            branch, test_dict, model.particle_input_vars, model.jet_input_vars, njets
+        )
+        print(f"... shap summary_plot {tag}")
         plt.clf()
-        labels = list(class_labels.keys())
-        new = np.transpose(shap_values, (2, 0, 1))
-        shapPlot(new, feature_names, labels)
-        plt.savefig(plot_dir + "/shap_summary_class.pdf", bbox_inches='tight')
-        plt.savefig(plot_dir + "/shap_summary_class.png", bbox_inches='tight')
-    for explainer, name in [
-        (shap.GradientExplainer(model_reg, list_inp_reg), "GradientExplainer"),
-    ]:
-        print("... {0}: explainer.shap_values(X)".format(name))
-        n_reg_inp = len(list_inp_reg)
-        list_inp_reg = list_inp_reg[0] if n_reg_inp == 1 else list_inp_reg
-        shap_values_basic = explainer.shap_values(list_inp_reg)
-        if n_reg_inp > 1:
-            shap_values_basic = shap_values_basic[model_reg.input_names.index('basic_input')]
-        shap_values_basic = np.sum(shap_values_basic, axis=1)
-        if 'jet_features' in model_reg.input_names:
-            shap_values_jet = explainer.shap_values(list_inp_reg)[model_reg.input_names.index('jet_features')]
-            shap_values = np.concatenate((shap_values_basic, shap_values_jet), axis=1)
-            feature_names = model.particle_input_vars + model.inputs['jet_features']
-        else:
-            shap_values = shap_values_basic
-            feature_names = model.particle_input_vars
-        print("... shap summary_plot regression")
-        plt.clf()
-        labels = ["Regression"]
-        new = np.transpose(shap_values, (2, 0, 1))
-        shapPlot(new, feature_names, labels)
-        plt.savefig(plot_dir + "/shap_summary_reg.pdf", bbox_inches='tight')
-        plt.savefig(plot_dir + "/shap_summary_reg.png", bbox_inches='tight')
+        shapPlot(np.transpose(shap_values, (2, 0, 1)), feature_names, labels)
+        plt.savefig(f"{plot_dir}/shap_summary_{tag}.pdf", bbox_inches='tight')
+        plt.savefig(f"{plot_dir}/shap_summary_{tag}.png", bbox_inches='tight')
 
 def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
 
@@ -887,10 +900,18 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
     # Collect all ROC data
     roc_data = []
     for label, bkg_idx in targets.items():
+
         y_true, y_score = compute_roc_inputs(light_idx, bkg_idx)
-        fpr, tpr, _ = roc_curve(y_true, y_score)
-        roc_auc = auc(fpr, tpr)
-        roc_data.append((tpr, fpr, roc_auc, label))
+        
+        mask = ~(np.isnan(y_true) | np.isnan(y_score))
+        y_true = y_true[mask]
+        y_score = y_score[mask]
+        
+        if len(y_score) > 0:
+
+            fpr, tpr, _ = roc_curve(y_true, y_score)
+            roc_auc = auc(fpr, tpr)
+            roc_data.append((tpr, fpr, roc_auc, label))
 
     # Plot all in one
     plt.figure(figsize=style.FIGURE_SIZE)
@@ -940,7 +961,6 @@ def basic(model, signal_dirs):
     Plot the basic ROCs for different classes. Does not reflect L1 rate
     Returns a dictionary of ROCs for each class
     """
-
     plot_dir = os.path.join(model.output_directory, "plots/training")
 
     ROC_dict = {class_label: 0 for class_label in model.class_labels}
@@ -951,11 +971,11 @@ def basic(model, signal_dirs):
     y_test = np.load(f"{model.output_directory}/testing_data/y_test.npz")["label"]
     truth_pt_test = np.load(f"{model.output_directory}/testing_data/truth_pt_test.npz")["truth_pt"]
     reco_pt_test = np.load(f"{model.output_directory}/testing_data/reco_pt_test.npz")["reco_pt"]
-    model_outputs = model.jet_model.predict(test_dict)
+    model_outputs = model.predict(test_dict)
 
     # Get classification outputs
     y_pred = model_outputs[0]
-    pt_ratio = model_outputs[1][:, 0]
+    pt_ratio = model_outputs[1]
 
     # Plot SHAP values
     plot_shaply(model, test_dict, model.class_labels, plot_dir)
@@ -968,7 +988,7 @@ def basic(model, signal_dirs):
         hist_response(pt_ratio, y_test, model.class_labels, plot_dir)
 
     # Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
+    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, model.results_dict)
     class_pairs = []
     # Generate all possible pairs of classes
     for i in model.class_labels.keys():
@@ -997,10 +1017,10 @@ def basic(model, signal_dirs):
         # Plot the binary ROCs for each class pair
         for class_pair in class_pairs:
             binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
+            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, model.results_dict,process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_data[2], model.class_labels, binary_dir, class_pair, process_label)
+                ROC_binary(sample_preds, sample_data[2], model.class_labels, binary_dir, class_pair, model.results_dict,process_label)
 
         # Add light vs b/charm/gluon combined plot
         binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
@@ -1026,5 +1046,6 @@ def basic(model, signal_dirs):
 
     # Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
+    
+    model.save_results_dict()
 
-    return ROC_dict

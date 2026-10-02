@@ -1,0 +1,48 @@
+input:
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/DYToLL_M10To50_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/DYToLL_M50_PTLL200To400_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/DYToLL_M50_PTLL400To600_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/DYToLL_M50_PTLL600ToInf_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/DYToLL_M50_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/GluGluHHTo2B2Tau_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/GluGluHHTo4B_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/GluGluHToGG_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/GluGluHToTauTau_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt120To170_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt15To3000_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt170To300_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt20To30_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt300To470_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt30To50_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt470To600_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt50To80_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt600ToInf_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/QCD_Pt80To120_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/TTHto2B_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/TTHto2C_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/TT_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/TTToSemileptonic_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/VBFHToBB_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/VBFHToCC_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/VBFHToCC_ext1_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/VBFHToInvisible_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/VBFHToInvisible_ext1_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/VBFHToTauTau_ext_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/VBFHToTauTau_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/WJetsToLNu_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/WplusH_Hto2B_WtoLNu_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/WplusH_Hto2C_WtoLNu_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/XtoHH_MX_1000To4000_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/XtoHH_MX_140To780_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/ZH_Hto2C_Zto2L_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/ZprimeToTauTau_M1500_PU200.root
+  - /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/ZprimeToTauTau_M500_PU200.root
+
+output: training_data/
+tree: outnano/Jets
+step_size: 100MB
+ratio: 1.0
+num_workers: 8
+extras: extra_fields
+signal_processes: [{input: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/TT_PU200.root , 
+                    output: signal_process_data/TT_PU200}]

@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 import awkward as ak
-from coffea.nanoevents.methods import vector
 
 from tagger.plot import style
 
@@ -194,4 +193,6 @@ def x_vs_y(x, y, apply_light=True):
         return x
 
 def to_coffea(array):
+    from coffea.nanoevents.methods import vector
+
     return ak.Array(array, behavior=vector.behavior, with_name="PtEtaPhiMLorentzVector")

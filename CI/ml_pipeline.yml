@@ -11,6 +11,7 @@ stages:
   - emulate
   - emulation-evaluate
   - profile
+  - reports
   - run_processes
   - run_TT_PU200
   - run_VBFHToBB_PU200
@@ -49,9 +50,10 @@ variables:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     TAG: 'v1.0.1'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 .template:
-  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  image: $IMAGE
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -67,20 +69,15 @@ data:
   extends:
     - .template
   stage: data
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   rules:
    - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
        - tagger/data/**
      when: manual
   script:
   - source activate tagger
-  - mkdir data
-  - cd data
   - export EOS_MGM_URL=root://eoscms.cern.ch
-  - eos cp $EOS_DATA_DIR/${TRAIN} .
-  - eos cp $EOS_DATA_DIR/${SIGNAL}.root .
-  - cd ..
-  - python tagger/data/make_data.py -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
+  - python tagger/data/make_data.py --config tagger/data/configs/data-config-baseline-17.yaml
   - tar -cf training_data_$Inputs.tgz training_data
   - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
@@ -92,7 +89,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   needs:
     - job : data
       optional: true
@@ -112,7 +109,7 @@ evaluate:
   extends:
     - .template
   stage: evaluate
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   script:
   - nproc
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
@@ -154,7 +151,7 @@ evaluate:
     expire_in: 7 days
 
 hls4ml:
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   extends:
     - .template
   rules:
@@ -200,7 +197,7 @@ emulation-evaluate:
   extends:
     - .template
   stage: emulation-evaluate
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   rules:
     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
   needs: [emulate,train,hls4ml]
@@ -226,7 +223,7 @@ profile:
   extends:
     - .template
   stage: profile
-  tags: [cb_vivado]
+  tags: [cern-nextgen-gpu]
   needs: [emulate,train,hls4ml,synth]
   dependencies: [emulate,train,hls4ml,synth]
   rules:

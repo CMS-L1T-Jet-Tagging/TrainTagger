@@ -10,7 +10,8 @@ import shutil
 
 import numpy as np
 import yaml
-from qkeras.qlayers import QDense
+
+from math import cos, pi
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 
@@ -71,3 +72,24 @@ def fromFolder(save_path: str, newoutput_dir: str = "None") -> JetTagModel:
     model = fromYaml(yaml_path, folder, recreate=recreate)
     model.load(folder)
     return model
+
+def log_beta_schedule(epoch, max_epochs=100):
+    log_beta_start = np.log10(1e-7)
+    log_beta_end = np.log10(1e-4)
+    log_beta = log_beta_start + (log_beta_end - log_beta_start) * (epoch / max_epochs)
+    return 10 ** log_beta
+
+def cosine_decay_restarts(global_step,initial_learning_rate, max_epochs):
+    n_cycle = 1
+    cycle_step = global_step
+    cycle_len = max_epochs
+    while cycle_step >= cycle_len:
+        cycle_step -= cycle_len
+        cycle_len *= 1
+        n_cycle += 1
+
+    cycle_t = min(cycle_step / (cycle_len - 10), 1)
+    lr = 1.e-6 + 0.5 * (initial_learning_rate - 1.e-6) * (
+                1 + cos(pi * cycle_t)
+            ) * 1 ** max(n_cycle - 1, 0)
+    return lr

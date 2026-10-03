@@ -57,6 +57,7 @@ variables:
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - source setup-ci.sh
     - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
@@ -70,10 +71,10 @@ data:
     - .template
   stage: data
   tags: [cern-nextgen-gpu]
-  # rules:
-  #  - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-  #      - tagger/data/**
-  #    when: manual
+  rules:
+   - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+       - tagger/data/**
+     when: manual
   script:
   - source activate tagger
   - export EOS_MGM_URL=root://eoscms.cern.ch

@@ -32,7 +32,7 @@ include:
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 # IMAGE = Which docker image to run the pipelines in. mamba_jettagger:latest for qkeras, mamba_jettagger:latest-gpu for keras v3
 
-DeepSet:QKeras:
+QKeras:DeepSet:
   extends: .ml_pipeline
   variables:
     Name: DeepSetQKeras
@@ -45,12 +45,12 @@ DeepSet:QKeras:
     EMULATION_WRAPPER_VERSION: v1_0_2
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
-DeepSet:HGQ2:
+HGQ2:DeepSet:
   extends: .ml_pipeline
   variables:
     Name: DeepSetHGQ2
     Config: HGQ2/DeepSets_HGQ2.yaml
-    Model: baseline_larger_HGQ2
+    Model: DeepSetsHGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'True'

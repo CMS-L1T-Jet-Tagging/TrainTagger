@@ -47,6 +47,7 @@ variables:
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     FASTPUPPI_VERSION: 'CMSSW_17_0_0_pre2_NGJet_plus_correlator'
     RERUN_ON_TAG: 'False'
+    RERUN_ON_OLDTRAINING: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     TAG: 'v1.0.1'

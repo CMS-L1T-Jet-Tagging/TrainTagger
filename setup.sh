@@ -63,9 +63,10 @@ export PYTHONPATH=$PYTHONPATH:$PWD
 export CI_COMMIT_REF_NAME=local
 
 # Set default versions of command line variables for local running
-export Name=new_samples_baseline_5param_extended_trk
+export Name=DeepSetHGQ2
+export Config=HGQ2/DeepSets_HGQ2.yaml
 export Inputs=baseline
-export Model=baseline
+export Model=DeepSetsHGQ2
 export N_PARAMS=5
 export TRACK_ALGO=extended
 export TRAIN=All200.root

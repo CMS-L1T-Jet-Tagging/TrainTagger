@@ -58,7 +58,7 @@ variables:
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-    - source setup-ci.sh
+    - source setup-ci.sh TAGGER_VERIFY=1 
     - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
@@ -94,7 +94,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-gpu]
+  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true

@@ -101,10 +101,9 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
         y_true = y_true[mask]
         y_score = y_score[mask]
         
-        if len(y_true) > 0:
-            fpr, tpr, _ = roc_curve(y_true, y_score)
-            roc_auc = auc(fpr, tpr)
-            roc_data.append((tpr, fpr, roc_auc, label))
+        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc_auc = auc(fpr, tpr)
+        roc_data.append((tpr, fpr, roc_auc, label))
 
     # Plot all ROC curves in one figure
     plt.figure(figsize=style.FIGURE_SIZE)
@@ -149,47 +148,45 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, results_dict,
     # Combine the labels and scores for binary classification
     selection = (y_true1 == 1) | (y_true2 == 1)
     y_true_binary = y_true1[selection]
-    if (len(y_true_binary) > 0 and len(y_score1[selection]) > 0 and len(y_score2[selection]) > 0):
     
-        # Normalized probabilities
-        y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
+    # Normalized probabilities
+    y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
 
-        mask = ~(np.isnan(y_true_binary) | np.isnan(y_score_binary))
-        y_true_binary = y_true_binary[mask]
-        y_score_binary = y_score_binary[mask]
-        # Compute FPR, TPR, and AUC
-        if len(y_score_binary) > 0:
-            fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
-            idx = np.argmin(np.abs(tpr - 0.5))
-            roc_auc = auc(fpr, tpr)
-            if signal_proc == None:
-                print(f"FPR at TPR for {class_pair[0]} vs {class_pair[1]} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")
-                results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_FPR"] = fpr[idx]
-                results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_AUC"] = roc_auc
+    mask = ~(np.isnan(y_true_binary) | np.isnan(y_score_binary))
+    y_true_binary = y_true_binary[mask]
+    y_score_binary = y_score_binary[mask]
+    # Compute FPR, TPR, and AUC
+    fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
+    idx = np.argmin(np.abs(tpr - 0.5))
+    roc_auc = auc(fpr, tpr)
+    if signal_proc == None:
+        print(f"FPR at TPR for {class_pair[0]} vs {class_pair[1]} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")
+        results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_FPR"] = fpr[idx]
+        results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_AUC"] = roc_auc
 
             # Plot the ROC curve
-            fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
-            hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
-            ax.plot(
+    fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
+    hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+    ax.plot(
                 tpr,
                 fpr,
                 label=f'{style.CLASS_LABEL_STYLE[class_pair[0]]} vs {style.CLASS_LABEL_STYLE[class_pair[1]]} (AUC = {roc_auc:.2f})',
                 color='blue',
                 linewidth=5,
-            )
-            ax.grid(True)
-            ax.set_ylabel('Mistag Rate')
-            ax.set_xlabel('Signal Efficiency')
-            leg = ax.legend(loc='lower right', fontsize=style.SMALL_SIZE + 3, title=signal_proc)
-            leg._legend_box.align = "left"
-            ax.set_yscale('log')
-            ax.set_ylim([1e-3, 1.1])
+    )
+    ax.grid(True)
+    ax.set_ylabel('Mistag Rate')
+    ax.set_xlabel('Signal Efficiency')
+    leg = ax.legend(loc='lower right', fontsize=style.SMALL_SIZE + 3, title=signal_proc)
+    leg._legend_box.align = "left"
+    ax.set_yscale('log')
+    ax.set_ylim([1e-3, 1.1])
 
-            # Save the plot
-            save_path = os.path.join(save_dir, f"ROC_{class_pair[0]}_vs_{class_pair[1]}")
-            plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
-            plt.savefig(f"{save_path}.png", bbox_inches='tight')
-            plt.close()
+    # Save the plot
+    save_path = os.path.join(save_dir, f"ROC_{class_pair[0]}_vs_{class_pair[1]}")
+    plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+    plt.savefig(f"{save_path}.png", bbox_inches='tight')
+    plt.close()
 
 
 def ROC(y_pred, y_test, class_labels, plot_dir, results_dict):
@@ -907,11 +904,9 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
         y_true = y_true[mask]
         y_score = y_score[mask]
         
-        if len(y_score) > 0:
-
-            fpr, tpr, _ = roc_curve(y_true, y_score)
-            roc_auc = auc(fpr, tpr)
-            roc_data.append((tpr, fpr, roc_auc, label))
+        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc_auc = auc(fpr, tpr)
+        roc_data.append((tpr, fpr, roc_auc, label))
 
     # Plot all in one
     plt.figure(figsize=style.FIGURE_SIZE)
@@ -1009,7 +1004,7 @@ def basic(model, signal_dirs):
                 'basic_input': sample_data[0],
                 'jet_features': sample_data[1]
             }
-            sample_preds = model.jet_model.predict(model.prepare_inputs(sample_raw_inputs)[0])[0]
+            sample_preds,_ = model.predict(sample_raw_inputs,prepare=True)
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = style.PROCESS_STYLE[signal_dirs[i]]
             os.makedirs(binary_dir, exist_ok=True)

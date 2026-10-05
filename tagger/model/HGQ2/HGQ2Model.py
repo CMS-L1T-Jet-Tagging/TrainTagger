@@ -65,8 +65,12 @@ class HGQ2Model(JetTagModel):
         # Load model
         self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
 
-    def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
-        model_outputs = self.jet_model.predict(X_test['basic_input'])
+    def predict(self, X_test, prepare=False) -> tuple:
+        if prepare:
+            prepared_inputs = self.prepare_inputs(X_test)[0]
+        else:
+            prepared_inputs = X_test
+        model_outputs = self.jet_model.predict(prepared_inputs)
         class_predictions = scipy.special.softmax(model_outputs[0],axis=1)
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)

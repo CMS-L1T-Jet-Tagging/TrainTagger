@@ -103,7 +103,7 @@ class JetTagModel(ABC):
         Must be written for child class if you want to run the synthesis steps
         """
 
-    def predict(self, particle_features_test: npt.NDArray[np.float64]) -> tuple:
+    def predict(self, X_test ,prepare=False) -> tuple:
         """Predict method for model
 
         Args:
@@ -112,7 +112,13 @@ class JetTagModel(ABC):
         Returns:
             tuple: (class_predictions , pt_ratio_predictions)
         """
-        model_outputs = self.jet_model.predict(particle_features_test)
+        
+        if prepare:
+            prepared_inputs = self.prepare_inputs(X_test)[0]
+        else:
+            prepared_inputs = X_test
+        
+        model_outputs = self.jet_model.predict(prepared_inputs)
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)

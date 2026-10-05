@@ -12,8 +12,10 @@ import numpy.typing as npt
 import tensorflow as tf
 from schema import Schema, And, Use, Optional
 
+
+from tagger.model.common import initialise_tensorflow
 from tagger.model.common_qkeras import choose_aggregator
-from tagger.model.common_tensorflow import initialise_tensorflow
+ 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.QKeras.QKerasModel import QKerasModel
 

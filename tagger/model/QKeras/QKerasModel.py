@@ -21,7 +21,8 @@ from qkeras.utils import load_qmodel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras import Model
 
-from tagger.model.common import huber_loss, AAtt, AttentionPooling, choose_aggregator
+from tagger.model.common import huber_loss
+from tagger.model.common_qkeras import AAtt, AttentionPooling   
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.data.tools import constituents_mask
 
@@ -155,7 +156,7 @@ class QKerasModel(JetTagModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        self.history = self.jet_model.fit(
+        history = self.jet_model.fit(
             inputs_dict,
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
@@ -169,6 +170,12 @@ class QKerasModel(JetTagModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
+        
+        self.history = history.history
+        self.results_dict['best_loss'] = np.min(history.history['loss'])
+        self.results_dict['best_val_loss'] = np.min(history.history['val_loss'])
+        self.results_dict['best_jet_id_loss'] = np.min(history.history[self.loss_name + self.output_id_name+'_loss'])
+        self.results_dict['best_pT_output_loss'] = np.min(history.history[self.loss_name + self.output_pt_name+'_loss'])
 
 
     def get_keras_trace_model(self):

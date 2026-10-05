@@ -20,8 +20,7 @@ from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.HGQ2.HGQ2Model import HGQ2Model
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.common import log_beta_schedule,cosine_decay_restarts
-from tagger.model.common_tensorflow import initialise_tensorflow, huber_loss
+from tagger.model.common import initialise_tensorflow
 
 @JetModelFactory.register('DeepSetModelHGQ2')
 class DeepSetModelHGQ2(HGQ2Model):

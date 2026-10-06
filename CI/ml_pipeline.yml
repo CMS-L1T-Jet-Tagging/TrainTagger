@@ -166,11 +166,6 @@ hls4ml:
     - job : train
       optional: true
   script:
-  - pip uninstall hls4ml
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
-  - cd hls4ml
-  - pip install .
-  - cd ..
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger

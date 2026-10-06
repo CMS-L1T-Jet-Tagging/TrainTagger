@@ -103,7 +103,7 @@ class JetTagModel(ABC):
         Must be written for child class if you want to run the synthesis steps
         """
 
-    def predict(self, X_test ,prepare=False) -> tuple:
+    def predict(self, X_test) -> tuple:
         """Predict method for model
 
         Args:
@@ -113,7 +113,7 @@ class JetTagModel(ABC):
             tuple: (class_predictions , pt_ratio_predictions)
         """
         
-        if prepare:
+        if type(X_test) == dict:
             prepared_inputs = self.prepare_inputs(X_test)[0]
         else:
             prepared_inputs = X_test

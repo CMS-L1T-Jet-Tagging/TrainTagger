@@ -65,8 +65,8 @@ class HGQ2Model(JetTagModel):
         # Load model
         self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
 
-    def predict(self, X_test, prepare=False) -> tuple:
-        if prepare:
+    def predict(self, X_test) -> tuple:
+        if type(X_test) == dict:
             prepared_inputs = self.prepare_inputs(X_test)[0]
         else:
             prepared_inputs = X_test

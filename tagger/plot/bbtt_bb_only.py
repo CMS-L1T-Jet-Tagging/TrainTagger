@@ -74,7 +74,7 @@ def nn_bscore_sum(model, basic_inputs, jet_pt, jet_pt_log, jet_eta, jet_eta_hw, 
 
 
     #Get the nn outputs
-    class_outputs, regression_outputs = model.predict(model.prepare_inputs(model_inputs)[0])
+    class_outputs, regression_outputs = model.predict(model_inputs)
     class_outputs, regression_outputs = ak.unflatten(class_outputs, og_shape), ak.unflatten(regression_outputs, og_shape)
 
     # Mask unwanted jets (i.e jets < 15 Gev and |eta| > 2.4), and set all scores to 0

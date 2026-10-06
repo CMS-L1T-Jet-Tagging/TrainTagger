@@ -324,25 +324,33 @@ def extract_nn_inputs(data, input_vars, jet_vars, n_parts=16, n_entries=None):
 def group_id_values(event_id, *arrays, num_elements=2):
     '''
     Group values according to event id.
-    Filter out events that has less than num_elements
+    Filter out events that have fewer than num_elements entries.
+    Zero-length arrays are passed through unchanged.
     '''
+    event_id = ak.to_numpy(event_id)
 
-    # Use ak.argsort to sort based on event_id
-    sorted_indices = ak.argsort(event_id)
-    sorted_event_id = event_id[sorted_indices]
+    order = np.argsort(event_id, kind="stable")
+    sorted_id = event_id[order]
 
-    # Find unique event_ids and counts manually
-    unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
+    _, counts = np.unique(sorted_id, return_counts=True)
 
-    # Use ak.unflatten to group the arrays by counts
-    grouped_id = ak.unflatten(sorted_event_id, counts)
-    grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
+    keep_event = counts >= num_elements
+    keep_entry = np.repeat(keep_event, counts)
 
-    # Filter out groups that don't have at least num_elements elements
-    mask = ak.num(grouped_id) >= num_elements
-    filtered_grouped_arrays = [arr[mask] for arr in grouped_arrays]
+    idx = order[keep_entry]
+    counts = counts[keep_event]
 
-    return grouped_id[mask], filtered_grouped_arrays
+    grouped_id = ak.unflatten(event_id[idx], counts)
+
+    grouped_arrays = []
+    for arr in arrays:
+        if len(arr) == 0:
+            # Nothing to sort/filter/group: keep it as an empty array
+            grouped_arrays.append(arr)
+        else:
+            grouped_arrays.append(ak.unflatten(arr[idx], counts))
+
+    return grouped_id, grouped_arrays
 
 
 def to_ML(data, class_labels):

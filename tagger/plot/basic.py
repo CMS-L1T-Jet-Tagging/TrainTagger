@@ -1004,7 +1004,7 @@ def basic(model, signal_dirs):
                 'basic_input': sample_data[0],
                 'jet_features': sample_data[1]
             }
-            sample_preds,_ = model.predict(sample_raw_inputs,prepare=True)
+            sample_preds,_ = model.predict(sample_raw_inputs)
             y_p, y_t = y_pred[signal_indices], y_test[signal_indices]
             process_label = style.PROCESS_STYLE[signal_dirs[i]]
             os.makedirs(binary_dir, exist_ok=True)

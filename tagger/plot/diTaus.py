@@ -149,8 +149,8 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
         'jet_features': jet_input2,
     }
     #Get the NN predictions
-    pred_score1, ratio1 = model.predict(model.prepare_inputs(raw_inputs1_dict)[0])
-    pred_score2, ratio2 = model.predict(model.prepare_inputs(raw_inputs2_dict)[0])
+    pred_score1, ratio1 = model.predict(raw_inputs1_dict,prepare=True)
+    pred_score2, ratio2 = model.predict(raw_inputs2_dict,prepare=True)
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())

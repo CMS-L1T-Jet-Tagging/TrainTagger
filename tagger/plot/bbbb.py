@@ -48,7 +48,7 @@ def nn_bscore_sum(model, basic_inputs, jet_inputs, jet_pt, jet_eta, apply_light,
         }
 
     #Get the nn outputs
-    class_outputs, regression_outputs = model.predict(model.prepare_inputs(model_inputs)[0])
+    class_outputs, regression_outputs = model.predict(model_inputs)
     regression_outputs = np.clip(regression_outputs, 0.5, 2.)
     class_outputs, regression_outputs = ak.unflatten(class_outputs, og_shape), ak.unflatten(regression_outputs, og_shape)
 

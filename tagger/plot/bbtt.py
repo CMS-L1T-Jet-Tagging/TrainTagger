@@ -155,14 +155,23 @@ def max_tau_sum(taup_preds, taum_preds):
 
 def nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, class_labels, n_jets=4):
     #Btag input list for first 4 jets
-    btag_inputs = [{
-        'basic_input': np.asarray(basic_nn_inputs[:, i]),
-        'jet_features': np.asarray(jet_nn_inputs[:, i])
-        }
-        for i in range(0, n_jets)]
+    
+    has_jet_inputs = len(jet_nn_inputs) > 0
+    if has_jet_inputs:
+        btag_inputs = [{
+            'basic_input': np.asarray(basic_nn_inputs[:, i]),
+            'jet_features': np.asarray(jet_nn_inputs[:, i])
+            }
+            for i in range(0, n_jets)]
+    else:
+        btag_inputs = [{
+            'basic_input': np.asarray(basic_nn_inputs[:, i]),
+            }
+            for i in range(0, n_jets)]
+        
 
     #Get the nn outputs
-    nn_outputs = [model.predict(model.prepare_inputs(nn_input)[0])[0]
+    nn_outputs = [model.predict(nn_input)[0]
         for i, nn_input in enumerate(btag_inputs)]
 
     #Calculate the output sum
@@ -422,7 +431,6 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     global n_events
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
-
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
     event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, raw_jet_inputs, num_elements=4)
 

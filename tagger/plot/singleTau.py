@@ -179,7 +179,7 @@ def derive_tau_WPs(model, minbias_path, target_rate=31, cmssw_model=False, n_ent
             'basic_input': selected_basic_inputs,
             'jet_features': selected_jet_inputs
         }
-        pred_scores, pt_ratios = model.predict(raw_inputs_dict,prepare=True)
+        pred_scores, pt_ratios = model.predict(raw_inputs_dict)
         all_scores[cuts] = tau_score(pred_scores, model.class_labels)
         all_corr_pts[cuts] = pt_ratios.flatten() * jet_pts[cuts]
 
@@ -256,7 +256,7 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
         'basic_input': selected_basic_inputs,
         'jet_features': selected_jet_inputs,
     }
-    pred_score, ratio = model.predict(raw_inputs_dict,prepare=True)
+    pred_score, ratio = model.predict(raw_inputs_dict)
     model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score

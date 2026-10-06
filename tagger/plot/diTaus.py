@@ -136,21 +136,35 @@ def derive_diTaus_WPs(model, minbias_path, target_rate=28, n_entries=100, tree='
     #Get inputs and pts for processing
     pt1_uncorrected, pt2_uncorrected = np.asarray(jet_pt[:, 0][cuts]), np.asarray(jet_pt[:,1][cuts])
     eta1_cuts, eta2_cuts = np.asarray(jet_eta[:, 0][cuts]), np.asarray(jet_eta[:,1][cuts])
-    jet_input1, jet_input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
     basic_input1, basic_input2 = np.asarray(basic_nn_inputs[:, 0][cuts]), np.asarray(basic_nn_inputs[:, 1][cuts])
+    
+    if len(jet_nn_inputs) > 0:
+    
+        jet_input1, jet_input2 = np.asarray(jet_nn_inputs[:, 0][cuts]), np.asarray(jet_nn_inputs[:, 1][cuts])
 
-    raw_inputs1_dict = {
-        'basic_input': basic_input1,
-        'jet_features': jet_input1,
-    }
+        raw_inputs1_dict = {
+            'basic_input': basic_input1,
+            'jet_features': jet_input1,
+        }
 
-    raw_inputs2_dict = {
-        'basic_input': basic_input2,
-        'jet_features': jet_input2,
-    }
+        raw_inputs2_dict = {
+            'basic_input': basic_input2,
+            'jet_features': jet_input2,
+        }
+    
+    else:
+        
+        raw_inputs1_dict = {
+            'basic_input': basic_input1,
+        }
+
+        raw_inputs2_dict = {
+            'basic_input': basic_input2,
+        }
+        
     #Get the NN predictions
-    pred_score1, ratio1 = model.predict(raw_inputs1_dict,prepare=True)
-    pred_score2, ratio2 = model.predict(raw_inputs2_dict,prepare=True)
+    pred_score1, ratio1 = model.predict(raw_inputs1_dict)
+    pred_score2, ratio2 = model.predict(raw_inputs2_dict)
 
     #Correct the pT and add the score
     pt1 = pt1_uncorrected*(ratio1.flatten())

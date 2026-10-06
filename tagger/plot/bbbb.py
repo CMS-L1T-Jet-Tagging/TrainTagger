@@ -175,7 +175,11 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     # Jet pt is already sorted in the producer, no need to do it here
     jet_pt, jet_eta, basic_nn_inputs, jet_nn_inputs = grouped_arrays
     def_sel = default_selection(jet_pt, jet_eta, apply_sel)
-    basic_nn_inputs, jet_nn_inputs = basic_nn_inputs[def_sel], jet_nn_inputs[def_sel]
+    
+    if len(jet_nn_inputs) > 0:
+        basic_nn_inputs, jet_nn_inputs = basic_nn_inputs[def_sel], jet_nn_inputs[def_sel]
+    else:
+        basic_nn_inputs, jet_nn_inputs = basic_nn_inputs[def_sel], jet_nn_inputs
     jet_pt_sel, jet_eta_sel = jet_pt[def_sel], jet_eta[def_sel]
 
     bscore_sum, regression = nn_bscore_sum(model, basic_nn_inputs, jet_nn_inputs, jet_pt_sel, jet_eta_sel, apply_light, model.class_labels)

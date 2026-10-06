@@ -52,7 +52,7 @@ HGQ2:DeepSet:
     Config: HGQ2/DeepSets_HGQ2.yaml
     Model: DeepSetsHGQ2
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'False'
+    RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu

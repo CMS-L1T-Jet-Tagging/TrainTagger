@@ -28,7 +28,7 @@ input_config:
 
 training_config :
   weight_method: ["onlyclass", "onlyclass"]
-  epochs : 20
+  epochs : 200
   batch_size : 1024
   learning_rate : 0.003
   validation_split : 0.1
@@ -49,4 +49,4 @@ firmware_config:
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 
-  project_name: 'L1TSC4NGJetModel'
+  project_name: 'L1TSC4NGJetModel_DS_HGQ'

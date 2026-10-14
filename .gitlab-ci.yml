@@ -43,16 +43,18 @@ QKeras:DeepSet:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
+    HLS4ML_NAME : Q_DS
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 HGQ2:DeepSet:
   extends: .ml_pipeline
   variables:
     Name: DeepSetHGQ2
-    Config: HGQ2/DeepSets_HGQ2.yaml
+    Config: HGQ2/DeepSets_larger_HGQ2.yaml
     Model: DeepSetsHGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
+    HLS4ML_NAME : HGQ_DS
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu

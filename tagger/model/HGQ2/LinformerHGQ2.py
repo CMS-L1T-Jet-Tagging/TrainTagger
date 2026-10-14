@@ -15,16 +15,16 @@ from hgq.constraints import MinMax
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
 
 from keras.models import load_model
-#import hls4ml
+import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+from tagger.model.HGQ2.HGQ2Model import HGQ2Model
 from tagger.model.common import initialise_tensorflow
 
-from hgq.utils import trace_minmax
 
 @JetModelFactory.register('LinformerHGQ2')
-class LinformerHGQ2(JetTagModel):
+class LinformerHGQ2(HGQ2Model):
 
     schema = Schema(
             {
@@ -42,23 +42,13 @@ class LinformerHGQ2(JetTagModel):
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
 
-                "quantization_config" : {'pt_output_quantization' : list},
+                "training_config" : HGQ2Model.training_config,
+                
+                "input_config" : HGQ2Model.input_config,
 
-                "training_config" :     {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
-                                         "validation_split" : And(float, lambda s: s > 0.0),
-                                         "target_ebops" : int,
-                                         "epochs" : And(int, lambda s: s >= 1),
-                                         "batch_size" : And(int, lambda s: s >= 1),
-                                         "learning_rate": And(float, lambda s: s > 0.0),
-                                         "loss_weights" : And(list, lambda s: len(s) == 2),
-                                        },
-
-                "firmware_config" : {"input_precision" : str,
-                                    "class_precision" : str,
-                                    "reg_precision": str,
-                                    "clock_period" : And(float, lambda s: 0.0 < s <= 10),
-                                    "fpga_part" : str,
-                                    "project_name" : str}
+                "firmware_config" : HGQ2Model.firmware_config,
+                
+                "quantization_config" : None
             }
     )
 
@@ -82,13 +72,13 @@ class LinformerHGQ2(JetTagModel):
         )
 
         FF_DIM = self.model_config['feedforward_dim']
-        NUM_PARTICLES = inputs_shape[0]
-        NUM_FEATURES = inputs_shape[1]
+        NUM_PARTICLES = inputs_shape['basic_input'][0]
+        NUM_FEATURES = inputs_shape['basic_input'][1]
         PROJ_K = self.model_config['projection_k']
         numheads = self.model_config['num_heads']
 
         with betascope, scope0, scope1:
-                qkv = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='model_input')
+                qkv = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='basic_input')
                 emb = QBatchNormalization(name='norm_input')(qkv)
                 emb = QDense(FF_DIM, activation='relu')(qkv)
                 emb = QDense(FF_DIM, activation='relu')(emb)
@@ -116,7 +106,7 @@ class LinformerHGQ2(JetTagModel):
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
-                jet_id = Activation('linear', name='jet_id_output')(jet_id)
+                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
@@ -129,6 +119,7 @@ class LinformerHGQ2(JetTagModel):
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = qkv, outputs = [jet_id, pt_regress])
                 print(self.jet_model.summary())
+                self.results_dict['num_parameters'] = self.jet_model.count_params()
 
     # Redefine save and load for HGQ due to needing h5 format
     @JetTagModel.save_decorator
@@ -240,88 +231,3 @@ class LinformerHGQ2(JetTagModel):
             if build:
                 # build the project
                 self.hls_jet_model.build(csim=False, reset=True)
-
-
-
-    def compile_model(self, num_samples: int, ebops: int):
-
-        """compile the model generating callbacks and loss function
-        Args:
-            num_samples (int): Number of samples in the training set used for scheduling
-        """
-
-        reduce_lr = ReduceLROnPlateau(
-                                        monitor='val_loss', factor=0.8, patience=50,
-                                        min_lr=1e-5, cooldown=200, min_delta=0.05
-                                    )
-
-        es = EarlyStoppingWithEbopsThres(monitor="val_loss",
-                                         patience=150,
-                                         verbose=1,
-                                         mode="min",
-                                         restore_best_weights=True,
-                                         start_from_epoch=75,
-                                         ebops_threshold=ebops + 100000
-                                        )
-        terminate_on_nan = keras.callbacks.TerminateOnNaN()
-
-        ebops_tracker = FreeEBOPs()
-        ebops_scheduler = BetaPID(
-            p=1, i=0.1, d=0,
-            target_ebops=ebops,
-            init_beta=1e-10, warmup=10,
-            max_beta=5e-6, damp_beta_on_target=0.5
-        )
-        # Define the callbacks using hyperparameters in the config        
-        self.callbacks = [ebops_tracker, terminate_on_nan, ebops_scheduler, reduce_lr, es]
-
-        # compile the tensorflow model setting the loss and metrics
-        self.jet_model.compile(
-            optimizer=keras.optimizers.AdamW(learning_rate=self.training_config['learning_rate']),
-            loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
-                self.loss_name + self.output_pt_name: keras.losses.Huber(),
-            },
-            loss_weights=self.training_config['loss_weights'],
-            metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-            weighted_metrics={
-                self.loss_name + self.output_id_name: 'categorical_accuracy',
-                self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
-            },
-        )
-    def fit(
-        self,
-        X_train: npt.NDArray[np.float64],
-        y_train: npt.NDArray[np.float64],
-        pt_target_train: npt.NDArray[np.float64],
-        sample_weight: npt.NDArray[np.float64],
-    ):
-        """Fit the model to the training dataset
-        Args:
-            X_train (npt.NDArray[np.float64]): X train dataset
-            y_train (npt.NDArray[np.float64]): y train classification targets
-            pt_target_train (npt.NDArray[np.float64]): y train pt regression targets
-            sample_weight (npt.NDArray[np.float64]): sample weighting
-        """
-        keras.config.disable_traceback_filtering()
-        sample_weight_dict = {
-                            "jet_id_output": sample_weight,
-                            "pT_output": sample_weight,
-        }
-        # Train the model using hyperparameters in yaml config
-        history = self.jet_model.fit(
-            {'model_input': X_train},
-            [y_train,pt_target_train],
-            sample_weight = [sample_weight, sample_weight],
-            epochs=self.training_config['epochs'],
-            batch_size=self.training_config['batch_size'],
-            verbose=self.run_config['verbose'],
-            validation_split=self.training_config['validation_split'],
-            callbacks=self.callbacks,
-            shuffle=True,
-        )
-
-        self.history = history.history

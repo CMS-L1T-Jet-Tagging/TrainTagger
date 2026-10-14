@@ -12,7 +12,7 @@ from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
-# Qkeras
+import hgq
 
 from keras.models import load_model
 import hls4ml
@@ -79,10 +79,10 @@ class DeepSetModelHGQ2(HGQ2Model):
                 n_features = inputs_shape['basic_input'][1]
 
                 inputs = Input(shape=(N_constituents,n_features), name='basic_input')
-                main = QBatchNormalization(name='norm_input')(inputs)
+                #main = QBatchNormalization(name='norm_input')(inputs)
 
                 for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
-                    main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(main)                
+                    main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(inputs)                
                 main = GlobalAveragePooling1D(name='avgpool')(main)
 
                 #jetID branch, 3 layer MLP
@@ -92,8 +92,8 @@ class DeepSetModelHGQ2(HGQ2Model):
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(main)
                     else:
                         jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
-                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
-                jet_id = Activation('linear', name='jet_id_output')(jet_id)
+                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='linear')(jet_id)
+                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
                 #pT regression branch
                 for ireg, depthreg in enumerate(self.model_config['regression_layers']):
                     if ireg == 0:
@@ -117,6 +117,12 @@ class DeepSetModelHGQ2(HGQ2Model):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
+            
+            # Load the testing data
+            test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
+            test_dict = {k: test_dict[k] for k in test_dict.files}
+            prepared_inputs = self.prepare_inputs(test_dict)[0]
+            hgq.utils.minmax_trace.trace_minmax(self.jet_model, prepared_inputs['basic_input'],verbose=2)
 
             # Remove the old directory if it exists
             hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
@@ -124,20 +130,23 @@ class DeepSetModelHGQ2(HGQ2Model):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"]="distributed_arithmetic"
-            config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
+            for layer in self.firmware_config['input_precision']:
+                config['LayerName'][layer]['Precision']['result'] = self.firmware_config['input_precision'][layer]
+
+            # Check that the input layers in the model match the input_precision keys in the firmware config
+            input_layer_names = [layer.name for layer in self.jet_model.layers if isinstance(layer, keras.layers.InputLayer)]
+            assert set(input_layer_names) == set(self.firmware_config['input_precision'].keys())
 
             # Configuration for conv1d layers
             # hls4ml automatically figures out the paralellization factor
-            config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
-            config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
+            #config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
+            #config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
 
-            #config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']            
-            #config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-            #config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
-
-            # Additional config
+            config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
+            config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
+            config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
+            config["LayerName"]["pT_output"]["Implementation"] = "latency"
 
             # Write HLS
             self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
@@ -148,9 +157,9 @@ class DeepSetModelHGQ2(HGQ2Model):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                # namespace='hls4ml_'+self.firmware_config['project_name'],
-                # write_weights_txt=False,
-                # write_emulation_constants=True,
+                namespace='hls4ml_'+self.firmware_config['project_name'],
+                write_weights_txt=False,
+                #write_emulation_constants=True,
             )
 
             # Compile the project

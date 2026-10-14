@@ -12,10 +12,11 @@ from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
 from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
+import hgq
 # Qkeras
 
 from keras.models import load_model
-#import hls4ml
+import hls4ml
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
@@ -71,8 +72,9 @@ class HGQ2Model(JetTagModel):
         else:
             prepared_inputs = X_test
         model_outputs = self.jet_model.predict(prepared_inputs)
-        class_predictions = scipy.special.softmax(model_outputs[0],axis=1)
+        class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
+        
         return (class_predictions, pt_ratio_predictions)
 
     def compile_model(self, num_samples: int):
@@ -116,7 +118,7 @@ class HGQ2Model(JetTagModel):
         self.jet_model.compile(
             optimizer=keras.optimizers.Adam(learning_rate=self.training_config['learning_rate']),
             loss={
-                self.loss_name + self.output_id_name: keras.losses.CategoricalCrossentropy(from_logits=True),
+                self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: keras.losses.Huber(),
             },
             loss_weights=self.training_config['loss_weights'],

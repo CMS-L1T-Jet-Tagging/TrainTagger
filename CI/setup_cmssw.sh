@@ -32,7 +32,7 @@ git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
 git checkout main_HGQ
 
-cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
+cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel_${HLS4ML_NAME}/firmware .
 ./setup.sh $HLS4ML_NAME $EMULATION_WRAPPER_VERSION
 
 make

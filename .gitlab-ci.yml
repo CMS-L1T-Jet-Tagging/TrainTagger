@@ -44,7 +44,7 @@ QKeras:DeepSet:
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
     HLS4ML_NAME : Q_DS
-    CMS_HLS4ML_BRANCH : main
+    CMS_HLS4ML_BRANCH : main_Qkeras
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 HGQ2:DeepSet:

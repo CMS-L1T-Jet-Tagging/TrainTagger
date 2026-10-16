@@ -184,13 +184,13 @@ synth:
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:
-    - cd output/$Model/firmware/L1TSC4NGJetModel
+    - cd output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../..
   artifacts:
     paths:
-      - output/$Model/firmware/L1TSC4NGJetModel
+      - output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME
     expire_in: 7 days
 
 emulation-evaluate:
@@ -331,8 +331,8 @@ upload_tagged_model:
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots
     - mkdir $Name
     - cd output/$Model/firmware
-    - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
-    - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
+    - tar -cvf L1TSC4NGJetModel_$HLS4ML_NAME.tgz L1TSC4NGJetModel_$HLS4ML_NAME
+    - cp -r L1TSC4NGJetModel_$HLS4ML_NAME.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
     - cd ../../..
     - mkdir $Name/plots
     - mv output/$Model/plots/emulation $Name/plots
@@ -344,7 +344,6 @@ upload_tagged_model:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    # - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
     - cd TrainTagger/${Name}
     - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots --recursive --extensions png,pdf
   artifacts:

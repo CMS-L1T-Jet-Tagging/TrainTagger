@@ -30,7 +30,7 @@ git cms-addpkg L1Trigger/Configuration
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
-git checkout main_HGQ
+git checkout ${CMS_HLS4ML_BRANCH}
 
 cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel_${HLS4ML_NAME}/firmware .
 ./setup.sh $HLS4ML_NAME $EMULATION_WRAPPER_VERSION

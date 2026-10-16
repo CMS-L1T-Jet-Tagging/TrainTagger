@@ -31,9 +31,10 @@ git cms-addpkg L1Trigger/Configuration
 
 git clone --quiet ${CMSSW_EMULATOR_WRAPPER}
 cd L1TSC4NGJetModel
+git checkout ${CMS_HLS4ML_BRANCH}
 
-cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel/firmware .
-./setup.sh test $EMULATION_WRAPPER_VERSION
+cp -r ../../../output/$Model/firmware/L1TSC4NGJetModel_${HLS4ML_NAME}/firmware .
+./setup.sh $HLS4ML_NAME $EMULATION_WRAPPER_VERSION
 
 make
 make install
@@ -51,7 +52,8 @@ fi;
 scram b 2>&1 || exit 1
 
 cd FastPUPPI/NtupleProducer/python
-echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test/L1TSC4NGJetModel_test")' >> runPerformanceNTuple.py
+echo -e "\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ[\"CMSSW_BASE\"]+\"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_${HLS4ML_NAME}/L1TSC4NGJetModel_${HLS4ML_NAME}\")" >> runPerformanceNTuple.py
+
 cmsenv
 export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
 ./scripts/prun.sh runPerformanceNTuple.py --170X_v1 ${PROC} '' --nomerge

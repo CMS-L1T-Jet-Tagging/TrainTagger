@@ -9,10 +9,10 @@ model_config :
   feedforward_dim : 16
   projection_k : 2
   num_heads : 1
-  classification_layers : [64,32,16]
-  classification_parallelisation_factor : [64,32,16]
-  regression_layers : [64,32,16]
-  regression_parallelisation_factor : [64,32,16]
+  classification_layers : [32,16]
+  classification_parallelisation_factor : [32,16]
+  regression_layers : [32,16]
+  regression_parallelisation_factor : [32,16]
   beta: 1.1e-8
 
 quantization_config:
@@ -29,14 +29,14 @@ input_config:
 
 training_config :
   weight_method: ["onlyclass", "onlyclass"]
-  epochs : 20000
-  batch_size : 102400
-  learning_rate : 0.00003
+  epochs : 200
+  batch_size : 1024
+  learning_rate : 0.003
   validation_split : 0.1
 
   loss_weights : [1,1]
 
-  target_ebops : 1000000
+  target_ebops : 300000
 
   pileup: False
 
@@ -49,4 +49,4 @@ firmware_config:
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 
-  project_name: 'L1TSC4NGJetModel'
+  project_name: 'L1TSC4NGJetModel_HGQ_Linf'

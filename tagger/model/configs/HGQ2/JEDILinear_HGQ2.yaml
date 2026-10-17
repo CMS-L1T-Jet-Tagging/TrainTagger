@@ -6,9 +6,9 @@ run_config :
 
 model_config :
   name : JEDILinear_HGQ2
-  embedding_layers : [64,64,64,64]
-  classification_layers : [64,32,16]
-  regression_layers : [64,32,16]
+  embedding_layers : [32,32,32,32]
+  classification_layers : [32,16]
+  regression_layers : [32,16]
   beta: 1.1e-7
 
 input_config:
@@ -30,7 +30,7 @@ training_config :
 
   loss_weights : [1,1]
 
-  target_ebops : 1000000
+  target_ebops : 300000
 
   pileup: False
 
@@ -44,4 +44,4 @@ firmware_config:
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 
-  project_name: 'L1TSC4NGJetModel'
+  project_name: 'L1TSC4NGJetModel_HGQ_JL'

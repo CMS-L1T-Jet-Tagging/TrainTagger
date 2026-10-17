@@ -38,24 +38,38 @@ class DeepSetModelFloat(JetTagModel):
                                   "regression_layers" : list,
                                   "kernel_initializer" : str,
                                   "aggregator" : And(str, lambda s: s in  ["mean", "max", "attention"])},
-                "quantization_config" : {'pt_output_quantization' : list},
-                "training_config" : {"weight_method" : And(str, lambda s: s in  ["none", "ptref", "onlyclass"]),
-                                     "validation_split" : And(float, lambda s: s > 0.0),
-                                     "epochs" : And(int, lambda s: s >= 1),
-                                     "batch_size" : And(int, lambda s: s >= 1),
-                                     "learning_rate" : And(float, lambda s: s > 0.0),
-                                     "loss_weights" : And(list, lambda s: len(s) == 2),
-                                     "EarlyStopping_patience" : And(int, lambda s: s > 0),
-                                     "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
-                                     "ReduceLROnPlateau_patience" : int,
-                                     "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0)},
+                "quantization_config" : None,
+                "training_config" : {"weight_method": And(
+                                        list,
+                                        lambda lst: len(lst) == 2,
+                                        lambda lst: all(x in ["none", "ptref", "onlyclass"] for x in lst)
+                                    ),
+                                    "validation_split" : And(float, lambda s: s > 0.0),
+                                    "epochs" : And(int, lambda s: s >= 1),
+                                    "batch_size" : And(int, lambda s: s >= 1),
+                                    "learning_rate" : And(float, lambda s: s > 0.0),
+                                    "loss_weights" : And(list, lambda s: len(s) == 2),
+                                    "initial_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                    "final_sparsity" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                    "EarlyStopping_patience" : And(int, lambda s: s > 0),
+                                    "ReduceLROnPlateau_factor" : And(float, lambda s: 1.0 >= s >= 0.0),
+                                    "ReduceLROnPlateau_patience" : int,
+                                    "ReduceLROnPlateau_min_lr" : And(float, lambda s: s >= 0.0),
+                                    "pileup": And(bool),
+                                    "huber_weights": And(list, lambda s: len(s) == 2),
+                                    "huber_delta": And(float, lambda s: s > 0.0),
+                                    },
                 ## generic hls4ml configuration
                 "firmware_config" : {"input_precision" : str,
                                      "class_precision" : str,
                                      "reg_precision": str,
                                      "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                      "fpga_part" : str,
-                                     "project_name" : str}
+                                     "project_name" : str},
+                "input_config" : {
+                    "basic_input_config": list,
+                    "basic_features": list,
+                    "jet_features": list}
             }
     )
 
@@ -76,9 +90,9 @@ class DeepSetModelFloat(JetTagModel):
             'kernel_initializer': self.model_config['kernel_initializer'],
         }
 
-        L, C = inputs_shape
+        L, C = inputs_shape['basic_input']
         #Initialize inputs
-        inputs = keras.layers.Input(shape=inputs_shape, name='model_input')
+        inputs = keras.layers.Input(shape=inputs_shape['basic_input'], name='basic_input')
 
         #Main branch
         main = BatchNormalization(name='norm_input')(inputs)
@@ -200,10 +214,6 @@ class DeepSetModelFloat(JetTagModel):
             ),
         ]
 
-        # Define the pruning
-        if 'initial_sparsity' in self.training_config:
-            self._prune_model(num_samples)
-
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
             optimizer='adam',
@@ -224,7 +234,7 @@ class DeepSetModelFloat(JetTagModel):
 
     def fit(
         self,
-        X_train: npt.NDArray[np.float64],
+        inputs_dict: dict,
         y_train: npt.NDArray[np.float64],
         pt_target_train: npt.NDArray[np.float64],
         sample_weight: npt.NDArray[np.float64],
@@ -237,15 +247,11 @@ class DeepSetModelFloat(JetTagModel):
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
         keras.config.disable_traceback_filtering()
-        sample_weight_dict = {
-                            "jet_id_output": sample_weight,
-                            "pT_output": sample_weight,
-        }
-        # Train the model using hyperparameters in yaml config
+        
         history = self.jet_model.fit(
-            {'model_input': X_train},
+            {'basic_input': inputs_dict['basic_input']},
             [y_train,pt_target_train],
-            sample_weight = [sample_weight, sample_weight],
+            sample_weight = [sample_weight[0], sample_weight[1]],
             epochs=self.training_config['epochs'],
             batch_size=self.training_config['batch_size'],
             verbose=self.run_config['verbose'],
@@ -256,7 +262,42 @@ class DeepSetModelFloat(JetTagModel):
 
         self.history = history.history
 
+    def get_keras_trace_model(self):
+        # Create a sub-model that outputs all intermediate layers and get keras trace
+        layer_outputs = [layer.output for layer in self.jet_model.layers]
+        keras_trace_model = Model(inputs=self.jet_model.input, outputs=layer_outputs)
+        return keras_trace_model
 
+    def get_branch_model(self, output_name):
+        output_tensor = self.jet_model.get_layer(output_name).output
+        input_layers = self._get_branch_inputs(output_tensor)
+        return keras.Model(input_layers, outputs=output_tensor)
+    
+    @staticmethod
+    def _get_branch_inputs(output_tensor):
+        # Keras 3: walk the graph via operation/node API
+        visited = set()
+        inputs = {}
+        stack = [output_tensor]
+
+        while stack:
+            t = stack.pop()
+            if id(t) in visited:
+                continue
+            visited.add(id(t))
+
+            kh = t._keras_history          # still exists in Keras 3
+            op = kh.operation              # NOTE: 'operation', not 'layer'
+            node_index = kh.node_index
+
+            if isinstance(op, keras.layers.InputLayer):
+                inputs[op.name] = op.output
+                continue
+
+            node = op._inbound_nodes[node_index]
+            stack.extend(node.arguments.keras_tensors)   # replaces node.input_tensors
+
+        return list(inputs.values())
     # Decorated with save decorator for added functionality
     @JetTagModel.save_decorator
     def save(self, out_dir: str = "None"):

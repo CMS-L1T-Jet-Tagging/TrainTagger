@@ -60,3 +60,56 @@ HGQ2:DeepSet:
     HLS4ML_NAME : HGQ_DS
     CMS_HLS4ML_BRANCH : main_HGQ
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+HGQ2:MLPMixer:
+  extends: .ml_pipeline
+  variables:
+    Name: MLPMixerHGQ2
+    Config: HGQ2/MLPMixer_HGQ2.yaml
+    Model: MLPMixerHGQ2
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+    EMULATION_WRAPPER_VERSION: v1_0_2
+    HLS4ML_NAME : HGQ_MLPM
+    CMS_HLS4ML_BRANCH : main_HGQ
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+HGQ2:JEDILinear:
+  extends: .ml_pipeline
+  variables:
+    Name: JEDILinearHGQ2
+    Config: HGQ2/JEDILinear_HGQ2.yaml
+    Model: JEDILinearHGQ2
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+    EMULATION_WRAPPER_VERSION: v1_0_2
+    HLS4ML_NAME : HGQ_JL
+    CMS_HLS4ML_BRANCH : main_HGQ
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+HGQ2:Linformer:
+  extends: .ml_pipeline
+  variables:
+    Name: LinformerHGQ2
+    Config: HGQ2/Linformer_HGQ2.yaml
+    Model: LinformerHGQ2
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+    EMULATION_WRAPPER_VERSION: v1_0_2
+    HLS4ML_NAME : HGQ_Linf
+    CMS_HLS4ML_BRANCH : main_HGQ
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+
+Float:DeepSet:
+  extends: .ml_pipeline
+  variables:
+    Name: DeepSetModelFloat
+    Config: Float/DeepSets_floating.yaml
+    Model: DeepSetModelFloat
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu

@@ -124,7 +124,7 @@ class DeepSetModelFloat(JetTagModel):
             if ireg == 0:
                 pt_regress = Dense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', **self.common_args)(main)
             else:
-                pt_regress = QDense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', activation='relu',**self.common_args)(pt_regress)
+                pt_regress = Dense(depthreg, name='Dense_' + str(ireg + 1) + '_pT', activation='relu',**self.common_args)(pt_regress)
 
         pt_regress = Dense(1, name='pT_output',
                             kernel_initializer='lecun_uniform')(pt_regress)

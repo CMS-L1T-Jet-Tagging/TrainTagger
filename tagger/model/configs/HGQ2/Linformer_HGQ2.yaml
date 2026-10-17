@@ -49,4 +49,4 @@ firmware_config:
   clock_period : 2.5
   fpga_part : 'xcvu13p-flga2577-2-e'
 
-  project_name: 'L1TSC4NGJetModel_HGQ_Linf'
+  project_name: 'L1TSC4NGJetModel_Linf_HGQ'

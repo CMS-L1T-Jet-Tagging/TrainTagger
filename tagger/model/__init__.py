@@ -1,6 +1,7 @@
 # flake8: noqa
 try:
     from tagger.model.QKeras.DeepSetModel import DeepSetModel
+    from tagger.model.QKeras.WeightedAverageSimpleModel import WeightedAverageSimpleModel
 except:
     from tagger.model.Float.DeepSetModelFloat import DeepSetModelFloat
     from tagger.model.HGQ2.DeepSetModelHGQ2 import DeepSetModelHGQ2

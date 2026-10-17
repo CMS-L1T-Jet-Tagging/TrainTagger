@@ -80,8 +80,8 @@ class JEDILinearHGQ2(HGQ2Model):
             with (
                 QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT_SYM'),
                 QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
-                inp_b = keras.layers.Input((N_constituents, n_features),name='basic_input')
-                #inp_b = QBatchNormalization()(inp)
+                inp = keras.layers.Input((N_constituents, n_features),name='basic_input')
+                inp_b = QBatchNormalization()(inp)
                 pool_scale = 2.**-round(log2(N_constituents))
 
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][0]), bias_axes='C', activation='relu')(inp_b)

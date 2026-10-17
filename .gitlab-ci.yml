@@ -37,13 +37,28 @@ QKeras:DeepSet:
   variables:
     Name: DeepSetQKeras
     Model: DeepSetQKeras
-    Config: QKeras/baseline.yaml
+    Config: QKeras/DeepSets_QKeras.yaml
     RERUN_ON_OLDTRAINING: 'False'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
-    HLS4ML_NAME : Q_DS
+    HLS4ML_NAME : DS_Q
+    CMS_HLS4ML_BRANCH : main_Qkeras
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+
+QKeras:DeepSet_WeightedAverage:
+  extends: .ml_pipeline
+  variables:
+    Name: DeepSetWeightedAverageQKeras
+    Model: DeepSetWeightedAverageQKeras
+    Config: QKeras/DeepSets_WeightedAverage_QKeras.yaml
+    RERUN_ON_OLDTRAINING: 'False'
+    RERUN_ON_TAG: 'False'
+    RUN_EMULATION: 'True'
+    RUN_SYNTHESIS: 'True'
+    EMULATION_WRAPPER_VERSION: v1_0_2
+    HLS4ML_NAME : DS_WA_Q
     CMS_HLS4ML_BRANCH : main_Qkeras
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
@@ -51,13 +66,13 @@ HGQ2:DeepSet:
   extends: .ml_pipeline
   variables:
     Name: DeepSetHGQ2
-    Config: HGQ2/DeepSets_larger_HGQ2.yaml
+    Config: HGQ2/DeepSets_HGQ2.yaml
     Model: DeepSetsHGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
-    HLS4ML_NAME : HGQ_DS
+    HLS4ML_NAME : DS_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
@@ -71,7 +86,7 @@ HGQ2:MLPMixer:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
-    HLS4ML_NAME : HGQ_MLPM
+    HLS4ML_NAME : MLPM_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
@@ -85,7 +100,7 @@ HGQ2:JEDILinear:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
-    HLS4ML_NAME : HGQ_JL
+    HLS4ML_NAME : JL_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
@@ -99,16 +114,16 @@ HGQ2:Linformer:
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
-    HLS4ML_NAME : HGQ_Linf
+    HLS4ML_NAME : Linf_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 Float:DeepSet:
   extends: .ml_pipeline
   variables:
-    Name: DeepSetModelFloat
+    Name: DeepSetFloat
     Config: Float/DeepSets_floating.yaml
-    Model: DeepSetModelFloat
+    Model: DeepSetFloat
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'False'

@@ -213,7 +213,6 @@ def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     return
 
-
 def _save_dataset_metadata(outdir, class_labels, tag, jet_fields, extras):
 
     dataset_metadata_file = os.path.join(outdir, 'variables.json')

@@ -80,7 +80,7 @@ class LinformerHGQ2(HGQ2Model):
         with betascope, scope0, scope1:
                 qkv = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='basic_input')
                 emb = QBatchNormalization(name='norm_input')(qkv)
-                emb = QDense(FF_DIM, activation='relu')(qkv)
+                emb = QDense(FF_DIM, activation='relu')(emb)
                 emb = QDense(FF_DIM, activation='relu')(emb)
 
                 with mhaconfig:

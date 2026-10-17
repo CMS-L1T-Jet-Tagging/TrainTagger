@@ -80,8 +80,8 @@ class MLPMixerHGQ2(HGQ2Model):
             n_features = inputs_shape['basic_input'][1]
 
             with (QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
-                inp_b = keras.layers.Input((N_constituents, n_features),name='basic_input')
-                #inp_b = QBatchNormalization()(inp)
+                inp = keras.layers.Input((N_constituents, n_features),name='basic_input')
+                inp_b = QBatchNormalization()(inp)
 
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][0]), bias_axes='C', activation='relu',iq_conf=iq_conf_inputs)(inp_b)
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x1)

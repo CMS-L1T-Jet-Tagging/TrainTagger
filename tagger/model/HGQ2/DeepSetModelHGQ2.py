@@ -79,10 +79,10 @@ class DeepSetModelHGQ2(HGQ2Model):
                 n_features = inputs_shape['basic_input'][1]
 
                 inputs = Input(shape=(N_constituents,n_features), name='basic_input')
-                #main = QBatchNormalization(name='norm_input')(inputs)
+                main = QBatchNormalization(name='norm_input')(inputs)
 
                 for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
-                    main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(inputs)                
+                    main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(main)                
                 main = GlobalAveragePooling1D(name='avgpool')(main)
 
                 #jetID branch, 3 layer MLP

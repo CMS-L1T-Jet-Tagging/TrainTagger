@@ -101,7 +101,7 @@ class MLPMixerHGQ2(HGQ2Model):
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C')(pt_regress)
                 pt_regress = Activation('linear', name='pT_output')(pt_regress)
                 #Define the model using both branches
-                self.jet_model = keras.Model(inputs = inp_b, outputs = [jet_id, pt_regress])
+                self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
                 print(self.jet_model.summary())
                 self.results_dict['num_parameters'] = self.jet_model.count_params()
 

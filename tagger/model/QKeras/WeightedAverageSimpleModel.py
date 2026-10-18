@@ -47,7 +47,7 @@ class WeightedAverageSimpleModel(QKerasModel):
                                     "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                     "fpga_part" : str,
                                     "project_name" : str},
-                "inputs" : {
+                "input_config" : {
                     "basic_input_config": list,
                     "basic_features": list,
                     "jet_features": list}

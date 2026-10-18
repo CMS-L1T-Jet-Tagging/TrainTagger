@@ -11,7 +11,7 @@ from schema import Schema, And, Use, Optional
 from tagger.model.common import initialise_tensorflow
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.QKerasModel import QKerasModel
+from tagger.model.QKeras.QKerasModel import QKerasModel
 
 from qkeras import QConv1D
 from qkeras.qlayers import QActivation, QDense

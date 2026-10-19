@@ -172,4 +172,4 @@ class DeepSetModelHGQ2(HGQ2Model):
 
             if build:
                 # build the project
-                self.hls_jet_model.build(csim=False, reset=True)
+                self.hls_jet_model.build(csim=False, reset=True, cosim=False)

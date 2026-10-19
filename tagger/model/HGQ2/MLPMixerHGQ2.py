@@ -86,7 +86,7 @@ class MLPMixerHGQ2(HGQ2Model):
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][0]), bias_axes='C', activation='relu',iq_conf=iq_conf_inputs)(inp)
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x1)
                 x2 = QEinsumDenseBatchnorm('bnc,nN->bNc', (N_constituents, n_features), bias_axes='N')(x1)
-                x = QAdd(iq_confs=(iq_conf_inputs, iq_default))([inp_b, x2])
+                x = QAdd(iq_confs=(iq_conf_inputs, iq_default))([inp, x2])
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][1]), bias_axes='C', activation='relu', )(x)
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][2]), bias_axes='C', activation='relu', )(x)
                 x = QEinsumDense('bnc,n->bc', self.model_config['embedding_layers'][3])(x)

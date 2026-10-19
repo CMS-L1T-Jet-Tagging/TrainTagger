@@ -20,7 +20,7 @@ quantization_config:
   quantizer_alpha_val : 1.0
   pt_output_quantization : [16,2]
 
-inputs:
+input_config:
   basic_input_config: ["pt", "pt_rel", "pt_log", "deta", "dphi", "mass", "isPhoton", "isElectronPlus",
     "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
     "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality", "eta"] # features to use in the basic_input

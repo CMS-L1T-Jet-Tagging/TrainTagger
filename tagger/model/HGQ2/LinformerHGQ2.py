@@ -82,10 +82,14 @@ class LinformerHGQ2(HGQ2Model):
                 emb = QBatchNormalization(name='norm_input')(qkv)
                 emb = QDense(FF_DIM, activation='relu')(emb)
                 emb = QDense(FF_DIM, activation='relu')(emb)
+                
+                q_in = keras.layers.Identity(name='attn_q_in')(emb)
+                k_in = keras.layers.Identity(name='attn_k_in')(emb)
+                v_in = keras.layers.Identity(name='attn_v_in')(emb)
 
                 with mhaconfig:
                     x = QLinformerAttention(numheads, key_dim=FF_DIM // numheads,
-                            lin_kv_proj_dim=PROJ_K, name='attention1', dropout=0)(emb, emb, emb)
+                            lin_kv_proj_dim=PROJ_K, name='attention1', dropout=0)(q_in, k_in, v_in)
 
                 res = QAdd()([x, emb])
                 x = QDense(FF_DIM * 2, activation='relu')(res)
@@ -149,9 +153,9 @@ class LinformerHGQ2(HGQ2Model):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"]="distributed_arithmetic"
-            config["Model"]["ReuseFactor"]=1
-            config['IOType'] = 'io_parallel'
+            #config["Model"]["Strategy"]="distributed_arithmetic"
+            #config["Model"]["ReuseFactor"]=1
+            #config['IOType'] = 'io_parallel'
 
             # config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']            
             # config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']

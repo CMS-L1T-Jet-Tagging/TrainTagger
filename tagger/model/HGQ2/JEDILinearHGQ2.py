@@ -132,9 +132,9 @@ class JEDILinearHGQ2(HGQ2Model):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            config["Model"]["Strategy"]="distributed_arithmetic"
-            config["Model"]["ReuseFactor"]=1
-            config['IOType'] = 'io_parallel'
+            #config["Model"]["Strategy"]="distributed_arithmetic"
+            #config["Model"]["ReuseFactor"]=1
+            #config['IOType'] = 'io_parallel'
 
             # config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']            
             # config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']

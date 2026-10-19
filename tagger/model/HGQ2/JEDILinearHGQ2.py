@@ -164,16 +164,16 @@ class JEDILinearHGQ2(HGQ2Model):
                 json.dump(config, fp)
 
 
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
-            new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
-                    auto layer13_index = ii % 20;
-                    layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
-                }"""
+            # old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
+            # new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
+            #         auto layer13_index = ii % 20;
+            #         layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
+            #     }"""
 
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
+            # with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
+            #     content = f.read()
 
-            content = content.replace(old_text, new_text)
+            # content = content.replace(old_text, new_text)
 
             with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
                 f.write(content)

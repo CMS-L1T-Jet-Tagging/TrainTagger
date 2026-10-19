@@ -57,7 +57,7 @@ QKeras:DeepSet_WeightedAverage:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    EMULATION_WRAPPER_VERSION: v1_0_2
+    EMULATION_WRAPPER_VERSION: v2_0_0
     HLS4ML_NAME : DS_WA_Q
     CMS_HLS4ML_BRANCH : main_Qkeras
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest

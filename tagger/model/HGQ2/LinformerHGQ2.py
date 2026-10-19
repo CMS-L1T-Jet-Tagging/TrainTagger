@@ -83,9 +83,9 @@ class LinformerHGQ2(HGQ2Model):
                 emb = QDense(FF_DIM, activation='relu')(emb)
                 emb = QDense(FF_DIM, activation='relu')(emb)
                 
-                q_in = keras.layers.Identity(name='attn_q_in')(emb)
-                k_in = keras.layers.Identity(name='attn_k_in')(emb)
-                v_in = keras.layers.Identity(name='attn_v_in')(emb)
+                q_in = keras.layers.Activation('linear', name='attn_q_in')(emb)
+                k_in = keras.layers.Activation('linear', name='attn_k_in')(emb)
+                v_in = keras.layers.Activation('linear', name='attn_v_in')(emb)
 
                 with mhaconfig:
                     x = QLinformerAttention(numheads, key_dim=FF_DIM // numheads,

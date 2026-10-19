@@ -146,10 +146,10 @@ def read_hls_log(filename: str) -> dict:
   else:
     return None
 
-def getReports(indir,project_name):
+def getReports(indir,project_dir,project_name):
     data_ = {}
     
-    report_csynth = Path('{}/solution1/syn/report/{}_csynth.xml'.format(indir,project_name))
+    report_csynth = Path('{}/{}/solution1/syn/report/{}_csynth.xml'.format(indir,project_dir,project_name))
     report_vsynth = Path('{}/vivado_synth.rpt'.format(indir))
     log = Path('{}/vitis_hls.log'.format(indir))
 
@@ -296,7 +296,7 @@ if __name__ == "__main__":
 
     doPlots(model, args.outpath, "profiling_data/")
 
-    report = getReports(args.outpath_firmware + '/' + model.firmware_config['project_name'] + '/' + model.firmware_config['project_name']+'_prj',model.firmware_config['project_name'])
+    report = getReports(args.outpath_firmware + '/' + model.firmware_config['project_name'], model.firmware_config['project_name']+'_prj',model.firmware_config['project_name'])
 
     print("===================")
     print('Input Precision : ', model.firmware_config['input_precision'])

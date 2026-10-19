@@ -150,19 +150,19 @@ class MLPMixerHGQ2(HGQ2Model):
 
             # Save config  as json file
             print("Saving default config as config.json ...")
-            with open(hls4ml_outdir + '/config.json', 'w') as fp:
-                json.dump(config, fp)
+            # with open(hls4ml_outdir + '/config.json', 'w') as fp:
+            #     json.dump(config, fp)
 
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config12>(layer10_out, layer11_out, layer12_out); // q_add'
-            new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
-                    auto layer11_index = ii % 20;
-                    layer12_out[ii] = layer10_out[ii] + layer11_out[layer11_index];
-                }"""
+            # old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config12>(layer10_out, layer11_out, layer12_out); // q_add'
+            # new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
+            #         auto layer11_index = ii % 20;
+            #         layer12_out[ii] = layer10_out[ii] + layer11_out[layer11_index];
+            #     }"""
 
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
+            # with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
+            #     content = f.read()
 
-            content = content.replace(old_text, new_text)
+            # content = content.replace(old_text, new_text)
 
             with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
                 f.write(content)

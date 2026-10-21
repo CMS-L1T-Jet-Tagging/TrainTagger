@@ -118,6 +118,17 @@ This prepare the data using the default options(look into the script to see what
 python tagger/data/make_data.py --make-data -i <your-rootfile> -s <custom-step-size>
 ```
 
+Two input ntuple formats are supported and detected automatically from the tree branches:
+
+1. the per-jet `jetTuple` ntuples (default tree `outnano/Jets`), and
+2. the Phase-2 nano (CMSSW `Events` tree) format with the jets stored in per-event
+   `L1JetTrain_jet_*` collections and their constituents in the flat
+   `L1JetTrainCand_jet_puppicand_*` collection linked by `L1JetTrainCand_jetIdx`, e.g.
+
+```
+python tagger/data/make_data.py -i output_Phase2_L1T.root --tree Events
+```
+
 This automatically create a new directory: `training_data` (it will ask before removing the exisiting one), and writes the data into it. Then, to train the model:
 
 ```

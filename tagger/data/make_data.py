@@ -21,6 +21,7 @@ if __name__ == "__main__":
         '-e', '--extras', default='extra_fields', help='Which extra fields to add to output tuples, in puppicand_fields.yml'
     )
     parser.add_argument('-t', '--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
+    parser.add_argument('-o', '--outdir', default='training_data/', help='Directory to store the processed training data chunks')
 
     parser.add_argument(
         '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
@@ -32,7 +33,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    make_data(infile=args.input, outdir=args.outdir, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:

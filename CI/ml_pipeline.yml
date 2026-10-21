@@ -48,6 +48,8 @@ variables:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
+    RETRAIN: 'False'
+    RETRAIN_URL: 'https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras'
     TAG: 'v1.0.1'
 
 .template:
@@ -100,7 +102,7 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING
+  - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING $RETRAIN
   artifacts:
     paths:
       - output

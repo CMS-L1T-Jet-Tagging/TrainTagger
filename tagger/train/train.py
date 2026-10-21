@@ -3,11 +3,29 @@ from argparse import ArgumentParser
 
 # Third parties
 import numpy as np
+import tensorflow as tf
 
 # Import from other modules
 from tagger.data.tools import load_data, to_ML
 from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
+
+# Default initial model for retraining if none is specified with --retrain
+DEFAULT_RETRAIN_URL = "https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras"
+
+
+def fetch_model_file(url_or_path):
+    """Fetch a saved model file from a web URL or return the local path as-is.
+
+    Args:
+        url_or_path (str): http(s) URL of a saved_model.keras file, or a local path.
+
+    Returns:
+        str: Local path to the model file (downloaded/cached if a URL was given).
+    """
+    if url_or_path.startswith(("http://", "https://")):
+        return tf.keras.utils.get_file(fname=os.path.basename(url_or_path), origin=url_or_path)
+    return url_or_path
 
 
 def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt):
@@ -125,7 +143,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         return None
     return sample_weights
 
-def train(model, out_dir, percent):
+def train(model, out_dir, percent, retrain_model=""):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, jet_vars, extra_vars = load_data("training_data/", percent, model)
@@ -175,6 +193,11 @@ def train(model, out_dir, percent):
 
     model.build_model(input_shapes, output_shape)
 
+    # Resume from a previously trained model if requested; it must be loaded onto the
+    # freshly built model before compile_model wraps it with the pruning layers
+    if retrain_model:
+        model.load_initial_weights(fetch_model_file(retrain_model))
+
     # Train it with a pruned model
     num_samples = particle_features_train.shape[0] * (1 - model.training_config['validation_split'])
 
@@ -198,6 +221,15 @@ if __name__ == "__main__":
     )
     parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
     parser.add_argument(
+        '--retrain',
+        nargs='?',
+        const=DEFAULT_RETRAIN_URL,
+        default='',
+        metavar='URL_OR_PATH',
+        help=f'Resume training from a previously saved model, fetched from a web URL or local path. '
+        f'If given without a value, the default is {DEFAULT_RETRAIN_URL}',
+    )
+    parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
     )
 
@@ -216,4 +248,4 @@ if __name__ == "__main__":
 
     else:
         model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.percent)
+        train(model, args.output, args.percent, retrain_model=args.retrain)

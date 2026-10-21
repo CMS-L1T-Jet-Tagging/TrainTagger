@@ -137,6 +137,20 @@ python tagger/train/train.py -y tagger/model/configs/baseline.yaml -o output/bas
 
 The model configs are defined in `tagger/model/configs` and passed to the training scripts with the -y option. Hyperparameters are defined in these configs. -o specifies where to save the model output
 
+To resume training from an already trained model instead of starting from random
+weights, use `--retrain`. Without a value it pulls the default tagged model
+(`https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras`),
+or you can point it at any other web URL or local `saved_model.keras` file:
+
+```
+python tagger/train/train.py -y tagger/model/configs/baseline.yaml -o output/baseline --retrain <optional URL_OR_PATH>
+```
+
+The weights are loaded onto the freshly built model (the architecture of the yaml config
+and the saved model must match) before the pruning setup, and training then continues on
+the new `training_data` contents. In the CI pipeline this is steered by the `RETRAIN`
+and `RETRAIN_URL` variables.
+
 # 3. Physics Validation
 
 Various physics validation plots can be make using the `tagger/plot` modules, the plots are divided into different final states, such as `bbbb.py`, to use the script, you need to derive the working points before evaluating the background rate/efficiency. The -m points the plotting script at the model to load and use for evaluating

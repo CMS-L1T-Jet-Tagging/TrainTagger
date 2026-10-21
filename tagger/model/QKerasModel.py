@@ -286,3 +286,24 @@ class QKerasModel(JetTagModel):
 
         # Load the model
         self.jet_model = load_qmodel(f"{out_dir}/model/saved_model.keras", custom_objects=custom_objects_)
+
+    def load_initial_weights(self, model_path: str):
+        """Initialize the model weights from a previously saved model to resume training from it.
+
+        Must be called after build_model (the freshly built model must exist, the
+        architecture must match the saved one) and before compile_model (so the
+        pruning wrappers pick up the loaded weights).
+        """
+        if self.jet_model is None:
+            raise RuntimeError("build_model must be called before load_initial_weights")
+
+        # Additional custom objects for attention layers
+        custom_objects_ = {
+            "AAtt": AAtt,
+            "AttentionPooling": AttentionPooling,
+        }
+
+        init_model = load_qmodel(model_path, custom_objects=custom_objects_)
+        self.jet_model.set_weights(init_model.get_weights())
+        print(f"Loaded initial weights from {model_path}, model will resume training from them")
+        del init_model

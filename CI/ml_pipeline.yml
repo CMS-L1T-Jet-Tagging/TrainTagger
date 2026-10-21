@@ -20,7 +20,6 @@ stages:
   - run_QCD_Pt15To3000_PU200
   - emulation_regression
   - upload
-  - test
 
 variables:
     Name: new_samples_baseline_5param_extended_trk
@@ -94,7 +93,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-gpu]
+  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true
@@ -170,6 +169,7 @@ hls4ml:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
+  - sed -i 's/^cosim      1$/cosim      0/' output/$Model/firmware/build_opt.tcl
   artifacts:
     paths:
       - output/$Model/firmware

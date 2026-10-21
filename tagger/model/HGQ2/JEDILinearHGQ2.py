@@ -22,6 +22,43 @@ from tagger.model.HGQ2.HGQ2Model import HGQ2Model
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.common import initialise_tensorflow
 
+import da4ml.types as _da_types
+
+def _patch_da4ml_flatten():
+    cls = getattr(_da_types, 'CombLogic', None)
+    if cls is None:
+        for obj in vars(_da_types).values():
+            if (isinstance(obj, type) and '__call__' in vars(obj)
+                    and 'inp_shifts' in getattr(obj, '__annotations__', {})):
+                cls = obj
+                break
+    if cls is None:
+        raise RuntimeError('da4ml patch: could not find the comb-logic class in da4ml.types')
+    if getattr(cls.__call__, '_flatten_patched', False):
+        return
+
+    orig_call = cls.__call__
+    state = {'calls': 0}
+
+    def patched_call(self, inp, *args, **kwargs):
+        n = len(self.inp_shifts)
+        shape = getattr(inp, 'shape', None)
+        if state['calls'] < 10:
+            state['calls'] += 1
+            print(f'[da4ml patch] call {state["calls"]}: type={type(inp).__name__} '
+                  f'shape={shape} n_shifts={n}')
+        if shape is None:  # list/tuple etc.
+            inp = np.asarray(inp)
+            shape = inp.shape
+        if len(shape) > 1 and int(np.prod(shape)) == n:
+            inp = inp.reshape(-1) if hasattr(inp, 'reshape') else np.asarray(inp).reshape(-1)
+        return orig_call(self, inp, *args, **kwargs)
+
+    patched_call._flatten_patched = True
+    cls.__call__ = patched_call
+    print(f'[da4ml patch] installed on {cls.__module__}.{cls.__name__}')
+
+
 
 @JetModelFactory.register('JEDILinearHGQ2')
 class JEDILinearHGQ2(HGQ2Model):
@@ -99,8 +136,8 @@ class JEDILinearHGQ2(HGQ2Model):
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
-                x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
-                #x = AveragePooling1D(N_constituents)(x)
+                #x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
+                x = GlobalAveragePooling1D()(x)
                 #x = Flatten()(x)
                 #x = Rescaling(1/16)(x)
 
@@ -125,21 +162,18 @@ class JEDILinearHGQ2(HGQ2Model):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
-
+            
+            #_patch_da4ml_flatten()
+            #type(layer.attributes['da_comb_logic'])
             # Remove the old directory if it exists
             hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
             os.system(f'rm -rf {hls4ml_outdir}')
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            #config["Model"]["Strategy"]="distributed_arithmetic"
+            config["Model"]["Strategy"]="distributed_arithmetic"
             #config["Model"]["ReuseFactor"]=1
             #config['IOType'] = 'io_parallel'
-
-            # config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']            
-            # config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-            # config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
-
 
             # Write HLS
             self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
@@ -150,8 +184,8 @@ class JEDILinearHGQ2(HGQ2Model):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                # namespace='hls4ml_'+self.firmware_config['project_name'],
-                # write_weights_txt=False,
+                #namespace='hls4ml_'+self.firmware_config['project_name'],
+                #write_weights_txt=False,
                 # write_emulation_constants=True,
             )
 
@@ -164,16 +198,16 @@ class JEDILinearHGQ2(HGQ2Model):
                 json.dump(config, fp)
 
 
-            # old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
-            # new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
-            #         auto layer13_index = ii % 20;
-            #         layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
-            #     }"""
+            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
+            new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
+                    auto layer13_index = ii % 20;
+                    layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
+                }"""
 
-            # with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-            #     content = f.read()
+            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
+                content = f.read()
 
-            # content = content.replace(old_text, new_text)
+            content = content.replace(old_text, new_text)
 
             with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
                 f.write(content)

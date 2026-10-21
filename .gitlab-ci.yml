@@ -101,7 +101,7 @@ HGQ2:JEDILinear:
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
     HLS4ML_NAME : JL_HGQ
-    CMS_HLS4ML_BRANCH : main_HGQ
+    CMS_HLS4ML_BRANCH : main_Qkeras
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
 
 HGQ2:Linformer:
@@ -111,8 +111,8 @@ HGQ2:Linformer:
     Config: HGQ2/Linformer_HGQ2.yaml
     Model: LinformerHGQ2
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
+    RUN_EMULATION: 'False'
+    RUN_SYNTHESIS: 'False'
     EMULATION_WRAPPER_VERSION: v1_0_2
     HLS4ML_NAME : Linf_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ

@@ -100,7 +100,7 @@ class LinformerHGQ2(HGQ2Model):
                 x = QDense(FF_DIM, activation='relu')(x)
                 lo2 = QAdd()([x, res])
 
-                x = GlobalAveragePooling1D(data_format='channels_last')(lo2)
+                x = GlobalAveragePooling1D()(lo2)
 
                 #jetID branch, 3 layer MLP
 
@@ -153,7 +153,7 @@ class LinformerHGQ2(HGQ2Model):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            #config["Model"]["Strategy"]="distributed_arithmetic"
+            config["Model"]["Strategy"]="distributed_arithmetic"
             #config["Model"]["ReuseFactor"]=1
             #config['IOType'] = 'io_parallel'
 
@@ -185,35 +185,35 @@ class LinformerHGQ2(HGQ2Model):
                 json.dump(config, fp)
 
 
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
+            # with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
+            #     content = f.read()
 
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config30>(layer28_out, layer29_out, layer30_out); // q_add'
-            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
-                    auto layer29_index = ii % 16;
-                    layer30_out[ii] = layer28_out[ii] + layer29_out[layer29_index];
-                }"""
+            # old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config30>(layer28_out, layer29_out, layer30_out); // q_add'
+            # new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
+            #         auto layer29_index = ii % 16;
+            #         layer30_out[ii] = layer28_out[ii] + layer29_out[layer29_index];
+            #     }"""
 
-            content = content.replace(old_text, new_text)
+            # content = content.replace(old_text, new_text)
 
-            old_text = 'nnet::add<quantizer_2_t, quantizer_3_t, q_add_1_t, config39>(layer37_out, layer38_out, layer39_out); // q_add_1'
-            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
-                    auto layer38_index = ii % 16;
-                    layer39_out[ii] = layer37_out[ii] + layer38_out[layer38_index];
-                }"""
+            # old_text = 'nnet::add<quantizer_2_t, quantizer_3_t, q_add_1_t, config39>(layer37_out, layer38_out, layer39_out); // q_add_1'
+            # new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
+            #         auto layer38_index = ii % 16;
+            #         layer39_out[ii] = layer37_out[ii] + layer38_out[layer38_index];
+            #     }"""
 
-            content = content.replace(old_text, new_text)
+            # content = content.replace(old_text, new_text)
 
-            old_text = 'nnet::add<quantizer_4_t, quantizer_5_t, q_add_2_t, config48>(layer46_out, layer47_out, layer48_out); // q_add_2'
-            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
-                    auto layer47_index = ii % 16;
-                    layer48_out[ii] = layer46_out[ii] + layer47_out[layer47_index];
-                }"""
+            # old_text = 'nnet::add<quantizer_4_t, quantizer_5_t, q_add_2_t, config48>(layer46_out, layer47_out, layer48_out); // q_add_2'
+            # new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
+            #         auto layer47_index = ii % 16;
+            #         layer48_out[ii] = layer46_out[ii] + layer47_out[layer47_index];
+            #     }"""
 
-            content = content.replace(old_text, new_text)
+            # content = content.replace(old_text, new_text)
 
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
-                f.write(content)
+            # with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
+            #     f.write(content)
 
             print("cpp replacement complete")
 

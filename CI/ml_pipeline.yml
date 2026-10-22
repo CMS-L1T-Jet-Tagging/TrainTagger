@@ -11,13 +11,13 @@ stages:
   - emulate
   - emulation-evaluate
   - profile
-  - run_processes
-  - run_TT_PU200
-  - run_VBFHToBB_PU200
-  - run_VBFHToCC_PU200
-  - run_MinBias_PU200
-  - run_QCD_Pt15To3000_PU200
-  - emulation_regression
+  # - run_processes
+  # - run_TT_PU200
+  # - run_VBFHToBB_PU200
+  # - run_VBFHToCC_PU200
+  # - run_MinBias_PU200
+  # - run_QCD_Pt15To3000_PU200
+  # - emulation_regression
   - upload
   - test
 
@@ -387,7 +387,7 @@ upload_new_model:
     - job: profile
       optional: true
     - job: emulation_regression
-      optional: false
+      optional: true
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null

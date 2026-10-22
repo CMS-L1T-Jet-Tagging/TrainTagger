@@ -7,6 +7,8 @@ import numpy.typing as npt
 import keras
 import numpy as np
 from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten,Rescaling
+
+import hgq
 from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd,QSum, QMultiply
 from hgq.layers.activation import QUnaryFunctionLUT
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig

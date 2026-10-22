@@ -112,7 +112,7 @@ HGQ2:Linformer:
     Model: LinformerHGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'True'
+    RUN_SYNTHESIS: 'False'
     EMULATION_WRAPPER_VERSION: v1_0_2
     HLS4ML_NAME : Linf_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ

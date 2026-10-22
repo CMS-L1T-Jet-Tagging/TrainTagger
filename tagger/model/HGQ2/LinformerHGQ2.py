@@ -7,6 +7,7 @@ import numpy.typing as npt
 import keras
 import numpy as np
 from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten,Rescaling
+import hgq
 from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd,QSum, QMultiply,QLinformerAttention
 from hgq.layers.activation import QUnaryFunctionLUT
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
@@ -150,6 +151,11 @@ class LinformerHGQ2(HGQ2Model):
             # Remove the old directory if it exists
             hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
             os.system(f'rm -rf {hls4ml_outdir}')
+            
+            test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
+            test_dict = {k: test_dict[k] for k in test_dict.files}
+            prepared_inputs = self.prepare_inputs(test_dict)[0]
+            hgq.utils.minmax_trace.trace_minmax(self.jet_model, prepared_inputs['basic_input'],verbose=2)
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')

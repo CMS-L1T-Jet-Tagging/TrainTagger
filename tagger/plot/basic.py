@@ -164,7 +164,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, results_dict,
         results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_FPR"] = fpr[idx]
         results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_AUC"] = roc_auc
 
-            # Plot the ROC curve
+    # Plot the ROC curve
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
     ax.plot(

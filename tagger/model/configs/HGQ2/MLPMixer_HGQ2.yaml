@@ -7,7 +7,7 @@ run_config :
 model_config :
   name : MLPMixer_HGQ2
   embedding_layers : [32,32,32,32]
- classification_layers : [32,16]
+  classification_layers : [32,16]
   classification_parallelisation_factor : [32,16]
   regression_layers : [32,16]
   regression_parallelisation_factor : [32,16]

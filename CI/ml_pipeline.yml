@@ -322,50 +322,50 @@ profile:
   artifacts:
     expire_in: 7 days
 
-run_processes:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
-  stage: run_processes
-  tags: [cern-nextgen-gpu]
-  needs:
-    - job : hls4ml
-      optional: true
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  before_script:
-    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
-    - source /cvmfs/cms.cern.ch/cmsset_default.sh
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-  script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  parallel:
-    matrix:
-      - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
-  artifacts:
-    paths:
-      - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
-    expire_in: 7 days
+# run_processes:
+#   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
+#   stage: run_processes
+#   tags: [cern-nextgen-gpu]
+#   needs:
+#     - job : hls4ml
+#       optional: true
+#   rules:
+#     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+#   before_script:
+#     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+#     - source /cvmfs/cms.cern.ch/cmsset_default.sh
+#     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+#   script:
+#   - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   parallel:
+#     matrix:
+#       - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
+#   artifacts:
+#     paths:
+#       - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
+#     expire_in: 7 days
 
-emulation_regression:
-  extends:
-    - .template
-  stage: emulation_regression
-  tags: [cern-nextgen-gpu]
-  needs:
-    - job : run_processes
-      optional: true
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  script:
-  - source activate tagger
-  - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
-  - mkdir -p output/$Model/plots/emulation_regression
-  - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 7 days
+# emulation_regression:
+#   extends:
+#     - .template
+#   stage: emulation_regression
+#   tags: [cern-nextgen-gpu]
+#   needs:
+#     - job : run_processes
+#       optional: true
+#   rules:
+#     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+#   script:
+#   - source activate tagger
+#   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
+#   - mkdir -p output/$Model/plots/emulation_regression
+#   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   artifacts:
+#     paths:
+#       - output/$Model
+#     expire_in: 7 days
 
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest

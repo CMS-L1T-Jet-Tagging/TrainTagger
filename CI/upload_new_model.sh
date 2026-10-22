@@ -13,18 +13,19 @@ if [ -z "${Name}" ] || [ -z "${Model}" ] || [ -z "${EOS_STORAGE_DIR}" ] || [ -z 
 fi
 mkdir $Name
 mkdir $Name/plots
-mv output/$Model/*.json $Name
-mv output/$Model/*.yaml $Name
 mv output/$Model/model $Name/model
 mv output/$Model/plots/training/ $Name/plots
 mv output/$Model/plots/physics/ $Name/plots
-mv output/$Model/plots/emulation_regression/ $Name/plots
+
+mkdir $Name/configs
+mv output/$Model/*.json $Name/configs
+mv output/$Model/*.yaml $Name/configs
 
 if [[ "$RUN_SYNTHESIS" == "True" ]]; then
     cd output/$Model/firmware/
     tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    eos cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     cd ../../..
     mv output/$Model/plots/profile $Name/plots
 fi
@@ -32,7 +33,7 @@ fi
 if [[ "$RUN_EMULATION" == "True" ]]; then
     mv output/$Model/plots/emulation $Name/plots
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator/
-    cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator
+    eos cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator
 fi
 
 cd ..
@@ -42,6 +43,7 @@ export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
 pb_copy_index.py TrainTagger/${Name} --recursive
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive
 cd TrainTagger/$Name
+pb_deploy_plots.py configs ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions json,yaml
 pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
 #pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,json
 ls ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}

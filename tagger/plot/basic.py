@@ -122,7 +122,7 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
     plt.close()
 
 
-def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=None):
+def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, results_dict,signal_proc=None):
     """
     Generate ROC curves comparing between two specific class labels.
     """
@@ -150,7 +150,14 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
 
     # Compute FPR, TPR, and AUC
     fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
+    
+    idx = np.argmin(np.abs(tpr - 0.5))
     roc_auc = auc(fpr, tpr)
+    if signal_proc == None:
+        print(f"FPR at TPR for {class_pair[0]} vs {class_pair[1]} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")
+        results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_FPR"] = fpr[idx]
+        results_dict[f"{class_pair[0]}_vs_{class_pair[1]}_AUC"] = roc_auc
+
 
     # Plot the ROC curve
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
@@ -177,11 +184,11 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     plt.close()
 
 
-def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
+def ROC(y_pred, y_test, class_labels, plot_dir, result_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
     colormap = matplotlib.colormaps.get_cmap('Set1')
-
+    ROC_dict={}
     # Create a plot for ROC curves
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
@@ -195,6 +202,10 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
         # Compute FPR, TPR, and AUC
         fpr, tpr, _ = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
+        
+        print(f"FPR at TPR for {class_label} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")
+        results_dict[f"{class_label}_FPR"] = fpr[idx]
+        results_dict[f"{class_label}_AUC"] = roc_auc
 
         ROC_dict[class_label] = roc_auc
         # Plot the ROC curve for the current class
@@ -968,7 +979,7 @@ def basic(model, signal_dirs):
         hist_response(pt_ratio, y_test, model.class_labels, plot_dir)
 
     # Plot ROC curves
-    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, ROC_dict)
+    ROC_dict = ROC(y_pred, y_test, model.class_labels, plot_dir, model.results_dict)
     class_pairs = []
     # Generate all possible pairs of classes
     for i in model.class_labels.keys():
@@ -997,10 +1008,10 @@ def basic(model, signal_dirs):
         # Plot the binary ROCs for each class pair
         for class_pair in class_pairs:
             binary_dir = os.path.join(sample_plot_dir, f"test_set") if i != -1 else plot_dir
-            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair, process_label)
+            ROC_binary(y_p, y_t, model.class_labels, binary_dir, class_pair,model.results_dict, process_label)
             if i != -1:
                 binary_dir = os.path.join(sample_plot_dir, "full_sample")
-                ROC_binary(sample_preds, sample_data[2], model.class_labels, binary_dir, class_pair, process_label)
+                ROC_binary(sample_preds, sample_data[2], model.class_labels, binary_dir, class_pair,model.results_dict, process_label)
 
         # Add light vs b/charm/gluon combined plot
         binary_dir_test = os.path.join(sample_plot_dir, "test_set") if i != -1 else plot_dir
@@ -1027,4 +1038,4 @@ def basic(model, signal_dirs):
     # Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
 
-    return ROC_dict
+    model.save_results_dict()

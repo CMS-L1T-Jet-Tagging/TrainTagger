@@ -190,3 +190,15 @@ if __name__ == "__main__":
     print('Latency : ', report['latency_clks'] * model.firmware_config['clock_period'] * 1e-3, ' mus')
     print('Initiation Interval : ', report['latency_ii'], ' clock cycles')
     print("===================")
+    
+    model.result_dict['InputPrecision'] = model.firmware_config['input_precision']
+    model.result_dict['ClassPrecision'] = model.firmware_config['class_precision']
+    model.result_dict['RegressionPrecision'] = model.firmware_config['reg_precision']
+    model.result_dict['FlipFlops'] = report['ff_rel']
+    model.result_dict['LookUpTables'] = report['lut_rel']
+    model.result_dict['BlockRAM'] = report['bram_rel']
+    model.result_dict['DigitalSignalProcessors'] = report['dsp_rel']
+    model.result_dict['Latency'] = report['latency_clks']
+    model.result_dict['InitiationInterval'] = report['latency_ii']
+    
+    model.save_results_dict()

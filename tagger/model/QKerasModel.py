@@ -169,6 +169,12 @@ class QKerasModel(JetTagModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
+        
+        self.results_dict['best_loss'] = np.min(self.history['loss'])
+        self.results_dict['best_val_loss'] = np.min(self.history['val_loss'])
+        self.results_dict['best_jet_id_loss'] = np.min(self.history['jet_id_output_loss'])
+        self.results_dict['best_pT_output_loss'] = np.min(self.history['pT_output_loss'])
+        
 
     def prepare_inputs(self, raw_inputs: dict) -> dict:
         """Prepare the input dictionary for the model from a list of arrays

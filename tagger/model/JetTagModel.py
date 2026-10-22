@@ -42,6 +42,8 @@ class JetTagModel(ABC):
         self.training_config = {}
         self.firmware_config = {}
         self.inputs = {}
+        
+        self.results_dict = {}
 
         self.output_id_name = 'jet_id_output'
         self.output_pt_name = 'pT_output'
@@ -113,6 +115,18 @@ class JetTagModel(ABC):
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)
+    
+    def save_results_dict(self,out_dir : str = "None"):
+        if out_dir == "None":
+            out_dir = self.output_directory
+        with open(os.path.join(out_dir, "results_dict.json"), "w") as f:
+            json.dump(self.results_dict,f, indent=4)
+            
+    def load_results_dict(self,out_dir : str = "None"):
+        if out_dir == "None":
+            out_dir = self.output_directory
+        with open(os.path.join(out_dir, "results_dict.json"), "r") as f:
+                self.results_dict = json.load(f)
 
     def save_decorator(save_func):
         """Decorator used to include additional

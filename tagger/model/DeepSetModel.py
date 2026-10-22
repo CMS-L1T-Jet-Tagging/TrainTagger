@@ -157,6 +157,9 @@ class DeepSetModel(QKerasModel):
         self.jet_model = tf.keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
 
         print(self.jet_model.summary())
+        
+        self.results_dict['num_parameters'] = self.jet_model.count_params()
+
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
         """Run the hls4ml model conversion

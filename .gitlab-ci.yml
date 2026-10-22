@@ -83,7 +83,7 @@ HGQ2:MLPMixer:
     Config: HGQ2/MLPMixer_HGQ2.yaml
     Model: MLPMixerHGQ2
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
+    RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
     HLS4ML_NAME : MLPM_HGQ
@@ -97,7 +97,7 @@ HGQ2:JEDILinear:
     Config: HGQ2/JEDILinear_HGQ2.yaml
     Model: JEDILinearHGQ2
     RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
+    RUN_EMULATION: 'False'
     RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
     HLS4ML_NAME : JL_HGQ
@@ -112,7 +112,7 @@ HGQ2:Linformer:
     Model: LinformerHGQ2
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'False'
-    RUN_SYNTHESIS: 'False'
+    RUN_SYNTHESIS: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
     HLS4ML_NAME : Linf_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ

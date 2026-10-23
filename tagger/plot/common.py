@@ -75,14 +75,23 @@ def delta_r(eta1, phi1, eta2, phi2):
     return np.sqrt(delta_eta**2 + delta_phi**2)
 
 def find_rate(rate_list, target_rate = 14, RateRange = 0.05):
+    if len(rate_list) == 0:
+        raise ValueError("Cannot select a working point from an empty rate list.")
 
-    idx_list = []
+    idx_list = [
+        i for i, rate in enumerate(rate_list)
+        if target_rate - RateRange <= rate <= target_rate + RateRange
+    ]
+    if idx_list:
+        return idx_list
 
-    for i in range(len(rate_list)):
-        if target_rate - RateRange <= rate_list[i] <= target_rate + RateRange:
-            idx_list.append(i)
-
-    return idx_list
+    closest_idx = int(np.argmin(np.abs(np.asarray(rate_list) - target_rate)))
+    print(
+        f"No rate point found in [{target_rate - RateRange}, "
+        f"{target_rate + RateRange}] kHz; using closest point "
+        f"({rate_list[closest_idx]:.3g} kHz)."
+    )
+    return [closest_idx]
 
 def plot_ratio(all_events, selected_events, plot=False):
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)

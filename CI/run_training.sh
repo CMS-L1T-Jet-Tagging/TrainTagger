@@ -9,7 +9,7 @@ if [ "$1" == "False" ] && [ "$2" == "False" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"
         RETRAIN_OPT="--retrain $RETRAIN_URL"
     fi
-    python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model $RETRAIN_OPT
+    python tagger/train/train.py -p 40 -y tagger/model/configs/$Model.yaml -o output/$Model $RETRAIN_OPT
     # Signal-process inputs for the basic ROC plots: retrain pipelines (RUN_RETRAIN=True)
     # produce retrain_signal_process_data.tgz when the signal nano AOD file sits next to the
     # retrain input; otherwise fall back to the standard dataset, and skip the per-signal

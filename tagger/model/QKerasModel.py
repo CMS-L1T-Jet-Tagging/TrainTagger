@@ -172,8 +172,8 @@ class QKerasModel(JetTagModel):
         
         self.results_dict['best_loss'] = np.min(self.history.history['loss'])
         self.results_dict['best_val_loss'] = np.min(self.history.history['val_loss'])
-        self.results_dict['best_jet_id_loss'] = np.min(self.history.history['jet_id_output_loss'])
-        self.results_dict['best_pT_output_loss'] = np.min(self.history.history['pT_output_loss'])
+        self.results_dict['best_jet_id_loss'] = np.min(self.history.history['prune_low_magnitude_jet_id_output_loss'])
+        self.results_dict['best_pT_output_loss'] = np.min(self.history.history['prune_low_magnitude_pT_output_loss'])
         
 
     def prepare_inputs(self, raw_inputs: dict) -> dict:

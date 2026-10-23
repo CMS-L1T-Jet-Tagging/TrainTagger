@@ -444,7 +444,8 @@ def make_data(
     ratio=1.0,
     step_size="100MB",
     tree="outnano/jets",
-    num_workers=8
+    num_workers=8,
+    label="data",
 ):
     """
     Process the data set in chunks from the input ntuples file.
@@ -458,7 +459,12 @@ def make_data(
         n_parts (int): Number of constituent particles to use for tagging.
         fraction (float) : fraction from (0-1) of data to process for training/testing
         step_size (str): Step size for uproot iteration.
+        label (str): What is produced, used in the terminal output, e.g. "training data".
+
+    Returns:
+        tuple: (number of entries processed, total entries in the input tree), or None if aborted.
     """
+    print(f"[make_data] Producing {label} from {infile} (tree {tree}, ratio {ratio})")
 
     # Check if output dir already exists, remove if so
     if os.path.exists(outdir):
@@ -467,7 +473,8 @@ def make_data(
             shutil.rmtree(outdir)
             print(f"Deleted existing directory: {outdir}")
         else:
-            print("Exiting without making changes.")
+            print(f"Keeping existing directory: {outdir}")
+            print_summary(label, infile, outdir, None)
             return
 
     # Create output training dataset
@@ -475,15 +482,18 @@ def make_data(
     print("Output directory:", outdir)
 
     # Loop through the entries
-    num_entries = uproot.open(infile)[tree].num_entries
-    print(num_entries)
+    tree_obj = uproot.open(infile)[tree]
+    num_entries = tree_obj.num_entries
+    print(f"Entries in input tree: {num_entries}, processing ratio {ratio} (~{int(num_entries * ratio)} entries)")
+
     num_entries_done = 0
     chunk = 0
+    target_entries = max(1, int(num_entries * ratio))
 
-    for data in (pbar := tqdm(uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=num_workers))):
-        pbar.set_description(f'Processing chunk {chunk}')
-
+    for data in (pbar := tqdm(uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=num_workers), total=None)):
         num_entries_done += len(data)  # count before cuts
+        processed_fraction = min(num_entries_done / float(target_entries), 1.0)
+        pbar.set_description(f'Processed chunk {chunk} ({processed_fraction:.1%})')
 
         # Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
@@ -505,3 +515,25 @@ def make_data(
         chunk += 1
         if num_entries_done / num_entries >= ratio:
             break
+
+    print_summary(label, infile, outdir, (num_entries_done, num_entries))
+    return num_entries_done, num_entries
+
+
+def print_summary(label, infile, outdir, result):
+    """
+    Print what make_data produced, where it is stored and how many entries were processed.
+
+    Parameters:
+        label (str): What was produced, e.g. "training data" or "signal data for TT_PU200".
+        infile (str): The input file path.
+        outdir (str): The output directory.
+        result (tuple or None): The return value of make_data.
+    """
+    if result is None:
+        print(f"[make_data] {label}: skipped, {outdir} was kept unchanged")
+        return
+    done, total = result
+    print(f"[make_data] {label}: processed {done} of {total} entries ({100 * done / total:.1f}%)")
+    print(f"[make_data]   input:  {infile}")
+    print(f"[make_data]   output: {os.path.abspath(outdir)}")

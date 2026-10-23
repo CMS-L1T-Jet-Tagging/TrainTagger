@@ -357,9 +357,49 @@ def constituents_mask(x, features_dim):
 
     return mask
 
+def _data_chunk_paths(outdir, percentage):
+    metadata_file = os.path.join(outdir, "metadata.json")
+    print("Loading metadata from: ", metadata_file)
+    with open(metadata_file, "r") as f:
+        metadata = json.load(f)
+
+    chunks_to_load = int(np.ceil((percentage / 100) * len(metadata)))
+    return [f"{metadata[i]['file']}:data" for i in range(chunks_to_load)]
+
+
+def _load_data_chunk(chunk_file, model, fields, variables):
+    data = uproot.concatenate([chunk_file], filter_name=fields, library="ak")
+    class_labels = variables['outputs'].copy()
+    input_vars = variables['inputs']
+    jet_vars = variables['jet_fields']
+    extra_vars = variables['extras']
+
+    pu_mask = data['class_label'] == class_labels['pileup']
+    remove_basic_fields = [i for i, x in enumerate(input_vars) if x not in model.inputs['basic_input_config']]
+    data['nn_inputs'] = np.delete(data['nn_inputs'], remove_basic_fields, axis=2)
+    remove_jet_fields = [i for i, x in enumerate(jet_vars) if x not in model.inputs['jet_features']]
+    data['nn_jet_features'] = np.delete(data['nn_jet_features'], remove_jet_fields, axis=1)
+
+    if not model.training_config['pileup']:
+        class_labels.pop('pileup', None)
+        data = data[~pu_mask]
+
+    return data, class_labels, input_vars, jet_vars, extra_vars
+
+
+def iter_data_chunks(outdir, percentage, model, fields=None):
+    """Yield processed ROOT chunks without concatenating the complete dataset."""
+    data_metadata_file = os.path.join(outdir, "variables.json")
+    with open(data_metadata_file, "r") as f:
+        variables = json.load(f)
+
+    for chunk_file in _data_chunk_paths(outdir, percentage):
+        yield _load_data_chunk(chunk_file, model, fields, variables)
+
+
 def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
     """
-    Load a specified percentage of the dataset using uproot.concatenate.
+    Load a specified percentage of the dataset, reading one ROOT chunk at a time.
 
     Parameters:
         outdir (str): The output directory containing the data chunks.
@@ -368,56 +408,18 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
         fields (list, optional): Specific fields to load. If None, load all fields.
 
     Returns:
-        awkward.Array: Concatenated data arrays from selected chunks.
+        tuple: Training data, test data, and dataset metadata.
     """
 
     print("Loading data from: ", outdir)
     print("Loading percentage: ", percentage)
     print("With test ratio of: ", test_ratio)
 
-    # Load metadata to determine chunks to load
-    metadata_file = os.path.join(outdir, "metadata.json")
-    print("Loading metadata from: ", metadata_file)
-    with open(metadata_file, "r") as f:
-        metadata = json.load(f)
-
-    total_chunks = len(metadata)
-    chunks_to_load = int(np.ceil((percentage / 100) * total_chunks))
-
-    # Collect the file paths for the chunks to load
-    chunk_files = [f"{metadata[i]['file']}:data" for i in range(chunks_to_load)]
-
-    # Use uproot.concatenate to load and combine data from multiple files
-    data = uproot.concatenate(
-        [f"{file}" for file in chunk_files],
-        filter_name=fields,
-        library="ak"
-    )
-
-    # Load corresponding metadata for classlabels/input variables
-    data_metadata_file = os.path.join(outdir, "variables.json")
-    with open(data_metadata_file, "r") as f:
-        variables = json.load(f)
-        class_labels = variables['outputs']
-        input_vars = variables['inputs']
-        jet_vars = variables['jet_fields']
-        extra_vars = variables['extras']
-
-    # Pile up masking and basic input configuration filtering based on model config
-    pu_mask = (data['class_label'] == class_labels['pileup'])
-
-    # remove unwanted basic input variables
-    remove_basic_fields = [i for i, x in enumerate(input_vars) if x not in model.inputs['basic_input_config']]
-    data['nn_inputs'] = np.delete(data['nn_inputs'], remove_basic_fields, axis=2)
-
-    # remove unwanted jet features
-    remove_jet_fields = [i for i, x in enumerate(jet_vars) if x not in model.inputs['jet_features']]
-    data['nn_jet_features'] = np.delete(data['nn_jet_features'], remove_jet_fields, axis=1)
-
-    # pileup masking if not training on pileup
-    if not model.training_config['pileup']:
-        class_labels.pop('pileup', None)  # Remove pileup from class_labels if not training on it
-        data = data[~pu_mask]
+    chunks = list(iter_data_chunks(outdir, percentage, model, fields))
+    if not chunks:
+        raise ValueError(f"No data chunks found in {outdir}")
+    data = ak.concatenate([chunk[0] for chunk in chunks], axis=0)
+    _, class_labels, input_vars, jet_vars, extra_vars = chunks[0]
 
     # Shuffle the data indices
     total_data_len = len(data)

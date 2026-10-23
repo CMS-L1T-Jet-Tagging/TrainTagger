@@ -21,7 +21,7 @@ import numpy as np
 import shap
 from sklearn.metrics import auc, roc_curve
 
-from tagger.data.tools import load_data, to_ML
+from tagger.data.tools import iter_data_chunks, load_data, to_ML
 from tagger.plot import style
 
 from .common import PT_BINS, plot_histo
@@ -920,17 +920,31 @@ def filter_process(test_data, model, process_dir):
     Filter jets from specific signal process to create plots for specified signal processes.
     Comparison done through concatenation of sets to be compared and np unique to check for duplicates.
     """
-    train, _, class_labels = load_data(os.path.join("signal_process_data", process_dir), 100, model, test_ratio=0)[:3]
-    train = to_ML(train, class_labels)
-
-    # apply unique to sets to be compared, since there tend to be duplicates
-    process_data = np.unique(train[0], axis=0)
     unique_test_data, indices_unique_test_data = np.unique(test_data, axis=0, return_index=True)
-    comparison_data = np.concatenate((unique_test_data, process_data), axis=0)
-    u, index, counts = np.unique(comparison_data, axis=0, return_index=True, return_counts=True)
-    process_indices = index[counts == 2]
-    filtered_indices = indices_unique_test_data[process_indices]
+    signal_path = os.path.join("signal_process_data", process_dir)
+    sample_chunks = []
+    matching_test_indices = set()
+    class_labels = None
 
+    for data, chunk_labels, *_ in iter_data_chunks(signal_path, 100, model):
+        class_labels = chunk_labels
+        train_chunk = to_ML(data, class_labels)
+        sample_chunks.append(train_chunk)
+
+        # Compare one ROOT chunk at a time to bound peak memory usage.
+        process_data = np.unique(train_chunk[0], axis=0)
+        comparison_data = np.concatenate((unique_test_data, process_data), axis=0)
+        _, index, counts = np.unique(
+            comparison_data, axis=0, return_index=True, return_counts=True
+        )
+        matching_test_indices.update(index[counts == 2].tolist())
+
+    if class_labels is None:
+        raise ValueError(f"No signal data chunks found in {signal_path}")
+    filtered_indices = indices_unique_test_data[
+        np.fromiter(sorted(matching_test_indices), dtype=int)
+    ]
+    train = tuple(np.concatenate([chunk[i] for chunk in sample_chunks], axis=0) for i in range(6))
     return filtered_indices, train
 
 

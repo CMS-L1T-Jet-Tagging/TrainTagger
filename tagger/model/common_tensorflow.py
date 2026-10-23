@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.layers import GlobalAveragePooling1D, GlobalMaxPooling1D, Multiply, Reshape, RepeatVector, Permute
 import tensorflow_model_optimization as tfmot
+from qkeras.qlayers import QDense
 import os
 
 

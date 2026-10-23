@@ -1,6 +1,7 @@
 # flake8: noqa
 import collections
 import os
+import warnings
 
 import awkward as ak
 import matplotlib
@@ -21,7 +22,7 @@ import numpy as np
 import shap
 from sklearn.metrics import auc, roc_curve
 
-from tagger.data.tools import load_data, to_ML
+from tagger.data.tools import iter_data_chunks, load_data, to_ML
 from tagger.plot import style
 
 from .common import PT_BINS, plot_histo
@@ -58,6 +59,20 @@ def loss_history(plot_dir, loss_names, history):
         plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
 
         fig.clf()
+
+
+def _roc_curve(y_true, y_score, name):
+    """
+    roc_curve that returns None if y_true has no signal or no background jets,
+    where sklearn would warn (UndefinedMetricWarning) and return NaN rates
+    """
+    y_true = np.asarray(y_true).astype(bool)
+    n_sig = int(y_true.sum())
+    n_bkg = len(y_true) - n_sig
+    if n_sig == 0 or n_bkg == 0:
+        print(f"Skipping ROC {name}: {n_sig} signal and {n_bkg} background jets")
+        return None
+    return roc_curve(y_true, y_score)
 
 
 def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
@@ -97,9 +112,15 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
         (r'$\tau_h^{\pm}$ vs Electrons', electron_indices),
     ]:
         y_true, y_score = compute_roc_inputs(y_pred, y_test, tau_indices, bkg_indices)
-        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc = _roc_curve(y_true, y_score, label)
+        if roc is None:
+            continue
+        fpr, tpr, _ = roc
         roc_auc = auc(fpr, tpr)
         roc_data.append((tpr, fpr, roc_auc, label))
+
+    if not roc_data:
+        return
 
     # Plot all ROC curves in one figure
     plt.figure(figsize=style.FIGURE_SIZE)
@@ -149,7 +170,10 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, signal_proc=N
     y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
 
     # Compute FPR, TPR, and AUC
-    fpr, tpr, _ = roc_curve(y_true_binary, y_score_binary)
+    roc = _roc_curve(y_true_binary, y_score_binary, f"{class_pair[0]} vs {class_pair[1]}")
+    if roc is None:
+        return
+    fpr, tpr, _ = roc
     roc_auc = auc(fpr, tpr)
 
     # Plot the ROC curve
@@ -185,6 +209,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     # Create a plot for ROC curves
     fig, ax = plt.subplots(1, 1, figsize=style.FIGURE_SIZE)
     hep.cms.label(llabel=style.CMSHEADER_LEFT, rlabel=style.CMSHEADER_RIGHT, ax=ax, fontsize=style.CMSHEADER_SIZE)
+    plotted_aucs = []  # AUCs in plotting order, to sort the legend
     for i, class_label in enumerate(class_labels):
 
         # Get true labels and predicted probabilities for the current class
@@ -193,10 +218,14 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
         y_score = y_pred[:, i]  # Predicted probabilities for the current class
 
         # Compute FPR, TPR, and AUC
-        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc = _roc_curve(y_true, y_score, f"{class_label} vs rest")
+        if roc is None:
+            continue
+        fpr, tpr, _ = roc
         roc_auc = auc(fpr, tpr)
 
         ROC_dict[class_label] = roc_auc
+        plotted_aucs.append(roc_auc)
         # Plot the ROC curve for the current class
         ax.plot(
             tpr,
@@ -211,9 +240,8 @@ def ROC(y_pred, y_test, class_labels, plot_dir, ROC_dict):
     ax.set_ylabel('Mistag Rate')
     ax.set_xlabel('Signal Efficiency')
 
-    auc_list = [value for key, value in ROC_dict.items()]
     handles, labels = plt.gca().get_legend_handles_labels()
-    order = np.argsort(auc_list)
+    order = np.argsort(plotted_aucs)
     ax.legend(
         [handles[idx] for idx in order],
         [labels[idx] for idx in order],
@@ -303,6 +331,8 @@ def plot_input_vars(particle_features_test, y_test, input_vars, class_labels, pl
             # don't want all 0 inputs in our plots but also want to preserve real 0s in the plots
             input_per_class = particle_features_test[:, :, i][(y_test[:, iclass] == 1)[:,None] & is_filled ].flatten()
             inputs.append(input_per_class)
+        if not any(len(values) > 0 for values in inputs):
+            continue
         plot_histo(
             inputs,
             labels,
@@ -313,13 +343,23 @@ def plot_input_vars(particle_features_test, y_test, input_vars, class_labels, pl
             x_range=style.INPUT_FEATURE_RANGES[input_vars[i]],
         )
         save_path = os.path.join(save_dir, input_vars[i]+"_split")
-        plt.savefig(f"{save_path}.png", bbox_inches='tight')
-        plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="divide by zero encountered in scalar divide",
+                category=RuntimeWarning,
+                module="matplotlib.transforms",
+            )
+            plt.savefig(f"{save_path}.png", bbox_inches='tight')
+            plt.savefig(f"{save_path}.pdf", bbox_inches='tight')
         plt.close()
 
     for i in range(len(input_vars)):
+        values = particle_features_test[:, :, i][is_filled].flatten()
+        if len(values) == 0:
+            continue
         plot_histo(
-            [particle_features_test[:, :, i][is_filled].flatten()],
+            [values],
             [style.INPUT_FEATURE_STYLE[input_vars[i]]],
             '',
             style.INPUT_FEATURE_STYLE[input_vars[i]],
@@ -396,14 +436,14 @@ def get_response(truth_pt, reco_pt, pt_ratio):
         uncorrected_response_bin = reco_pt[selection] / truth_pt[selection]
         regressed_response_bin = regressed_pt[selection] / truth_pt[selection]
 
-        # Append the mean response
-        uncorrected_response.append(np.mean(uncorrected_response_bin))
-        regressed_response.append(np.mean(regressed_response_bin))
-
         # Compute the standard deviation and uncertainty in the mean
         n_events = len(truth_pt[selection])
 
         if n_events > 0:
+            # Append the mean response only for populated bins. Empty bins
+            # would otherwise produce NaNs that break Matplotlib's layout.
+            uncorrected_response.append(np.mean(uncorrected_response_bin))
+            regressed_response.append(np.mean(regressed_response_bin))
             uncorrected_std = np.std(uncorrected_response_bin)
             regressed_std = np.std(regressed_response_bin)
 
@@ -411,6 +451,8 @@ def get_response(truth_pt, reco_pt, pt_ratio):
             regressed_errors.append(regressed_std / np.sqrt(n_events))
         else:
             # No events in bin
+            uncorrected_response.append(0)
+            regressed_response.append(0)
             uncorrected_errors.append(0)
             regressed_errors.append(0)
 
@@ -565,24 +607,26 @@ def get_rms(truth_pt, reco_pt, pt_ratio):
         pt_max = PT_BINS[i + 1]
 
         selection = (truth_pt > pt_min) & (truth_pt < pt_max)
-        pt_avg = np.mean(abs(truth_pt[selection] - reco_pt[selection]))
-
-        mu_uncorr = np.mean(uncorrected_res[selection])
-        sigma_uncorr = np.std(uncorrected_res[selection])
-        mu_reg = np.mean(regressed_res[selection])
-        sigma_reg = np.std(regressed_res[selection])
-
-        # Get the errors for the standard deviation
-        # Standard error of the standard deviation for a normal distribution
         n_uncorr = len(uncorrected_res[selection])
         n_reg = len(regressed_res[selection])
 
-        if n_uncorr <= 1 or n_reg <= 1:
-            sigma_uncorr_err = sigma_uncorr
-            sigma_reg_err = sigma_reg
+        if n_uncorr == 0 or n_reg == 0:
+            sigma_uncorr = 0
+            sigma_reg = 0
+            sigma_uncorr_err = 0
+            sigma_reg_err = 0
         else:
-            sigma_uncorr_err = sigma_uncorr / np.sqrt(2 * (n_uncorr - 1))
-            sigma_reg_err = sigma_reg / np.sqrt(2 * (n_reg - 1))
+            sigma_uncorr = np.std(uncorrected_res[selection])
+            sigma_reg = np.std(regressed_res[selection])
+
+            # Standard error of the standard deviation for a normal
+            # distribution.
+            if n_uncorr <= 1 or n_reg <= 1:
+                sigma_uncorr_err = sigma_uncorr
+                sigma_reg_err = sigma_reg
+            else:
+                sigma_uncorr_err = sigma_uncorr / np.sqrt(2 * (n_uncorr - 1))
+                sigma_reg_err = sigma_reg / np.sqrt(2 * (n_reg - 1))
 
         rms_uncorr.append(sigma_uncorr)
         rms_reg.append(sigma_reg)
@@ -821,7 +865,10 @@ def efficiency(y_pred, y_test, reco_pt_test, class_labels, plot_dir):
         summed_y_score = sum(y_pred[:, idx] for idx in eff_selection[key])
 
         # Compute FPR, TPR, and AUC
-        fpr, tpr, thres = roc_curve(summed_y_true, summed_y_score)
+        roc = _roc_curve(summed_y_true, summed_y_score, f"{key} efficiency")
+        if roc is None:
+            continue
+        fpr, tpr, thres = roc
         roc_auc = auc(fpr, tpr)
 
         # get working points for 50%, 20%, 10%
@@ -888,9 +935,15 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
     roc_data = []
     for label, bkg_idx in targets.items():
         y_true, y_score = compute_roc_inputs(light_idx, bkg_idx)
-        fpr, tpr, _ = roc_curve(y_true, y_score)
+        roc = _roc_curve(y_true, y_score, f"light vs {label}")
+        if roc is None:
+            continue
+        fpr, tpr, _ = roc
         roc_auc = auc(fpr, tpr)
         roc_data.append((tpr, fpr, roc_auc, label))
+
+    if not roc_data:
+        return
 
     # Plot all in one
     plt.figure(figsize=style.FIGURE_SIZE)
@@ -920,17 +973,31 @@ def filter_process(test_data, model, process_dir):
     Filter jets from specific signal process to create plots for specified signal processes.
     Comparison done through concatenation of sets to be compared and np unique to check for duplicates.
     """
-    train, _, class_labels = load_data(os.path.join("signal_process_data", process_dir), 100, model, test_ratio=0)[:3]
-    train = to_ML(train, class_labels)
-
-    # apply unique to sets to be compared, since there tend to be duplicates
-    process_data = np.unique(train[0], axis=0)
     unique_test_data, indices_unique_test_data = np.unique(test_data, axis=0, return_index=True)
-    comparison_data = np.concatenate((unique_test_data, process_data), axis=0)
-    u, index, counts = np.unique(comparison_data, axis=0, return_index=True, return_counts=True)
-    process_indices = index[counts == 2]
-    filtered_indices = indices_unique_test_data[process_indices]
+    signal_path = os.path.join("signal_process_data", process_dir)
+    sample_chunks = []
+    matching_test_indices = set()
+    class_labels = None
 
+    for data, chunk_labels, *_ in iter_data_chunks(signal_path, 100, model):
+        class_labels = chunk_labels
+        train_chunk = to_ML(data, class_labels)
+        sample_chunks.append(train_chunk)
+
+        # Compare one ROOT chunk at a time to bound peak memory usage.
+        process_data = np.unique(train_chunk[0], axis=0)
+        comparison_data = np.concatenate((unique_test_data, process_data), axis=0)
+        _, index, counts = np.unique(
+            comparison_data, axis=0, return_index=True, return_counts=True
+        )
+        matching_test_indices.update(index[counts == 2].tolist())
+
+    if class_labels is None:
+        raise ValueError(f"No signal data chunks found in {signal_path}")
+    filtered_indices = indices_unique_test_data[
+        np.fromiter(sorted(matching_test_indices), dtype=int)
+    ]
+    train = tuple(np.concatenate([chunk[i] for chunk in sample_chunks], axis=0) for i in range(6))
     return filtered_indices, train
 
 
@@ -979,11 +1046,11 @@ def basic(model, signal_dirs):
 
     # Make ROC binaries for complete test set and each signal process
     for i in range(-1, len(signal_dirs), 1):
-        sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
         if i == -1:
             y_p, y_t = y_pred, y_test
             process_label = None
         else:
+            sample_plot_dir = os.path.join(model.output_directory, "plots/physics", f"binary_rocs_{signal_dirs[i]}")
             signal_indices, sample_data = filter_process(test_dict['basic_input'], model, signal_dirs[i])
             sample_raw_inputs = {
                 'basic_input': sample_data[0],

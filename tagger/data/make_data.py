@@ -32,20 +32,26 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    make_data(infile=args.input, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    make_data(
+        infile=args.input,
+        outdir='training_data',
+        step_size=args.step,
+        extras=args.extras,
+        ratio=args.ratio,
+        tree=args.tree,
+        label="training data",
+    )
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:
         signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
-        print("making signal inputs for basic plotting:", signal_input)
-        signal_output = os.path.join("signal_process_data", signal_process)
-        if not os.path.exists(signal_output):
-            make_data(
-                infile=signal_input,
-                outdir=signal_output,
-                step_size=args.step,
-                extras=args.extras,
-                ratio=args.ratio,
-                tree=args.tree,
-                num_workers = args.num_workers,
-            )
+        make_data(
+            infile=signal_input,
+            outdir=os.path.join("signal_process_data", signal_process),
+            step_size=args.step,
+            extras=args.extras,
+            ratio=args.ratio,
+            tree=args.tree,
+            num_workers = args.num_workers,
+            label=f"signal data for {signal_process} (basic plotting)",
+        )

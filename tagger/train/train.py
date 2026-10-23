@@ -29,8 +29,6 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         raise ValueError(
             "Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass."
         )
-    if weightingMethod == "onlypt":
-        return flat_pt_weights(reco_pt_train)
     num_samples = y_train.shape[0]
 
     sample_weights = np.ones(num_samples)

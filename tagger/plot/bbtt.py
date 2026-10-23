@@ -103,8 +103,8 @@ def default_selection(jet_pt, jet_eta, indices, apply_sel):
     return event_mask
 
 
-def choose_taus_cmssw(taus):
-    ids = ak.argcombinations(taus, 2, fields=['jet1', 'jet2'])
+def choose_taus_cmssw(taup, taum):
+    ids = ak.argcombinations(taup, 2, fields=['jet1', 'jet2'])
 
     tau_topo = [(taup[:,i] + taup[:,j]) * (taum[:,i] + taum[:,j]) for i,j in zip(ids.jet1[0], ids.jet2[0])]
     #tau_topo = [(taup[:,i]*taum[:,j]) + (taum[:,i]*taup[:,j]) for i,j in zip(ids.jet1[0], ids.jet2[0])]

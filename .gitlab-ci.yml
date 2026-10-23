@@ -50,16 +50,16 @@ DeepSet:baseline_5param_extended_trk:
     RUN_RETRAIN: 'False'
     EMULATION_WRAPPER_VERSION: v1_0_2
 
-WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
-  extends: .ml_pipeline
-  variables:
-    Name: weightedAverageSimple_5param_extended_trk
-    Model: weightedAverageSimple
-    RERUN_ON_OLDTRAINING: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
-    RUN_RETRAIN: 'False'
-    EMULATION_WRAPPER_VERSION: v2_0_0
+# WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: weightedAverageSimple_5param_extended_trk
+#     Model: weightedAverageSimple
+#     RERUN_ON_OLDTRAINING: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
+#     RUN_RETRAIN: 'False'
+#     EMULATION_WRAPPER_VERSION: v2_0_0
 
 # DeepSetHGQ:baseline_hgq_5param_extended_trk:
 #  extends: .ml_pipeline

@@ -1,0 +1,83 @@
+# Automated AI code review of merge requests with hodor
+# (https://github.com/mr-karan/hodor), driving Kimi K3 on the CERN AI
+# gateway. Requires CI/CD variable HODOR_LLM_API_KEY (masked, not
+# protected); HODOR_GITLAB_TOKEN required for posting (project access
+# token with api scope — CI_JOB_TOKEN cannot write MR discussions here).
+#
+# Draft MRs are skipped. Manual review of any MR: Build > Pipelines > Run
+# pipeline with variable HODOR_MR_IID=<number> (and optionally
+# HODOR_MR_TARGET=<branch>, default master).
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api|trigger)$/ && $HODOR_MR_IID
+    - when: never
+
+hodor-review:
+  stage: test
+  image:
+    name: ghcr.io/mr-karan/hodor@sha256:daff937be827dc4e11d6560506743979e0111bda251c5d5564218596fe4c05a5
+    entrypoint: [""]
+  timeout: 30m
+  interruptible: true
+  allow_failure: true
+  needs: []
+  rules:
+    - if: $CI_MERGE_REQUEST_DRAFT == "true"
+      when: never
+    - when: on_success
+  variables:
+    HODOR_SOURCE: https://github.com/WMass/hodor
+    HODOR_COMMIT: 8bb33632a5fe059815cab669a176c40fed404a0b
+    HODOR_MODEL: MiMo-V2.6-Pro-MOPD-NGT
+    GIT_DEPTH: "0"
+    PI_OFFLINE: "1"
+    LLM_API_KEY: $HODOR_LLM_API_KEY
+  cache:
+    key: hodor-$HODOR_COMMIT
+    paths:
+      - .bun-cache
+  before_script:
+    - set -e
+    - |
+      for var in HODOR_LLM_API_KEY HODOR_GITLAB_TOKEN; do
+        eval val="\$$var"
+        if [ -z "$val" ]; then
+          echo ":: CI/CD variable $var is not configured. Add it under Settings > CI/CD > Variables (masked, not protected)."
+          exit 1
+        fi
+      done
+      export GITLAB_TOKEN="$HODOR_GITLAB_TOKEN"
+      glab auth login --hostname "$CI_SERVER_HOST" --token "$GITLAB_TOKEN"
+  script:
+    - set -e
+    - MR_IID="${CI_MERGE_REQUEST_IID:-$HODOR_MR_IID}"
+    - MR_URL="${CI_PROJECT_URL}/-/merge_requests/${MR_IID}"
+    - |
+      if [ -z "${CI_MERGE_REQUEST_IID:-}" ]; then
+        git fetch -q origin "refs/merge-requests/${MR_IID}/merge"
+        git checkout -q FETCH_HEAD
+        export CI_MERGE_REQUEST_TARGET_BRANCH_NAME="${HODOR_MR_TARGET:-master}"
+      fi
+    - HODOR_SRC="$(dirname "$CI_PROJECT_DIR")/hodor-src"
+    - git init -q "$HODOR_SRC"
+    - git -C "$HODOR_SRC" remote add origin "$HODOR_SOURCE"
+    - git -C "$HODOR_SRC" fetch -q --depth 1 origin "$HODOR_COMMIT"
+    - git -C "$HODOR_SRC" checkout -q FETCH_HEAD
+    - cd "$HODOR_SRC" && BUN_INSTALL_CACHE_DIR="$CI_PROJECT_DIR/.bun-cache" bun install --frozen-lockfile && cd "$CI_PROJECT_DIR"
+    - export HODOR_MODELS_JSON="$HODOR_SRC/models.cern.json"
+    - >-
+      bun run "$HODOR_SRC/src/cli.ts" "$MR_URL"
+      --model "cern/$HODOR_MODEL"
+      --reasoning-effort max
+      --post
+      --code-quality gl-code-quality-report.json
+      --require-delivery
+  artifacts:
+    when: always
+    expose_as: "Hodor findings"
+    paths:
+      - gl-code-quality-report.json
+    reports:
+      codequality: gl-code-quality-report.json

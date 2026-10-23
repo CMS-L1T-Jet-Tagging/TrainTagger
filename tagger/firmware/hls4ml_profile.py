@@ -191,14 +191,14 @@ if __name__ == "__main__":
     print('Initiation Interval : ', report['latency_ii'], ' clock cycles')
     print("===================")
     
-    model.result_dict['InputPrecision'] = model.firmware_config['input_precision']
-    model.result_dict['ClassPrecision'] = model.firmware_config['class_precision']
-    model.result_dict['RegressionPrecision'] = model.firmware_config['reg_precision']
-    model.result_dict['FlipFlops'] = report['ff_rel']
-    model.result_dict['LookUpTables'] = report['lut_rel']
-    model.result_dict['BlockRAM'] = report['bram_rel']
-    model.result_dict['DigitalSignalProcessors'] = report['dsp_rel']
-    model.result_dict['Latency'] = report['latency_clks']
-    model.result_dict['InitiationInterval'] = report['latency_ii']
+    model.results_dict['InputPrecision'] = model.firmware_config['input_precision']
+    model.results_dict['ClassPrecision'] = model.firmware_config['class_precision']
+    model.results_dict['RegressionPrecision'] = model.firmware_config['reg_precision']
+    model.results_dict['FlipFlops'] = report['ff_rel']
+    model.results_dict['LookUpTables'] = report['lut_rel']
+    model.results_dict['BlockRAM'] = report['bram_rel']
+    model.results_dict['DigitalSignalProcessors'] = report['dsp_rel']
+    model.results_dict['Latency'] = report['latency_clks']
+    model.results_dict['InitiationInterval'] = report['latency_ii']
     
     model.save_results_dict()

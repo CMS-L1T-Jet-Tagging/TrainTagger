@@ -184,7 +184,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, results_dict,
     plt.close()
 
 
-def ROC(y_pred, y_test, class_labels, plot_dir, result_dict):
+def ROC(y_pred, y_test, class_labels, plot_dir, results_dict):
     # Create a colormap for unique colors
     # Use 'tab10' with enough colors
     colormap = matplotlib.colormaps.get_cmap('Set1')

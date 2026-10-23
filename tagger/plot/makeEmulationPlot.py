@@ -127,7 +127,7 @@ def doPlots(model, outputdir, inputdir):
         "%",
     )
     
-    model.result_dict['RegressionEmulatorAccuracy'] = 100 - 100 * bit_accurate / len(np.array(data['jet_SC4NGJet_score_regression']))
+    model.results_dict['RegressionEmulatorAccuracy'] = 100 - 100 * bit_accurate / len(np.array(data['jet_SC4NGJet_score_regression']))
     
     plt.savefig("%s/jetRegression_1D.png" % outputdir, bbox_inches='tight')
     plt.savefig("%s/jetRegression_1D.pdf" % outputdir, bbox_inches='tight')
@@ -157,7 +157,7 @@ def doPlots(model, outputdir, inputdir):
             "%",
         )
         
-        model.result_dict['ClassificationEmulatorAccuracy_'+label] = 100 - 100 * bit_accurate / len(np.array(data['jet_SC4NGJet_score_' + label]))
+        model.results_dict['ClassificationEmulatorAccuracy_'+label] = 100 - 100 * bit_accurate / len(np.array(data['jet_SC4NGJet_score_' + label]))
 
         plt.savefig("%s/%s_score_1D.png" % (outputdir, label), bbox_inches='tight')
         plt.savefig("%s/%s_score_1D.pdf" % (outputdir, label), bbox_inches='tight')

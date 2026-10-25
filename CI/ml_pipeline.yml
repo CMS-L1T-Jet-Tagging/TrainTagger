@@ -168,7 +168,6 @@ hls4ml:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
-  - sed -i 's/^cosim      1$/cosim      0/' output/$Model/firmware/L1TSC4NGJetModel_${HLS4ML_NAME}/build_opt.tcl
   artifacts:
     paths:
       - output/$Model/firmware
@@ -184,6 +183,9 @@ synth:
     - if: $RUN_SYNTHESIS == "True"
   script:
     - cd output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME
+    - cat build_opt.tcl
+    - sed -i 's/    cosim      1$/    cosim      0/' build_opt.tcl
+    - cat build_opt.tcl
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../..

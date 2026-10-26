@@ -1,6 +1,5 @@
 include:
     - CI/cmssw.yml
-    - template: Code-Quality.gitlab-ci.yml
 
 stages:
   - data
@@ -19,7 +18,6 @@ stages:
   # - run_QCD_Pt15To3000_PU200
   # - emulation_regression
   - upload
-  - test
 
 variables:
     Name: new_samples_baseline_5param_extended_trk
@@ -51,7 +49,8 @@ variables:
     RETRAIN: 'False'
     RETRAIN_URL: 'https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras'
     RUN_RETRAIN: 'False'
-    RETRAIN_DATA_PATH: ''
+    TRAINING_DATA_DIR: ''
+    MODEL_OUTPUT_DIR: ${EOS_STORAGE_DIR}/automation/v1_0_2
     RETRAIN_NTUPLE_TREE: 'Events'
     TAG: 'v1.0.1'
 
@@ -91,7 +90,7 @@ data:
   - eos cp signal_process_data.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 # Optional retraining input preparation, enabled with RUN_RETRAIN='True'.
-# Grabs the nano AOD file in RETRAIN_DATA_PATH and runs make_data on it; the
+# Grabs the nano AOD file in TRAINING_DATA_DIR and runs make_data on it; the
 # Phase-2 (Events/L1JetTrain) format is detected automatically. The resulting
 # tarball is stored next to the standard one so the train, evaluate and hls4ml
 # jobs can pick it up while the rest of the pipeline is unchanged.
@@ -105,24 +104,24 @@ retrain_data:
   script:
   - source activate tagger
   - |
-    if [ -z "$RETRAIN_DATA_PATH" ]; then
-      echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the nano AOD root file to retrain on."
+    if [ -z "$TRAINING_DATA_DIR" ]; then
+      echo "RUN_RETRAIN is 'True' but TRAINING_DATA_DIR is not set. Point it at the nano AOD root file to retrain on."
       exit 1
     fi
   - mkdir data
   - cd data
   - export EOS_MGM_URL=root://eoscms.cern.ch
   - |
-    case "$RETRAIN_DATA_PATH" in
-      root://*) xrdcp -f "$RETRAIN_DATA_PATH" . ;;
-      http://*|https://*) curl -L -O "$RETRAIN_DATA_PATH" ;;
-      *) eos cp "$RETRAIN_DATA_PATH" . ;;
+    case "$TRAINING_DATA_DIR" in
+      root://*) xrdcp -f "$TRAINING_DATA_DIR" . ;;
+      http://*|https://*) curl -L -O "$TRAINING_DATA_DIR" ;;
+      *) eos cp "$TRAINING_DATA_DIR" . ;;
     esac
-  - RETRAIN_DATA=$(basename $RETRAIN_DATA_PATH)
+  - RETRAIN_DATA=$(basename $TRAINING_DATA_DIR)
   # Bring the signal sample along for the basic post-training plots when it sits
   # next to the retrain input, following the <process>.root convention of make_data.py
   - |
-    RETRAIN_DATA_DIR=$(dirname $RETRAIN_DATA_PATH)
+    RETRAIN_DATA_DIR=$(dirname $TRAINING_DATA_DIR)
     if [[ "$RETRAIN_DATA_DIR" == /eos/* ]] && eos ls "$RETRAIN_DATA_DIR/${SIGNAL}.root" > /dev/null 2>&1; then
       eos cp "$RETRAIN_DATA_DIR/${SIGNAL}.root" .
     fi
@@ -320,6 +319,10 @@ profile:
   - cd ..
   - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
   artifacts:
+    paths:
+      - output
+    exclude:
+      - .npy
     expire_in: 7 days
 
 # run_processes:
@@ -439,33 +442,3 @@ upload_tagged_model:
     paths:
       - $Name
     expire_in: 7 days
-
-code_quality:
-   tags:
-    - docker-privileged-xl
-   artifacts:
-    reports:
-      codequality: gl-code-quality-report.json
-
-pylint:
-  stage: test
-  image: python:3.7-slim
-  before_script:
-    - mkdir -p public/badges public/lint
-    - echo undefined > public/badges/$CI_JOB_NAME.score
-    - pip install pylint-gitlab
-  script:
-    - pylint --exit-zero --output-format=text $(find -type f -name "*.py" ! -path "**/.venv/**") | tee /tmp/pylint.txt
-    - sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' /tmp/pylint.txt > public/badges/$CI_JOB_NAME.score
-    - pylint --exit-zero --output-format=pylint_gitlab.GitlabCodeClimateReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > codeclimate.json
-    - pylint --exit-zero --output-format=pylint_gitlab.GitlabPagesHtmlReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > public/lint/index.html
-  after_script:
-    - anybadge --overwrite --label $CI_JOB_NAME --value=$(cat public/badges/$CI_JOB_NAME.score) --file=public/badges/$CI_JOB_NAME.svg 4=red 6=orange 8=yellow 10=green
-    - |
-      echo "Your score is: $(cat public/badges/$CI_JOB_NAME.score)"
-  artifacts:
-    paths:
-      - public
-    reports:
-      codequality: codeclimate.json
-    when: always

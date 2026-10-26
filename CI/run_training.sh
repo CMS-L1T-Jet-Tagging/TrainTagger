@@ -2,7 +2,7 @@
 # $1 RERUN_ON_TAG; if false triggers full retraining of the model, if true just run basic plotting on the tagged model
 # $2 RERUN_ON_OLDTRAINING if true run basic plotting on previosuly trained model
 # $3 RETRAIN; if "True" initialize the model weights from $RETRAIN_URL before training
-# $4 RUN_RETRAIN; if "True" the training input was prepared from $RETRAIN_DATA_PATH by the retrain_data job
+# $4 RUN_RETRAIN; if "True" the training input was prepared from $TRAINING_DATA_DIR by the retrain_data job
 if [ "$1" == "False" ] && [ "$2" == "False" ]; then
     RETRAIN_OPT=""
     if [ "$3" == "True" ]; then

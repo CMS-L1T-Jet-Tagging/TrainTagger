@@ -17,9 +17,18 @@ mv output/$Model/model $Name/model
 mv output/$Model/plots/training/ $Name/plots
 mv output/$Model/plots/physics/ $Name/plots
 
+eos mkdir -p $MODEL_OUTPUT_DIR
+eos cp -r $Name/model $MODEL_OUTPUT_DIR
+eos cp -r $Name/plots $MODEL_OUTPUT_DIR
+
 mkdir $Name/configs
 mv output/$Model/*.json $Name/configs
 mv output/$Model/*.yaml $Name/configs
+eos cp -r $Name/configs ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
+eos cp -r $Name/configs $MODEL_OUTPUT_DIR
+
+eos cp output/$Model/results_dict.json $MODEL_OUTPUT_DIR
+
 
 if [[ "$RUN_SYNTHESIS" == "True" ]]; then
     cd output/$Model/firmware/
@@ -28,12 +37,19 @@ if [[ "$RUN_SYNTHESIS" == "True" ]]; then
     eos cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     cd ../../..
     mv output/$Model/plots/profile $Name/plots
+
+    eos mkdir -p $MODEL_OUTPUT_DIR//firmware/
+    eos cp -r L1TSC4NGJetModel.tgz $MODEL_OUTPUT_DIR/firmware
 fi
 
 if [[ "$RUN_EMULATION" == "True" ]]; then
     mv output/$Model/plots/emulation $Name/plots
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator/
-    eos cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator
+    tar -cvf ${CMSSW_VERSION}/src/L1TSC4NGJetModel.tgz ${CMSSW_VERSION}/src/L1TSC4NGJetModel
+    eos cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator
+    
+    eos mkdir -p $MODEL_OUTPUT_DIR//emulator/
+    eos cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel.tgz $MODEL_OUTPUT_DIR/emulator
 fi
 
 cd ..
@@ -43,11 +59,10 @@ export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
 pb_copy_index.py TrainTagger/${Name} --recursive
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive
 cd TrainTagger/$Name
-pb_deploy_plots.py configs ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions json,yaml
 pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
-#pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,json
 ls ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
 eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
 eos cp -r plots/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
 eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
 eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+

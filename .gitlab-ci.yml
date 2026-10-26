@@ -29,10 +29,10 @@ include:
 # Default false to run a full retraining of a model
 # RUN_EMULATION = Switch to turn on the CMSSW emulator, need to have a working CMSSW emualtor for this. Has to run for rerun on tag. Tagged models need FW
 # RUN_SYNTHESIS = Switch to turn on the hls4ml and synthesis steps. Emulator needs synthesis to run
-# RUN_RETRAIN = Switch to run the optional retrain_data step: grabs the nano AOD file at RETRAIN_DATA_PATH, runs
+# RUN_RETRAIN = Switch to run the optional retrain_data step: grabs the nano AOD file at TRAINING_DATA_DIR, runs
 # make_data on it and trains initialised from RETRAIN_URL; the evaluate, hls4ml, synthesis and emulation steps
 # then run as usual. Requires RERUN_ON_TAG = 'False' and RERUN_ON_OLDTRAINING = 'False'
-# RETRAIN_DATA_PATH = Path (eos, xrootd or http) to the nano AOD (Events/L1JetTrain format) root file to retrain on
+# TRAINING_DATA_DIR = Path (eos, xrootd or http) to the nano AOD (Events/L1JetTrain format) root file to retrain on
 # RETRAIN_NTUPLE_TREE = Tree within the retrain file containing the jets (default Events)
 # RETRAIN = Resume weights from RETRAIN_URL before training on the standard dataset (set automatically when RUN_RETRAIN = 'True')
 # RETRAIN_URL = Model URL or local path to initialise the weights from when retraining

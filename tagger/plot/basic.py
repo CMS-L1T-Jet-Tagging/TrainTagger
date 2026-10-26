@@ -201,6 +201,8 @@ def ROC(y_pred, y_test, class_labels, plot_dir, results_dict):
 
         # Compute FPR, TPR, and AUC
         fpr, tpr, _ = roc_curve(y_true, y_score)
+        idx = np.argmin(np.abs(tpr - 0.5))
+        
         roc_auc = auc(fpr, tpr)
         
         print(f"FPR at TPR for {class_label} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")

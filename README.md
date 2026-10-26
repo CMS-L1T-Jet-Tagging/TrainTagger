@@ -152,7 +152,7 @@ the new `training_data` contents. In the CI pipeline this is steered by the `RET
 and `RETRAIN_URL` variables.
 
 To retrain the model on a new nano AOD sample in the CI pipeline, set `RUN_RETRAIN: 'True'`
-and point `RETRAIN_DATA_PATH` at the nano AOD root file to use (eos, xrootd or http path).
+and point `TRAINING_DATA_DIR` at the nano AOD root file to use (eos, xrootd or http path).
 An optional `retrain_data` job then copies the file, runs `make_data` on the
 `RETRAIN_NTUPLE_TREE` tree (default `Events`; the Phase-2 `L1JetTrain` format is detected
 automatically), and the training job resumes from `RETRAIN_URL` as with `RETRAIN`. The

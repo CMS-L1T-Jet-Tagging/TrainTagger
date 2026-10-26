@@ -49,3 +49,5 @@ firmware_config:
   fpga_part : 'xcvu13p-flga2577-2-e'
 
   project_name: 'L1TSC4NGJetModel_MLPM_HGQ'
+
+  split: False

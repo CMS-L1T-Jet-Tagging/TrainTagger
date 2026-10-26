@@ -221,8 +221,15 @@ profile:
     - .template
   stage: profile
   tags: [cern-nextgen-gpu]
-  needs: [emulate,train,hls4ml,synth]
-  dependencies: [emulate,train,hls4ml,synth]
+  needs:
+    - job: train
+      optional: false
+    - job: emulate
+      optional: true
+    - job: hls4ml
+      optional: false
+    - job: synth
+      optional: false
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:

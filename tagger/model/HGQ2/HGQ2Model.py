@@ -48,7 +48,8 @@ class HGQ2Model(JetTagModel):
                         "reg_precision": str,
                         "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                         "fpga_part" : str,
-                        "project_name" : str}
+                        "project_name" : str,
+                        "split" : bool}
 
 
     # Redefine save and load for HGQ due to needing h5 format
@@ -172,7 +173,7 @@ class HGQ2Model(JetTagModel):
     def get_keras_trace_model(self):
         # Create a sub-model that outputs all intermediate layers and get keras trace
         layer_outputs = [layer.output for layer in self.jet_model.layers]
-        keras_trace_model = Model(inputs=self.jet_model.input, outputs=layer_outputs)
+        keras_trace_model = keras.Model(inputs=self.jet_model.input, outputs=layer_outputs)
         return keras_trace_model
 
     def get_branch_model(self, output_name):

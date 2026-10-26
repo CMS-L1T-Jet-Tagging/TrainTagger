@@ -224,7 +224,7 @@ profile:
   needs: [emulate,train,hls4ml,synth]
   dependencies: [emulate,train,hls4ml,synth]
   rules:
-    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
+    - if: $RUN_SYNTHESIS == "True"
   script:
   - source activate tagger
   - pip install hls4ml[profiling]
@@ -232,8 +232,10 @@ profile:
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
-  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
+  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile -e $RUN_EMULATION 
   artifacts:
+    paths:
+      - output/$Model
     expire_in: 7 days
 
 run_processes:

@@ -283,18 +283,21 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/All200_part6.root', help='Path to profiling data rootfile')
     parser.add_argument('-r', '--remake', default=False, help='Remake profiling data? ')
     parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/baseline.yaml', help='YAML config for model')
+    parser.add_argument('-e', '--test_emulator', default=True, help='Run emulator test?')
 
     args = parser.parse_args()
 
     model = fromFolder(args.model_path)
+    
+    if args.test_emulator:
 
-    if args.remake:
-        make_data(infile=args.input,
-                  outdir="profiling_data/",
-                  extras='extra_emulation_fields',
-                  tree="outnano/Jets")
+      if args.remake:
+          make_data(infile=args.input,
+                    outdir="profiling_data/",
+                    extras='extra_emulation_fields',
+                    tree="outnano/Jets")
 
-    doPlots(model, args.outpath, "profiling_data/")
+      doPlots(model, args.outpath, "profiling_data/")
 
     report = getReports(args.outpath_firmware + '/' + model.firmware_config['project_name'], model.firmware_config['project_name']+'_prj',model.firmware_config['project_name'])
 

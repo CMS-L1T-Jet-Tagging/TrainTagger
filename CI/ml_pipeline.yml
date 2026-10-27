@@ -235,10 +235,13 @@ profile:
   script:
   - source activate tagger
   - pip install hls4ml[profiling]
-  - mkdir data
-  - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
-  - cd ..
+  - |
+    if $RUN_EMULATION; then
+      mkdir data
+      cd data
+      cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
+      cd ..
+    fi
   - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile -e $RUN_EMULATION 
   artifacts:
     paths:

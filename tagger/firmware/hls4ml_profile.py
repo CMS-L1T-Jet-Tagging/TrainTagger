@@ -318,6 +318,18 @@ if __name__ == "__main__":
     print('Estimated FMax :',  report['hls_log']['FMax'], 'MHz' )
     print("   ")
     print("===================")
+    
+    model.results_dict['InputPrecision'] = model.firmware_config['input_precision']
+    model.results_dict['ClassPrecision'] = model.firmware_config['class_precision']
+    model.results_dict['RegressionPrecision'] = model.firmware_config['reg_precision']
+    model.results_dict['FlipFlops'] = report['hls_report']['ff']
+    model.results_dict['LookUpTables'] = report['hls_report']['lut']
+    model.results_dict['BlockRAM'] = report['hls_report']['bram18']
+    model.results_dict['DigitalSignalProcessors'] = report['hls_report']['dsp']
+    model.results_dict['Latency'] = report['hls_report']['latency_best']
+    model.results_dict['InitiationInterval'] = report['hls_report']['interval_best']
+    
+    
     if bool(report['vsynth_report']):
         print("   ")
         print("Resource Usage of a VU13P from VSynth")
@@ -328,5 +340,14 @@ if __name__ == "__main__":
         print('Block RAM : {} -> {:.2f} %'.format(report['vsynth_report']['bram18'],(report['vsynth_report']['bram18']/5376)*100))
         print("   ")
         print("===================")
+
+        model.results_dict['V_FlipFlops'] = report['vsynth_report']['ff']
+        model.results_dict['V_LookUpTables'] = report['vsynth_report']['lut']
+        model.results_dict['V_BlockRAM'] = report['vsynth_report']['bram18']
+        model.results_dict['V_DigitalSignalProcessors'] = report['vsynth_report']['dsp']
+        
     print('Memory Usage :',  report['hls_log']['memory_GB'], 'GB' )
     print('Synth time :',  report['hls_log']['time_seconds'], 's' )
+
+
+    model.save_results_dict()

@@ -28,8 +28,8 @@ input_config:
 
 training_config :
   weight_method: ["onlyclass", "onlyclass"]
-  epochs : 3
-  batch_size : 332
+  epochs : 3000
+  batch_size : 33200
   learning_rate : 0.003
   validation_split : 0.1
 

@@ -17,6 +17,7 @@ mkdir $Name/configs
 
 mv output/$Model/*.json $Name/configs
 mv output/$Model/*.yaml $Name/configs
+mv output/$Model/configs/* $Name/configs
 
 mv output/$Model/model $Name/model
 

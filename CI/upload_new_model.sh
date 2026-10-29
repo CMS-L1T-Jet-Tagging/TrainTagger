@@ -13,9 +13,16 @@ if [ -z "${Name}" ] || [ -z "${Model}" ] || [ -z "${EOS_STORAGE_DIR}" ] || [ -z 
 fi
 mkdir $Name
 mkdir $Name/plots
+mkdir $Name/configs
+
+mv output/$Model/*.json $Name/configs
+mv output/$Model/*.yaml $Name/configs
+
 mv output/$Model/model $Name/model
+
 mv output/$Model/plots/training/ $Name/plots
 mv output/$Model/plots/physics/ $Name/plots
+mv output/$Model/plots/emulation_regression/ $Name/plots
 
 if [[ "$RUN_SYNTHESIS" == "True" ]]; then
     cd output/$Model/firmware/
@@ -39,10 +46,18 @@ export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
 pb_copy_index.py TrainTagger/${Name} --recursive
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive
 cd TrainTagger/$Name
-pb_deploy_plots.py model ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions h5
-#pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive --extensions png,pdf,json
+
 ls ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+
+eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
 eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
+eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
+
+eos cp -r model/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
 eos cp -r plots/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
+eos cp -r configs/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
+
+pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots --recursive
+
 eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true
 eos ln ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}

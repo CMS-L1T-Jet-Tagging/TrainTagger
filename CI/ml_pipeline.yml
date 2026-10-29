@@ -240,7 +240,9 @@ profile:
       mkdir -p data
       cp ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root data
     fi
-  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile -e $RUN_EMULATION 
+  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile -e $RUN_EMULATION
+  - mkdir output/$Model/configs
+  - mv output/$Model/results_dict.json output/$Model/configs
   artifacts:
     paths:
       - output/$Model

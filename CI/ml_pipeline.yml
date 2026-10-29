@@ -61,9 +61,6 @@ variables:
   script:
     - python $FOLDER/$SCRIPT $ARGS
   tags: [cern-nextgen-gpu]
-  # rules: # run automatically on default branch, tags, and on merge requests with 'ci::automatic-build' label; otherwise run manually
-  #    - if: '($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_LABELS =~ /ci::automatic-build/)'
-  #      when: on_success
 
 data:
   extends:
@@ -189,7 +186,11 @@ synth:
     - cat build_opt.tcl
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
-    - cd ../../..
+    - cd ../../../..
+    - cp tagger/firmware/wrapper_generator.sh output/$Model/firmware/L1TSC4NGJetModel/firmware
+    - cd output/$Model/firmware/L1TSC4NGJetModel/firmware
+    - ./wrapper_generator.sh L1TSC4NGJetModel.h
+    - cd ../../../../..
   artifacts:
     paths:
       - output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME
@@ -210,7 +211,7 @@ emulation-evaluate:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model
+  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -o output/$Model/plots/emulation
   artifacts:
     paths:
       - output/$Model

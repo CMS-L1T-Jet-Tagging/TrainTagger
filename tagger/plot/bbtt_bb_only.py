@@ -21,7 +21,17 @@ from scipy.interpolate import interp1d
 #Imports from other modules
 from tagger.data.tools import extract_array, extract_nn_inputs, group_id_values
 from tagger.model.common import fromFolder
-from common import MINBIAS_RATE, PT_CUTS, ETA_CUTS, WPs_CMSSW, find_rate, plot_ratio, get_bar_patch_data
+from common import (
+    MINBIAS_RATE,
+    PT_CUT,
+    ETA_CUT,
+    PT_CUTS,
+    ETA_CUTS,
+    WPs_CMSSW,
+    find_rate,
+    plot_ratio,
+    get_bar_patch_data,
+)
 
 # Helpers
 def bbtt_seed(jet_pt, tau_pt):
@@ -191,7 +201,9 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     print("Total number of minbias events: ", n_events)
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
-    event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta_hw, raw_jet_eta_hw, raw_inputs, raw_jet_inputs, num_elements=4)
+    event_id, grouped_arrays = group_id_values(
+        raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, raw_jet_inputs, num_elements=4
+    )
 
     # Extract the grouped arrays
     # Jet pt is already sorted in the producer, no need to do it here

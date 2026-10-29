@@ -167,6 +167,8 @@ def derive_bbbb_WPs(model, minbias_path, apply_sel, apply_light, target_rate=14,
     #Count number of total event
     n_events = len(np.unique(raw_event_id))
     print("Total number of minbias events: ", n_events)
+    if n_events == 0:
+        raise ValueError(f"No events found in minbias sample '{minbias_path}'.")
 
     #Group these attributes by event id, and filter out groups that don't have at least 2 elements
     event_id, grouped_arrays  = group_id_values(raw_event_id, raw_jet_pt, raw_jet_eta, raw_inputs, raw_jet_inputs, num_elements=4)
@@ -644,7 +646,13 @@ if __name__ == "__main__":
     parser.add_argument('--tree', default='outnano/Jets', help='Tree within the ntuple containing the jets')
 
     #Other controls
-    parser.add_argument('-n','--n_entries', type=int, default=1000, help = 'Number of data entries in root file to run over, can speed up run time, set to None to run on all data entries')
+    parser.add_argument(
+        '-n',
+        '--n_entries',
+        type=int,
+        default=650000,
+        help='Number of data entries in the ROOT file to process (default: 650000).',
+    )
     args = parser.parse_args()
 
     model = fromFolder(args.model_dir)

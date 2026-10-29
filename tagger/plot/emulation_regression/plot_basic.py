@@ -18,6 +18,11 @@ from tagger.plot.common import to_coffea, PT_BINS, REGULAR_PT_BINS
 
 style.set_style()
 
+PT_POINTS = [np.mean((PT_BINS[i], PT_BINS[i + 1])) for i in range(len(PT_BINS) - 1)]
+LEGEND_FONTSIZE = style.MEDIUM_SIZE
+TITLE_FONTSIZE = style.BIGGER_SIZE
+
+
 # Plotting functions
 def _plot_errorbars(data_coll, proc, ylabel, save_path,
                      legend_loc='best', xlim=None, ylim=None):
@@ -33,7 +38,7 @@ def _plot_errorbars(data_coll, proc, ylabel, save_path,
                 ('scPuppiExtendedJets', 1, 3, 'scPuppiExtendedJets_jecs'),
             ]:
                 ax.errorbar(
-                    pt_points,
+                    PT_POINTS,
                     data_coll[coll_key][idx],
                     yerr=data_coll[coll_key][err_idx],
                     fmt='o',
@@ -48,7 +53,12 @@ def _plot_errorbars(data_coll, proc, ylabel, save_path,
             ax.set_ylabel(ylabel)
             ax.set_xscale(l1)
             ax.set_yscale(l2)
-            ax.legend(title=PROCESS_STYLE[proc], fontsize=legend_fontsize, title_fontsize=title_fontsize, loc=legend_loc)
+            ax.legend(
+                title=PROCESS_STYLE[proc],
+                fontsize=LEGEND_FONTSIZE,
+                title_fontsize=TITLE_FONTSIZE,
+                loc=legend_loc,
+            )
             ax.grid(True, alpha=1, linestyle='-', lw=0.75)
 
             if xlim is not None:

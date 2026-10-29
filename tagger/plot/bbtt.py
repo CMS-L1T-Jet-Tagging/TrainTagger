@@ -195,7 +195,7 @@ def nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, class_labels, n
         bscore_sum = b[np.arange(len(b)).reshape(-1, 1), b_indices].sum(axis=1)
         bscore_sums.append(bscore_sum)
 
-    return bscore_sums, tscore_sums, tau_indices
+    return bscore_sums, tscore_sums, tscore_idxs
 
 
 # derive rate, wps and efficiency plotting functions

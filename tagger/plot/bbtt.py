@@ -417,7 +417,12 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
-
+    
+    print(raw_event_id)
+    print(raw_jet_pt)
+    print(raw_jet_eta)
+    print(raw_inputs)
+    print(raw_jet_inputs)
     #Count number of total event
     global n_events
     n_events = len(np.unique(raw_event_id))

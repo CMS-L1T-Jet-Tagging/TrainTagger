@@ -8,4 +8,3 @@ except:
     from tagger.model.HGQ2.JEDILinearHGQ2 import JEDILinearHGQ2
     from tagger.model.HGQ2.MLPMixerHGQ2 import MLPMixerHGQ2
     from tagger.model.HGQ2.LinformerHGQ2 import LinformerHGQ2
-    from tagger.model.PQuant.DeepSetModelPQuant import DeepSetModelPQuant

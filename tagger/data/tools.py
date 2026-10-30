@@ -338,16 +338,17 @@ def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
     Sort the grouped arrays in descending order of ordering_var if it is provided
     '''
 
-    # Use ak.argsort to sort based on event_id
-    sorted_indices = ak.argsort(event_id)
-    sorted_event_id = event_id[sorted_indices]
+    event_id = ak.to_numpy(event_id)
 
-    # Find unique event_ids and counts manually
-    unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
+    order = np.argsort(event_id, kind="stable")
+    sorted_id = event_id[order]
 
-    # Use ak.unflatten to group the arrays by counts
-    grouped_id = ak.unflatten(sorted_event_id, counts)
-    grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
+
+    _, counts = np.unique(sorted_id, return_counts=True)
+
+
+    keep_event = counts >= num_elements
+    keep_entry = np.repeat(keep_event, counts)
 
     if ordering_var is not None:
         # Sort the jets within each event by the ordering variable
@@ -357,8 +358,24 @@ def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
     # Filter out groups that don't have at least num_elements elements
     mask = ak.num(grouped_id) >= num_elements
     filtered_grouped_arrays = [arr[mask] for arr in grouped_arrays]
+    
+    grouped_id = ak.unflatten(event_id[idx], counts)
 
-    return grouped_id[mask], filtered_grouped_arrays
+    grouped_arrays = []
+    for arr in arrays:
+        if len(arr) == 0:
+            # Nothing to sort/filter/group: keep it as an empty array
+            grouped_arrays.append(arr)
+        else:
+            grouped_arrays.append(ak.unflatten(arr[idx], counts))
+            
+    if ordering_var is not None:
+        # Sort the jets within each event by the ordering variable
+        grouped_ordering_var = ak.unflatten(ordering_var[sorted_indices], counts)
+        grouped_arrays = sort_arrays(grouped_ordering_var, *grouped_arrays)
+
+    return grouped_id, grouped_arrays
+
 
 
 def to_ML(data, class_labels):

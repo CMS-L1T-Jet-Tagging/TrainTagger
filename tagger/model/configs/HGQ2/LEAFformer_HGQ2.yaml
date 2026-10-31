@@ -15,7 +15,16 @@ model_config :
   beta: 1.1e-8
 
 quantization_config:
-  pt_output_quantization : [16,6]
+
+input_config:
+  # Specify inputs for the model here, order is defined in data/puppicand.yaml. New inputs should always
+  # be added here and in puppicands yaml
+  basic_input_config: ["pt", "pt_rel", "pt_log", "deta", "dphi", "mass", "isPhoton", "isElectronPlus",
+    "isElectronMinus", "isMuonPlus", "isMuonMinus", "isNeutralHadron", "isChargedHadronPlus",
+    "isChargedHadronMinus", "z0", "dxy", "isfilled", "puppiweight", "emid", "quality"] # features to use in the basic_input
+  basic_features: ['basic_input']
+  jet_features: [] # will later be concatenated into one jet features input
+
 
 training_config :
   weight_method: "onlyclass"
@@ -28,6 +37,8 @@ training_config :
 
   target_ebops : 300000
 
+  pileup: False
+
 
 firmware_config:
   input_precision: 'ap_fixed<24,12,AP_RND,AP_SAT>'
@@ -38,5 +49,7 @@ firmware_config:
   fpga_part : 'xcvu13p-flga2577-2-e'
 
   project_name: 'L1TSC4NGJetModel'
+
+  split: False
 
 

@@ -187,9 +187,9 @@ synth:
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../../..
-    - cp tagger/firmware/wrapper_generator.sh output/$Model/firmware/L1TSC4NGJetModel/firmware
-    - cd output/$Model/firmware/L1TSC4NGJetModel/firmware
-    - ./wrapper_generator.sh L1TSC4NGJetModel.h
+    - cp tagger/firmware/wrapper_generator.sh output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME/firmware
+    - cd output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME/firmware
+    - ./wrapper_generator.sh L1TSC4NGJetModel_$HLS4ML_NAME.h
     - cd ../../../../..
   artifacts:
     paths:

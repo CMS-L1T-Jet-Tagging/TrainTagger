@@ -334,31 +334,26 @@ def sort_arrays(sorting_val, *arrays):
 def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
     '''
     Group values according to event id.
-    Filter out events that has less than num_elements
-    Sort the grouped arrays in descending order of ordering_var if it is provided
+    Filter out events that have fewer than num_elements entries.
+    If ordering_var is provided, sort each group (in all arrays) in
+    descending order of ordering_var.
+    Zero-length arrays are passed through unchanged.
     '''
-
     event_id = ak.to_numpy(event_id)
 
+    # Stable sort so entries keep their original relative order within an event
     order = np.argsort(event_id, kind="stable")
     sorted_id = event_id[order]
 
-
     _, counts = np.unique(sorted_id, return_counts=True)
 
-
+    # Drop small events *before* grouping, so nothing is built and then discarded
     keep_event = counts >= num_elements
     keep_entry = np.repeat(keep_event, counts)
 
-    if ordering_var is not None:
-        # Sort the jets within each event by the ordering variable
-        grouped_ordering_var = ak.unflatten(ordering_var[sorted_indices], counts)
-        grouped_arrays = sort_arrays(grouped_ordering_var, *grouped_arrays)
+    idx = order[keep_entry]
+    counts = counts[keep_event]
 
-    # Filter out groups that don't have at least num_elements elements
-    mask = ak.num(grouped_id) >= num_elements
-    filtered_grouped_arrays = [arr[mask] for arr in grouped_arrays]
-    
     grouped_id = ak.unflatten(event_id[idx], counts)
 
     grouped_arrays = []
@@ -368,11 +363,15 @@ def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
             grouped_arrays.append(arr)
         else:
             grouped_arrays.append(ak.unflatten(arr[idx], counts))
-            
-    if ordering_var is not None:
-        # Sort the jets within each event by the ordering variable
-        grouped_ordering_var = ak.unflatten(ordering_var[sorted_indices], counts)
-        grouped_arrays = sort_arrays(grouped_ordering_var, *grouped_arrays)
+
+    if ordering_var is not None and len(ordering_var) > 0:
+        grouped_ordering = ak.unflatten(ordering_var[idx], counts)
+        # Per-event permutation, largest ordering_var first
+        sort_idx = ak.argsort(grouped_ordering, axis=1, ascending=False)
+        grouped_arrays = [
+            arr if len(arr) == 0 else arr[sort_idx]
+            for arr in grouped_arrays
+        ]
 
     return grouped_id, grouped_arrays
 

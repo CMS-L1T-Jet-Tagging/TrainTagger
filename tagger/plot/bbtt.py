@@ -154,12 +154,20 @@ def max_tau_sum(taup_preds, taum_preds):
     return tau_scores2, tau_idxs
 
 def nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, class_labels, n_jets=4):
-    #Btag input list for first 4 jets
-    btag_inputs = [{
-        'basic_input': np.asarray(basic_nn_inputs[:, i]),
-        'jet_features': np.asarray(jet_nn_inputs[:, i])
-        }
-        for i in range(0, n_jets)]
+    
+    has_jet_inputs = len(jet_nn_inputs) > 0
+    if has_jet_inputs:
+        btag_inputs = [{
+            'basic_input': np.asarray(basic_nn_inputs[:, i]),
+            'jet_features': np.asarray(jet_nn_inputs[:, i])
+            }
+            for i in range(0, n_jets)]
+    else:
+        btag_inputs = [{
+            'basic_input': np.asarray(basic_nn_inputs[:, i]),
+            }
+            for i in range(0, n_jets)]
+
 
     #Get the nn outputs
     nn_outputs = [model.predict(model.prepare_inputs(nn_input)[0])[0]

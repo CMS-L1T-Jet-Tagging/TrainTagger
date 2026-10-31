@@ -23,7 +23,8 @@ from keras.models import load_model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tagger.data.tools import load_data, to_ML
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.common import initialise_tensorflow,cosine_decay_restarts
+from tagger.model.HGQ2.HGQ2Model import HGQ2Model
+from tagger.model.common import initialise_tensorflow
 
 from hgq.utils import trace_minmax
 import inspect

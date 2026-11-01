@@ -76,7 +76,7 @@ assert _patched, 'No table einsum-dense class found to patch'
 print('Patched HGQ2 table classes:', _patched)
 
 @JetModelFactory.register('LEAFformerHGQ2')
-class LEAFformerHGQ2(JetTagModel):
+class LEAFformerHGQ2(HGQ2Model):
 
     schema = Schema(
             {

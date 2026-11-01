@@ -83,25 +83,19 @@ class DeepSetModelHGQ2(HGQ2Model):
 
                 for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
                     main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(main)                
-                main = GlobalAveragePooling1D(name='avgpool')(main)
+                x = GlobalAveragePooling1D(name='avgpool')(main)
 
                 #jetID branch, 3 layer MLP
 
-                for iclass, depthclass in enumerate(self.model_config['classification_layers']):
-                    if iclass == 0:
-                        jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(main)
-                    else:
-                        jet_id = QDense(depthclass, parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass], name='Dense_' + str(iclass + 1) + '_jetID',activation='relu')(jet_id)                
-                jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='linear')(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
-                #pT regression branch
-                for ireg, depthreg in enumerate(self.model_config['regression_layers']):
-                    if ireg == 0:
-                        pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(main)
-                    else:
-                        pt_regress = QDense(depthreg, parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], name='Dense_' + str(ireg + 1) + '_pT',activation='relu')(pt_regress)      
-                pt_regress = QDense(1,name='pT_output')(pt_regress)#1.1e-7
 
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
+                
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 

@@ -121,8 +121,8 @@ class LEAFformerHGQ2(HGQ2Model):
         mhaconfig = QuantizerConfigScope(place='table', overflow_mode='SAT_SYM', homogeneous_axis=(0,1), bc=Min(0))
 
         FF_DIM = self.model_config['feedforward_dim']
-        NUM_PARTICLES = inputs_shape[0]
-        NUM_FEATURES = inputs_shape[1]
+        NUM_PARTICLES = inputs_shape['basic_input'][0]
+        NUM_FEATURES = inputs_shape['basic_input'][1]
         numheads = self.model_config['num_heads']
         
         bn_mom = 0.75

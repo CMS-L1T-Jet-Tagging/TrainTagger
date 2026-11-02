@@ -32,7 +32,7 @@ training_config :
 
   loss_weights : [1,1]
 
-  target_ebops : 750000
+  target_ebops : 500000
 
   pileup: False
 

@@ -128,7 +128,7 @@ class LEAFformerHGQ2(HGQ2Model):
         bn_mom = 0.75
         
         with betascope, scope0, scope1:
-                inp = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='model_input')
+                inp = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='basic_input')
                 emb = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(inp)
 
                 with mhaconfig:

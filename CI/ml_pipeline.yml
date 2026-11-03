@@ -49,8 +49,8 @@ variables:
     RETRAIN: 'False'
     RETRAIN_URL: 'https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras'
     RUN_RETRAIN: 'False'
-    TRAINING_DATA_DIR: ''
-    MODEL_OUTPUT_DIR: ${EOS_STORAGE_DIR}/automation/v1_0_2
+    RETRAIN_DATA_PATH: ''
+    MODEL_OUTPUT_PATH: ${EOS_STORAGE_DIR}/automation/v1_0_2
     RETRAIN_NTUPLE_TREE: 'Events'
     TAG: 'v1.0.1'
 
@@ -90,7 +90,7 @@ data:
   - eos cp signal_process_data.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 # Optional retraining input preparation, enabled with RUN_RETRAIN='True'.
-# Grabs the nano AOD file in TRAINING_DATA_DIR and runs make_data on it; the
+# Grabs the nano AOD file in RETRAIN_DATA_PATH and runs make_data on it; the
 # Phase-2 (Events/L1JetTrain) format is detected automatically. The resulting
 # tarball is stored next to the standard one so the train, evaluate and hls4ml
 # jobs can pick it up while the rest of the pipeline is unchanged.
@@ -104,24 +104,24 @@ retrain_data:
   script:
   - source activate tagger
   - |
-    if [ -z "$TRAINING_DATA_DIR" ]; then
-      echo "RUN_RETRAIN is 'True' but TRAINING_DATA_DIR is not set. Point it at the nano AOD root file to retrain on."
+    if [ -z "$RETRAIN_DATA_PATH" ]; then
+      echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the nano AOD root file to retrain on."
       exit 1
     fi
   - mkdir data
   - cd data
   - export EOS_MGM_URL=root://eoscms.cern.ch
   - |
-    case "$TRAINING_DATA_DIR" in
-      root://*) xrdcp -f "$TRAINING_DATA_DIR" . ;;
-      http://*|https://*) curl -L -O "$TRAINING_DATA_DIR" ;;
-      *) eos cp "$TRAINING_DATA_DIR" . ;;
+    case "$RETRAIN_DATA_PATH" in
+      root://*) xrdcp -f "$RETRAIN_DATA_PATH" . ;;
+      http://*|https://*) curl -L -O "$RETRAIN_DATA_PATH" ;;
+      *) eos cp "$RETRAIN_DATA_PATH" . ;;
     esac
-  - RETRAIN_DATA=$(basename $TRAINING_DATA_DIR)
+  - RETRAIN_DATA=$(basename $RETRAIN_DATA_PATH)
   # Bring the signal sample along for the basic post-training plots when it sits
   # next to the retrain input, following the <process>.root convention of make_data.py
   - |
-    RETRAIN_DATA_DIR=$(dirname $TRAINING_DATA_DIR)
+    RETRAIN_DATA_DIR=$(dirname $RETRAIN_DATA_PATH)
     if [[ "$RETRAIN_DATA_DIR" == /eos/* ]] && eos ls "$RETRAIN_DATA_DIR/${SIGNAL}.root" > /dev/null 2>&1; then
       eos cp "$RETRAIN_DATA_DIR/${SIGNAL}.root" .
     fi

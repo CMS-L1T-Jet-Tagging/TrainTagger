@@ -12,6 +12,8 @@ model_config :
   classification_parallelisation_factor : [32, 16]
   regression_layers : [10]
   regression_parallelisation_factor : [10]
+  autoencoder_layers : [8, 6, 8]
+  autoencoder_parallelisation_factor : [8, 6, 8]
   beta: 0.00000001
 
 quantization_config:
@@ -19,11 +21,10 @@ quantization_config:
 
 training_config :
   weight_method: "onlyclass"
-  epochs : 400
-  batch_size : 1024
+  epochs : 200
+  batch_size : 2048
   learning_rate : 0.001
   validation_split : 0.1
-
   loss_weights : [1,1]
 
 

@@ -6,7 +6,7 @@ import keras
 import numpy as np
 import numpy.typing as npt
 from keras.layers import Input, Activation, GlobalAveragePooling1D
-from hgq.layers import QConv1D, QDense, QBatchNormalization
+from hgq.layers import QAdd, QConv1D, QDense, QBatchNormalization
 from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
 from hgq.regularizers import MonoL1
 from hgq.constraints import MinMax
@@ -33,6 +33,8 @@ class DeepSetModelHGQ2(JetTagModel):
                                   "classification_parallelisation_factor" : list,
                                   "regression_layers" : list,
                                   "regression_parallelisation_factor" : list,
+                                  "autoencoder_layers" : list,
+                                  "autoencoder_parallelisation_factor" : list,
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
 
@@ -101,7 +103,7 @@ class DeepSetModelHGQ2(JetTagModel):
                         name='Conv1D_' + str(iconv1d + 1),
                         activation='relu'
                     )(main)                
-                main = GlobalAveragePooling1D(name='avgpool')(main)
+                embedding = GlobalAveragePooling1D(name='embedding')(main)
              
                 # --------------------------------------
                 # Jet ID Branch
@@ -112,7 +114,8 @@ class DeepSetModelHGQ2(JetTagModel):
                         parallelization_factor=self.model_config['classification_parallelisation_factor'][iclass],
                         name='Dense_' + str(iclass + 1) + '_jetID',
                         activation='relu'
-                    )(main if iclass == 0 else jet_id)
+                    )(embedding if iclass == 0 else jet_id)
+
                 jet_id = QDense(outputs_shape[0], parallelization_factor=outputs_shape[0], activation='relu')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
@@ -125,44 +128,34 @@ class DeepSetModelHGQ2(JetTagModel):
                         parallelization_factor=self.model_config['regression_parallelisation_factor'][ireg], 
                         name='Dense_' + str(ireg + 1) + '_pT',
                         activation='relu'
-                    )(main if ireg == 0 else pt_regress)      
+                    )(embedding if ireg == 0 else pt_regress) 
+
                 # pt_regress = QDense(1,name='pT_output', enable_oq=True, oq_conf=oq_conf_pt, iq_conf=oq_conf_pt)(pt_regress)
                 pt_regress = QDense(1,name='pT_output')(pt_regress)
 
                 # --------------------------------------
                 # Anomaly Detection Branch
                 # --------------------------------------
-                # for ianom, depthanom in enumerate(self.model_config['anomaly_layers']):
-                #     if ianom == 0:
-                #         anomaly = QDense(depthanom, parallelization_factor=self.model_config['anomaly_parallelisation_factor'][ianom], name='Dense_' + str(ianom + 1) + '_anomaly',activation='relu')(main)
-                #     else:
-                #         anomaly = QDense(depthanom, parallelization_factor=self.model_config['anomaly_parallelisation_factor'][ianom], name='Dense_' + str(ianom + 1) + '_anomaly',activation='relu')(anomaly)
+                for ianom, depthanom in enumerate(self.model_config['autoencoder_layers']):
+                    anomaly = QDense(
+                        depthanom, 
+                        parallelization_factor=self.model_config['autoencoder_parallelisation_factor'][ianom], 
+                        name='Dense_' + str(ianom + 1) + '_autoencoder',
+                        activation='relu'
+                    )(embedding if ianom == 0 else anomaly)
 
-                # self.anomaly_model = keras.Model(inputs=main, outputs=anomaly)
-    
+                anomaly = QDense(self.model_config['conv1d_layers'][-1], name='autoencoder_output')(anomaly)
+                
                 # --------------------------------------
                 # Define the model using both branches
                 # --------------------------------------
-                self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+                self.jet_model = keras.Model(inputs=inputs, outputs=[jet_id, pt_regress])
+                self.encoder_model = keras.Model(inputs=inputs, outputs=embedding)
+                self.jetid_model = keras.Model(inputs=inputs, outputs=jet_id)
+                self.jetpt_model = keras.Model(inputs=inputs, outputs=pt_regress)
+                self.autoencoder_model = keras.Model(inputs=embedding, outputs=anomaly)
+
                 print(self.jet_model.summary())
-
-    # Redefine save and load for HGQ due to needing h5 format
-    @JetTagModel.save_decorator
-    def save(self, out_dir):
-        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
-        export_path = os.path.join(out_dir, "model/saved_model.h5")
-        self.jet_model.save(export_path)
-        print(f"Model saved to {export_path}")
-
-    @JetTagModel.load_decorator
-    def load(self, out_dir=None):
-        self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
-    
-    def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
-        model_outputs = self.jet_model.predict(X_test)
-        class_predictions = model_outputs[0]
-        pt_ratio_predictions = model_outputs[1].flatten()
-        return (class_predictions, pt_ratio_predictions)
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
             """Run the hls4ml model conversion
@@ -219,7 +212,7 @@ class DeepSetModelHGQ2(JetTagModel):
                 # build the project
                 self.hls_jet_model.build(csim=False, reset=True)
        
-    def compile_model(self, num_samples: int):
+    def compile_model(self):
         
         """compile the model generating callbacks and loss function
         Args:
@@ -255,6 +248,33 @@ class DeepSetModelHGQ2(JetTagModel):
                 self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
             },
         )
+
+    def compile_autoencoder(self):
+
+        """compile the autoencoder model generating callbacks and loss function
+        Args:
+            num_samples (int): Number of samples in the training set used for scheduling
+        """
+
+        # ----- Fine-tuning Model -----
+        self.autoencoder_callbacks = [
+            BetaPID(
+                p=1, i=0.1, d=0,
+                target_ebops=50_000,
+                init_beta=1e-10, warmup=10,
+                max_beta=1e-6, damp_beta_on_target=0.5
+            ),
+            FreeEBOPs(),
+        ]
+        self.autoencoder_optimizer = keras.optimizers.Adam(learning_rate=self.training_config['learning_rate'])
+
+        # Compile the tensorflow model setting the loss and metrics
+        self.autoencoder_model.compile(
+            optimizer=self.autoencoder_optimizer,
+            loss='mean_squared_error',
+            metrics=['mae', 'mean_squared_error'],
+        )
+
     def fit(
         self,
         X_train: npt.NDArray[np.float64],
@@ -271,10 +291,14 @@ class DeepSetModelHGQ2(JetTagModel):
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
         keras.config.disable_traceback_filtering()
-        sample_weight_dict = {
-                            "jet_id_output": sample_weight,
-                            "pT_output": sample_weight,
-        }
+
+        # Convert all to fp32
+        X_train = X_train.astype(np.float32)
+        y_train = y_train.astype(np.float32)
+        pt_target_train = pt_target_train.astype(np.float32)
+        if sample_weight is not None:
+            sample_weight = sample_weight.astype(np.float32)
+        
         # Train the model using hyperparameters in yaml config
         self.history = self.jet_model.fit(
             {'model_input': X_train},
@@ -287,3 +311,72 @@ class DeepSetModelHGQ2(JetTagModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
+
+        return self.history
+
+    def fit_autoencoder(
+        self,
+        X_train: npt.NDArray[np.float64],
+        sample_weight: npt.NDArray[np.float64],
+    ):
+        """Fit the autoencoder model to the training dataset
+
+        Args:
+            X_train (npt.NDArray[np.float64]): X train dataset
+            sample_weight (npt.NDArray[np.float64]): sample weighting
+        """
+        keras.config.disable_traceback_filtering()
+
+        # Convert all to fp32
+        X_train = X_train.astype(np.float32)
+        if sample_weight is not None:
+            sample_weight = sample_weight.astype(np.float32)
+
+        # Get embeddings for the training data
+        z_train = self.encoder_model.predict(X_train)
+
+        # Train the autoencoder model using hyperparameters in yaml config
+        self.history = self.autoencoder_model.fit(
+            x=z_train, y=z_train,
+            sample_weight=sample_weight,
+            epochs=self.training_config['epochs'],
+            batch_size=self.training_config['batch_size'],
+            verbose=self.run_config['verbose'],
+            validation_split=self.training_config['validation_split'],
+            callbacks=self.autoencoder_callbacks,
+            shuffle=True,
+        )
+
+        return self.history
+
+    # Redefine save and load for HGQ due to needing h5 format
+    @JetTagModel.save_decorator
+    def save(self, out_dir):
+        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
+        export_path = os.path.join(out_dir, "model/saved_model.h5")
+        self.jet_model.save(export_path)
+        self.autoencoder_model.save(export_path.replace('saved_model.h5', 'saved_autoencoder.h5'))
+        print(f"Model saved to {export_path}")
+
+    @JetTagModel.load_decorator
+    def load(self, out_dir=None):
+        self.jet_model = load_model(f"{out_dir}/model/saved_model.h5")
+        self.encoder_model = keras.Model(inputs=self.jet_model.input, outputs=self.jet_model.get_layer('embedding').output)
+        self.jetid_model = keras.Model(inputs=self.jet_model.get_layer('Dense_1_jetID').input, outputs=self.jet_model.get_layer('jet_id_output').output)
+        self.jetpt_model = keras.Model(inputs=self.jet_model.get_layer('Dense_1_pT').input, outputs=self.jet_model.get_layer('pT_output').output)
+        self.autoencoder_model = load_model(f"{out_dir}/model/saved_autoencoder.h5")
+    
+    def predict(self, X_test: npt.NDArray[np.float64]) -> tuple:
+        model_outputs = self.jet_model.predict(X_test)
+        class_predictions = model_outputs[0]
+        pt_ratio_predictions = model_outputs[1].flatten()
+        return (class_predictions, pt_ratio_predictions)
+
+    def predict_autoencoder(self, X_test: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        z_test = self.encoder_model.predict(X_test)
+        return self.autoencoder_model.predict(z_test)
+
+    def score_autoencoder(self, X_test: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        z_test = self.encoder_model.predict(X_test)
+        z_pred = self.autoencoder_model.predict(z_test)
+        return np.mean(np.square(z_test - z_pred), axis=1)

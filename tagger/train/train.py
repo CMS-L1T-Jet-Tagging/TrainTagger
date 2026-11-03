@@ -158,16 +158,18 @@ def train(model, data_dir, out_dir, percent):
 
     model.build_model(input_shape, output_shape)
 
-    # Train it with a pruned model
-    num_samples = particle_features_train.shape[0] * (1 - model.training_config['validation_split'])
-
-    model.compile_model(num_samples)
+    # Train main model
+    model.compile_model()
     model.fit(particle_features_train, y_train, pt_target_train, jet_weights)
+
+    # Train autoencoder
+    model.compile_autoencoder()
+    model.fit_autoencoder(particle_features_train, jet_weights)
 
     # Finished training, save model
     model.save()
 
-    model.plot_loss()
+    # model.plot_loss()
 
     return
 

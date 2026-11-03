@@ -88,46 +88,64 @@ data:
   - eos cp signal_process_data.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 # Optional retraining input preparation, enabled with RUN_RETRAIN='True'.
-# Grabs the nano AOD file in RETRAIN_DATA_PATH and runs make_data on it; the
-# Phase-2 (Events/L1JetTrain) format is detected automatically. The resulting
-# tarball is stored next to the standard one so the train, evaluate and hls4ml
-# jobs can pick it up while the rest of the pipeline is unchanged.
+# Copies every .root file in the RETRAIN_DATA_PATH directory and runs make_data
+# on all of them together; the Phase-2 (Events/L1JetTrain) format is detected
+# automatically. A <SIGNAL>.root file (default TT_PU200.root) in the directory is
+# reserved for the basic post-training plots and excluded from the training
+# inputs. The resulting tarball is stored next to the standard one so the train,
+# evaluate and hls4ml jobs can pick it up while the rest of the pipeline is
+# unchanged.
 retrain_data:
   extends:
     - .template
   stage: data
-  tags: [cern-nextgen-gpu]
+  tags: [cb_vivado]
   rules:
     - if: $RUN_RETRAIN == "True"
   script:
   - source activate tagger
   - |
     if [ -z "$RETRAIN_DATA_PATH" ]; then
-      echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the nano AOD root file to retrain on."
+      echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the directory with the nano AOD root files to retrain on."
       exit 1
     fi
   - mkdir data
   - cd data
-  - export EOS_MGM_URL=root://eoscms.cern.ch
   - |
-    case "$RETRAIN_DATA_PATH" in
-      root://*) xrdcp -f "$RETRAIN_DATA_PATH" . ;;
-      http://*|https://*) curl -L -O "$RETRAIN_DATA_PATH" ;;
-      *) eos cp "$RETRAIN_DATA_PATH" . ;;
-    esac
-  - RETRAIN_DATA=$(basename $RETRAIN_DATA_PATH)
-  # Bring the signal sample along for the basic post-training plots when it sits
-  # next to the retrain input, following the <process>.root convention of make_data.py
-  - |
-    RETRAIN_DATA_DIR=$(dirname $RETRAIN_DATA_PATH)
-    if [[ "$RETRAIN_DATA_DIR" == /eos/* ]] && eos ls "$RETRAIN_DATA_DIR/${SIGNAL}.root" > /dev/null 2>&1; then
-      eos cp "$RETRAIN_DATA_DIR/${SIGNAL}.root" .
+    # Copy every .root file in the RETRAIN_DATA_PATH directory locally: /eos
+    # paths through the matching MGM instance, root:// URLs via xrootd,
+    # anything else as a local (or fuse-mounted) directory
+    if [[ "$RETRAIN_DATA_PATH" == /eos/* ]]; then
+      case "$RETRAIN_DATA_PATH" in
+        /eos/user/*) export EOS_MGM_URL=root://eosuser.cern.ch ;;
+        /eos/project/*) export EOS_MGM_URL=root://eosproject.cern.ch ;;
+        *) export EOS_MGM_URL=root://eoscms.cern.ch ;;
+      esac
+      FILES=$(eos ls "$RETRAIN_DATA_PATH" | grep '\.root$' || true)
+      for f in $FILES; do eos cp "$RETRAIN_DATA_PATH/$f" .; done
+    elif [[ "$RETRAIN_DATA_PATH" == root://* ]]; then
+      SERVER=$(echo "$RETRAIN_DATA_PATH" | cut -d/ -f1-3)
+      RPATH="/${RETRAIN_DATA_PATH#root://*/}"
+      FILES=$(xrdfs "$SERVER" ls "$RPATH" | grep '\.root$' || true)
+      for f in $FILES; do xrdcp -f "${SERVER}/${f#/}" .; done
+    elif [[ "$RETRAIN_DATA_PATH" == http://* || "$RETRAIN_DATA_PATH" == https://* ]]; then
+      echo "http(s) directories cannot be listed; use an eos, xrootd or local directory for RETRAIN_DATA_PATH"
+      exit 1
+    else
+      FILES=$(ls "$RETRAIN_DATA_PATH"/*.root 2>/dev/null || true)
+      for f in $FILES; do cp "$f" .; done
     fi
   - cd ..
   - |
     SIG_OPT=""
-    if [ -f data/${SIGNAL}.root ]; then SIG_OPT="-sig $SIGNAL"; fi
-    python tagger/data/make_data.py -i data/$RETRAIN_DATA --tree $RETRAIN_NTUPLE_TREE $SIG_OPT
+    if [ -f "data/${SIGNAL}.root" ]; then SIG_OPT="-sig $SIGNAL"; fi
+    TRAIN_FILES=$(find data -maxdepth 1 -name '*.root' ! -name "${SIGNAL}.root" | sort)
+    if [ -z "$TRAIN_FILES" ]; then
+      echo "No .root training files found under RETRAIN_DATA_PATH=$RETRAIN_DATA_PATH"
+      exit 1
+    fi
+    echo "Retraining on files: $TRAIN_FILES"
+    python tagger/data/make_data.py -i $TRAIN_FILES --tree $RETRAIN_NTUPLE_TREE $SIG_OPT
     tar -cf retrain_training_data_$Inputs.tgz training_data
     export EOS_MGM_URL=root://eosproject.cern.ch
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}

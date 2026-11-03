@@ -516,7 +516,7 @@ def make_data(
     Process the data set in chunks from the input ntuples file.
 
     Parameters:
-        infile (str): The input file path.
+        infile (str or list of str): Input file path, or list of paths processed together as one dataset.
         outdir (str): The output directory.
         tag (str): Input tags to use from puppicands, defined in puppicand_fields.yml.
         jet_fields (list): List of jet NN fields to use for training.
@@ -540,10 +540,14 @@ def make_data(
     os.makedirs(outdir, exist_ok=True)
     print("Output directory:", outdir)
 
+    # Accept either one input file or a list of files; multiple files are
+    # iterated transparently as a single dataset.
+    infiles = list(infile) if isinstance(infile, (list, tuple)) else [infile]
+
     # Loop through the entries
-    input_tree = uproot.open(infile)[tree]
-    num_entries = input_tree.num_entries
-    print(num_entries)
+    input_tree = uproot.open(infiles[0])[tree]
+    num_entries = sum(uproot.open(fname)[tree].num_entries for fname in infiles)
+    print(f"Processing {len(infiles)} input file(s) with {num_entries} entries")
     num_entries_done = 0
     chunk = 0
 
@@ -553,6 +557,11 @@ def make_data(
     nano = is_nano_input(input_tree)
     if nano:
         print(f"Detected Phase-2 nano input format in '{tree}', restructuring to jet records")
+    elif not input_tree.keys(filter_name=FILTER_PATTERN):
+        raise ValueError(
+            f"'{infiles[0]}' tree '{tree}' matches neither the Phase-2 nano ('{NANO_JET_PREFIX}*') "
+            f"nor the jetTuple ('{FILTER_PATTERN}') input format; check the input files and the tree name"
+        )
 
     iterate_args = (
         dict(filter_name=NANO_FILTER_PATTERN)
@@ -560,14 +569,17 @@ def make_data(
         else dict(filter_name=FILTER_PATTERN, how="zip")
     )
     for data in (
-        pbar := tqdm(uproot.iterate({infile: tree}, step_size=step_size, max_workers=num_workers, **iterate_args))
+        pbar := tqdm(uproot.iterate({fname: tree for fname in infiles}, step_size=step_size, max_workers=num_workers, **iterate_args))
     ):
         pbar.set_description(f'Processing chunk {chunk}')
 
+        # count iterated entries before restructuring and cuts; for nano inputs the
+        # restructure expands each event into several jet records, which must not
+        # count towards the requested fraction of the dataset
+        num_entries_done += len(data)
+
         if nano:
             data = _nano_to_jet_records(data)
-
-        num_entries_done += len(data)  # count before cuts
 
         # Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
@@ -589,3 +601,8 @@ def make_data(
         chunk += 1
         if num_entries_done / num_entries >= ratio:
             break
+
+    if chunk == 0:
+        raise ValueError(
+            f"No entries were read from {infiles} tree '{tree}'; the files hold no data in the expected input format"
+        )

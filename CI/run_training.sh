@@ -11,9 +11,9 @@ if [ "$1" == "False" ] && [ "$2" == "False" ]; then
     fi
     python tagger/train/train.py -p 40 -y tagger/model/configs/$Model.yaml -o output/$Model $RETRAIN_OPT
     # Signal-process inputs for the basic ROC plots: retrain pipelines (RUN_RETRAIN=True)
-    # produce retrain_signal_process_data.tgz when the signal nano AOD file sits next to the
-    # retrain input; otherwise fall back to the standard dataset, and skip the per-signal
-    # plots if neither tarball exists.
+    # produce retrain_signal_process_data.tgz when the retrain directory holds a
+    # <SIGNAL>.root file; otherwise fall back to the standard dataset, and skip the
+    # per-signal plots if neither tarball exists.
     SIG_OPT=""
     SIG_TGZ=""
     if [ "$4" == "True" ] && eos cp "${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/retrain_signal_process_data.tgz" . 2>/dev/null; then

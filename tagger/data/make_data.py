@@ -12,8 +12,10 @@ if __name__ == "__main__":
     parser.add_argument(
         '-i',
         '--input',
-        default='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/All200_part0.root',
-        help='Path to input training data',
+        default=['/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/All200_part0.root'],
+        nargs='+',
+        metavar='INPUT',
+        help='Path(s) to input training data; multiple files are processed together as one dataset',
     )
     parser.add_argument('-r', '--ratio', default=1, type=float, help='Ratio (0-1) of the input data root file to process')
     parser.add_argument('-s', '--step', default='100MB', help='The maximum memory size to process input root file')
@@ -33,11 +35,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    make_data(infile=args.input, outdir=args.outdir, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
+    input_files = args.input if isinstance(args.input, list) else [args.input]
+
+    make_data(infile=input_files, outdir=args.outdir, step_size=args.step, extras=args.extras, ratio=args.ratio, tree=args.tree)
 
     # Format all the signal processes used for plotting later
     for signal_process in args.signal_processes:
-        signal_input = os.path.join(os.path.dirname(args.input), f"{signal_process}.root")
+        signal_input = os.path.join(os.path.dirname(input_files[0]), f"{signal_process}.root")
         print("making signal inputs for basic plotting:", signal_input)
         signal_output = os.path.join("signal_process_data", signal_process)
         if not os.path.exists(signal_output):

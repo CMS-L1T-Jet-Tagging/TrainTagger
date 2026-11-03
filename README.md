@@ -152,13 +152,15 @@ the new `training_data` contents. In the CI pipeline this is steered by the `RET
 and `RETRAIN_URL` variables.
 
 To retrain the model on a new nano AOD sample in the CI pipeline, set `RUN_RETRAIN: 'True'`
-and point `TRAINING_DATA_DIR` at the nano AOD root file to use (eos, xrootd or http path).
-An optional `retrain_data` job then copies the file, runs `make_data` on the
+and point `RETRAIN_DATA_PATH` at the directory holding the nano AOD root files to use
+(eos, xrootd or local directory). All `.root` files in the directory are used together.
+An optional `retrain_data` job then copies the files, runs `make_data` over them on the
 `RETRAIN_NTUPLE_TREE` tree (default `Events`; the Phase-2 `L1JetTrain` format is detected
 automatically), and the training job resumes from `RETRAIN_URL` as with `RETRAIN`. The
 evaluate, hls4ml, synthesis and emulation steps then run on the retrained model as usual.
-If a `<SIGNAL>.root` file (e.g. `TT_PU200.root`) sits next to the retrain input it is
-processed too, for the per-signal basic ROC plots.
+If the directory also contains a `<SIGNAL>.root` file (default `TT_PU200.root`) it is
+excluded from the training inputs and processed for the per-signal basic ROC plots.
+Locally several input files can be passed to `make_data.py -i file1.root file2.root ...`.
 
 # 3. Physics Validation
 

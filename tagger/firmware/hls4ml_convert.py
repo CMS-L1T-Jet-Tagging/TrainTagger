@@ -14,4 +14,8 @@ if __name__ == "__main__":
 
     # Load the model
     model = fromFolder(args.model_path)
-    model.firmware_convert(args.outpath, build=False)
+
+    # Replace this with our new code
+    # model.firmware_convert(args.outpath, build=False)
+
+    # Must work first time

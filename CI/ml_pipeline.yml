@@ -48,7 +48,7 @@ variables:
     RUN_SYNTHESIS: 'True'
     RETRAIN: 'False'
     RETRAIN_URL: 'https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras'
-    RUN_RETRAIN: 'False'
+    RUN_RETRAIN: 'True'
     RETRAIN_DATA_PATH: ''
     MODEL_OUTPUT_PATH: ${EOS_STORAGE_DIR}/automation/v1_0_2
     RETRAIN_NTUPLE_TREE: 'Events'

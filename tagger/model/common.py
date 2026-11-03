@@ -8,9 +8,7 @@ Written 28/05/2025 cebrown@cern.ch
 import os
 import shutil
 
-import numpy as np
 import yaml
-from qkeras.qlayers import QDense
 
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 

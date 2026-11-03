@@ -10,15 +10,16 @@ from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
 
-def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt):
+def save_test_data(out_dir, X_test, y_test, truth_pt_test, reco_pt_test):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
-    np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
-    np.savez_compressed(os.path.join(out_dir, "testing_data/y_test.npz"), label=y_test)
-    np.savez_compressed(os.path.join(out_dir, "testing_data/truth_pt_test.npz"), truth_pt=truth_pt_test)
-    np.savez_compressed(os.path.join(out_dir, "testing_data/reco_pt_test.npz"), reco_pt=reco_pt)
 
-    print(f"Test labels saved to {out_dir}")
+    np.save(os.path.join(out_dir, "testing_data/X_test.npy"), X_test)
+    np.save(os.path.join(out_dir, "testing_data/y_test.npy"), y_test)
+    np.save(os.path.join(out_dir, "testing_data/truth_pt_test.npy"), truth_pt_test)
+    np.save(os.path.join(out_dir, "testing_data/reco_pt_test.npy"), reco_pt_test)
+
+    print(f"Test data saved to {out_dir}")
 
 
 def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, low_pt=False):
@@ -29,8 +30,6 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         raise ValueError(
             "Oops!  Given weightingMethod not defined in train_weights(). Use either none, ptref, or onlyclass."
         )
-    if weightingMethod == "onlypt":
-        return flat_pt_weights(reco_pt_train)
     num_samples = y_train.shape[0]
 
     sample_weights = np.ones(num_samples)
@@ -91,8 +90,8 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         6: 1.0,  # muon
         7: 1.0,  # electron
     }
-    if model.training_config['pileup']:
-        weights_per_class[8] = 1.0  # pileup
+    # if model.training_config['pileup']:
+    #     weights_per_class[8] = 1.0  # pileup
 
     for idx in class_labels.values():
         weights_per_class_pt_bin[idx] = weights_per_class_pt_bin[idx] * weights_per_class[idx]
@@ -125,61 +124,45 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         return None
     return sample_weights
 
-def train(model, out_dir, percent):
+def train(model, data_dir, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, jet_vars, extra_vars = load_data("training_data/", percent, model)
-    input_vars = [var for var in input_vars if var in model.inputs['basic_input_config']] # keep only the input variables that are in the model's input config
-    jet_vars = [var for var in jet_vars if var in model.inputs['jet_features']]
+    data_train, data_test, class_labels, input_vars, extra_vars = load_data(data_dir, percent, model)
+    # input_vars = [var for var in input_vars if var in model.inputs['basic_input_config']] # keep only the input variables that are in the model's input config
     model.set_labels(
         input_vars,
-        jet_vars,
         extra_vars,
         class_labels,
     )
 
     # Make into ML-like data for training
-    particle_features_train, jet_features_train, y_train, pt_target_train, _, reco_pt_train = to_ML(data_train, class_labels)
+    particle_features_train, y_train, pt_target_train, _, reco_pt_train = to_ML(data_train, class_labels)
 
     # Save particle_features_test, y_test, and truth_pt_test for plotting later
-    particle_features_test, jet_features_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
+    particle_features_test, y_test, _, truth_pt_test, reco_pt_test = to_ML(data_test, class_labels)
 
-    # collect all possible train and test inputs
-    raw_inputs_train = {
-        'basic_input': particle_features_train,
-        'jet_features': jet_features_train,
-    }
-
-    raw_inputs_test = {
-        'basic_input': particle_features_test,
-        'jet_features': jet_features_test,
-    }
-    test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys
-    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test)
+    save_test_data(out_dir, particle_features_test, y_test, truth_pt_test, reco_pt_test)
 
     # Calculate the sample weights for training
-    jet_weights = []
-    for w in model.training_config['weight_method']:
-        sample_weight_class = train_weights(
-            y_train,
-            reco_pt_train,
-            class_labels,
-            weightingMethod=w,
-            debug=model.run_config['debug'],
-        )
-        jet_weights.append(sample_weight_class)
+    jet_weights = train_weights(
+        y_train,
+        reco_pt_train,
+        class_labels,
+        weightingMethod=model.training_config['weight_method'],
+        debug=model.run_config['debug'],
+    )
 
     # Get input shape and inputs dict
-    train_dict, input_shapes = model.prepare_inputs(raw_inputs_train)
+    input_shape = particle_features_train.shape[1:]
     output_shape = y_train.shape[1:]
 
-    model.build_model(input_shapes, output_shape)
+    model.build_model(input_shape, output_shape)
 
     # Train it with a pruned model
     num_samples = particle_features_train.shape[0] * (1 - model.training_config['validation_split'])
 
     model.compile_model(num_samples)
-    model.fit(train_dict, y_train, pt_target_train, jet_weights)
+    model.fit(particle_features_train, y_train, pt_target_train, jet_weights)
 
     # Finished training, save model
     model.save()
@@ -193,19 +176,14 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     # Training argument
-    parser.add_argument(
-        '-o', '--output', default='output/baseline', help='Output model directory path, also save evaluation plots'
-    )
+    parser.add_argument('-o', '--output', default='output/baseline', help='Output model directory path, also save evaluation plots')
+    parser.add_argument('-d', '--data', default='training_data', help='Directory containing the training data')
     parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
-    parser.add_argument(
-        '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
-    )
+    parser.add_argument('-y', '--yaml_config', default='tagger/model/configs/deepset_HGQ2.yaml', help='YAML config for model')
 
     # Basic ploting
     parser.add_argument('--plot-basic', action='store_true', help='Plot all the basic performance if set')
-    parser.add_argument(
-        '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
-    )
+    parser.add_argument('-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting')
 
     args = parser.parse_args()
 
@@ -216,4 +194,4 @@ if __name__ == "__main__":
 
     else:
         model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.percent)
+        train(model, args.data, args.output, args.percent)

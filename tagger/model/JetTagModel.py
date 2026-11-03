@@ -70,7 +70,7 @@ class JetTagModel(ABC):
         self.model_config = yaml_dict['model_config']
         self.quantization_config = yaml_dict['quantization_config']
         self.training_config = yaml_dict['training_config']
-        self.inputs = yaml_dict['inputs']
+        # self.inputs = yaml_dict['inputs']
         if "firmware_config" in yaml_dict:
             self.firmware_config = yaml_dict['firmware_config']
 
@@ -180,7 +180,7 @@ class JetTagModel(ABC):
 
         return wrapper
 
-    def set_labels(self, particle_input_vars: str, jet_input_vars: str, extra_vars: str, class_labels: str):
+    def set_labels(self, particle_input_vars: str, extra_vars: str, class_labels: str):
         """Set internal labels
 
         Args:
@@ -190,7 +190,7 @@ class JetTagModel(ABC):
             class_labels (str): Class label names
         """
         self.particle_input_vars = particle_input_vars
-        self.jet_input_vars = jet_input_vars
+        # self.jet_input_vars = jet_input_vars
         self.extra_vars = extra_vars
         self.class_labels = class_labels
 

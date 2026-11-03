@@ -43,11 +43,11 @@ DeepSet:baseline_5param_extended_trk:
   variables:
     Name: baseline_5param_extended_trk
     Model: baseline
-    RERUN_ON_OLDTRAINING: 'False'
+    RERUN_ON_OLDTRAINING: 'True'
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    RUN_RETRAIN: 'False'
+    RUN_RETRAIN: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
 
 # WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:

@@ -49,6 +49,8 @@ DeepSet:baseline_5param_extended_trk:
     RUN_SYNTHESIS: 'True'
     RUN_RETRAIN: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
+  forward:
+    pipeline_variables: true
 
 # WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
 #   extends: .ml_pipeline

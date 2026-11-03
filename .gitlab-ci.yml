@@ -49,8 +49,10 @@ DeepSet:baseline_5param_extended_trk:
     RUN_SYNTHESIS: 'True'
     RUN_RETRAIN: 'True'
     EMULATION_WRAPPER_VERSION: v1_0_2
-  forward:
-    pipeline_variables: true
+  trigger:
+    forward:
+      pipeline_variables: true   # pass variables from the API call to the downstream pipeline
+      yaml_variables: true       # default; passes the variables: block above
 
 # WeightedAverageSimple:weightedAverageSimple_5param_extended_trk:
 #   extends: .ml_pipeline

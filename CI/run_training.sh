@@ -5,10 +5,11 @@ if [ "$1" == "False" ] && [ "$2" == "False" ]; then
 
     if [ "$3" == "True" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"
-        eos cp $RETRAIN_URL output/retrainmodel
-        cd output/retrainmodel
+        eos cp $RETRAIN_URL output/$Model
+        cd output/$Model
         mv metadata/* .
         retrainopt=--retrain
+        cd ../../
     fi
 
     python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model $retrainopt

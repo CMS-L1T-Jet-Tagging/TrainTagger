@@ -101,7 +101,7 @@ retrain_data:
     - if: $RUN_RETRAIN == "True"
   script:
   - source activate tagger
-  - EOS_STORAGE_DATADIR=${EOS_STORAGE_DATADIR}/retrain
+  - export EOS_STORAGE_DATADIR=${EOS_STORAGE_DATADIR}/retrain
   - |
     if [ -z "$RETRAIN_DATA_PATH" ]; then
       echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the directory with the nano AOD root files to retrain on."
@@ -145,10 +145,6 @@ train:
     - job : retrain_data
       optional: true
   script:
-  - |
-    if [[$RUN_RETRAIN == 'True']]; then
-      Model=retrainmodel
-    fi;
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger

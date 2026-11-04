@@ -69,10 +69,6 @@ data:
   tags: [cern-nextgen-gpu]
   rules:
     - if: $RUN_RETRAIN == "False"
-  rules:
-   - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-       - tagger/data/**
-     when: manual
   script:
   - source activate tagger
   - mkdir data

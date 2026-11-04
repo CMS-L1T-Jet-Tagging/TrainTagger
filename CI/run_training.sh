@@ -1,7 +1,7 @@
 #!/bin/bash
 # $1 RERUN_ON_TAG; if false triggers full retraining of the model, if true just run basic plotting on the tagged model
 # $2 RERUN_ON_OLDTRAINING if true run basic plotting on previosuly trained model
-if [ "$1" == "False" ] && [ "$2" == "False" ]; then
+if [ "$1" == "False" ]; then
 
     if [ "$3" == "True" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"

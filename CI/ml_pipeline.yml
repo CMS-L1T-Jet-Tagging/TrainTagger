@@ -50,6 +50,7 @@ variables:
     RUN_RETRAIN: 'True'
     RETRAIN_NTUPLE_TREE: 'Events'
     TAG: 'v1.0.1'
+    EMULATION_WRAPPER_VERSION: 'v1_0_2'
 
 .template:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -148,7 +149,7 @@ train:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING $RUN_RETRAIN
+  - ./CI/run_training.sh $RERUN_ON_TAG $RUN_RETRAIN
   artifacts:
     paths:
       - output

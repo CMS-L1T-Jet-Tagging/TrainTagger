@@ -140,7 +140,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-gpu]
+  tags: [cb_vivado]
   needs:
     - job : data
       optional: true

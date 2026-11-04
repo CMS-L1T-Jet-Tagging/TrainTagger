@@ -129,6 +129,7 @@ retrain_data:
   - cd ..
   - |
     SIG_OPT=""
+    TRAIN_FILES=$(find data -maxdepth 1 -name '*.root' ! -name "${SIGNAL}.root" | sort)
     echo "Retraining on files: $TRAIN_FILES"
     python tagger/data/make_data.py -i $TRAIN_FILES --tree $RETRAIN_NTUPLE_TREE $SIG_OPT
     tar -cf training_data_$Inputs.tgz training_data

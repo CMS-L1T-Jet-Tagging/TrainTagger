@@ -1,33 +1,20 @@
 #!/bin/bash
 # $1 RERUN_ON_TAG; if false triggers full retraining of the model, if true just run basic plotting on the tagged model
 # $2 RERUN_ON_OLDTRAINING if true run basic plotting on previosuly trained model
-# $3 RETRAIN; if "True" initialize the model weights from $RETRAIN_URL before training
-# $4 RUN_RETRAIN; if "True" the training input was prepared from $TRAINING_DATA_DIR by the retrain_data job
 if [ "$1" == "False" ] && [ "$2" == "False" ]; then
-    RETRAIN_OPT=""
+
     if [ "$3" == "True" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"
-        RETRAIN_OPT="--retrain $RETRAIN_URL"
+        eos cp $RETRAIN_URL output/retrainmodel
+        cd output/retrainmodel
+        mv metadata/* .
+        retrainopt=--retrain
     fi
-    python tagger/train/train.py -p 40 -y tagger/model/configs/$Model.yaml -o output/$Model $RETRAIN_OPT
-    # Signal-process inputs for the basic ROC plots: retrain pipelines (RUN_RETRAIN=True)
-    # produce retrain_signal_process_data.tgz when the retrain directory holds a
-    # <SIGNAL>.root file; otherwise fall back to the standard dataset, and skip the
-    # per-signal plots if neither tarball exists.
-    SIG_OPT=""
-    SIG_TGZ=""
-    if [ "$4" == "True" ] && eos cp "${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/retrain_signal_process_data.tgz" . 2>/dev/null; then
-        SIG_TGZ=retrain_signal_process_data.tgz
-    elif eos cp "${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz" .; then
-        SIG_TGZ=signal_process_data.tgz
-    else
-        echo "No signal_process_data tarball found, plotting basics without a dedicated signal process"
-    fi
-    if [ -n "$SIG_TGZ" ]; then
-        tar -xf "$SIG_TGZ"
-        SIG_OPT="-sig $SIGNAL"
-    fi
-    python tagger/train/train.py --plot-basic $SIG_OPT -y tagger/model/configs/$Model.yaml -o output/$Model
+
+    python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model $retrainopt
+    eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
+    tar -xf signal_process_data.tgz
+    python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
     cd output/$Model/model
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
     eos cp saved_model.keras ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/

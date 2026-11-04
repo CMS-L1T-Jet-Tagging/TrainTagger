@@ -46,8 +46,7 @@ variables:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    RETRAIN: 'True'
-    RETRAIN_URL: 'https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras'
+    RETRAIN_URL: 'https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/
     RUN_RETRAIN: 'True'
     RETRAIN_NTUPLE_TREE: 'Events'
     TAG: 'v1.0.1'
@@ -104,6 +103,7 @@ retrain_data:
     - if: $RUN_RETRAIN == "True"
   script:
   - source activate tagger
+  - EOS_STORAGE_DATADIR=${EOS_STORAGE_DATADIR}/retrain
   - |
     if [ -z "$RETRAIN_DATA_PATH" ]; then
       echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the directory with the nano AOD root files to retrain on."
@@ -123,14 +123,6 @@ retrain_data:
       esac
       FILES=$(eos ls "$RETRAIN_DATA_PATH" | grep '\.root$' || true)
       for f in $FILES; do eos cp "$RETRAIN_DATA_PATH/$f" .; done
-    elif [[ "$RETRAIN_DATA_PATH" == root://* ]]; then
-      SERVER=$(echo "$RETRAIN_DATA_PATH" | cut -d/ -f1-3)
-      RPATH="/${RETRAIN_DATA_PATH#root://*/}"
-      FILES=$(xrdfs "$SERVER" ls "$RPATH" | grep '\.root$' || true)
-      for f in $FILES; do xrdcp -f "${SERVER}/${f#/}" .; done
-    elif [[ "$RETRAIN_DATA_PATH" == http://* || "$RETRAIN_DATA_PATH" == https://* ]]; then
-      echo "http(s) directories cannot be listed; use an eos, xrootd or local directory for RETRAIN_DATA_PATH"
-      exit 1
     else
       FILES=$(ls "$RETRAIN_DATA_PATH"/*.root 2>/dev/null || true)
       for f in $FILES; do cp "$f" .; done
@@ -138,23 +130,12 @@ retrain_data:
   - cd ..
   - |
     SIG_OPT=""
-    if [ -f "data/${SIGNAL}.root" ]; then SIG_OPT="-sig $SIGNAL"; fi
-    TRAIN_FILES=$(find data -maxdepth 1 -name '*.root' ! -name "${SIGNAL}.root" | sort)
-    if [ -z "$TRAIN_FILES" ]; then
-      echo "No .root training files found under RETRAIN_DATA_PATH=$RETRAIN_DATA_PATH"
-      exit 1
-    fi
     echo "Retraining on files: $TRAIN_FILES"
     python tagger/data/make_data.py -i $TRAIN_FILES --tree $RETRAIN_NTUPLE_TREE $SIG_OPT
-    tar -cf retrain_training_data_$Inputs.tgz training_data
+    tar -cf training_data_$Inputs.tgz training_data
     export EOS_MGM_URL=root://eosproject.cern.ch
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
-    eos cp retrain_training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
-    if [ -n "$SIG_OPT" ]; then
-      tar -cf retrain_signal_process_data.tgz signal_process_data
-      eos cp retrain_signal_process_data.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
-    fi
-
+    eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 train:
   extends:
     - .template
@@ -167,18 +148,13 @@ train:
       optional: true
   script:
   - |
-    if [ "$RUN_RETRAIN" == "True" ]; then
-      DATA_TGZ=retrain_training_data_$Inputs.tgz
-    else
-      DATA_TGZ=training_data_$Inputs.tgz
-    fi
-    eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/$DATA_TGZ .
-    tar -xf $DATA_TGZ
+    if [[$RUN_RETRAIN == 'True']]; then
+      Model=retrainmodel
+    fi;
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - |
-    RETRAIN_FLAG=$RETRAIN
-    if [ "$RUN_RETRAIN" == "True" ]; then RETRAIN_FLAG="True"; fi
-    ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING $RETRAIN_FLAG $RUN_RETRAIN
+  - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING $RUN_RETRAIN
   artifacts:
     paths:
       - output
@@ -193,14 +169,8 @@ evaluate:
   tags: [cern-nextgen-gpu]
   script:
   - nproc
-  - |
-    if [ "$RUN_RETRAIN" == "True" ]; then
-      DATA_TGZ=retrain_training_data_$Inputs.tgz
-    else
-      DATA_TGZ=training_data_$Inputs.tgz
-    fi
-    eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/$DATA_TGZ .
-    tar -xf $DATA_TGZ
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - mkdir data
   - cd data
@@ -253,14 +223,8 @@ hls4ml:
   - cd hls4ml
   - pip install .
   - cd ..
-  - |
-    if [ "$RUN_RETRAIN" == "True" ]; then
-      DATA_TGZ=retrain_training_data_$Inputs.tgz
-    else
-      DATA_TGZ=training_data_$Inputs.tgz
-    fi
-    eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/$DATA_TGZ .
-    tar -xf $DATA_TGZ
+  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+  - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
   artifacts:

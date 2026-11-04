@@ -203,13 +203,10 @@ def train(model, out_dir, percent, retrain_model=""):
     model.results_dict['num_regression_outputs'] = pt_target_train.shape[1:]
     
     output_shape = y_train.shape[1:]
-
-    model.build_model(input_shapes, output_shape)
-
-    # Resume from a previously trained model if requested; it must be loaded onto the
-    # freshly built model before compile_model wraps it with the pruning layers
-    if retrain_model:
-        model.load_initial_weights(fetch_model_file(retrain_model))
+    
+        
+    else:
+        model.build_model(input_shapes, output_shape)
 
     # Train it with a pruned model
     num_samples = particle_features_train.shape[0] * (1 - model.training_config['validation_split'])
@@ -235,12 +232,8 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--percent', default=100, type=int, help='Percentage of how much processed data to train on')
     parser.add_argument(
         '--retrain',
-        nargs='?',
-        const=DEFAULT_RETRAIN_URL,
-        default='',
-        metavar='URL_OR_PATH',
-        help=f'Resume training from a previously saved model, fetched from a web URL or local path. '
-        f'If given without a value, the default is {DEFAULT_RETRAIN_URL}',
+        action='store_true',
+        help='Run a retraining'
     )
     parser.add_argument(
         '-y', '--yaml_config', default='tagger/model/configs/baseline_larger.yaml', help='YAML config for model'
@@ -260,5 +253,8 @@ if __name__ == "__main__":
         basic(model, args.signal_processes)
 
     else:
-        model = fromYaml(args.yaml_config, args.output)
+        if args.retrain:
+            model = fromFolder(args.output)
+        else:
+            model = fromYaml(args.yaml_config, args.output)
         train(model, args.output, args.percent, retrain_model=args.retrain)

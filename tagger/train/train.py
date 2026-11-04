@@ -204,8 +204,7 @@ def train(model, out_dir, percent, retrain_model=""):
     
     output_shape = y_train.shape[1:]
     
-        
-    else:
+    if retrain_model:   
         model.build_model(input_shapes, output_shape)
 
     # Train it with a pruned model

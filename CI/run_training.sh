@@ -5,8 +5,10 @@ if [ "$1" == "False" ]; then
 
     if [ "$3" == "True" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"
+        eos ls $RETRAIN_URL
         eos cp $RETRAIN_URL output/$Model
         cd output/$Model
+        ls 
         mv metadata/* .
         retrainopt=--retrain
         cd ../../

@@ -46,7 +46,7 @@ variables:
     RERUN_ON_TAG: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
-    RETRAIN_URL: 'https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/'
+    RETRAIN_URL: '/eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/tags/v2.0.0/v1.0.2/'
     RUN_RETRAIN: 'True'
     RETRAIN_NTUPLE_TREE: 'Events'
     TAG: 'v1.0.1'

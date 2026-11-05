@@ -210,7 +210,7 @@ def train(model, out_dir, percent, retrain_model=""):
     # Train it with a pruned model
     num_samples = particle_features_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    model.compile_model(num_samples)
+    model.compile_model(num_samples, retrain_model)
     model.fit(train_dict, y_train, pt_target_train, jet_weights)
 
     # Finished training, save model

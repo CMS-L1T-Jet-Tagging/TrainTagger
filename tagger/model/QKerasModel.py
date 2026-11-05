@@ -93,7 +93,7 @@ class QKerasModel(JetTagModel):
         # Add pruning callback
         self.callbacks.append(tfmot.sparsity.keras.UpdatePruningStep())
 
-    def compile_model(self, num_samples: int):
+    def compile_model(self, num_samples: int, retrain: bool):
         """compile the model generating callbacks and loss function
         Args:
             num_samples (int): Number of samples in the training set used for scheduling
@@ -114,12 +114,16 @@ class QKerasModel(JetTagModel):
         ]
 
         # Define the pruning
-        if 'initial_sparsity' in self.training_config:
+        if ('initial_sparsity' in self.training_config) and (retrain == False):
             self._prune_model(num_samples)
+            
+        if retrain == True:
+            self.training_config['learning_rate'] =  self.training_config['learning_rate'] / 100
+            self.training_config['epochs'] = self.training_config['epochs'] / 10
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
-            optimizer='adam',
+            optimizer=keras.optimizers.Adam(learning_rate=self.training_config['learning_rate']),
             loss={
                 self.loss_name + self.output_id_name: 'categorical_crossentropy',
                 self.loss_name + self.output_pt_name: huber_loss(

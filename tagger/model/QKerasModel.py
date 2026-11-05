@@ -119,7 +119,7 @@ class QKerasModel(JetTagModel):
             
         if retrain == True:
             self.training_config['learning_rate'] =  self.training_config['learning_rate'] / 100
-            self.training_config['epochs'] = self.training_config['epochs'] / 10
+            self.training_config['epochs'] = int(self.training_config['epochs'] / 10)
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(

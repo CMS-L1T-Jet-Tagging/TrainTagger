@@ -6,13 +6,12 @@ if [ "$1" == "False" ]; then
     if [ "$2" == "True" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"
         eos ls $RETRAIN_URL
-        eos cp -r $RETRAIN_URL output/$Model
+        eos cp -r $RETRAIN_URL/* output/$Model
         cd output/$Model
         ls 
         mv metadata/* .
-        export retrainopt=--retrain
         cd ../../
-        python tagger/train/train.py -p 100 -y tagger/model/configs/$Model.yaml -o output/$Model $retrainopt
+        python tagger/train/train.py -p 100 -y tagger/model/configs/$Model.yaml -o output/$Model --retrain
         python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
         cd output/$Model/model
         eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model

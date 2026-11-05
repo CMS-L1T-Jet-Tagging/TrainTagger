@@ -3,7 +3,7 @@
 # $2 RERUN_ON_OLDTRAINING if true run basic plotting on previosuly trained model
 if [ "$1" == "False" ]; then
 
-    if [ "$3" == "True" ]; then
+    if [ "$2" == "True" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"
         eos ls $RETRAIN_URL
         eos cp $RETRAIN_URL output/$Model

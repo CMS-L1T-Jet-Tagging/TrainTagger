@@ -6,27 +6,38 @@ if [ "$1" == "False" ]; then
     if [ "$2" == "True" ]; then
         echo "Retraining model initialized from: $RETRAIN_URL"
         eos ls $RETRAIN_URL
-        eos cp $RETRAIN_URL output/$Model
+        eos cp -r $RETRAIN_URL output/$Model
         cd output/$Model
         ls 
         mv metadata/* .
-        retrainopt=--retrain
+        export retrainopt=--retrain
         cd ../../
+        python tagger/train/train.py -p 100 -y tagger/model/configs/$Model.yaml -o output/$Model $retrainopt
+        python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
+        cd output/$Model/model
+        eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
+        eos cp saved_model.keras ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
+        cd ..
+        eos cp *.json ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
+        eos cp *.yaml ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
+        eos cp -r testing_data ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
+        rm -rf /eos/${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+        export MODEL_LOCATION=${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
+    else
+        python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model $retrainopt
+        eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
+        tar -xf signal_process_data.tgz
+        python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
+        cd output/$Model/model
+        eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
+        eos cp saved_model.keras ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
+        cd ..
+        eos cp *.json ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
+        eos cp *.yaml ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
+        eos cp -r testing_data ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
+        rm -rf /eos/${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+        export MODEL_LOCATION=${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
     fi
-
-    python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model $retrainopt
-    eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/signal_process_data.tgz .
-    tar -xf signal_process_data.tgz
-    python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
-    cd output/$Model/model
-    eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
-    eos cp saved_model.keras ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model/
-    cd ..
-    eos cp *.json ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
-    eos cp *.yaml ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
-    eos cp -r testing_data ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/
-    rm -rf /eos/${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-    export MODEL_LOCATION=${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
 else
     export MODEL_LOCATION=${EOS_STORAGE_DIR}/tags/${TAG}/
     mkdir -p output/$Model/model

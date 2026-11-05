@@ -10,24 +10,6 @@ from tagger.data.tools import load_data, to_ML
 from tagger.model.common import fromFolder, fromYaml
 from tagger.plot.basic import basic
 
-# Default initial model for retraining if none is specified with --retrain
-DEFAULT_RETRAIN_URL = "https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/tags/v2.0.0/v1.0.2/model/saved_model.keras"
-
-
-def fetch_model_file(url_or_path):
-    """Fetch a saved model file from a web URL or return the local path as-is.
-
-    Args:
-        url_or_path (str): http(s) URL of a saved_model.keras file, or a local path.
-
-    Returns:
-        str: Local path to the model file (downloaded/cached if a URL was given).
-    """
-    if url_or_path.startswith(("http://", "https://")):
-        return tf.keras.utils.get_file(fname=os.path.basename(url_or_path), origin=url_or_path)
-    return url_or_path
-
-
 def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
@@ -217,7 +199,7 @@ def train(model, out_dir, percent, retrain_model=""):
     model.save()
 
     model.plot_loss()
-
+    
     return
 
 

@@ -48,7 +48,7 @@ if [[ "$RUN_EMULATION" == "True" ]]; then
     tar -cvf ${CMSSW_VERSION}/src/L1TSC4NGJetModel.tgz ${CMSSW_VERSION}/src/L1TSC4NGJetModel
     eos cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/emulator
     
-    eos mkdir -p $MODEL_OUTPUT_PATH//emulator/
+    eos mkdir -p $MODEL_OUTPUT_PATH/emulator/
     eos cp -r ${CMSSW_VERSION}/src/L1TSC4NGJetModel.tgz $MODEL_OUTPUT_PATH/emulator
 fi
 

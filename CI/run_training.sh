@@ -11,7 +11,7 @@ if [ "$1" == "False" ]; then
         ls 
         mv metadata/* .
         cd ../../
-        python tagger/train/train.py -p 100 -y tagger/model/configs/$Model.yaml -o output/$Model --retrain
+        python tagger/train/train.py -p 10 -y tagger/model/configs/$Model.yaml -o output/$Model --retrain
         python tagger/train/train.py --plot-basic -sig $SIGNAL -y tagger/model/configs/$Model.yaml -o output/$Model
         cd output/$Model/model
         eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model

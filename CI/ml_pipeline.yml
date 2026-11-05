@@ -355,8 +355,8 @@ upload_new_model:
   needs:
     - job: train
       optional: false
-    - job: evaluate
-      optional: true
+    # - job: evaluate
+    #   optional: true
     - job: emulation-evaluate
       optional: true
     - job: emulate

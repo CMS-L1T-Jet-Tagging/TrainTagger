@@ -6,8 +6,8 @@ run_config :
 
 model_config :
   name : DeepSets_HGQ2
-  conv1d_layers : [32,32,32,32]
-  conv1d_parallelisation_factor :  [32,32,32,32]
+  conv1d_layers : [16,16,16,16]
+  conv1d_parallelisation_factor :  [16,16,16,16]
   classification_layers : [32,16]
   classification_parallelisation_factor : [32,16]
   regression_layers : [32,16]

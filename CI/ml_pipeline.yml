@@ -4,19 +4,19 @@ include:
 stages:
   - data
   - train
-  - evaluate
+  #- evaluate
   - hls4ml
   - synth
   - emulate
   - emulation-evaluate
   - profile
-  - run_processes
-  - run_TT_PU200
-  - run_VBFHToBB_PU200
-  - run_VBFHToCC_PU200
-  - run_MinBias_PU200
-  - run_QCD_Pt15To3000_PU200
-  - emulation_regression
+  #- run_processes
+  #- run_TT_PU200
+  #- run_VBFHToBB_PU200
+  #- run_VBFHToCC_PU200
+  #- run_MinBias_PU200
+  #- run_QCD_Pt15To3000_PU200
+  #- emulation_regression
   - upload
 
 variables:
@@ -49,6 +49,9 @@ variables:
     RUN_SYNTHESIS: 'True'
     TAG: 'v1.0.1'
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+    RETRAIN_URL: '/eos/project/c/cms-l1t-jet-tagger/www/${CI_PROJECT_NAME}/branches/keras-v3-rebase/DeepSetHGQ2/latest/'
+    RUN_RETRAIN: 'True'
+    RETRAIN_NTUPLE_TREE: 'Events'
 
 .template:
   image: $IMAGE
@@ -67,9 +70,10 @@ data:
   stage: data
   tags: [cern-nextgen-gpu]
   rules:
-   - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
-       - tagger/data/**
-     when: manual
+  #  - changes:  # Include the job and set to when:manual if any of the follow paths match a modified file.
+  #      - tagger/data/**
+  #    when: manual
+    - if: $RUN_RETRAIN == "False"
   script:
   - source activate tagger
   - export EOS_MGM_URL=root://eoscms.cern.ch
@@ -84,6 +88,58 @@ data:
   - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
   - eos cp signal_process_data.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
+# Optional retraining input preparation, enabled with RUN_RETRAIN='True'.
+# Copies every .root file in the RETRAIN_DATA_PATH directory and runs make_data
+# on all of them together; the Phase-2 (Events/L1JetTrain) format is detected
+# automatically. A <SIGNAL>.root file (default TT_PU200.root) in the directory is
+# reserved for the basic post-training plots and excluded from the training
+# inputs. The resulting tarball is stored next to the standard one so the train,
+# evaluate and hls4ml jobs can pick it up while the rest of the pipeline is
+# unchanged.
+retrain_data:
+  extends:
+    - .template
+  stage: data
+  tags: [cb_vivado]
+  rules:
+    - if: $RUN_RETRAIN == "True"
+  script:
+  - source activate tagger
+  - export EOS_STORAGE_DATADIR=${EOS_STORAGE_DATADIR}/retrain
+  - |
+    if [ -z "$RETRAIN_DATA_PATH" ]; then
+      echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the directory with the nano AOD root files to retrain on."
+      exit 1
+    fi
+  - mkdir data
+  - cd data
+  - |
+    # Copy every .root file in the RETRAIN_DATA_PATH directory locally: /eos
+    # paths through the matching MGM instance, root:// URLs via xrootd,
+    # anything else as a local (or fuse-mounted) directory
+    if [[ "$RETRAIN_DATA_PATH" == /eos/* ]]; then
+      case "$RETRAIN_DATA_PATH" in
+        /eos/user/*) export EOS_MGM_URL=root://eosuser.cern.ch ;;
+        /eos/project/*) export EOS_MGM_URL=root://eosproject.cern.ch ;;
+        *) export EOS_MGM_URL=root://eoscms.cern.ch ;;
+      esac
+      FILES=$(eos ls "$RETRAIN_DATA_PATH" | grep '\.root$' || true)
+      for f in $FILES; do eos cp "$RETRAIN_DATA_PATH/$f" .; done
+    else
+      FILES=$(ls "$RETRAIN_DATA_PATH"/*.root 2>/dev/null || true)
+      for f in $FILES; do cp "$f" .; done
+    fi
+  - cd ..
+  - |
+    SIG_OPT=""
+    TRAIN_FILES=$(find data -maxdepth 1 -name '*.root' ! -name "${SIGNAL}.root" | sort)
+    echo "Retraining on files: $TRAIN_FILES"
+    python tagger/data/make_data.py -i $TRAIN_FILES --tree $RETRAIN_NTUPLE_TREE $SIG_OPT
+    tar -cf training_data_$Inputs.tgz training_data
+    export EOS_MGM_URL=root://eosproject.cern.ch
+    eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
+    eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
+
 train:
   extends:
     - .template
@@ -92,82 +148,84 @@ train:
   needs:
     - job : data
       optional: true
-  script:
-  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
-  - tar -xf training_data_$Inputs.tgz
-  - source activate tagger
-  - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING
-  artifacts:
-    paths:
-      - output
-    exclude:
-      - .npy
-    expire_in: 7 days
-
-evaluate:
-  extends:
-    - .template
-  stage: evaluate
-  tags: [cern-nextgen-gpu]
-  script:
-  - nproc
-  - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
-  - tar -xf training_data_$Inputs.tgz
-  - source activate tagger
-  - mkdir data
-  - cd data
-  - eos cp $EOS_DATA_DIR/$MINBIAS .
-  - eos cp $BBBB_EOS_DIR/$BBBB .
-  - eos cp $BBTT_EOS_DIR/$BBTT .
-  - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
-  - cd ..
-  - echo "pT weights plots"
-  - python tagger/plot/pt_weights.py -m output/$Model
-  - echo "bbtt performance"
-  - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "VBF tautau performance"
-  - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "Topology tautau performance"
-  - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "bbbb performance"
-  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbbb.py --eff -s data/$BBBB --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "Single tau performance"
-  - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  artifacts:
-    paths:
-      - output
-    when: always
-    exclude:
-      - .npy
-    expire_in: 7 days
-
-hls4ml:
-  tags: [cern-nextgen-gpu]
-  extends:
-    - .template
-  rules:
-    - if: $RUN_SYNTHESIS == "True"
-  stage: hls4ml
-  needs:
-    - job : train
+    - job : retrain_data
       optional: true
   script:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
+  - ./CI/run_training.sh $RERUN_ON_TAG $RUN_RETRAIN
   artifacts:
     paths:
-      - output/$Model/firmware
+      - output
+    exclude:
+      - .npy
     expire_in: 7 days
+
+# evaluate:
+#   extends:
+#     - .template
+#   stage: evaluate
+#   tags: [cern-nextgen-gpu]
+#   script:
+#   - nproc
+#   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+#   - tar -xf training_data_$Inputs.tgz
+#   - source activate tagger
+#   - mkdir data
+#   - cd data
+#   - eos cp $EOS_DATA_DIR/$MINBIAS .
+#   - eos cp $BBBB_EOS_DIR/$BBBB .
+#   - eos cp $BBTT_EOS_DIR/$BBTT .
+#   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
+#   - cd ..
+#   - echo "pT weights plots"
+#   - python tagger/plot/pt_weights.py -m output/$Model
+#   - echo "bbtt performance"
+#   - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE -m output/$Model
+#   - echo "VBF tautau performance"
+#   - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/diTaus.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE -m output/$Model
+#   - echo "Topology tautau performance"
+#   - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+#   - echo "bbbb performance"
+#   - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/bbbb.py --eff -s data/$BBBB --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
+#   - echo "Single tau performance"
+#   - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+#   - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+#   artifacts:
+#     paths:
+#       - output
+#     when: always
+#     exclude:
+#       - .npy
+#     expire_in: 7 days
+
+# hls4ml:
+#   tags: [cern-nextgen-gpu]
+#   extends:
+#     - .template
+#   rules:
+#     - if: $RUN_SYNTHESIS == "True"
+#   stage: hls4ml
+#   needs:
+#     - job : train
+#       optional: true
+#   script:
+#   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
+#   - tar -xf training_data_$Inputs.tgz
+#   - source activate tagger
+#   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
+#   artifacts:
+#     paths:
+#       - output/$Model/firmware
+#     expire_in: 7 days
 
 synth:
   tags:
@@ -248,50 +306,50 @@ profile:
       - output/$Model
     expire_in: 7 days
 
-run_processes:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
-  stage: run_processes
-  tags: [cern-nextgen-gpu]
-  needs:
-    - job : hls4ml
-      optional: true
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  before_script:
-    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
-    - source /cvmfs/cms.cern.ch/cmsset_default.sh
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-  script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  parallel:
-    matrix:
-      - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
-  artifacts:
-    paths:
-      - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
-    expire_in: 7 days
+# run_processes:
+#   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
+#   stage: run_processes
+#   tags: [cern-nextgen-gpu]
+#   needs:
+#     - job : hls4ml
+#       optional: true
+#   rules:
+#     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+#   before_script:
+#     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+#     - source /cvmfs/cms.cern.ch/cmsset_default.sh
+#     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+#   script:
+#   - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   parallel:
+#     matrix:
+#       - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
+#   artifacts:
+#     paths:
+#       - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
+#     expire_in: 7 days
 
-emulation_regression:
-  extends:
-    - .template
-  stage: emulation_regression
-  tags: [cern-nextgen-gpu]
-  needs:
-    - job : run_processes
-      optional: true
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  script:
-  - source activate tagger
-  - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
-  - mkdir -p output/$Model/plots/emulation_regression
-  - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 7 days
+# emulation_regression:
+#   extends:
+#     - .template
+#   stage: emulation_regression
+#   tags: [cern-nextgen-gpu]
+#   needs:
+#     - job : run_processes
+#       optional: true
+#   rules:
+#     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+#   script:
+#   - source activate tagger
+#   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
+#   - mkdir -p output/$Model/plots/emulation_regression
+#   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   artifacts:
+#     paths:
+#       - output/$Model
+#     expire_in: 7 days
 
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
@@ -303,7 +361,7 @@ upload_new_model:
     - job: train
       optional: false
     - job: evaluate
-      optional: false
+      optional: true
     - job: emulation-evaluate
       optional: true
     - job: emulate
@@ -328,8 +386,21 @@ upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
   tags: [k8s-gpu]
-  needs: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
-  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
+  needs:
+    - job: train
+      optional: false
+    - job: evaluate
+      optional: true
+    - job: emulation-evaluate
+      optional: true
+    - job: emulate
+      optional: true
+    - job: hls4ml
+      optional: true
+    - job: profile
+      optional: true
+    - job: emulation_regression
+      optional: true
   rules:
     - if: $RERUN_ON_TAG == "True"
   before_script:

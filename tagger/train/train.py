@@ -125,7 +125,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         return None
     return sample_weights
 
-def train(model, out_dir, percent):
+def train(model, out_dir, percent, retrain_model):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
     data_train, data_test, class_labels, input_vars, jet_vars, extra_vars = load_data("training_data/", percent, model)
@@ -186,12 +186,13 @@ def train(model, out_dir, percent):
     
     output_shape = y_train.shape[1:]
 
-    model.build_model(input_shapes, output_shape)
+    if not retrain_model:   
+        model.build_model(input_shapes, output_shape)
 
     # Train it with a pruned model
     num_samples = particle_features_train.shape[0] * (1 - model.training_config['validation_split'])
 
-    model.compile_model(num_samples)
+    model.compile_model(num_samples,retrain_model)
     model.fit(train_dict, y_train, pt_target_train, jet_weights)
 
     # Finished training, save model
@@ -219,6 +220,11 @@ if __name__ == "__main__":
     parser.add_argument(
         '-sig', '--signal-processes', default=[], nargs='*', help='Specify all signal process for individual plotting'
     )
+    parser.add_argument(
+        '--retrain',
+        action='store_true',
+        help='Run a retraining'
+    )
 
     args = parser.parse_args()
 
@@ -228,5 +234,8 @@ if __name__ == "__main__":
         basic(model, args.signal_processes)
 
     else:
-        model = fromYaml(args.yaml_config, args.output)
-        train(model, args.output, args.percent)
+        if args.retrain:
+            model = fromFolder(args.output)
+        else:
+            model = fromYaml(args.yaml_config, args.output)
+        train(model, args.output, args.percent, retrain_model=args.retrain)

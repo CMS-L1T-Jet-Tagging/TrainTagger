@@ -32,35 +32,35 @@ include:
 # TAG = Which tag of the model to run the evaluation on if RERUN_ON_TAG = 'True'
 # IMAGE = Which docker image to run the pipelines in. mamba_jettagger:latest for qkeras, mamba_jettagger:latest-gpu for keras v3
 
-QKeras:DeepSet:
-  extends: .ml_pipeline
-  variables:
-    Name: DeepSetQKeras
-    Model: DeepSetQKeras
-    Config: QKeras/DeepSets_QKeras.yaml
-    RERUN_ON_OLDTRAINING: 'False'
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
-    EMULATION_WRAPPER_VERSION: v1_0_2
-    HLS4ML_NAME : DS_Q
-    CMS_HLS4ML_BRANCH : main_Qkeras
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+# QKeras:DeepSet:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: DeepSetQKeras
+#     Model: DeepSetQKeras
+#     Config: QKeras/DeepSets_QKeras.yaml
+#     RERUN_ON_OLDTRAINING: 'False'
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
+#     EMULATION_WRAPPER_VERSION: v1_0_2
+#     HLS4ML_NAME : DS_Q
+#     CMS_HLS4ML_BRANCH : main_Qkeras
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
-QKeras:DeepSet_WeightedAverage:
-  extends: .ml_pipeline
-  variables:
-    Name: DeepSetWeightedAverageQKeras
-    Model: DeepSetWeightedAverageQKeras
-    Config: QKeras/DeepSets_WeightedAverage_QKeras.yaml
-    RERUN_ON_OLDTRAINING: 'False'
-    RERUN_ON_TAG: 'False'
-    RUN_EMULATION: 'True'
-    RUN_SYNTHESIS: 'True'
-    EMULATION_WRAPPER_VERSION: v2_0_0
-    HLS4ML_NAME : DS_WA_Q
-    CMS_HLS4ML_BRANCH : main_Qkeras
-    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+# QKeras:DeepSet_WeightedAverage:
+#   extends: .ml_pipeline
+#   variables:
+#     Name: DeepSetWeightedAverageQKeras
+#     Model: DeepSetWeightedAverageQKeras
+#     Config: QKeras/DeepSets_WeightedAverage_QKeras.yaml
+#     RERUN_ON_OLDTRAINING: 'False'
+#     RERUN_ON_TAG: 'False'
+#     RUN_EMULATION: 'True'
+#     RUN_SYNTHESIS: 'True'
+#     EMULATION_WRAPPER_VERSION: v2_0_0
+#     HLS4ML_NAME : DS_WA_Q
+#     CMS_HLS4ML_BRANCH : main_Qkeras
+#     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 HGQ2:DeepSet:
   extends: .ml_pipeline
@@ -75,6 +75,11 @@ HGQ2:DeepSet:
     HLS4ML_NAME : DS_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
+    RUN_RETRAIN: 'False'
+  trigger:
+    forward:
+      pipeline_variables: true   # pass variables from the API call to the downstream pipeline
+      yaml_variables: true       # default; passes the variables: block above
 
 # HGQ2:MLPMixer:
 #   extends: .ml_pipeline

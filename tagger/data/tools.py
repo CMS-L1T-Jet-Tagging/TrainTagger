@@ -18,6 +18,19 @@ from .config import EXTRA_FIELDS, FILTER_PATTERN, INPUT_TAG, JET_NN_FIELDS, N_PA
 
 gc.set_threshold(0)
 
+# Phase-2 "nano" input format (Events tree with per-event L1JetTrain collections)
+# Jet branches are named L1JetTrain_jet_*, their constituents live in a separate flat
+# L1JetTrainCand_jet_puppicand_* collection linked to the jets by L1JetTrainCand_jetIdx.
+NANO_JET_PREFIX = "L1JetTrain_"
+NANO_CAND_PREFIX = "L1JetTrainCand_jet_puppicand_"
+NANO_JET_IDX = "L1JetTrainCand_jetIdx"
+# Same branch selection as FILTER_PATTERN, restricted to the L1JetTrain collections,
+# plus the jet index needed to group constituents.
+NANO_FILTER_PATTERN = [
+    FILTER_PATTERN.replace("/(jet)_", r"/^L1JetTrain(Cand)?_(jet)_"),
+    rf"/^{NANO_JET_IDX}$/",
+]
+
 # >>>>>>>>>>>>>>>>>>>PRIVATE FUNCTIONS<<<<<<<<<<<<<<<<<<<<<<
 
 def _add_response_vars(data):
@@ -167,6 +180,50 @@ def _pad_fill(array, target):
     pad an array to target length and then fill it with 0s
     '''
     return ak.fill_none(ak.pad_none(array, target, axis=1, clip=True), 0)
+
+def _nano_to_jet_records(events):
+    """
+    Restructure one chunk of Phase-2 nano (Events tree) data into per-jet records with
+    the same layout produced by the jetTuple ntuples: jet-level scalars as top fields and
+    the constituents as a 'jet_puppicand' sub-record of jagged arrays.
+    Parameters:
+        events (awkward array): per-event records holding the L1JetTrain jet collections,
+            the flat L1JetTrainCand constituent collections and L1JetTrainCand_jetIdx.
+    Returns:
+        awkward array: one record per jet across all events in the chunk.
+    """
+
+    jet_fields = [field for field in events.fields if field.startswith(NANO_JET_PREFIX)]
+
+    # Flatten the per-event jet collections into a flat list of jets
+    jets = {field[len(NANO_JET_PREFIX):]: ak.flatten(events[field], axis=1) for field in jet_fields}
+
+    # Number of jets and constituents per event
+    n_jets = ak.to_numpy(ak.num(events[jet_fields[0]], axis=1))
+    jet_idx = events[NANO_JET_IDX]
+    n_cands = ak.to_numpy(ak.num(jet_idx, axis=1))
+
+    # Global jet index over the whole chunk for every constituent
+    flat_jet_idx = ak.to_numpy(ak.flatten(jet_idx, axis=1))
+    ev_of_cand = np.repeat(np.arange(len(n_jets)), n_cands)
+    jet_start = np.concatenate(([0], np.cumsum(n_jets)[:-1]))
+
+    # Keep only constituents pointing at a valid jet
+    valid = (flat_jet_idx >= 0) & (flat_jet_idx < n_jets[ev_of_cand])
+    global_jet_idx = flat_jet_idx[valid] + jet_start[ev_of_cand[valid]]
+
+    order = np.argsort(global_jet_idx, kind="stable")
+    counts = np.bincount(global_jet_idx[order], minlength=int(n_jets.sum()))
+
+    # Group the constituent collections per jet
+    cand_fields = [field for field in events.fields if field.startswith(NANO_CAND_PREFIX)]
+    puppicand = {}
+    for field in cand_fields:
+        flat_vals = ak.to_numpy(ak.flatten(events[field], axis=1))[valid][order]
+        puppicand[field[len(NANO_CAND_PREFIX):]] = ak.unflatten(flat_vals, counts)
+    jets["jet_puppicand"] = ak.zip(puppicand, depth_limit=1)
+
+    return ak.zip(jets, depth_limit=1)
 
 def _make_nn_inputs(data_split, tag, jet_fields, n_parts):
 
@@ -486,6 +543,13 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
 
     return train_data, test_data, class_labels, input_vars, jet_vars, extra_vars
 
+def is_nano_input(tree):
+    """
+    Check if an input tree uses the Phase-2 nano (Events) format, identified by the
+    per-event L1JetTrain jet collections, rather than the per-jet jetTuple format.
+    """
+    return any(key.startswith(NANO_JET_PREFIX) for key in tree.keys())
+
 def make_data(
     infile='/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_220926_170X_v0.1/All200_part0.root',
     outdir='training_data/',
@@ -495,7 +559,7 @@ def make_data(
     n_parts=N_PARTICLES,
     ratio=1.0,
     step_size="100MB",
-    tree="outnano/jets",
+    tree="outnano/Jets",
     num_workers=8
 ):
     """
@@ -539,10 +603,35 @@ def make_data(
     num_entries_done = 0
     chunk = 0
 
-    for data in (pbar := tqdm(uproot.iterate(data_sources, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, num_workers=num_workers))):
+    # Phase-2 nano (Events) inputs keep the jets in per-event L1JetTrain collections
+    # instead of the per-jet jetTuple layout; they are restructured chunk by chunk so
+    # that everything downstream sees the same per-jet records either way.
+    nano = is_nano_input(input_tree)
+    if nano:
+        print(f"Detected Phase-2 nano input format in '{tree}', restructuring to jet records")
+    elif not input_tree.keys(filter_name=FILTER_PATTERN):
+        raise ValueError(
+            f"'{infiles[0]}' tree '{tree}' matches neither the Phase-2 nano ('{NANO_JET_PREFIX}*') "
+            f"nor the jetTuple ('{FILTER_PATTERN}') input format; check the input files and the tree name"
+        )
+
+    iterate_args = (
+        dict(filter_name=NANO_FILTER_PATTERN)
+        if nano
+        else dict(filter_name=FILTER_PATTERN, how="zip")
+    )
+    for data in (
+        pbar := tqdm(uproot.iterate({fname: tree for fname in infiles}, step_size=step_size, max_workers=num_workers, **iterate_args))
+    ):
         pbar.set_description(f'Processing chunk {chunk}')
 
-        num_entries_done += len(data)  # count before cuts
+        # count iterated entries before restructuring and cuts; for nano inputs the
+        # restructure expands each event into several jet records, which must not
+        # count towards the requested fraction of the dataset
+        num_entries_done += len(data)
+
+        if nano:
+            data = _nano_to_jet_records(data)
 
         # Define jet kinematic cuts
         jet_cut = (data['jet_pt_phys'] > 15) & (np.abs(data['jet_eta_phys']) < 2.4) & (data['jet_reject'] == 0)
@@ -564,3 +653,8 @@ def make_data(
         chunk += 1
         if num_entries_done / num_entries >= ratio:
             break
+        
+        if chunk == 0:
+            raise ValueError(
+                f"No entries were read from {infiles} tree '{tree}'; the files hold no data in the expected input format"
+            )

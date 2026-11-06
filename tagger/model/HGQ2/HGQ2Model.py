@@ -78,7 +78,7 @@ class HGQ2Model(JetTagModel):
         
         return (class_predictions, pt_ratio_predictions)
 
-    def compile_model(self, num_samples: int):
+    def compile_model(self, num_samples: int, retrain: bool):
 
         """compile the model generating callbacks and loss function
         Args:
@@ -115,6 +115,19 @@ class HGQ2Model(JetTagModel):
             es
 
         ]
+        
+        if retrain == True:
+            self.training_config['learning_rate'] =  self.training_config['learning_rate'] / 100
+            self.training_config['epochs'] = int(self.training_config['epochs'] / 10)
+            
+            ebops_scheduler = BetaPID(
+                p=1, i=0.1, d=0,
+                target_ebops=self.training_config['target_ebops'],
+                init_beta=0, warmup=10,
+                max_beta=0, damp_beta_on_target=0.5
+            )
+            
+            self.callbacks = [ebops_tracker,terminate_on_nan,ebops_scheduler]
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
             optimizer=keras.optimizers.Adam(learning_rate=self.training_config['learning_rate']),

@@ -25,7 +25,6 @@ temp/**
 mlruns/**
 mlflow_*.txt
 tagger/firmware/*.json
-setup-ci.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

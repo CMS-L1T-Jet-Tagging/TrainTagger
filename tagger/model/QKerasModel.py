@@ -120,7 +120,6 @@ class QKerasModel(JetTagModel):
         if retrain == True:
             self.training_config['learning_rate'] =  self.training_config['learning_rate'] / 100
             self.training_config['epochs'] = int(self.training_config['epochs'] / 10)
-            self.loss_name = 'prune_low_magnitude_'
 
         # compile the tensorflow model setting the loss and metrics
         self.jet_model.compile(
@@ -160,12 +159,13 @@ class QKerasModel(JetTagModel):
         """
 
         # Train the model using hyperparameters in yaml config
+        print(self.loss_name + self.output_id_name)
         self.history = self.jet_model.fit(
             inputs_dict,
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
-                'prune_low_magnitude_jet_id_output': sample_weight[0],
-                'prune_low_magnitude_pT_output': sample_weight[1],
+                self.loss_name + self.output_id_name: sample_weight[0],
+                self.loss_name + self.output_pt_name: sample_weight[1],
             },
             epochs=self.training_config['epochs'],
             batch_size=self.training_config['batch_size'],
@@ -174,6 +174,7 @@ class QKerasModel(JetTagModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
+        
         
         self.results_dict['best_loss'] = np.min(self.history.history['loss'])
         self.results_dict['best_val_loss'] = np.min(self.history.history['val_loss'])

@@ -559,7 +559,7 @@ def make_data(
     n_parts=N_PARTICLES,
     ratio=1.0,
     step_size="100MB",
-    tree="outnano/Jets",
+    tree="outnano/jets",
     num_workers=8
 ):
     """
@@ -599,10 +599,13 @@ def make_data(
     os.makedirs(outdir, exist_ok=True)
     print("Output directory:", outdir)
 
-    input_tree = uproot.open(data_sources[0])[tree]
+
     num_entries_done = 0
     chunk = 0
-
+    print(data_sources)
+    input_tree = uproot.open(data_sources[0])[tree]
+    
+    
     # Phase-2 nano (Events) inputs keep the jets in per-event L1JetTrain collections
     # instead of the per-jet jetTuple layout; they are restructured chunk by chunk so
     # that everything downstream sees the same per-jet records either way.
@@ -616,20 +619,16 @@ def make_data(
         )
 
     iterate_args = (
-        dict(filter_name=NANO_FILTER_PATTERN)
+        dict(filter_name=NANO_FILTER_PATTERN, step_size=step_size, num_workers=num_workers)
         if nano
-        else dict(filter_name=FILTER_PATTERN, how="zip")
+        else dict(filter_name=FILTER_PATTERN, how="zip", step_size=step_size, num_workers=num_workers)
     )
-    for data in (
-        pbar := tqdm(uproot.iterate({fname: tree for fname in infiles}, step_size=step_size, max_workers=num_workers, **iterate_args))
-    ):
+
+    for data in (pbar := tqdm(uproot.iterate(data_sources, **iterate_args))):
         pbar.set_description(f'Processing chunk {chunk}')
 
-        # count iterated entries before restructuring and cuts; for nano inputs the
-        # restructure expands each event into several jet records, which must not
-        # count towards the requested fraction of the dataset
-        num_entries_done += len(data)
-
+        num_entries_done += len(data)  # count before cuts
+        
         if nano:
             data = _nano_to_jet_records(data)
 
@@ -653,8 +652,3 @@ def make_data(
         chunk += 1
         if num_entries_done / num_entries >= ratio:
             break
-        
-        if chunk == 0:
-            raise ValueError(
-                f"No entries were read from {infiles} tree '{tree}'; the files hold no data in the expected input format"
-            )

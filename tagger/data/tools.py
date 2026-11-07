@@ -599,7 +599,7 @@ def make_data(
     os.makedirs(outdir, exist_ok=True)
     print("Output directory:", outdir)
 
-
+    input_tree = uproot.open(data_sources[0])[tree]
     num_entries_done = 0
     chunk = 0
 

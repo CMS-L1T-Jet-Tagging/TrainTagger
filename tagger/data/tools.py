@@ -603,7 +603,7 @@ def make_data(
     num_entries_done = 0
     chunk = 0
     print(data_sources)
-    input_tree = uproot.open(data_sources[0])[tree]
+    input_tree = uproot.open(next(iter(data_sources)))[tree]
     
     
     # Phase-2 nano (Events) inputs keep the jets in per-event L1JetTrain collections

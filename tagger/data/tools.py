@@ -575,16 +575,6 @@ def make_data(
         fraction (float) : fraction from (0-1) of data to process for training/testing
         step_size (str): Step size for uproot iteration.
     """
-    
-    # Count entries over the same sources that Uproot will iterate.
-    data_sources = _uproot_source(infile, tree)
-    num_entries = sum(
-        entry[-1] if isinstance(entry, tuple) else entry
-        for entry in uproot.num_entries(data_sources)
-    )
-    if num_entries == 0:
-        raise ValueError(f"No entries found in input: {infile}")
-    print('Number of entries: ',num_entries)
     # Check if output dir already exists, remove if so
     if os.path.exists(outdir):
         confirm = input(f"The directory '{outdir}' already exists. Do you want to delete it and continue? [y/n]: ")
@@ -605,11 +595,14 @@ def make_data(
     print(data_sources)
     input_tree = uproot.open(next(iter(data_sources)))[tree]
     
+    num_entries = sum(uproot.open(fname)[tree].num_entries for fname in data_sources)
+    print(f"Processing {len(data_sources)} input file(s) with {num_entries} entries")
     
     # Phase-2 nano (Events) inputs keep the jets in per-event L1JetTrain collections
     # instead of the per-jet jetTuple layout; they are restructured chunk by chunk so
     # that everything downstream sees the same per-jet records either way.
     nano = is_nano_input(input_tree)
+    print(nano)
     if nano:
         print(f"Detected Phase-2 nano input format in '{tree}', restructuring to jet records")
     elif not input_tree.keys(filter_name=FILTER_PATTERN):

@@ -1,0 +1,9 @@
+input:
+  - data/retrain_nano.root
+output: training_data/
+tree: outnano/Jets
+step_size: 100MB
+ratio: 1.0
+num_workers: 8
+extras: extra_fields
+signal_processes: [{}]

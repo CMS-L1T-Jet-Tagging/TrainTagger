@@ -75,7 +75,10 @@ HGQ2:DeepSet:
     HLS4ML_NAME : DS_HGQ
     CMS_HLS4ML_BRANCH : main_HGQ
     IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest-gpu
-    RUN_RETRAIN: 'False'
+    RUN_RETRAIN: 'True'
+    RETRAIN_DATA_PATH: '/eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/cebrown/phase2/spring24_cmssw17/automation_test'
+    MODEL_OUTPUT_PATH: '/eos/user/c/cebrown/tagger/automation/model/'
+
   trigger:
     forward:
       pipeline_variables: true   # pass variables from the API call to the downstream pipeline

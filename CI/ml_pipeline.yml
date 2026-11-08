@@ -10,13 +10,13 @@ stages:
   - emulate
   - emulation-evaluate
   - profile
-  - run_processes
-  - run_TT_PU200
-  - run_VBFHToBB_PU200
-  - run_VBFHToCC_PU200
-  - run_MinBias_PU200
-  - run_QCD_Pt15To3000_PU200
-  - emulation_regression
+  #- run_processes
+  #- run_TT_PU200
+  #- run_VBFHToBB_PU200
+  #- run_VBFHToCC_PU200
+  #- run_MinBias_PU200
+  #- run_QCD_Pt15To3000_PU200
+  #- emulation_regression
   - upload
 
 variables:
@@ -105,40 +105,15 @@ retrain_data:
     - if: $RUN_RETRAIN == "True"
   script:
   - source activate tagger
+  - export EOS_MGM_URL=root://eoscms.cern.ch
   - export EOS_STORAGE_DATADIR=${EOS_STORAGE_DATADIR}/retrain
-  - |
-    if [ -z "$RETRAIN_DATA_PATH" ]; then
-      echo "RUN_RETRAIN is 'True' but RETRAIN_DATA_PATH is not set. Point it at the directory with the nano AOD root files to retrain on."
-      exit 1
-    fi
   - mkdir data
-  - cd data
-  - |
-    # Copy every .root file in the RETRAIN_DATA_PATH directory locally: /eos
-    # paths through the matching MGM instance, root:// URLs via xrootd,
-    # anything else as a local (or fuse-mounted) directory
-    if [[ "$RETRAIN_DATA_PATH" == /eos/* ]]; then
-      case "$RETRAIN_DATA_PATH" in
-        /eos/user/*) export EOS_MGM_URL=root://eosuser.cern.ch ;;
-        /eos/project/*) export EOS_MGM_URL=root://eosproject.cern.ch ;;
-        *) export EOS_MGM_URL=root://eoscms.cern.ch ;;
-      esac
-      FILES=$(eos ls "$RETRAIN_DATA_PATH" | grep '\.root$' || true)
-      for f in $FILES; do eos cp "$RETRAIN_DATA_PATH/$f" .; done
-    else
-      FILES=$(ls "$RETRAIN_DATA_PATH"/*.root 2>/dev/null || true)
-      for f in $FILES; do cp "$f" .; done
-    fi
-  - cd ..
-  - |
-    SIG_OPT=""
-    TRAIN_FILES=$(find data -maxdepth 1 -name '*.root' ! -name "${SIGNAL}.root" | sort)
-    echo "Retraining on files: $TRAIN_FILES"
-    python tagger/data/make_data.py -i $TRAIN_FILES --tree $RETRAIN_NTUPLE_TREE $SIG_OPT
-    tar -cf training_data_$Inputs.tgz training_data
-    export EOS_MGM_URL=root://eosproject.cern.ch
-    eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
-    eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
+  - eos find -f --maxdepth 1 "${RETRAIN_DATA_PATH%/}/"   | grep -E '/[^/]+\.root$'   | grep -Ev '/(All200|MinBias)[^/]*$'   | xargs -d '\n' -I{} eos cp -p {} data/
+  - python tagger/data/make_data.py --config tagger/data/configs/data-config-retrain-ci.yaml
+  - tar -cf training_data_$Inputs.tgz training_data
+  - export EOS_MGM_URL=root://eosproject.cern.ch
+  - eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
+  - eos cp training_data_$Inputs.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}
 
 train:
   extends:
@@ -306,50 +281,50 @@ profile:
       - output/$Model
     expire_in: 7 days
 
-run_processes:
-  image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
-  stage: run_processes
-  tags: [cern-nextgen-gpu]
-  needs:
-    - job : hls4ml
-      optional: true
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  before_script:
-    - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
-    - source /cvmfs/cms.cern.ch/cmsset_default.sh
-    - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
-  script:
-  - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  parallel:
-    matrix:
-      - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
-  artifacts:
-    paths:
-      - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
-    expire_in: 7 days
+# run_processes:
+#   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
+#   stage: run_processes
+#   tags: [cern-nextgen-gpu]
+#   needs:
+#     - job : hls4ml
+#       optional: true
+#   rules:
+#     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+#   before_script:
+#     - source /cvmfs/grid.cern.ch/etc/profile.d/setup-cvmfs-ui.sh
+#     - source /cvmfs/cms.cern.ch/cmsset_default.sh
+#     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+#   script:
+#   - ./CI/build_cmssw.sh -run ${CMSSW_VERSION} ${CMSSW_L1CT} ${FASTPUPPI_VERSION} ${PROCESS} ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   parallel:
+#     matrix:
+#       - PROCESS: [TT_PU200,VBFHToBB_PU200,VBFHToCC_PU200,MinBias_PU200,QCD_Pt15To3000_PU200]
+#   artifacts:
+#     paths:
+#       - ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/*.log
+#     expire_in: 7 days
 
-emulation_regression:
-  extends:
-    - .template
-  stage: emulation_regression
-  tags: [cern-nextgen-gpu]
-  needs:
-    - job : run_processes
-      optional: true
-  rules:
-    - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
-  script:
-  - source activate tagger
-  - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
-  - mkdir -p output/$Model/plots/emulation_regression
-  - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  artifacts:
-    paths:
-      - output/$Model
-    expire_in: 7 days
+# emulation_regression:
+#   extends:
+#     - .template
+#   stage: emulation_regression
+#   tags: [cern-nextgen-gpu]
+#   needs:
+#     - job : run_processes
+#       optional: true
+#   rules:
+#     - if: ($RUN_EMULATION == "True") && ($RUN_SYNTHESIS == "True")
+#   script:
+#   - source activate tagger
+#   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
+#   - mkdir -p output/$Model/plots/emulation_regression
+#   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+#   artifacts:
+#     paths:
+#       - output/$Model
+#     expire_in: 7 days
 
 upload_new_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest

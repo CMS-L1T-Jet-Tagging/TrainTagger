@@ -57,6 +57,9 @@ eos cp -r model/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
 eos cp -r plots/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
 eos cp -r configs/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
 
+eos rm ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/*.json
+eos rm ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/*.yaml
+
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots --recursive
 
 eos rm ${EOS_STORAGE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${Name}/latest || true

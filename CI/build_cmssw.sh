@@ -56,7 +56,8 @@ echo -e "\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.envi
 
 cmsenv
 export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
-./scripts/prun.sh runPerformanceNTuple.py --170X_v1 ${PROC} '' --nomerge
+export NUM_THREADS=$(nproc)
+./scripts/prun.sh runPerformanceNTuple.py -j $NUM_THREADS --170X_v1 ${PROC} '' --nomerge
 cd ${PROC}
 hadd perfNano.root perfNano*.root
 rm *job*.root

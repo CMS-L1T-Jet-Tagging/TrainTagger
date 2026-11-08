@@ -79,21 +79,42 @@ class DeepSetModelHGQ2(HGQ2Model):
                 n_features = inputs_shape['basic_input'][1]
 
                 inputs = Input(shape=(N_constituents,n_features), name='basic_input')
-                main = QBatchNormalization(name='norm_input')(inputs)
-
+                main = inputs 
+                # Per-constituent "Conv1D, kernel_size=1" == einsum over the feature axis
                 for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
-                    main = QConv1D(filters=depthconv1d, parallelization_factor=self.model_config['conv1d_parallelisation_factor'][iconv1d], kernel_size=1, name='Conv1D_' + str(iconv1d + 1),activation='relu')(main)                
-                x = GlobalAveragePooling1D(name='avgpool')(main)
+                    main = QEinsumDenseBatchnorm(
+                        'bnf,fh->bnh',
+                        (N_constituents, depthconv1d),
+                        bias_axes='h',
+                        activation='relu',
+                        name='Conv1D_' + str(iconv1d + 1),
+                    )(main)
+                main = QGlobalAveragePooling1D(name='avgpool')(main)
 
                 #jetID branch, 3 layer MLP
 
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
+                # jetID branch
+                jet_id = main
+                for iclass, depthclass in enumerate(self.model_config['classification_layers']):
+                    jet_id = QEinsumDenseBatchnorm(
+                        'bf,fh->bh',
+                        depthclass,
+                        bias_axes='h',
+                        activation='relu',
+                        name='Dense_' + str(iclass + 1) + '_jetID',
+                    )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
                 jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
+                pt_regress = main
+                for ireg, depthreg in enumerate(self.model_config['regression_layers']):
+                    pt_regress = QEinsumDenseBatchnorm(
+                        'bf,fh->bh',
+                        depthreg,
+                        bias_axes='h',
+                        activation='relu',
+                        name='Dense_' + str(ireg + 1) + '_pT',
+                    )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
                 
                 #Define the model using both branches

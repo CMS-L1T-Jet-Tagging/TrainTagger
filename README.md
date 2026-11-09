@@ -95,18 +95,17 @@ python tagger/plot/bbbb.py --eff -m $OUT
 # Convert to HLS (the env has the hls4ml fork, section 4)
 python tagger/firmware/hls4ml_convert.py -m $OUT -o $OUT/firmware
 
-# CMSSW emulator (section 5), in an el8 container
-# checkout not on /afs or /eos? add -B $WORK_MOUNT (section 5)
+# CMSSW emulator (section 5): run this e.g. on lxplus, from a TrainTagger checkout
+# with output/$Model/firmware from the step above (copy it if you converted elsewhere).
+# If this fails, use the el8 container (section 5).
+export Model=baseline   # same model as above; a new shell does not have it
 kinit <user>@CERN.CH
-/cvmfs/cms.cern.ch/common/cmssw-el8 -B /eos
-
-# --- inside container, from TrainTagger:
 source setup.sh
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 ./CI/setup_cmssw.sh -run $CMSSW_VERSION $CMSSW_L1CT $FASTPUPPI_VERSION
-exit
 
-# --- back in original shell (with activated setup):
+# In the shell with the tagger env and activated setup.
+# If that is another machine, copy the jetTuple file there and pass its path to -i:
 python tagger/plot/makeEmulationPlot.py -r True -i $JETTUPLE -m $OUT
 ```
 
@@ -263,19 +262,35 @@ The CI builds `${CMSSW_VERSION}` (currently `CMSSW_17_0_0_pre2`) with the `${CMS
 
 Before you start:
 
-- The release is built for `el8`. On an `el9` machine, run inside the `cmssw-el8` container, otherwise git and curl from CVMFS fail with `libssl.so.1.1: cannot open shared object file`.
-- On lxplus, with your checkout on `/afs` or `/eos`, the container sees it by default. On other machines, your checkout may be on a file system that the container does not bind. Then run `source setup.sh` and add `-B $WORK_MOUNT` to the `cmssw-el8` command. `$WORK_MOUNT` defaults to the top-level directory of the current path; set it before sourcing `setup.sh` if that is wrong. Without the bind, `cmsenv` and `scram` fail with `SCRAM fatal: Unable to locate the top of local release`, and the emulator step of `build_cmssw.sh` writes no `perfNano.root` files.
+- Run this e.g. on lxplus, from a TrainTagger checkout that has `output/$Model/firmware` from step 4. If you converted the model on another machine, copy that folder over.
 - `git cms-init` needs your GitHub user name: `git config --global user.github <your github username>`.
 - `cmsRun` reads its input from `/eos/cms` over xrootd, even though the path is written as `file:/eos/...`. You need a valid Kerberos ticket (`kinit <user>@CERN.CH`), otherwise it fails with `[3010] Unable to give access - user access restricted`.
 
 ```bash
+export Model=baseline   # the model to emulate; a new shell does not have it
 kinit <user>@CERN.CH
-/cvmfs/cms.cern.ch/common/cmssw-el8 -B /eos
-# inside the container, from the TrainTagger directory:
+# from the TrainTagger directory:
 source setup.sh   # sets CMSSW_VERSION, CMSSW_L1CT, FASTPUPPI_VERSION, CMSSW_EMULATOR_WRAPPER, EMULATION_WRAPPER_VERSION
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 ./CI/setup_cmssw.sh -run $CMSSW_VERSION $CMSSW_L1CT $FASTPUPPI_VERSION
 ```
+
+`setup_cmssw.sh` picks the `SCRAM_ARCH` from the OS: `el9_amd64_gcc13` on lxplus, `el8_amd64_gcc13` in the CI image and in the container below.
+
+<details>
+<summary>If this fails, use the el8 container</summary>
+
+Run the same commands inside it, then leave it before the plot step:
+
+```bash
+/cvmfs/cms.cern.ch/common/cmssw-el8 -B /eos
+# run the commands above inside the container, then:
+exit
+```
+
+The container sees a checkout on `/afs` or `/eos` by default. On other machines your checkout may be on a file system that the container does not bind. Then run `source setup.sh` first and add `-B $WORK_MOUNT` to the `cmssw-el8` command. `$WORK_MOUNT` defaults to the top-level directory of the current path; set it before sourcing `setup.sh` if that is wrong. Without the bind, `cmsenv` and `scram` fail with `SCRAM fatal: Unable to locate the top of local release`, and the emulator step of `build_cmssw.sh` writes no `perfNano.root` files.
+
+</details>
 
 `setup.sh` sets `EMULATION_WRAPPER_VERSION=v1_0_2` (baseline). For `weightedAverageSimple`, run `export EMULATION_WRAPPER_VERSION=v2_0_0` before sourcing `setup.sh`.
 
@@ -304,7 +319,7 @@ done
 
 The full samples are large (TT 60 files / 247 GB, MinBias 1148 files / 1.4 TB), so start with a few files.
 
-Then, inside the container, run each process, merge its outputs and copy them to an output directory (this is what `CI/build_cmssw.sh` does after compiling):
+Then, in the same environment as the build, run each process, merge its outputs and copy them to an output directory (this is what `CI/build_cmssw.sh` does after compiling):
 
 `setup.sh` sets `L1TPF_LOCAL_INPUT_DIR=$PWD/localinputs` and `OUTPATH=$PWD/FPOutput`.
 

@@ -176,7 +176,7 @@ The input files were made in two steps with the [FastPUPPI](https://github.com/C
 
    Section 5 runs the CMSSW emulator on these same files.
 
-2. **Slimmed inputs → jet ntuples.** The FastPUPPI ntuplizer (`runPerformanceNTuple.py`, which calls `jetNTuplizer.cc`) turns the inputs into jet ntuples, one file per process. Section 2 starts from these files, in `$EOS_DATA_DIR`:
+2. **Slimmed inputs → jet ntuples.** The FastPUPPI ntuplizer (`runJetNtuple.py`, which calls `JetNTuplizer.cc`) turns the inputs into jet ntuples, one file per process. Section 2 starts from these files, in `$EOS_DATA_DIR`:
 
    ```
    /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/

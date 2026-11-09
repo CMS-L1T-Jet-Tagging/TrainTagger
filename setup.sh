@@ -20,7 +20,7 @@ unset _filter
 # Set default versions of command line variables for local running
 export Name=new_samples_baseline_5param_extended_trk
 export Inputs=baseline
-export Model=baseline
+export Model=${Model:-baseline}
 export N_PARAMS=5
 export TRACK_ALGO=extended
 export TRAIN=All200.root

@@ -123,6 +123,29 @@ conda activate tagger
 source setup.sh
 ```
 
+**Alternative: the prebuilt image.** Instead of creating the conda environment, you can use the image the CI runs in, which already contains a `tagger` environment. It is available on CVMFS, so there is nothing to install or download:
+
+```bash
+# from the TrainTagger directory; on other machines, bind the file system with your checkout instead of /afs
+singularity shell -B /afs -B /eos -B /cvmfs /cvmfs/unpacked.cern.ch/gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+
+# inside the image, in every new shell
+source /opt/conda/etc/profile.d/conda.sh
+conda activate tagger
+source setup.sh
+export PYTHONUSERBASE=$HOME/.local-tagger-image
+```
+
+The image has the standard `hls4ml`, not the `jet_tagger_hls4ml_update` fork. Training and physics validation work as they are. The HLS conversion (section 4) and the comparison with the emulator (section 5) need the fork, as in the CI. Install it once, in a separate folder because the image is read-only:
+
+```bash
+pip install --user --no-deps git+https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git@jet_tagger_hls4ml_update
+```
+
+The CMSSW steps of section 5 have their own environment, so run those outside this image.
+
+The same image can be pulled from `gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest` (this needs a registry login), e.g. to use it as the image of a Kubernetes pod.
+
 `setup.sh` sets the same variables, with the same default values, as [`CI/ml_pipeline.yml`](CI/ml_pipeline.yml). If you change the defaults in the CI, update `setup.sh` too.
 
 `setup.sh` also sets the paths of the input files (`$TRAIN_FILE`, `$SIGNAL_FILE`, `$MINBIAS_FILE`, `$BBBB_FILE`, `$BBTT_FILE`, `$VBFHTAUTAU_FILE`). Each one points to the copy in `data/` (`$DATA_DIR`) if it exists, otherwise to the file on EOS. To use other samples, change `EOS_DATA_DIR` or the file names and source `setup.sh` again.

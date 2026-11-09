@@ -270,14 +270,18 @@ Convert the model `-m` to an HLS project in `-o`. This is Python only and needs 
 python tagger/firmware/hls4ml_convert.py -m output/baseline -o output/baseline/firmware
 ```
 
-Then run the Vitis HLS build and Vivado synthesis. If `vitis_hls` is not on your `PATH`, source `/opt/Xilinx/Vitis_HLS/<version>/settings64.sh` first. Vitis HLS 2024.1 also works; it prints `ERROR: [HLS 200-101] config_array_partition: Unknown option '-maximum_size'`, which is harmless because hls4ml wraps that call in `catch`.
+The next two steps **need a computer with Vitis HLS and Vivado installed**; they are not part of the conda environment or the prebuilt image. The CI uses version 2023.2. If `vitis_hls` is not on your `PATH`, source `/opt/Xilinx/Vitis_HLS/<version>/settings64.sh` first. Vitis HLS 2024.1 also works; it prints `ERROR: [HLS 200-101] config_array_partition: Unknown option '-maximum_size'`, which is harmless because hls4ml wraps that call in `catch`.
 
 ```bash
 cd output/baseline/firmware/L1TSC4NGJetModel
+# HLS build: C synthesis (csynth) turns the C++ into Verilog
 vitis_hls -f build_prj.tcl
+# Vivado synthesis of the csynth Verilog; the resource usage goes to vivado_synth.rpt
 vivado -mode batch -source vivado_synth.tcl
 cd -
 ```
+
+By default, `build_opt.tcl` in that folder also turns on C simulation, co-simulation and validation for the HLS build. To run only csynth, set `csim`, `cosim` and `validation` to 0 there.
 
 # 5. CMSSW emulation
 

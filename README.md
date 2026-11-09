@@ -52,7 +52,7 @@ Run everything from the TrainTagger directory. `setup.sh` sets the CI defaults a
 Reading the input files over `/eos` is very slow. **The copy to /data needs about 60 GB of free disk space** (`All200.root` alone is 47 GB); check with `df -h .`. Without enough space, skip the copy and the scripts fall back to read from EOS. The quick test reads only a small part of the files, so it can also skip the copy.
 
 
-`$WORK_MOUNT` (from `setup.sh`) is the mount that holds your checkout: by default the top-level directory of the current path, e.g. `/shared` on NGT. Set it before sourcing `setup.sh` if that is wrong. `setup_cmssw.sh` exits with 0 even when `cmsRun` fails, so check that the `jetTuple_*.root` file is larger than a few hundred bytes.
+`setup_cmssw.sh` exits with 0 even when `cmsRun` fails, so check that the `jetTuple_*.root` file is larger than a few hundred bytes.
 
 **Remark**:
 The quick test on 2% of the data only checks that the chain runs; its plots are not physically meaningful. It may happen that some ROC curves are not plotted due to low statistics.
@@ -97,8 +97,9 @@ python tagger/plot/bbbb.py --eff -m $OUT
 python tagger/firmware/hls4ml_convert.py -m $OUT -o $OUT/firmware
 
 # CMSSW emulator (section 5), in an el8 container
+# checkout not on /afs or /eos? add -B $WORK_MOUNT (section 5)
 kinit <user>@CERN.CH
-/cvmfs/cms.cern.ch/common/cmssw-el8 -B /eos -B $WORK_MOUNT
+/cvmfs/cms.cern.ch/common/cmssw-el8 -B /eos
 
 # --- inside container, from TrainTagger:
 source setup.sh
@@ -264,14 +265,13 @@ The CI builds `${CMSSW_VERSION}` (currently `CMSSW_17_0_0_pre2`) with the `${CMS
 Before you start:
 
 - The release is built for `el8`. On an `el9` machine, run inside the `cmssw-el8` container, otherwise git and curl from CVMFS fail with `libssl.so.1.1: cannot open shared object file`.
-- Bind the file system that holds your TrainTagger checkout into the container (`-B $WORK_MOUNT`, e.g. `/shared` on NGT), not only `/eos`. Otherwise `cmsenv` and `scram` fail with `SCRAM fatal: Unable to locate the top of local release`. The emulator step of `build_cmssw.sh` then writes no `perfNano.root` files.
+- On lxplus, with your checkout on `/afs` or `/eos`, the container sees it by default. On other machines, your checkout may be on a file system that the container does not bind. Then run `source setup.sh` and add `-B $WORK_MOUNT` to the `cmssw-el8` command. `$WORK_MOUNT` defaults to the top-level directory of the current path; set it before sourcing `setup.sh` if that is wrong. Without the bind, `cmsenv` and `scram` fail with `SCRAM fatal: Unable to locate the top of local release`, and the emulator step of `build_cmssw.sh` writes no `perfNano.root` files.
 - `git cms-init` needs your GitHub user name: `git config --global user.github <your github username>`.
 - `cmsRun` reads its input from `/eos/cms` over xrootd, even though the path is written as `file:/eos/...`. You need a valid Kerberos ticket (`kinit <user>@CERN.CH`), otherwise it fails with `[3010] Unable to give access - user access restricted`.
 
 ```bash
 kinit <user>@CERN.CH
-source setup.sh   # sets WORK_MOUNT, the mount that holds your checkout
-/cvmfs/cms.cern.ch/common/cmssw-el8 -B /eos -B $WORK_MOUNT
+/cvmfs/cms.cern.ch/common/cmssw-el8 -B /eos
 # inside the container, from the TrainTagger directory:
 source setup.sh   # sets CMSSW_VERSION, CMSSW_L1CT, FASTPUPPI_VERSION, CMSSW_EMULATOR_WRAPPER, EMULATION_WRAPPER_VERSION
 source /cvmfs/cms.cern.ch/cmsset_default.sh

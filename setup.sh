@@ -2,21 +2,6 @@
 export PYTHONPATH=$PYTHONPATH:$PWD
 export CI_COMMIT_REF_NAME=local
 
-# Hide TensorFlow's C++ start-up messages (no GPU/CUDA/TensorRT found etc.); set to 0 to see them again
-export TF_CPP_MIN_LOG_LEVEL=${TF_CPP_MIN_LOG_LEVEL:-3}
-# Hide harmless warnings raised inside Keras/QKeras, not by this repo:
-# - deprecation of set_learning_phase
-# - serialisation of QKeras quantizers, which QKeras stores as Keras constraints
-for _filter in \
-  'ignore:`tf.keras.backend.set_learning_phase` is deprecated:UserWarning' \
-  'ignore:The `keras.constraints.serialize()` API should only be used for objects of type:UserWarning'; do
-  case ",${PYTHONWARNINGS}," in
-    *",${_filter},"*) ;;
-    *) export PYTHONWARNINGS="${PYTHONWARNINGS:+${PYTHONWARNINGS},}${_filter}" ;;
-  esac
-done
-unset _filter
-
 # Set default versions of command line variables for local running
 export Name=new_samples_baseline_5param_extended_trk
 export Inputs=baseline

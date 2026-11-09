@@ -97,6 +97,8 @@ train:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING
+  - mkdir output/$Model/configs
+  - mv output/$Model/results_dict.json output/$Model/configs
   artifacts:
     paths:
       - output
@@ -210,8 +212,8 @@ emulation-evaluate:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
+  - mv output/$Model/configs/results_dict.json output/$Model
   - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -o output/$Model/plots/emulation
-  - mkdir output/$Model/configs
   - mv output/$Model/results_dict.json output/$Model/configs
   artifacts:
     paths:

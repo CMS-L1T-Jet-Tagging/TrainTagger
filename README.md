@@ -80,11 +80,10 @@ python tagger/data/make_data.py -i $TRAIN_FILE -sig $SIGNAL -r $RATIO
 # set model: any config in tagger/model/configs
 # e.g. baseline (= Deepset Model)
 export Model=baseline
-CFG=tagger/model/configs/$Model.yaml
-OUT=output/$Model
+export OUT=output/$Model
 
 # Train with 50% of data, then make the basic plots
-python tagger/train/train.py -p 50 -y $CFG -o $OUT
+python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o $OUT
 python tagger/train/train.py --plot-basic -sig $SIGNAL -o $OUT
 
 # Physics validation, bbbb only (more in section 3)

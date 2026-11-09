@@ -186,7 +186,7 @@ You only need to repeat these steps to make new samples, e.g. for a new CMSSW re
 Note that to submit jobs as part of this setup, you need the [submission](https://github.com/CMS-L1T-Jet-Tagging/submission/tree/dev/14_0_X-leptons) repo as well.
 
 # 2. Prepare the data and train the model
-
+The commands in sections 2 to 5 use the `baseline` model and the input files copied to `data/` (section 0). For another model, replace `baseline`. Without the copy, use the full path on EOS instead, e.g. `/eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/All200.root`.
 After creating the training ntuples, in our setup, they will then be shuffled and concatenate (`hadd`) into a big file, such as this one (`${EOS_DATA_DIR}/${TRAIN}`):
 
 ```
@@ -195,10 +195,10 @@ After creating the training ntuples, in our setup, they will then be shuffled an
 
 
 
-Prepare the data with `make_data.py`, which looks for `${SIGNAL}.root` in the same directory as the training file:
+Prepare the data with `make_data.py`, which looks for `TT_PU200.root` in the same directory as the training file:
 
 ```bash
-python tagger/data/make_data.py -i $TRAIN_FILE --tree $NTUPLE_TREE -sig $SIGNAL
+python tagger/data/make_data.py -i data/All200.root --tree outnano/Jets -sig TT_PU200
 ```
 
 This writes `training_data/` and `signal_process_data/` (it asks before removing existing ones). Use `-s` to change the `uproot.iterate` step size and `-r` to process only a fraction of the input file. To redo only the signal samples, answer `n` for `training_data/` and `y` for the signal.
@@ -206,8 +206,8 @@ This writes `training_data/` and `signal_process_data/` (it asks before removing
 Train the model and make the basic plots:
 
 ```bash
-python tagger/train/train.py -p 50 -y tagger/model/configs/$Model.yaml -o output/$Model
-python tagger/train/train.py --plot-basic -sig $SIGNAL -o output/$Model
+python tagger/train/train.py -p 50 -y tagger/model/configs/baseline.yaml -o output/baseline
+python tagger/train/train.py --plot-basic -sig TT_PU200 -o output/baseline
 ```
 
 - `-y` selects the model config from `tagger/model/configs`; hyperparameters live there.
@@ -215,7 +215,7 @@ python tagger/train/train.py --plot-basic -sig $SIGNAL -o output/$Model
 - `-p` is the percentage of the processed data to train on (the CI uses 50).
 - `-sig` adds signal-specific ROC curves; this needs `signal_process_data/`.
 
-Training plots land in `output/$Model/plots/training`.
+Training plots land in `output/baseline/plots/training`.
 
 # 3. Physics Validation
 
@@ -234,46 +234,46 @@ python tagger/plot/bbbb.py --eff -n <number of samples to use, usually ~500k> -m
 ### Examples for different decays
 ```bash
 # pT weights
-python tagger/plot/pt_weights.py -m output/$Model
+python tagger/plot/pt_weights.py -m output/baseline
 
 # bb tautau
-python tagger/plot/bbtt.py --deriveRate --minbias $MINBIAS_FILE -n 650000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/bbtt.py --deriveWPs --minbias $MINBIAS_FILE --signal $BBTT_FILE -n 650000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/bbtt.py --eff -s $BBTT_FILE -n 500000 --tree $NTUPLE_TREE -m output/$Model
+python tagger/plot/bbtt.py --deriveRate --minbias data/MinBias_PU200.root -n 650000 --tree outnano/Jets -m output/baseline
+python tagger/plot/bbtt.py --deriveWPs --minbias data/MinBias_PU200.root --signal data/GluGluHHTo2B2Tau_PU200.root -n 650000 --tree outnano/Jets -m output/baseline
+python tagger/plot/bbtt.py --eff -s data/GluGluHHTo2B2Tau_PU200.root -n 500000 --tree outnano/Jets -m output/baseline
 
 # VBF tautau
-python tagger/plot/diTaus.py --deriveWPs --minbias $MINBIAS_FILE -n 650000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/diTaus.py --BkgRate --minbias $MINBIAS_FILE -n 500000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/diTaus.py --eff --vbf_sample $VBFHTAUTAU_FILE -n 500000 --tree $NTUPLE_TREE -m output/$Model
+python tagger/plot/diTaus.py --deriveWPs --minbias data/MinBias_PU200.root -n 650000 --tree outnano/Jets -m output/baseline
+python tagger/plot/diTaus.py --BkgRate --minbias data/MinBias_PU200.root -n 500000 --tree outnano/Jets -m output/baseline
+python tagger/plot/diTaus.py --eff --vbf_sample data/VBFHToTauTau_PU200.root -n 500000 --tree outnano/Jets -m output/baseline
 
 # Topology tautau
-python tagger/plot/diTaus_topo.py --deriveWPs --minbias $MINBIAS_FILE -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/diTaus_topo.py --BkgRate --minbias $MINBIAS_FILE -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/diTaus_topo.py --eff --vbf_sample $VBFHTAUTAU_FILE -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/MinBias_PU200.root -n 1000000 --tree outnano/Jets -m output/baseline
+python tagger/plot/diTaus_topo.py --BkgRate --minbias data/MinBias_PU200.root -n 1000000 --tree outnano/Jets -m output/baseline
+python tagger/plot/diTaus_topo.py --eff --vbf_sample data/VBFHToTauTau_PU200.root -n 1000000 --tree outnano/Jets -m output/baseline
 
 # bbbb
-python tagger/plot/bbbb.py --deriveWPs --minbias $MINBIAS_FILE -n 650000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/bbbb.py --eff -s $BBBB_FILE --minbias $MINBIAS_FILE -n 500000 --tree $NTUPLE_TREE -m output/$Model
+python tagger/plot/bbbb.py --deriveWPs --minbias data/MinBias_PU200.root -n 650000 --tree outnano/Jets -m output/baseline
+python tagger/plot/bbbb.py --eff -s data/GluGluHHTo4B_PU200.root --minbias data/MinBias_PU200.root -n 500000 --tree outnano/Jets -m output/baseline
 
 # Single tau
-python tagger/plot/singleTau.py --deriveWPs --minbias $MINBIAS_FILE -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-python tagger/plot/singleTau.py --eff --vbf_sample $VBFHTAUTAU_FILE -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+python tagger/plot/singleTau.py --deriveWPs --minbias data/MinBias_PU200.root -n 1000000 --tree outnano/Jets -m output/baseline
+python tagger/plot/singleTau.py --eff --vbf_sample data/VBFHToTauTau_PU200.root -n 1000000 --tree outnano/Jets -m output/baseline
 ```
 
-The plots land in `output/$Model/plots/physics`.
+The plots land in `output/baseline/plots/physics`.
 
 # 4. Convert and synthesize the model
 
 Convert the model `-m` to an HLS project in `-o`. This is Python only and needs no Vivado:
 
 ```bash
-python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
+python tagger/firmware/hls4ml_convert.py -m output/baseline -o output/baseline/firmware
 ```
 
 Then run the Vitis HLS build and Vivado synthesis. If `vitis_hls` is not on your `PATH`, source `/opt/Xilinx/Vitis_HLS/<version>/settings64.sh` first. Vitis HLS 2024.1 also works; it prints `ERROR: [HLS 200-101] config_array_partition: Unknown option '-maximum_size'`, which is harmless because hls4ml wraps that call in `catch`.
 
 ```bash
-cd output/$Model/firmware/L1TSC4NGJetModel
+cd output/baseline/firmware/L1TSC4NGJetModel
 vitis_hls -f build_prj.tcl
 vivado -mode batch -source vivado_synth.tcl
 cd -
@@ -285,7 +285,7 @@ The CI builds `${CMSSW_VERSION}` (currently `CMSSW_17_0_0_pre2`) with the `${CMS
 
 Before you start:
 
-- Run this e.g. on lxplus, from a TrainTagger checkout that has `output/$Model/firmware` from step 4. If you converted the model on another machine, copy that folder over.
+- Run this e.g. on lxplus, from a TrainTagger checkout that has `output/baseline/firmware` from step 4. If you converted the model on another machine, copy that folder over.
 - `git cms-init` needs your GitHub user name: `git config --global user.github <your github username>`.
 - `cmsRun` reads its input from `/eos/cms` over xrootd, even though the path is written as `file:/eos/...`. You need a valid Kerberos ticket (`kinit <user>@CERN.CH`), otherwise it fails with `[3010] Unable to give access - user access restricted`.
 
@@ -293,9 +293,9 @@ Before you start:
 export Model=baseline   # the model to emulate; a new shell does not have it
 kinit <user>@CERN.CH
 # from the TrainTagger directory:
-source setup.sh   # sets CMSSW_VERSION, CMSSW_L1CT, FASTPUPPI_VERSION, CMSSW_EMULATOR_WRAPPER, EMULATION_WRAPPER_VERSION
+source setup.sh   # setup_cmssw.sh reads Model, CMSSW_EMULATOR_WRAPPER, EMULATION_WRAPPER_VERSION, TRACK_ALGO and N_PARAMS
 source /cvmfs/cms.cern.ch/cmsset_default.sh
-./CI/setup_cmssw.sh -run $CMSSW_VERSION $CMSSW_L1CT $FASTPUPPI_VERSION
+./CI/setup_cmssw.sh -run CMSSW_17_0_0_pre2 CMS-L1T-Jet-Tagging:CMSSW_17_0_0_pre2_NGJet_plus_correlator CMSSW_17_0_0_pre2_NGJet_plus_correlator
 ```
 
 `setup_cmssw.sh` picks the `SCRAM_ARCH` from the OS: `el9_amd64_gcc13` on lxplus, `el8_amd64_gcc13` in the CI image and in the container below.
@@ -317,14 +317,14 @@ The container sees a checkout on `/afs` or `/eos` by default. On other machines 
 
 `setup.sh` sets `EMULATION_WRAPPER_VERSION=v1_0_2` (baseline). For `weightedAverageSimple`, run `export EMULATION_WRAPPER_VERSION=v2_0_0` before sourcing `setup.sh`.
 
-The wrapper versions available on its `main` branch are `v1_0_2` (baseline) and `v2_0_0` (weightedAverageSimple). `setup_cmssw.sh` exits with 0 even when `cmsRun` fails, so check that `$JETTUPLE` is larger than a few hundred bytes.
+The wrapper versions available on its `main` branch are `v1_0_2` (baseline) and `v2_0_0` (weightedAverageSimple). `setup_cmssw.sh` exits with 0 even when `cmsRun` fails, so check that `CMSSW_17_0_0_pre2/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root` is larger than a few hundred bytes.
 
 Compare the TensorFlow, hls4ml and CMSSW emulator outputs (job `emulation-evaluate`), and profile the hls4ml model layer by layer (job `profile`, needs `pip install hls4ml[profiling]`):
 
 ```bash
-# $JETTUPLE (from setup.sh) is the emulator output, read in place
-python tagger/plot/makeEmulationPlot.py -r True -i $JETTUPLE -m output/$Model
-python tagger/firmware/hls4ml_profile.py -r True -i $JETTUPLE -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
+# the emulator output of setup_cmssw.sh, read in place
+python tagger/plot/makeEmulationPlot.py -r True -i CMSSW_17_0_0_pre2/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root -m output/baseline
+python tagger/firmware/hls4ml_profile.py -r True -i CMSSW_17_0_0_pre2/src/FastPUPPI/NtupleProducer/python/jetTuple_extended_5.root -m output/baseline -of output/baseline/firmware -o output/baseline/plots/profile
 ```
 
 The `run_processes` job runs the emulator on TT, VBFHToBB, VBFHToCC, MinBias and QCD samples and writes `<PROCESS>_perfNano.root` to `${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}`.
@@ -344,11 +344,11 @@ The full samples are large (TT 60 files / 247 GB, MinBias 1148 files / 1.4 TB), 
 
 Then, in the same environment as the build, run each process, merge its outputs and copy them to an output directory (this is what `CI/build_cmssw.sh` does after compiling):
 
-`setup.sh` sets `L1TPF_LOCAL_INPUT_DIR=$PWD/localinputs` and `OUTPATH=$PWD/FPOutput`.
-
 ```bash
+export L1TPF_LOCAL_INPUT_DIR=$PWD/localinputs
+OUTPATH=$PWD/FPOutput
 mkdir -p $OUTPATH
-cd $CMSSW_VERSION/src/FastPUPPI/NtupleProducer/python
+cd CMSSW_17_0_0_pre2/src/FastPUPPI/NtupleProducer/python
 cmsenv
 # point the producer at your model (L1TSC4NGJetModel_test); do this once, build_cmssw.sh does the same
 grep -q L1TSC4NGJetModel_test runPerformanceNTuple.py || echo $'\nprocess.l1tSC4NGJetProducer.l1tSC4NGJetModelPath = cms.string(os.environ["CMSSW_BASE"]+"/src/L1TSC4NGJetModel/L1TSC4NGJetModel_test/L1TSC4NGJetModel_test")' >> runPerformanceNTuple.py
@@ -364,9 +364,9 @@ cd -
 The plotting scripts need `jecs.root` and the `<PROCESS>_perfNano.root` files in the same directory. The `emulation_regression` job then makes regression plots from those files (locally, use `-i FPOutput`):
 
 ```bash
-python tagger/plot/emulation_regression/plot_basic.py  -m output/$Model -i <dir with perfNano files>
-python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i <dir with perfNano files>
-python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i <dir with perfNano files>
+python tagger/plot/emulation_regression/plot_basic.py  -m output/baseline -i <dir with perfNano files>
+python tagger/plot/emulation_regression/plot_masses.py -m output/baseline -i <dir with perfNano files>
+python tagger/plot/emulation_regression/plot_turnon.py -m output/baseline -i <dir with perfNano files>
 ```
 
 ------

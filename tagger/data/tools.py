@@ -584,7 +584,8 @@ def make_data(
         else:
             print("Exiting without making changes.")
             return
-
+    data_sources = _uproot_source(infile, tree)
+    
     # Create output training dataset
     os.makedirs(outdir, exist_ok=True)
     print("Output directory:", outdir)

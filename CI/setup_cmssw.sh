@@ -1,5 +1,6 @@
 #!/bin/bash
-export SCRAM_ARCH=el8_amd64_gcc13
+# el version from the OS: el8 in the CI image and the cmssw-el8 container, el9 on lxplus
+export SCRAM_ARCH=el$(. /etc/os-release; echo ${VERSION_ID%%.*})_amd64_gcc13
 
 if [[ "$2" == "" ]]; then
     echo "Usage $0 [ -checkout | -compile | -run ] CMSSW_VERSION GITHUB_MASTER GITHUB_TAG [ GITHUB_PR ]"

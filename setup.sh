@@ -35,7 +35,7 @@ export L1TPF_LOCAL_INPUT_DIR=${L1TPF_LOCAL_INPUT_DIR:-$PWD/localinputs}
 export OUTPATH=${OUTPATH:-$PWD/FPOutput}
 
 
-# Mount that holds this checkout, bound into the cmssw-el8 container (e.g. /shared on NGT).
+# File system that holds this checkout, for binding it into the cmssw-el8 container (only needed for the fallback, see README section 5).
 # Defaults to the top-level directory of $PWD; set WORK_MOUNT before sourcing to override.
 export WORK_MOUNT=${WORK_MOUNT:-/$(echo $PWD | cut -d/ -f2)}
 

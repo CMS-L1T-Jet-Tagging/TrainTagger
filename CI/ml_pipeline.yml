@@ -124,6 +124,7 @@ evaluate:
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "pT weights plots"
+  - mv output/$Model/configs/results_dict.json output/$Model
   - python tagger/plot/pt_weights.py -m output/$Model
   - echo "bbtt performance"
   - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
@@ -143,6 +144,7 @@ evaluate:
   - echo "Single tau performance"
   - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+  - mv output/$Model/results_dict.json output/$Model/configs
   artifacts:
     paths:
       - output

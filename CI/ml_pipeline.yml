@@ -167,6 +167,7 @@ hls4ml:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
+  - mv output/$Model/configs/results_dict.json output/$Model
   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
   artifacts:
     paths:
@@ -291,6 +292,7 @@ emulation_regression:
   - source activate tagger
   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
   - mkdir -p output/$Model/plots/emulation_regression
+  - mv output/$Model/configs/results_dict.json output/$Model
   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}

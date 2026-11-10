@@ -258,7 +258,7 @@ profile:
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
   stage: run_processes
-  tags: [cern-nextgen-gpu]
+  tags: [cern-nextgen-h100]
   needs:
     - job : hls4ml
       optional: true
@@ -292,7 +292,6 @@ emulation_regression:
   - source activate tagger
   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
   - mkdir -p output/$Model/plots/emulation_regression
-  - mv output/$Model/configs/results_dict.json output/$Model
   - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
   - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}

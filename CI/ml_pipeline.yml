@@ -98,7 +98,7 @@ train:
   - source activate tagger
   - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING
   - mkdir output/$Model/configs
-  - mv output/$Model/results_dict.json output/$Model/configs
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_t.json
   artifacts:
     paths:
       - output
@@ -124,7 +124,7 @@ evaluate:
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "pT weights plots"
-  - mv output/$Model/configs/results_dict.json output/$Model
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/plot/pt_weights.py -m output/$Model
   - echo "bbtt performance"
   - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
@@ -144,7 +144,7 @@ evaluate:
   - echo "Single tau performance"
   - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - mv output/$Model/results_dict.json output/$Model/configs
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_e.json
   artifacts:
     paths:
       - output
@@ -167,7 +167,7 @@ hls4ml:
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
-  - mv output/$Model/configs/results_dict.json output/$Model
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
   artifacts:
     paths:
@@ -215,9 +215,9 @@ emulation-evaluate:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - mv output/$Model/configs/results_dict.json output/$Model
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -o output/$Model/plots/emulation
-  - mv output/$Model/results_dict.json output/$Model/configs
+  - mv output/$Model/results_dict_ee.json output/$Model/configs
   artifacts:
     paths:
       - output/$Model
@@ -247,9 +247,9 @@ profile:
       mkdir -p data
       cp ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root data
     fi
-  - mv output/$Model/configs/results_dict.json output/$Model
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile -e $RUN_EMULATION
-  - mv output/$Model/results_dict.json output/$Model/configs
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_p.json
   artifacts:
     paths:
       - output/$Model

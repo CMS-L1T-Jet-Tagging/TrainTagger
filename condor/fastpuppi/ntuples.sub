@@ -1,0 +1,25 @@
+universe = vanilla
+
+executable = $(script_dir)/run_cmssw_stage.sh
+arguments = runJetNtuple_htcondor.py $(input_file) $(output_name) $(max_events) $(cmssw_dir)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_SUCCESS
+success_exit_code = 0
+transfer_input_files = $(cmssw_dir)/src/FastPUPPI/NtupleProducer/python/runJetNtuple_htcondor.py
+transfer_output_files = $(output_name)
+transfer_output_remaps = "$(output_name)=$(output_path)"
+
+output = $(stdout)
+error = $(stderr)
+log = $(joblog)
+stream_output = True
+stream_error = True
+
+# runJetNtuple_htcondor.py currently calls goMT() with its one-thread default.
+request_cpus = 1
+request_memory = 8GB
+request_disk = 5GB
+requirements = (Machine =!= "hd91.dice.priv")
+
+queue

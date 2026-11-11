@@ -217,7 +217,7 @@ emulation-evaluate:
   - source activate tagger
   - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -o output/$Model/plots/emulation
-  - mv output/$Model/results_dict_ee.json output/$Model/configs
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_ee.json
   artifacts:
     paths:
       - output/$Model

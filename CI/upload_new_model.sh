@@ -19,6 +19,8 @@ mv output/$Model/*.json $Name/configs
 mv output/$Model/*.yaml $Name/configs
 mv output/$Model/configs/* $Name/configs
 
+python CI/merge_json.py $Name/configs/results_dict_*.json -o $Name/configs/results_dict_merged.json --on-conflict last
+
 mv output/$Model/model $Name/model
 
 mv output/$Model/plots/training/ $Name/plots

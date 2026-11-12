@@ -260,4 +260,3 @@ class DeepSetModelHGQ2(HGQ2Model):
                 hls_regression_model.compile()
                 if build:
                     hls_regression_model.build(csim=False, reset=True, cosim=False)
-

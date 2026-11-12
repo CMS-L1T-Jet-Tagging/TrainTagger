@@ -148,7 +148,7 @@ def read_hls_log(filename: str) -> dict:
 
 def getReports(indir,project_dir,project_name):
     data_ = {}
-    
+
     report_csynth = Path('{}/{}/solution1/syn/report/{}_csynth.xml'.format(indir,project_dir,project_name))
     report_vsynth = Path('{}/vivado_synth.rpt'.format(indir))
     log = Path('{}/vitis_hls.log'.format(indir))
@@ -184,7 +184,7 @@ def doPlots(model, outputdir, inputdir, trace=False):
     hls_inputs = hls_inputs[0] if len(hls_inputs) == 1 else hls_inputs
     y_hls, y_ptreg_hls = model.hls_jet_model.predict(hls_inputs)
     y_class, y_ptreg = model.jet_model.predict(model_dict)
-    
+
     print(
         "MSE between keras and hls4ml for regression is",
         sklearn.metrics.mean_absolute_error(y_ptreg[:, 0],y_ptreg_hls[:, 0])
@@ -205,7 +205,7 @@ def doPlots(model, outputdir, inputdir, trace=False):
         )
         figure.savefig("%s/%s_score_2D.png" % (outputdir, label), bbox_inches='tight')
         figure.savefig("%s/%s_score_2D.pdf" % (outputdir, label), bbox_inches='tight')
-        
+
         print(
             "MSE between keras and hls4ml for " + label + " classification is",
             sklearn.metrics.mean_absolute_error(np.array(y_class[:, i]),np.array(y_hls[:, i]))
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model = fromFolder(args.model_path)
-    
+
     if args.test_emulator == "True":
 
       if args.remake:
@@ -318,7 +318,7 @@ if __name__ == "__main__":
     print('Estimated FMax :',  report['hls_log']['FMax'], 'MHz' )
     print("   ")
     print("===================")
-    
+
     model.results_dict['InputPrecision'] = model.firmware_config['input_precision']
     model.results_dict['ClassPrecision'] = model.firmware_config['class_precision']
     model.results_dict['RegressionPrecision'] = model.firmware_config['reg_precision']
@@ -328,8 +328,8 @@ if __name__ == "__main__":
     model.results_dict['DigitalSignalProcessors'] = report['hls_report']['dsp']
     model.results_dict['Latency'] = report['hls_report']['latency_best']
     model.results_dict['InitiationInterval'] = report['hls_report']['interval_best']
-    
-    
+
+
     if bool(report['vsynth_report']):
         print("   ")
         print("Resource Usage of a VU13P from VSynth")
@@ -345,7 +345,7 @@ if __name__ == "__main__":
         model.results_dict['V_LookUpTables'] = report['vsynth_report']['lut']
         model.results_dict['V_BlockRAM'] = report['vsynth_report']['bram18']
         model.results_dict['V_DigitalSignalProcessors'] = report['vsynth_report']['dsp']
-        
+
     print('Memory Usage :',  report['hls_log']['memory_GB'], 'GB' )
     print('Synth time :',  report['hls_log']['time_seconds'], 's' )
 

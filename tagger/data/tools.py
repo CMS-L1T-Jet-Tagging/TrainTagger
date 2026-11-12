@@ -231,7 +231,7 @@ def _save_dataset_metadata(outdir, class_labels, tag, jet_fields, extras):
 
 def _uproot_source(infile, tree):
     """
-    Creates a dictionary with 
+    Creates a dictionary with
     {filepath/*/*.root: "outnano/Jets",} structure for uproot.iterate()
     """
     inputs = [infile] if isinstance(infile, (str, bytes, os.PathLike)) else infile
@@ -511,7 +511,7 @@ def make_data(
         fraction (float) : fraction from (0-1) of data to process for training/testing
         step_size (str): Step size for uproot iteration.
     """
-    
+
     # Count entries over the same sources that Uproot will iterate.
     data_sources = _uproot_source(infile, tree)
     num_entries = sum(

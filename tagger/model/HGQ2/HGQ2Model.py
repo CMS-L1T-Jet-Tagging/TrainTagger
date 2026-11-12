@@ -23,8 +23,8 @@ from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.common import cosine_decay_restarts
 
 class HGQ2Model(JetTagModel):
-    
-    
+
+
     input_config = {"basic_input_config": list,
                     "basic_features": list,
                     "jet_features": list}
@@ -42,7 +42,7 @@ class HGQ2Model(JetTagModel):
                         "target_ebops" : int,
                         "pileup": And(bool),
                         }
-    
+
     firmware_config = { "input_precision" : dict,
                         "class_precision" : str,
                         "reg_precision": str,
@@ -75,7 +75,7 @@ class HGQ2Model(JetTagModel):
         model_outputs = self.jet_model.predict(prepared_inputs)
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
-        
+
         return (class_predictions, pt_ratio_predictions)
 
     def compile_model(self, num_samples: int):
@@ -85,7 +85,7 @@ class HGQ2Model(JetTagModel):
             num_samples (int): Number of samples in the training set used for scheduling
         """
 
-        scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch, 
+        scheduler = keras.callbacks.LearningRateScheduler(schedule = lambda epoch : cosine_decay_restarts(epoch,
                                                                                                           initial_learning_rate=self.training_config['learning_rate'],
                                                                                                           max_epochs=self.training_config['epochs']))
 
@@ -132,7 +132,7 @@ class HGQ2Model(JetTagModel):
                 self.loss_name + self.output_pt_name: ['mae', 'mean_squared_error'],
             }
         )
-    
+
     def fit(
         self,
         X_train: npt.NDArray[np.float64],
@@ -163,13 +163,13 @@ class HGQ2Model(JetTagModel):
         )
 
         self.history = history.history
-        
+
         self.results_dict['best_loss'] = np.min(history.history['loss'])
         self.results_dict['best_val_loss'] = np.min(history.history['val_loss'])
         self.results_dict['best_jet_id_loss'] = np.min(history.history['jet_id_output_loss'])
         self.results_dict['best_pT_output_loss'] = np.min(history.history['pT_output_loss'])
-        
-        
+
+
     def get_keras_trace_model(self):
         # Create a sub-model that outputs all intermediate layers and get keras trace
         layer_outputs = [layer.output for layer in self.jet_model.layers]
@@ -180,7 +180,7 @@ class HGQ2Model(JetTagModel):
         output_tensor = self.jet_model.get_layer(output_name).output
         input_layers = self._get_branch_inputs(output_tensor)
         return keras.Model(input_layers, outputs=output_tensor)
-    
+
     @staticmethod
     def _get_branch_inputs(output_tensor):
         # Keras 3: walk the graph via operation/node API

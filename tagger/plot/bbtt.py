@@ -154,7 +154,7 @@ def max_tau_sum(taup_preds, taum_preds):
     return tau_scores2, tau_idxs
 
 def nn_score_sums(model, basic_nn_inputs, jet_nn_inputs, jet_pt, class_labels, n_jets=4):
-    
+
     has_jet_inputs = len(jet_nn_inputs) > 0
     if has_jet_inputs:
         btag_inputs = [{
@@ -425,7 +425,7 @@ def derive_bbtt_WPs(model, minbias_path, ht_cut, apply_sel, signal_path, n_entri
     raw_jet_pt = extract_array(minbias, 'jet_pt', n_entries)
     raw_jet_eta = extract_array(minbias, 'jet_eta_phys', n_entries)
     raw_inputs, raw_jet_inputs = extract_nn_inputs(minbias, model.particle_input_vars, model.jet_input_vars, n_entries=n_entries)
-    
+
     #Count number of total event
     global n_events
     n_events = len(np.unique(raw_event_id))

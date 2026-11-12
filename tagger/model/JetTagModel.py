@@ -43,7 +43,7 @@ class JetTagModel(ABC):
         self.training_config = {}
         self.firmware_config = {}
         self.inputs = {}
-        
+
         self.results_dict = {}
 
         self.output_id_name = 'jet_id_output'
@@ -112,24 +112,24 @@ class JetTagModel(ABC):
         Returns:
             tuple: (class_predictions , pt_ratio_predictions)
         """
-        
+
         if type(X_test) == dict:
             prepared_inputs = self.prepare_inputs(X_test)[0]
         else:
             prepared_inputs = X_test
-        
+
         model_outputs = self.jet_model.predict(prepared_inputs)
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)
-    
-    
+
+
     def save_results_dict(self,out_dir : str = "None"):
         if out_dir == "None":
             out_dir = self.output_directory
         with open(os.path.join(out_dir, "results_dict.json"), "w") as f:
             json.dump(self.results_dict,f, indent=4)
-            
+
     def load_results_dict(self,out_dir : str = "None"):
         if out_dir == "None":
             out_dir = self.output_directory
@@ -164,10 +164,10 @@ class JetTagModel(ABC):
             # Dump class variables
             with open(os.path.join(out_dir, "class_labels.json"), "w") as f:
                 json.dump(self.class_labels, f, indent=4)
-            
+
             with open(os.path.join(out_dir, "results_dict.json"), "w") as f:
                 json.dump(self.results_dict,f, indent=4)
-                
+
             # Do the rest of the saving, defined in child class
             save_func(self, out_dir)
 
@@ -201,7 +201,7 @@ class JetTagModel(ABC):
             # Dump class variables
             with open(os.path.join(out_dir, "extra_vars.json"), "r") as f:
                 self.extra_vars = json.load(f)
-            # Load results dict  
+            # Load results dict
             with open(os.path.join(out_dir, "results_dict.json"), "r") as f:
                 self.results_dict = json.load(f)
             # Do the rest of the loading, defined in child class

@@ -22,7 +22,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCh
 from tensorflow.keras import Model
 
 from tagger.model.common import huber_loss
-from tagger.model.common_qkeras import AAtt, AttentionPooling   
+from tagger.model.common_qkeras import AAtt, AttentionPooling
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.data.tools import constituents_mask
 
@@ -170,7 +170,7 @@ class QKerasModel(JetTagModel):
             callbacks=self.callbacks,
             shuffle=True,
         )
-        
+
         self.history = history.history
         self.results_dict['best_loss'] = np.min(history.history['loss'])
         self.results_dict['best_val_loss'] = np.min(history.history['val_loss'])

@@ -39,13 +39,13 @@ class DeepSetModelHGQ2(HGQ2Model):
                                   "regression_parallelisation_factor" : list,
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
-                
+
                 "input_config" : HGQ2Model.input_config,
-                
+
                 "training_config" :  HGQ2Model.training_config,
 
                 "firmware_config" : HGQ2Model.firmware_config,
-                
+
                 "quantization_config" : None
             }
     )
@@ -79,7 +79,7 @@ class DeepSetModelHGQ2(HGQ2Model):
                 n_features = inputs_shape['basic_input'][1]
 
                 inputs = Input(shape=(N_constituents,n_features), name='basic_input')
-                main = inputs 
+                main = inputs
                 # Per-constituent "Conv1D, kernel_size=1" == einsum over the feature axis
                 for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
                     main = QEinsumDenseBatchnorm(
@@ -116,14 +116,14 @@ class DeepSetModelHGQ2(HGQ2Model):
                         name='Dense_' + str(ireg + 1) + '_pT',
                     )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
-                
+
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
 
                 # Define the model using both branches
 
                 print(self.jet_model.summary())
-                
+
                 self.results_dict['num_parameters'] = self.jet_model.count_params()
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
@@ -132,7 +132,7 @@ class DeepSetModelHGQ2(HGQ2Model):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
-            
+
             # Load the testing data
             test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
             test_dict = {k: test_dict[k] for k in test_dict.files}
@@ -142,7 +142,7 @@ class DeepSetModelHGQ2(HGQ2Model):
             # Remove the old directory if it exists
             hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
             os.system(f'rm -rf {hls4ml_outdir}')
-            
+
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
             config['IOType'] = 'io_parallel'
@@ -176,7 +176,7 @@ class DeepSetModelHGQ2(HGQ2Model):
                 write_weights_txt=False,
                 #write_emulation_constants=True,
             )
-            
+
                         # Compile the project
             self.hls_jet_model.compile()
             # Save config  as json file
@@ -187,14 +187,14 @@ class DeepSetModelHGQ2(HGQ2Model):
             if build:
                 # build the project
                 self.hls_jet_model.build(csim=False, reset=True, cosim=False)
-            
+
             if self.firmware_config['split']:
-                
+
                 ##### Embedding Model
-                
+
                 embedding_model = keras.Model(inputs=self.jet_model.layers['basic_input'], outputs=self.jet_model.layers['avgpool'])
                 embedding_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_embedding'
-                
+
                 emb_config = hls4ml.utils.config_from_keras_model(embedding_model, granularity='name')
                 emb_config['IOType'] = 'io_parallel'
                 for layer in self.firmware_config['input_precision']:
@@ -214,12 +214,12 @@ class DeepSetModelHGQ2(HGQ2Model):
                 hls_embedding_model.compile()
                 if build:
                     hls_embedding_model.build(csim=False, reset=True, cosim=False)
-                    
+
                 ##### Classification Model
 
                 classification_model = keras.Model(inputs=self.jet_model.layers['Dense_0_jetID'], outputs=self.jet_model.layers['jet_id_output'])
                 class_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_classification'
-                
+
                 class_config = hls4ml.utils.config_from_keras_model(classification_model, granularity='name')
                 class_config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
                 class_config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
@@ -238,10 +238,10 @@ class DeepSetModelHGQ2(HGQ2Model):
                 hls_classication_model.compile()
                 if build:
                     hls_classication_model.build(csim=False, reset=True, cosim=False)
-                    
+
                 regression_model = keras.Model(inputs=self.jet_model.layers['Dense_0_pT'], outputs=self.jet_model.layers['pT_output'])
                 reg_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_classification'
-                
+
                 reg_config = hls4ml.utils.config_from_keras_model(regression_model, granularity='name')
                 reg_config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
                 reg_config["LayerName"]["pT_output"]["Implementation"] = "latency"
@@ -260,4 +260,4 @@ class DeepSetModelHGQ2(HGQ2Model):
                 hls_regression_model.compile()
                 if build:
                     hls_regression_model.build(csim=False, reset=True, cosim=False)
-                
+

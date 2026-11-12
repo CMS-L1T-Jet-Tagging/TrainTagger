@@ -44,11 +44,11 @@ class LinformerHGQ2(HGQ2Model):
                                   },
 
                 "training_config" : HGQ2Model.training_config,
-                
+
                 "input_config" : HGQ2Model.input_config,
 
                 "firmware_config" : HGQ2Model.firmware_config,
-                
+
                 "quantization_config" : None
             }
     )
@@ -83,7 +83,7 @@ class LinformerHGQ2(HGQ2Model):
                 emb = QBatchNormalization(name='norm_input')(qkv)
                 emb = QDense(FF_DIM, activation='relu')(emb)
                 emb = QDense(FF_DIM, activation='relu')(emb)
-                
+
                 q_in = keras.layers.Activation('linear', name='attn_q_in')(emb)
                 k_in = keras.layers.Activation('linear', name='attn_k_in')(emb)
                 v_in = keras.layers.Activation('linear', name='attn_v_in')(emb)
@@ -113,7 +113,7 @@ class LinformerHGQ2(HGQ2Model):
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
-                
+
 
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = qkv, outputs = [jet_id, pt_regress])
@@ -145,7 +145,7 @@ class LinformerHGQ2(HGQ2Model):
             # Remove the old directory if it exists
             hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
             os.system(f'rm -rf {hls4ml_outdir}')
-            
+
             test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
             test_dict = {k: test_dict[k] for k in test_dict.files}
             prepared_inputs = self.prepare_inputs(test_dict)[0]
@@ -157,7 +157,7 @@ class LinformerHGQ2(HGQ2Model):
             #config["Model"]["ReuseFactor"]=1
             #config['IOType'] = 'io_parallel'
 
-            # config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']            
+            # config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
             # config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
             # config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
 

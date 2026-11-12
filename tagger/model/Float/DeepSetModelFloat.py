@@ -247,7 +247,7 @@ class DeepSetModelFloat(JetTagModel):
             sample_weight (npt.NDArray[np.float64]): sample weighting
         """
         keras.config.disable_traceback_filtering()
-        
+
         history = self.jet_model.fit(
             {'basic_input': inputs_dict['basic_input']},
             [y_train,pt_target_train],
@@ -272,7 +272,7 @@ class DeepSetModelFloat(JetTagModel):
         output_tensor = self.jet_model.get_layer(output_name).output
         input_layers = self._get_branch_inputs(output_tensor)
         return keras.Model(input_layers, outputs=output_tensor)
-    
+
     @staticmethod
     def _get_branch_inputs(output_tensor):
         # Keras 3: walk the graph via operation/node API

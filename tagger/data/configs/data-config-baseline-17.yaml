@@ -44,5 +44,5 @@ step_size: 100MB
 ratio: 1.0
 num_workers: 8
 extras: extra_fields
-signal_processes: [{input: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/TT_PU200.root , 
+signal_processes: [{input: /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/TT_PU200.root ,
                     output: signal_process_data/TT_PU200}]

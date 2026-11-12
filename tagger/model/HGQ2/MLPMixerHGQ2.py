@@ -39,13 +39,13 @@ class MLPMixerHGQ2(HGQ2Model):
                                   "regression_parallelisation_factor" : list,
                                   "beta": And(float, lambda s: 1.0 >= s >= 0.0),
                                   },
-                
+
                 "training_config" : HGQ2Model.training_config,
-                
+
                 "input_config" : HGQ2Model.input_config,
 
                 "firmware_config" : HGQ2Model.firmware_config,
-                
+
                 "quantization_config" : None
             }
     )
@@ -93,7 +93,7 @@ class MLPMixerHGQ2(HGQ2Model):
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][1]), bias_axes='C', activation='relu', )(x)
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][2]), bias_axes='C', activation='relu', )(x)
                 x = QEinsumDense('bnc,n->bc', self.model_config['embedding_layers'][3])(x)
-                
+
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
@@ -102,7 +102,7 @@ class MLPMixerHGQ2(HGQ2Model):
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
-                
+
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
                 print(self.jet_model.summary())
@@ -114,7 +114,7 @@ class MLPMixerHGQ2(HGQ2Model):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
-            
+
             test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
             test_dict = {k: test_dict[k] for k in test_dict.files}
             prepared_inputs = self.prepare_inputs(test_dict)[0]

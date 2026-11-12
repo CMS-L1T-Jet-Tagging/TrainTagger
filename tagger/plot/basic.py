@@ -100,7 +100,7 @@ def ROC_taus(y_pred, y_test, class_labels, plot_dir, signal_proc=None):
         mask = ~(np.isnan(y_true) | np.isnan(y_score))
         y_true = y_true[mask]
         y_score = y_score[mask]
-        
+
         fpr, tpr, _ = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
         roc_data.append((tpr, fpr, roc_auc, label))
@@ -148,7 +148,7 @@ def ROC_binary(y_pred, y_test, class_labels, plot_dir, class_pair, results_dict,
     # Combine the labels and scores for binary classification
     selection = (y_true1 == 1) | (y_true2 == 1)
     y_true_binary = y_true1[selection]
-    
+
     # Normalized probabilities
     y_score_binary = y_score1[selection] / (y_score1[selection] + y_score2[selection])
 
@@ -212,7 +212,7 @@ def ROC(y_pred, y_test, class_labels, plot_dir, results_dict):
         print(f"FPR at TPR for {class_label} ≈ 0.5 (actual TPR = {tpr[idx]:.4f}): {fpr[idx]:.4f}, AUC: {roc_auc:.4f}")
         results_dict[f"{class_label}_FPR"] = fpr[idx]
         results_dict[f"{class_label}_AUC"] = roc_auc
-        
+
         ROC_dict[class_label] = roc_auc
         # Plot the ROC curve for the current class
         ax.plot(
@@ -731,7 +731,7 @@ def shapPlot(shap_values, feature_names, class_names):
     )
     ax.set_xlabel("mean (|Shapley value|)", fontsize=30)
     plt.tight_layout()
-    
+
 def get_input_names(model):
         """Names of a functional model's inputs, in model.inputs order (Keras 2 or 3)."""
         names = getattr(model, "input_names", None)   # Keras 2
@@ -899,11 +899,11 @@ def ROC_jets(y_pred, y_test, class_labels, plot_dir, process_label=None):
     for label, bkg_idx in targets.items():
 
         y_true, y_score = compute_roc_inputs(light_idx, bkg_idx)
-        
+
         mask = ~(np.isnan(y_true) | np.isnan(y_score))
         y_true = y_true[mask]
         y_score = y_score[mask]
-        
+
         fpr, tpr, _ = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
         roc_data.append((tpr, fpr, roc_auc, label))
@@ -1041,6 +1041,5 @@ def basic(model, signal_dirs):
 
     # Plot pt corrections
     pt_correction_hist(pt_ratio, truth_pt_test, reco_pt_test, plot_dir)
-    
-    model.save_results_dict()
 
+    model.save_results_dict()

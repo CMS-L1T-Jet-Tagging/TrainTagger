@@ -51,5 +51,3 @@ firmware_config:
   project_name: 'L1TSC4NGJetModel'
 
   split: False
-
-

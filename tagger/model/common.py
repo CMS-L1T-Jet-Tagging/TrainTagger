@@ -97,18 +97,18 @@ def cosine_decay_restarts(global_step,initial_learning_rate, max_epochs):
 
 def initialise_tensorflow(num_threads):
     import tensorflow as tf
-    
+
     print("Using ")
     print(tf.config.list_physical_devices('GPU'))
     print("for training")
-    
+
     gpu = tf.config.list_physical_devices('GPU')
     #tf.config.experimental.set_memory_growth(gpu[0], True)
     # Set some tensorflow constants
     os.environ["OMP_NUM_THREADS"] = str(num_threads)
     os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
     os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
-    
+
     seed = np.random.randint(2**32 - 1)
     tf.keras.utils.set_random_seed(seed)
     print("my seed is:", seed)

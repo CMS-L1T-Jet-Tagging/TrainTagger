@@ -3,6 +3,7 @@ import gc
 import json
 import os
 import shutil
+from pathlib import Path
 
 import awkward as ak
 
@@ -193,7 +194,6 @@ def _make_nn_inputs(data_split, tag, jet_fields, n_parts):
 
     return
 
-
 def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     chunk_info = {"chunk": chunk, "entries": entries, "file": outfile}
@@ -213,7 +213,6 @@ def _save_chunk_metadata(metadata_file, chunk, entries, outfile):
 
     return
 
-
 def _save_dataset_metadata(outdir, class_labels, tag, jet_fields, extras):
 
     dataset_metadata_file = os.path.join(outdir, 'variables.json')
@@ -230,6 +229,26 @@ def _save_dataset_metadata(outdir, class_labels, tag, jet_fields, extras):
 
     return
 
+def _uproot_source(infile, tree):
+    """
+    Creates a dictionary with
+    {filepath/*/*.root: "outnano/Jets",} structure for uproot.iterate()
+    """
+    inputs = [infile] if isinstance(infile, (str, bytes, os.PathLike)) else infile
+    sources = {}
+
+    for item in inputs:
+        item = os.fsdecode(os.fspath(item))
+        if os.path.isdir(item):
+            files = sorted(Path(item).rglob("*.root"))
+            if not files:
+                raise FileNotFoundError(f"No ROOT files found in {item}")
+            for path in files:
+                sources[str(path)] = tree
+        else:
+            sources[item] = tree
+
+    return sources
 
 def _process_chunk(data_split, tag, jet_fields, extras, n_parts, chunk, outdir):
     """
@@ -315,31 +334,47 @@ def sort_arrays(sorting_val, *arrays):
 def group_id_values(event_id, *arrays, num_elements=2, ordering_var=None):
     '''
     Group values according to event id.
-    Filter out events that has less than num_elements
-    Sort the grouped arrays in descending order of ordering_var if it is provided
+    Filter out events that have fewer than num_elements entries.
+    If ordering_var is provided, sort each group (in all arrays) in
+    descending order of ordering_var.
+    Zero-length arrays are passed through unchanged.
     '''
+    event_id = ak.to_numpy(event_id)
 
-    # Use ak.argsort to sort based on event_id
-    sorted_indices = ak.argsort(event_id)
-    sorted_event_id = event_id[sorted_indices]
+    # Stable sort so entries keep their original relative order within an event
+    order = np.argsort(event_id, kind="stable")
+    sorted_id = event_id[order]
 
-    # Find unique event_ids and counts manually
-    unique_event_id, counts = np.unique(sorted_event_id, return_counts=True)
+    _, counts = np.unique(sorted_id, return_counts=True)
 
-    # Use ak.unflatten to group the arrays by counts
-    grouped_id = ak.unflatten(sorted_event_id, counts)
-    grouped_arrays = [ak.unflatten(arr[sorted_indices], counts) for arr in arrays]
+    # Drop small events *before* grouping, so nothing is built and then discarded
+    keep_event = counts >= num_elements
+    keep_entry = np.repeat(keep_event, counts)
 
-    if ordering_var is not None:
-        # Sort the jets within each event by the ordering variable
-        grouped_ordering_var = ak.unflatten(ordering_var[sorted_indices], counts)
-        grouped_arrays = sort_arrays(grouped_ordering_var, *grouped_arrays)
+    idx = order[keep_entry]
+    counts = counts[keep_event]
 
-    # Filter out groups that don't have at least num_elements elements
-    mask = ak.num(grouped_id) >= num_elements
-    filtered_grouped_arrays = [arr[mask] for arr in grouped_arrays]
+    grouped_id = ak.unflatten(event_id[idx], counts)
 
-    return grouped_id[mask], filtered_grouped_arrays
+    grouped_arrays = []
+    for arr in arrays:
+        if len(arr) == 0:
+            # Nothing to sort/filter/group: keep it as an empty array
+            grouped_arrays.append(arr)
+        else:
+            grouped_arrays.append(ak.unflatten(arr[idx], counts))
+
+    if ordering_var is not None and len(ordering_var) > 0:
+        grouped_ordering = ak.unflatten(ordering_var[idx], counts)
+        # Per-event permutation, largest ordering_var first
+        sort_idx = ak.argsort(grouped_ordering, axis=1, ascending=False)
+        grouped_arrays = [
+            arr if len(arr) == 0 else arr[sort_idx]
+            for arr in grouped_arrays
+        ]
+
+    return grouped_id, grouped_arrays
+
 
 
 def to_ML(data, class_labels):
@@ -424,11 +459,11 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
     pu_mask = (data['class_label'] == class_labels['pileup'])
 
     # remove unwanted basic input variables
-    remove_basic_fields = [i for i, x in enumerate(input_vars) if x not in model.inputs['basic_input_config']]
+    remove_basic_fields = [i for i, x in enumerate(input_vars) if x not in model.input_config['basic_input_config']]
     data['nn_inputs'] = np.delete(data['nn_inputs'], remove_basic_fields, axis=2)
 
     # remove unwanted jet features
-    remove_jet_fields = [i for i, x in enumerate(jet_vars) if x not in model.inputs['jet_features']]
+    remove_jet_fields = [i for i, x in enumerate(jet_vars) if x not in model.input_config['jet_features']]
     data['nn_jet_features'] = np.delete(data['nn_jet_features'], remove_jet_fields, axis=1)
 
     # pileup masking if not training on pileup
@@ -467,7 +502,7 @@ def make_data(
     Process the data set in chunks from the input ntuples file.
 
     Parameters:
-        infile (str): The input file path.
+        infile (str): infile (str or iterable): ROOT file(s), folder(s), or wildcard pattern(s).
         outdir (str): The output directory.
         tag (str): Input tags to use from puppicands, defined in puppicand_fields.yml.
         jet_fields (list): List of jet NN fields to use for training.
@@ -477,6 +512,15 @@ def make_data(
         step_size (str): Step size for uproot iteration.
     """
 
+    # Count entries over the same sources that Uproot will iterate.
+    data_sources = _uproot_source(infile, tree)
+    num_entries = sum(
+        entry[-1] if isinstance(entry, tuple) else entry
+        for entry in uproot.num_entries(data_sources)
+    )
+    if num_entries == 0:
+        raise ValueError(f"No entries found in input: {infile}")
+    print('Number of entries: ',num_entries)
     # Check if output dir already exists, remove if so
     if os.path.exists(outdir):
         confirm = input(f"The directory '{outdir}' already exists. Do you want to delete it and continue? [y/n]: ")
@@ -491,13 +535,11 @@ def make_data(
     os.makedirs(outdir, exist_ok=True)
     print("Output directory:", outdir)
 
-    # Loop through the entries
-    num_entries = uproot.open(infile)[tree].num_entries
-    print(num_entries)
+
     num_entries_done = 0
     chunk = 0
 
-    for data in (pbar := tqdm(uproot.iterate(infile, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, max_workers=num_workers))):
+    for data in (pbar := tqdm(uproot.iterate(data_sources, filter_name=FILTER_PATTERN, how="zip", step_size=step_size, num_workers=num_workers))):
         pbar.set_description(f'Processing chunk {chunk}')
 
         num_entries_done += len(data)  # count before cuts

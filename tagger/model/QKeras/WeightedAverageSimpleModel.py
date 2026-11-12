@@ -7,9 +7,11 @@ import numpy.typing as npt
 import tensorflow as tf
 from schema import Schema, And, Use, Optional
 
-from tagger.model.common_tensorflow import choose_aggregator, initialise_tensorflow
+
+from tagger.model.common import initialise_tensorflow
+
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
-from tagger.model.QKerasModel import QKerasModel
+from tagger.model.QKeras.QKerasModel import QKerasModel
 
 from qkeras import QConv1D
 from qkeras.qlayers import QActivation, QDense
@@ -45,7 +47,7 @@ class WeightedAverageSimpleModel(QKerasModel):
                                     "clock_period" : And(float, lambda s: 0.0 < s <= 10),
                                     "fpga_part" : str,
                                     "project_name" : str},
-                "inputs" : {
+                "input_config" : {
                     "basic_input_config": list,
                     "basic_features": list,
                     "jet_features": list}

@@ -17,6 +17,9 @@ mkdir $Name/configs
 
 mv output/$Model/*.json $Name/configs
 mv output/$Model/*.yaml $Name/configs
+mv output/$Model/configs/* $Name/configs
+
+python CI/merge_json.py $Name/configs/results_dict_*.json -o $Name/configs/results_dict_merged.json --on-conflict last
 
 mv output/$Model/model $Name/model
 
@@ -26,7 +29,7 @@ mv output/$Model/plots/emulation_regression/ $Name/plots
 
 if [[ "$RUN_SYNTHESIS" == "True" ]]; then
     cd output/$Model/firmware/
-    tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
+    tar -cvf L1TSC4NGJetModel_$HLS4ML_NAME.tgz L1TSC4NGJetModel_$HLS4ML_NAME
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     eos cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     cd ../../..
@@ -46,7 +49,6 @@ export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
 pb_copy_index.py TrainTagger/${Name} --recursive
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR} --recursive
 cd TrainTagger/$Name
-
 ls ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}
 
 eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
@@ -56,6 +58,9 @@ eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
 eos cp -r model/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
 eos cp -r plots/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
 eos cp -r configs/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
+
+eos rm ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/*.json
+eos rm ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/*.yaml
 
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots --recursive
 

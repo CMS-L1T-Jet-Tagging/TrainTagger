@@ -1,0 +1,262 @@
+import json
+import os
+from schema import Schema, And, Use, Optional
+import scipy
+
+import keras
+import numpy as np
+import numpy.typing as npt
+from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten
+from hgq.layers import QConv1D, QDense, QMeanPow2,QBatchNormalization, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D
+from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
+from hgq.regularizers import MonoL1
+from hgq.constraints import MinMax
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler, PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
+import hgq
+
+from keras.models import load_model
+import hls4ml
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tagger.data.tools import load_data, to_ML
+from tagger.model.HGQ2.HGQ2Model import HGQ2Model
+from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+from tagger.model.common import initialise_tensorflow
+
+@JetModelFactory.register('DeepSetModelHGQ2')
+class DeepSetModelHGQ2(HGQ2Model):
+
+    schema = Schema(
+            {
+                "model": str,
+                ## generic run config coniguration
+                "run_config" : JetTagModel.run_schema,
+                "model_config" : {"name" : str,
+                                  "conv1d_layers" : list,
+                                  "conv1d_parallelisation_factor" : list,
+                                  "classification_layers" : list,
+                                  "classification_parallelisation_factor" : list,
+                                  "regression_layers" : list,
+                                  "regression_parallelisation_factor" : list,
+                                  "beta": And(float, lambda s: 1.0 >= s >= 0.0),
+                                  },
+
+                "input_config" : HGQ2Model.input_config,
+
+                "training_config" :  HGQ2Model.training_config,
+
+                "firmware_config" : HGQ2Model.firmware_config,
+
+                "quantization_config" : None
+            }
+    )
+
+    def build_model(self, inputs_shape, outputs_shape):
+
+        initialise_tensorflow(self.run_config['num_threads'])
+        #initialise_jax()
+        scope0 = QuantizerConfigScope(default_q_type='kbi',
+                                      b0=7,
+                                      overflow_mode='wrap',
+                                      i0=0,
+                                      fr=MonoL1(1.e-8),
+                                      ir=MonoL1(1.e-8),
+                                    )
+
+        scope1 = QuantizerConfigScope(default_q_type='kif',
+                                      place='datalane',
+                                      overflow_mode='wrap',
+                                      f0=7,
+                                      fr=MonoL1(1.e-8),
+                                      ic=MinMax(0, 12),
+                                    )
+        heterogeneous_axis = None
+
+        scope2 = LayerConfigScope(enable_ebops=True, heterogeneous_axis=heterogeneous_axis,beta0=1e-8)
+
+        with scope0, scope1, scope2:
+
+                N_constituents = inputs_shape['basic_input'][0]
+                n_features = inputs_shape['basic_input'][1]
+
+                inputs = Input(shape=(N_constituents,n_features), name='basic_input')
+                main = inputs
+                # Per-constituent "Conv1D, kernel_size=1" == einsum over the feature axis
+                for iconv1d, depthconv1d in enumerate(self.model_config['conv1d_layers']):
+                    main = QEinsumDenseBatchnorm(
+                        'bnf,fh->bnh',
+                        (N_constituents, depthconv1d),
+                        bias_axes='h',
+                        activation='relu',
+                        name='Conv1D_' + str(iconv1d + 1),
+                    )(main)
+                main = QGlobalAveragePooling1D(name='avgpool')(main)
+
+                #jetID branch, 3 layer MLP
+
+                # jetID branch
+                jet_id = main
+                for iclass, depthclass in enumerate(self.model_config['classification_layers']):
+                    jet_id = QEinsumDenseBatchnorm(
+                        'bf,fh->bh',
+                        depthclass,
+                        bias_axes='h',
+                        activation='relu',
+                        name='Dense_' + str(iclass + 1) + '_jetID',
+                    )(jet_id)
+                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
+                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+
+                pt_regress = main
+                for ireg, depthreg in enumerate(self.model_config['regression_layers']):
+                    pt_regress = QEinsumDenseBatchnorm(
+                        'bf,fh->bh',
+                        depthreg,
+                        bias_axes='h',
+                        activation='relu',
+                        name='Dense_' + str(ireg + 1) + '_pT',
+                    )(pt_regress)
+                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
+
+                #Define the model using both branches
+                self.jet_model = keras.Model(inputs = inputs, outputs = [jet_id, pt_regress])
+
+                # Define the model using both branches
+
+                print(self.jet_model.summary())
+
+                self.results_dict['num_parameters'] = self.jet_model.count_params()
+
+    def firmware_convert(self, firmware_dir: str, build: bool = False):
+            """Run the hls4ml model conversion
+            Args:
+                firmware_dir (str): Where to save the firmware
+                build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
+            """
+
+            # Load the testing data
+            test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
+            test_dict = {k: test_dict[k] for k in test_dict.files}
+            prepared_inputs = self.prepare_inputs(test_dict)[0]
+            hgq.utils.minmax_trace.trace_minmax(self.jet_model, prepared_inputs['basic_input'],verbose=2)
+
+            # Remove the old directory if it exists
+            hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
+            os.system(f'rm -rf {hls4ml_outdir}')
+
+            # Create default config
+            config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
+            config['IOType'] = 'io_parallel'
+            for layer in self.firmware_config['input_precision']:
+                config['LayerName'][layer]['Precision']['result'] = self.firmware_config['input_precision'][layer]
+
+            # Check that the input layers in the model match the input_precision keys in the firmware config
+            input_layer_names = [layer.name for layer in self.jet_model.layers if isinstance(layer, keras.layers.InputLayer)]
+            assert set(input_layer_names) == set(self.firmware_config['input_precision'].keys())
+
+            # Configuration for conv1d layers
+            # hls4ml automatically figures out the paralellization factor
+            #config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
+            #config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
+
+            config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
+            config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
+            config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
+            config["LayerName"]["pT_output"]["Implementation"] = "latency"
+
+            # Write HLS
+            self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
+                self.jet_model,
+                backend='Vitis',
+                project_name=self.firmware_config['project_name'],
+                clock_period=self.firmware_config['clock_period'],
+                hls_config=config,
+                output_dir=f'{hls4ml_outdir}',
+                part= self.firmware_config['fpga_part'],
+                namespace='hls4ml_'+self.firmware_config['project_name'],
+                write_weights_txt=False,
+                #write_emulation_constants=True,
+            )
+
+                        # Compile the project
+            self.hls_jet_model.compile()
+            # Save config  as json file
+            print("Saving default config as config.json ...")
+            with open(hls4ml_outdir + '/config.json', 'w') as fp:
+                json.dump(config, fp)
+
+            if build:
+                # build the project
+                self.hls_jet_model.build(csim=False, reset=True, cosim=False)
+
+            if self.firmware_config['split']:
+
+                ##### Embedding Model
+
+                embedding_model = keras.Model(inputs=self.jet_model.layers['basic_input'], outputs=self.jet_model.layers['avgpool'])
+                embedding_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_embedding'
+
+                emb_config = hls4ml.utils.config_from_keras_model(embedding_model, granularity='name')
+                emb_config['IOType'] = 'io_parallel'
+                for layer in self.firmware_config['input_precision']:
+                    emb_config['LayerName'][layer]['Precision']['result'] = self.firmware_config['input_precision'][layer]
+                # Write HLS
+                hls_embedding_model = hls4ml.converters.convert_from_keras_model(
+                    embedding_model,
+                    backend='Vitis',
+                    project_name=self.firmware_config['project_name']+'_embedding',
+                    clock_period=self.firmware_config['clock_period'],
+                    hls_config=emb_config,
+                    output_dir=f'{embedding_outdir}',
+                    part= self.firmware_config['fpga_part'],
+                    namespace='hls4ml_'+self.firmware_config['project_name']+'_embedding',
+                    write_weights_txt=False,
+                )
+                hls_embedding_model.compile()
+                if build:
+                    hls_embedding_model.build(csim=False, reset=True, cosim=False)
+
+                ##### Classification Model
+
+                classification_model = keras.Model(inputs=self.jet_model.layers['Dense_0_jetID'], outputs=self.jet_model.layers['jet_id_output'])
+                class_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_classification'
+
+                class_config = hls4ml.utils.config_from_keras_model(classification_model, granularity='name')
+                class_config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
+                class_config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
+                # Write HLS
+                hls_classification_model = hls4ml.converters.convert_from_keras_model(
+                    classification_model,
+                    backend='Vitis',
+                    project_name=self.firmware_config['project_name']+'_classification',
+                    clock_period=self.firmware_config['clock_period'],
+                    hls_config=class_config,
+                    output_dir=f'{classification_outdir}',
+                    part= self.firmware_config['fpga_part'],
+                    namespace='hls4ml_'+self.firmware_config['project_name']+'_classification',
+                    write_weights_txt=False,
+                )
+                hls_classication_model.compile()
+                if build:
+                    hls_classication_model.build(csim=False, reset=True, cosim=False)
+
+                regression_model = keras.Model(inputs=self.jet_model.layers['Dense_0_pT'], outputs=self.jet_model.layers['pT_output'])
+                reg_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_classification'
+
+                reg_config = hls4ml.utils.config_from_keras_model(regression_model, granularity='name')
+                reg_config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
+                reg_config["LayerName"]["pT_output"]["Implementation"] = "latency"
+                # Write HLS
+                hls_regression_model = hls4ml.converters.convert_from_keras_model(
+                    regression_model,
+                    backend='Vitis',
+                    project_name=self.firmware_config['project_name']+'_regression',
+                    clock_period=self.firmware_config['clock_period'],
+                    hls_config=reg_config,
+                    output_dir=f'{reg_outdir}',
+                    part= self.firmware_config['fpga_part'],
+                    namespace='hls4ml_'+self.firmware_config['project_name']+'_regression',
+                    write_weights_txt=False,
+                )
+                hls_regression_model.compile()
+                if build:
+                    hls_regression_model.build(csim=False, reset=True, cosim=False)

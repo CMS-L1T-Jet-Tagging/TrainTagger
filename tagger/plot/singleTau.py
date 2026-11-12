@@ -259,7 +259,7 @@ def plot_bkg_rate_tau(model, minbias_path, n_entries=500000, tree='jetntuple/Jet
         'basic_input': selected_basic_inputs,
         'jet_features': selected_jet_inputs,
     }
-    pred_score, ratio = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
+    pred_score, ratio = model.predict(raw_inputs_dict)
     model_tau = tau_score(pred_score, model.class_labels )
 
     #Emulator tau score

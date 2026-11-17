@@ -53,7 +53,7 @@ class DeepSetModelHGQ2(HGQ2Model):
     def build_model(self, inputs_shape, outputs_shape):
 
         initialise_tensorflow(self.run_config['num_threads'])
-        #initialise_jax()
+
         scope0 = QuantizerConfigScope(default_q_type='kbi',
                                       b0=7,
                                       overflow_mode='wrap',
@@ -153,11 +153,6 @@ class DeepSetModelHGQ2(HGQ2Model):
             input_layer_names = [layer.name for layer in self.jet_model.layers if isinstance(layer, keras.layers.InputLayer)]
             assert set(input_layer_names) == set(self.firmware_config['input_precision'].keys())
 
-            # Configuration for conv1d layers
-            # hls4ml automatically figures out the paralellization factor
-            #config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 16
-            #config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 16
-
             config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
             config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
             config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
@@ -187,76 +182,3 @@ class DeepSetModelHGQ2(HGQ2Model):
             if build:
                 # build the project
                 self.hls_jet_model.build(csim=False, reset=True, cosim=False)
-
-            if self.firmware_config['split']:
-
-                ##### Embedding Model
-
-                embedding_model = keras.Model(inputs=self.jet_model.layers['basic_input'], outputs=self.jet_model.layers['avgpool'])
-                embedding_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_embedding'
-
-                emb_config = hls4ml.utils.config_from_keras_model(embedding_model, granularity='name')
-                emb_config['IOType'] = 'io_parallel'
-                for layer in self.firmware_config['input_precision']:
-                    emb_config['LayerName'][layer]['Precision']['result'] = self.firmware_config['input_precision'][layer]
-                # Write HLS
-                hls_embedding_model = hls4ml.converters.convert_from_keras_model(
-                    embedding_model,
-                    backend='Vitis',
-                    project_name=self.firmware_config['project_name']+'_embedding',
-                    clock_period=self.firmware_config['clock_period'],
-                    hls_config=emb_config,
-                    output_dir=f'{embedding_outdir}',
-                    part= self.firmware_config['fpga_part'],
-                    namespace='hls4ml_'+self.firmware_config['project_name']+'_embedding',
-                    write_weights_txt=False,
-                )
-                hls_embedding_model.compile()
-                if build:
-                    hls_embedding_model.build(csim=False, reset=True, cosim=False)
-
-                ##### Classification Model
-
-                classification_model = keras.Model(inputs=self.jet_model.layers['Dense_0_jetID'], outputs=self.jet_model.layers['jet_id_output'])
-                class_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_classification'
-
-                class_config = hls4ml.utils.config_from_keras_model(classification_model, granularity='name')
-                class_config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-                class_config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
-                # Write HLS
-                hls_classification_model = hls4ml.converters.convert_from_keras_model(
-                    classification_model,
-                    backend='Vitis',
-                    project_name=self.firmware_config['project_name']+'_classification',
-                    clock_period=self.firmware_config['clock_period'],
-                    hls_config=class_config,
-                    output_dir=f'{classification_outdir}',
-                    part= self.firmware_config['fpga_part'],
-                    namespace='hls4ml_'+self.firmware_config['project_name']+'_classification',
-                    write_weights_txt=False,
-                )
-                hls_classication_model.compile()
-                if build:
-                    hls_classication_model.build(csim=False, reset=True, cosim=False)
-
-                regression_model = keras.Model(inputs=self.jet_model.layers['Dense_0_pT'], outputs=self.jet_model.layers['pT_output'])
-                reg_outdir = firmware_dir + '/' + self.firmware_config['project_name'] + '_classification'
-
-                reg_config = hls4ml.utils.config_from_keras_model(regression_model, granularity='name')
-                reg_config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
-                reg_config["LayerName"]["pT_output"]["Implementation"] = "latency"
-                # Write HLS
-                hls_regression_model = hls4ml.converters.convert_from_keras_model(
-                    regression_model,
-                    backend='Vitis',
-                    project_name=self.firmware_config['project_name']+'_regression',
-                    clock_period=self.firmware_config['clock_period'],
-                    hls_config=reg_config,
-                    output_dir=f'{reg_outdir}',
-                    part= self.firmware_config['fpga_part'],
-                    namespace='hls4ml_'+self.firmware_config['project_name']+'_regression',
-                    write_weights_txt=False,
-                )
-                hls_regression_model.compile()
-                if build:
-                    hls_regression_model.build(csim=False, reset=True, cosim=False)

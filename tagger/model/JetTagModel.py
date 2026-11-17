@@ -16,6 +16,10 @@ from schema import Schema, And, Use, Optional
 from tagger.plot.basic import loss_history
 from tagger.data.tools import constituents_mask
 
+import importlib
+from tagger.model.model_modules import MODEL_MODULES
+
+
 class JetTagModel(ABC):
     """Parent Class for Jet Tag Models
 
@@ -273,6 +277,8 @@ class JetModelFactory:
     registry = {}
     """ Internal registry for available Jet Tag Models """
 
+
+    
     @classmethod
     def register(cls, name: str):
         """Decorator for registering new jet tag models
@@ -283,7 +289,7 @@ class JetModelFactory:
 
         def inner_wrapper(wrapped_class: JetTagModel):
             if name in cls.registry:
-                print('Jet Tagger Model %s already exists. Will replace it', name)
+                print(f'Jet Tagger Model {name} already exists. Will replace it')
             cls.registry[name] = wrapped_class
             return wrapped_class
 
@@ -293,6 +299,13 @@ class JetModelFactory:
     def create_JetTagModel(cls, name: str, folder: str, **kwargs) -> 'JetTagModel':
         """Factory command to create the Jet Tag Model"""
 
+        if name not in cls.registry:
+            raise RuntimeError( f"Module {MODEL_MODULES[name]} was imported but did not register '{name}'")
+            if name not in MODEL_MODULES:
+                available = sorted(set(cls.registry) | set(MODEL_MODULES))
+                raise ValueError(f"Unknown model '{name}'. Available: {available}")
+            importlib.import_module(MODEL_MODULES[name])
+        
         jettag_class = cls.registry[name]
         model = jettag_class(folder, **kwargs)
 

@@ -31,7 +31,7 @@ if [[ "$RUN_SYNTHESIS" == "True" ]]; then
     cd output/$Model/firmware/
     tar -cvf L1TSC4NGJetModel_$HLS4ML_NAME.tgz L1TSC4NGJetModel_$HLS4ML_NAME
     eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
-    eos cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
+    eos cp -r L1TSC4NGJetModel_$HLS4ML_NAME.tgz ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/firmware/
     cd ../../..
     mv output/$Model/plots/profile $Name/plots
 fi

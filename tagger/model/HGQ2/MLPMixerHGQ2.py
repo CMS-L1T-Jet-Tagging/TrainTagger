@@ -84,7 +84,6 @@ class MLPMixerHGQ2(HGQ2Model):
 
             with (QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
                 inp = keras.layers.Input((N_constituents, n_features),name='basic_input')
-                #inp_b = QBatchNormalization()(inp)
 
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][0]), bias_axes='C', activation='relu',iq_conf=iq_conf_inputs)(inp)
                 x1 = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, n_features), bias_axes='C', activation='relu', )(x1)
@@ -130,14 +129,7 @@ class MLPMixerHGQ2(HGQ2Model):
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
 
-
-            # Configuration for conv1d layers
-            # hls4ml automatically figures out the paralellization factor
-            # config['LayerName']['Conv1D_1']['ParallelizationFactor'] = 8
-            # config['LayerName']['Conv1D_2']['ParallelizationFactor'] = 8
-
             # Additional config
-
 
             # Write HLS
             self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
@@ -148,9 +140,9 @@ class MLPMixerHGQ2(HGQ2Model):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                #namespace='hls4ml_'+self.firmware_config['project_name'],
-                #write_weights_txt=False,
-                # write_emulation_constants=True,
+                namespace='hls4ml_'+self.firmware_config['project_name'],
+                write_weights_txt=False,
+                write_emulation_constants=True,
             )
 
             # Compile the project
@@ -160,37 +152,6 @@ class MLPMixerHGQ2(HGQ2Model):
             print("Saving default config as config.json ...")
             with open(hls4ml_outdir + '/config.json', 'w') as fp:
                 json.dump(config, fp)
-
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config12>(layer10_out, layer11_out, layer12_out); // q_add'
-            new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
-                    auto layer11_index = ii % 20;
-                    layer12_out[ii] = layer10_out[ii] + layer11_out[layer11_index];
-                }"""
-
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
-
-            content = content.replace(old_text, new_text)
-
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
-                f.write(content)
-
-            print("cpp replacement complete")
-
-            old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
-            new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
-                          #pragma HLS inline recursive
-                        """
-
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
-                content = f.read()
-
-            content = content.replace(old_text, new_text)
-
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
-                f.write(content)
-
-            print("einsum dense replacement complete.")
 
             if build:
                 # build the project

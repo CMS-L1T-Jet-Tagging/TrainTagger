@@ -111,7 +111,7 @@ def initialise_tensorflow(num_threads):
 
     seed = np.random.randint(2**32 - 1)
     tf.keras.utils.set_random_seed(seed)
-    print("my seed is:", seed)
+    print("my model training seed is:", seed)
 
 def huber_loss(delta=.1, pu=0., alpha=0.):
     import tensorflow as tf

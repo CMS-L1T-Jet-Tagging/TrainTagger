@@ -436,9 +436,13 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
     total_chunks = len(metadata)
     chunks_to_load = int(np.ceil((percentage / 100) * total_chunks))
 
+    seed = np.random.randint(2**32 - 1)
+    print("my data loading seed is:", seed)
     # Collect the file paths for the chunks to load
-    chunk_files = [f"{metadata[i]['file']}:data" for i in range(chunks_to_load)]
-
+    rng = np.random.default_rng(seed)
+    sel = np.sort(rng.choice(total_chunks, chunks_to_load, replace=False))
+    chunk_files = [f"{metadata[i]['file']}:data" for i in sel]
+    
     # Use uproot.concatenate to load and combine data from multiple files
     data = uproot.concatenate(
         [f"{file}" for file in chunk_files],

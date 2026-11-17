@@ -24,44 +24,6 @@ from tagger.model.HGQ2.HGQ2Model import HGQ2Model
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.model.common import initialise_tensorflow
 
-import da4ml.types as _da_types
-
-def _patch_da4ml_flatten():
-    cls = getattr(_da_types, 'CombLogic', None)
-    if cls is None:
-        for obj in vars(_da_types).values():
-            if (isinstance(obj, type) and '__call__' in vars(obj)
-                    and 'inp_shifts' in getattr(obj, '__annotations__', {})):
-                cls = obj
-                break
-    if cls is None:
-        raise RuntimeError('da4ml patch: could not find the comb-logic class in da4ml.types')
-    if getattr(cls.__call__, '_flatten_patched', False):
-        return
-
-    orig_call = cls.__call__
-    state = {'calls': 0}
-
-    def patched_call(self, inp, *args, **kwargs):
-        n = len(self.inp_shifts)
-        shape = getattr(inp, 'shape', None)
-        if state['calls'] < 10:
-            state['calls'] += 1
-            print(f'[da4ml patch] call {state["calls"]}: type={type(inp).__name__} '
-                  f'shape={shape} n_shifts={n}')
-        if shape is None:  # list/tuple etc.
-            inp = np.asarray(inp)
-            shape = inp.shape
-        if len(shape) > 1 and int(np.prod(shape)) == n:
-            inp = inp.reshape(-1) if hasattr(inp, 'reshape') else np.asarray(inp).reshape(-1)
-        return orig_call(self, inp, *args, **kwargs)
-
-    patched_call._flatten_patched = True
-    cls.__call__ = patched_call
-    print(f'[da4ml patch] installed on {cls.__module__}.{cls.__name__}')
-
-
-
 @JetModelFactory.register('JEDILinearHGQ2')
 class JEDILinearHGQ2(HGQ2Model):
 
@@ -122,14 +84,11 @@ class JEDILinearHGQ2(HGQ2Model):
                 QuantizerConfigScope(place=('weight', 'bias'), overflow_mode='SAT_SYM'),
                 QuantizerConfigScope(place='datalane', heterogeneous_axis=heterogeneous_axis)):
                 inp = keras.layers.Input((N_constituents, n_features),name='basic_input')
-                #inp_b = QBatchNormalization()(inp)
-                pool_scale = 2.**-round(log2(N_constituents))
 
                 x = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][0]), bias_axes='C', activation='relu')(inp)
                 s = QEinsumDenseBatchnorm('bnc,cC->bnC', (N_constituents, self.model_config['embedding_layers'][1]), bias_axes='C', activation='relu', )(x)
 
                 s2 = AveragePooling1D(N_constituents)(x)
-                #s2 = Rescaling(pool_scale)(s2)
 
                 d = QEinsumDenseBatchnorm( 'bnc,cC->bnC', (1, self.model_config['embedding_layers'][2]), bias_axes='C', activation='relu')(s2)
 
@@ -140,10 +99,7 @@ class JEDILinearHGQ2(HGQ2Model):
                                           bias_axes='C',
                                           activation='relu',
                                         )(x)
-                #x = QSum(axes=1, scale=1 / 16, keepdims=False)(x)
                 x = GlobalAveragePooling1D()(x)
-                #x = Flatten()(x)
-                #x = Rescaling(1/16)(x)
 
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
                 jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
@@ -153,7 +109,6 @@ class JEDILinearHGQ2(HGQ2Model):
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
                 pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
-
 
                 #Define the model using both branches
                 self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
@@ -179,9 +134,6 @@ class JEDILinearHGQ2(HGQ2Model):
 
             # Create default config
             config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
-            #config["Model"]["Strategy"]="distributed_arithmetic"
-            #config["Model"]["ReuseFactor"]=1
-            #config['IOType'] = 'io_parallel'
 
             config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
             config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
@@ -197,9 +149,9 @@ class JEDILinearHGQ2(HGQ2Model):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                #namespace='hls4ml_'+self.firmware_config['project_name'],
-                #write_weights_txt=False,
-                # write_emulation_constants=True,
+                namespace='hls4ml_'+self.firmware_config['project_name'],
+                write_weights_txt=False,
+                write_emulation_constants=True,
             )
 
             # Compile the project
@@ -209,38 +161,6 @@ class JEDILinearHGQ2(HGQ2Model):
             print("Saving default config as config.json ...")
             with open(hls4ml_outdir + '/config.json', 'w') as fp:
                 json.dump(config, fp)
-
-
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config14>(layer12_out, layer13_out, layer14_out); // q_add'
-            new_text = """for (int ii = 0; ii < 16 * 20; ii++) {
-                    auto layer13_index = ii % 20;
-                    layer14_out[ii] = layer12_out[ii] + layer13_out[layer13_index];
-                }"""
-
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
-
-            content = content.replace(old_text, new_text)
-
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
-                f.write(content)
-
-            print("cpp replacement complete")
-
-            old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
-            new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
-                          #pragma HLS inline recursive
-                        """
-
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
-                content = f.read()
-
-            content = content.replace(old_text, new_text)
-
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
-                f.write(content)
-
-            print("einsum dense replacement complete.")
 
             if build:
                 # build the project

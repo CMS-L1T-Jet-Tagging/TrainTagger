@@ -128,48 +128,32 @@ class LEAFformerHGQ2(HGQ2Model):
         bn_mom = 0.75
 
         with betascope, scope0, scope1:
-                inp = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='basic_input')
-                emb = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(inp)
+            inp = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='basic_input')
+            emb = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(inp)
 
-                with mhaconfig:
-                    xa = QMultiHeadAttentionT(numheads, FF_DIM, dropout=0.0)(emb, emb)
+            with mhaconfig:
+                xa = QMultiHeadAttentionT(numheads, FF_DIM, dropout=0.0)(emb, emb)
 
-                xa = xf = QAdd()([emb, xa])
-                xf = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(xf)
-                xf = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(xf)
-                x = QAdd()([xa, xf])
+            xa = xf = QAdd()([emb, xa])
+            xf = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(xf)
+            xf = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(xf)
+            x = QAdd()([xa, xf])
 
-                x = GlobalAveragePooling1D()(x)
-                #jetID branch, 3 layer MLP
+            x = GlobalAveragePooling1D()(x)
+            
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
+            jet_id = Activation('softmax', name='jet_id_output')(jet_id)
 
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
-                jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
-                jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
 
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
-                pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
-
-                #Define the model using both branches
-                self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
-                print(self.jet_model.summary())
-                self.results_dict['num_parameters'] = self.jet_model.count_params()
-
-    # Redefine save and load for HGQ due to needing h5 format
-    @JetTagModel.save_decorator
-    def save(self, out_dir):
-        # Export the model
-        #model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
-        os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
-        export_path = os.path.join(out_dir, "model/saved_model.keras")
-        self.jet_model.save(export_path)
-        print(f"Model saved to {export_path}")
-
-    @JetTagModel.load_decorator
-    def load(self, out_dir=None):
-        # Load model
-        self.jet_model = load_model(f"{out_dir}/model/saved_model.keras")
+            #Define the model using both branches
+            self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
+            print(self.jet_model.summary())
+            self.results_dict['num_parameters'] = self.jet_model.count_params()
 
     def firmware_convert(self, firmware_dir: str, build: bool = False):
             """Run the hls4ml model conversion
@@ -188,12 +172,7 @@ class LEAFformerHGQ2(HGQ2Model):
             config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
-
-            # config['LayerName']['model_input']['Precision']['result'] = self.firmware_config['input_precision']
-            # config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
-            # config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
-
-
+            
             # Write HLS
             self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
                 self.jet_model,
@@ -203,9 +182,9 @@ class LEAFformerHGQ2(HGQ2Model):
                 hls_config=config,
                 output_dir=f'{hls4ml_outdir}',
                 part= self.firmware_config['fpga_part'],
-                # namespace='hls4ml_'+self.firmware_config['project_name'],
-                # write_weights_txt=False,
-                # write_emulation_constants=True,
+                namespace='hls4ml_'+self.firmware_config['project_name'],
+                write_weights_txt=False,
+                write_emulation_constants=True,
             )
 
             # Compile the project
@@ -215,54 +194,6 @@ class LEAFformerHGQ2(HGQ2Model):
             print("Saving default config as config.json ...")
             with open(hls4ml_outdir + '/config.json', 'w') as fp:
                 json.dump(config, fp)
-
-
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'r') as f:
-                content = f.read()
-
-            old_text = 'nnet::add<quantizer_t, quantizer_1_t, q_add_t, config30>(layer28_out, layer29_out, layer30_out); // q_add'
-            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
-                    auto layer29_index = ii % 16;
-                    layer30_out[ii] = layer28_out[ii] + layer29_out[layer29_index];
-                }"""
-
-            content = content.replace(old_text, new_text)
-
-            old_text = 'nnet::add<quantizer_2_t, quantizer_3_t, q_add_1_t, config39>(layer37_out, layer38_out, layer39_out); // q_add_1'
-            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
-                    auto layer38_index = ii % 16;
-                    layer39_out[ii] = layer37_out[ii] + layer38_out[layer38_index];
-                }"""
-
-            content = content.replace(old_text, new_text)
-
-            old_text = 'nnet::add<quantizer_4_t, quantizer_5_t, q_add_2_t, config48>(layer46_out, layer47_out, layer48_out); // q_add_2'
-            new_text = """for (int ii = 0; ii < 16 * 16; ii++) {
-                    auto layer47_index = ii % 16;
-                    layer48_out[ii] = layer46_out[ii] + layer47_out[layer47_index];
-                }"""
-
-            content = content.replace(old_text, new_text)
-
-            with open(hls4ml_outdir+'/firmware/'+self.firmware_config['project_name']+'.cpp', 'w') as f:
-                f.write(content)
-
-            print("cpp replacement complete")
-
-            old_text = '#pragma HLS ARRAY_PARTITION variable = out_tpose complete'
-            new_text = """#pragma HLS ARRAY_PARTITION variable = out_tpose complete
-                          #pragma HLS inline recursive
-                        """
-
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'r') as f:
-                content = f.read()
-
-            content = content.replace(old_text, new_text)
-
-            with open(hls4ml_outdir+'/firmware/nnet_utils/nnet_einsum_dense.h', 'w') as f:
-                f.write(content)
-
-            print("einsum dense replacement complete.")
 
             if build:
                 # build the project

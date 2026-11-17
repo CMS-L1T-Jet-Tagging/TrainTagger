@@ -30,7 +30,7 @@ training_config :
   learning_rate : 0.003
   validation_split : 0.1
 
-  loss_weights : [1,1]
+  loss_weights : [1,65]
 
   target_ebops : 500000
 
@@ -47,5 +47,3 @@ firmware_config:
   fpga_part : 'xcvu13p-flga2577-2-e'
 
   project_name: 'L1TSC4NGJetModel_JL_HGQ'
-
-  split: False

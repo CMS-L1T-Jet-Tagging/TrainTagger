@@ -56,7 +56,6 @@ class HGQ2Model(JetTagModel):
     @JetTagModel.save_decorator
     def save(self, out_dir):
         # Export the model
-        #model_export = tfmot.sparsity.keras.strip_pruning(self.jet_model)
         os.makedirs(os.path.join(out_dir, 'model'), exist_ok=True)
         export_path = os.path.join(out_dir, "model/saved_model.keras")
         self.jet_model.save(export_path)

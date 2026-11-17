@@ -140,7 +140,7 @@ class LEAFformerHGQ2(HGQ2Model):
             x = QAdd()([xa, xf])
 
             x = GlobalAveragePooling1D()(x)
-            
+
             jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
             jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
             jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
@@ -172,7 +172,7 @@ class LEAFformerHGQ2(HGQ2Model):
             config["Model"]["Strategy"]="distributed_arithmetic"
             config["Model"]["ReuseFactor"]=1
             config['IOType'] = 'io_parallel'
-            
+
             # Write HLS
             self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
                 self.jet_model,

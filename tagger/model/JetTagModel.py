@@ -300,7 +300,6 @@ class JetModelFactory:
         """Factory command to create the Jet Tag Model"""
 
         if name not in cls.registry:
-            raise RuntimeError( f"Module {MODEL_MODULES[name]} was imported but did not register '{name}'")
             if name not in MODEL_MODULES:
                 available = sorted(set(cls.registry) | set(MODEL_MODULES))
                 raise ValueError(f"Unknown model '{name}'. Available: {available}")

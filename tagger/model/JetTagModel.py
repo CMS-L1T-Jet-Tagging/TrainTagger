@@ -278,7 +278,7 @@ class JetModelFactory:
     """ Internal registry for available Jet Tag Models """
 
 
-    
+
     @classmethod
     def register(cls, name: str):
         """Decorator for registering new jet tag models
@@ -305,7 +305,7 @@ class JetModelFactory:
                 available = sorted(set(cls.registry) | set(MODEL_MODULES))
                 raise ValueError(f"Unknown model '{name}'. Available: {available}")
             importlib.import_module(MODEL_MODULES[name])
-        
+
         jettag_class = cls.registry[name]
         model = jettag_class(folder, **kwargs)
 

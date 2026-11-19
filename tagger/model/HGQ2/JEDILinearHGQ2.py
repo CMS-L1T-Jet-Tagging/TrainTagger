@@ -121,6 +121,8 @@ class JEDILinearHGQ2(HGQ2Model):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
+            
+            print(f"Warning: this firmware convert will not produce a bit accurate emulation and will fail when synthesising")
 
             # Load the testing data
             test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)

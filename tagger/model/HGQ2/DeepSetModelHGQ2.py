@@ -152,11 +152,14 @@ class DeepSetModelHGQ2(HGQ2Model):
             # Check that the input layers in the model match the input_precision keys in the firmware config
             input_layer_names = [layer.name for layer in self.jet_model.layers if isinstance(layer, keras.layers.InputLayer)]
             assert set(input_layer_names) == set(self.firmware_config['input_precision'].keys())
-
+            
             config["LayerName"]["jet_id_output"]["Precision"]["result"] = self.firmware_config['class_precision']
             config["LayerName"]["jet_id_output"]["Implementation"] = "stable"
             config["LayerName"]["pT_output"]["Precision"]["result"] = self.firmware_config['reg_precision']
-            config["LayerName"]["pT_output"]["Implementation"] = "latency"
+            config["LayerName"]["pT_output"]["Implementation"] = "stable"
+            
+            config['LayerName']['jet_id_output']['Precision']['table']  = 'fixed<24,8,TRN,WRAP,0>'
+            config['LayerName']['jet_id_output']['TableSize']           = 8192
 
             # Write HLS
             self.hls_jet_model = hls4ml.converters.convert_from_keras_model(

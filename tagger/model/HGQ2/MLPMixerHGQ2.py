@@ -115,7 +115,7 @@ class MLPMixerHGQ2(HGQ2Model):
             """
 
             print(f"Warning: this firmware convert will not produce a bit accurate emulation and will fail when synthesising")
-            
+
             test_dict = np.load(f"{self.output_directory}/testing_data/test_dict.npz", allow_pickle=False)
             test_dict = {k: test_dict[k] for k in test_dict.files}
             prepared_inputs = self.prepare_inputs(test_dict)[0]

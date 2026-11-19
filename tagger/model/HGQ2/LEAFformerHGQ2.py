@@ -162,7 +162,7 @@ class LEAFformerHGQ2(HGQ2Model):
                 firmware_dir (str): Where to save the firmware
                 build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
             """
-            
+
             print(f"Warning: this firmware convert will not produce a bit accurate emulation and will fail when synthesising")
 
             # Remove the old directory if it exists

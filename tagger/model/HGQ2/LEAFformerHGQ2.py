@@ -106,7 +106,7 @@ class LEAFformerHGQ2(HGQ2Model):
 
     def build_model(self, inputs_shape, outputs_shape):
 
-        model.results_dict['model_seed'] = initialise_tensorflow(self.run_config['num_threads'])
+        self.results_dict['model_seed'] = initialise_tensorflow(self.run_config['num_threads'])
 
         scope0 = QuantizerConfigScope(k0=1, b0=8, i0=1, br=MonoL1(1e-8), overflow_mode='WRAP')
 

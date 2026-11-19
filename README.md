@@ -173,7 +173,7 @@ Reference on conda environment here: https://docs.conda.io/projects/conda/en/lat
 
 # Adding a new model
 To add a new model class to the repo there are a number of steps needed:
-First create a file MyModel.py in the tagger/model directory
+First create a file MyModel.py in the tagger/model/subfolder directory
 This python script must contain a uniquely named model class that inherits from JetTagModel and is registered with the model factory:
 ```
 @JetModelFactory.register('MyModel')
@@ -209,9 +209,9 @@ firmware_convert(firmware_dir, build)
 ```
 
 
-Secondly, add your model to the `tagger/model/__init__.py` as `from tagger.model.MyModel import MyModel`
+Secondly, add your model to the tagger/model/model_modules.py MODEL_MODULES dictionary of the form "MyModel" : "tagger.model.subfolder.MyModel"
 
-Finally, add your config yaml to `tagger/model/configs`
+Finally, add your config yaml to `tagger/model/configs/subfolder`
 
 The config must follow in style to the others present and contains your model hyperparameters. The hyperparameters are automatically loaded when the model is created either from the original yaml or from a saved model folder.
 They are accessed in your model class with, for example, `self.model_config['name']`. The internal hyperparameters in each dictionary are for you to decide and access when building and compiling your model. Below is the minimum requirements for your yaml config:
@@ -246,7 +246,7 @@ firmware_config:
 To train your new model just specify the new yaml when training e.g.
 
 ```
-python tagger/train/train.py -y tagger/model/configs/mymodel.yaml -o output/mymodel
+python tagger/train/train.py -y tagger/model/configs/subfolder/mymodel.yaml -o output/mymodel
 ```
 
 Your yaml file will be validated in the pre-commit-hooks. If your config adds extra parameters that are necessary for your model variant to run add these variables in the tagger/model/configs/scheme.py file with a new elif path for your specific model type.

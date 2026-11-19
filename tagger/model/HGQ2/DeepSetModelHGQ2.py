@@ -52,7 +52,7 @@ class DeepSetModelHGQ2(HGQ2Model):
 
     def build_model(self, inputs_shape, outputs_shape):
 
-        initialise_tensorflow(self.run_config['num_threads'])
+        model.results_dict['model_seed'] = initialise_tensorflow(self.run_config['num_threads'])
 
         scope0 = QuantizerConfigScope(default_q_type='kbi',
                                       b0=7,

@@ -76,7 +76,7 @@ class DeepSetModel(QKerasModel):
             aggregator: String that specifies the type of aggregator to use after the conv1D net.
         """
 
-        initialise_tensorflow(self.run_config['num_threads'])
+        model.results_dict['model_seed'] = initialise_tensorflow(self.run_config['num_threads'])
 
         self.common_args = {
             'kernel_quantizer': quantized_bits(

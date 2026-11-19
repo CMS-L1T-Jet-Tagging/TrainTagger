@@ -128,7 +128,7 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
 def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
-    data_train, data_test, class_labels, input_vars, jet_vars, extra_vars = load_data("training_data/", percent, model)
+    data_train, data_test, class_labels, input_vars, jet_vars, extra_vars = load_data("training_data/", percent, model,save_seed=True)
     input_vars = [var for var in input_vars if var in model.input_config['basic_input_config']] # keep only the input variables that are in the model's input config
     jet_vars = [var for var in jet_vars if var in model.input_config['jet_features']]
     model.set_labels(

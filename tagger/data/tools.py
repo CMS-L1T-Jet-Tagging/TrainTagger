@@ -409,7 +409,7 @@ def constituents_mask(x, features_dim):
 
     return mask
 
-def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
+def load_data(outdir, percentage, model, test_ratio=0.1, fields=None, save_seed=False):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -438,6 +438,8 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
 
     seed = np.random.randint(2**32 - 1)
     print("my data loading seed is:", seed)
+    if save_seed:
+        model.results_dict['data_seed'] = seed
     # Collect the file paths for the chunks to load
     rng = np.random.default_rng(seed)
     sel = np.sort(rng.choice(total_chunks, chunks_to_load, replace=False))

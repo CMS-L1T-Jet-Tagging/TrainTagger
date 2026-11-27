@@ -185,6 +185,196 @@ Loss per epoch of ``loss`` (a Keras history key such as jet_id_output_loss), on 
 Mean |SHAP value| per output and input feature, for ``branch`` classification or regression.\
 shap.GradientExplainer on the first `SHAP_N_JETS = 10` test jets (also the background), with seed `SHAP_SEED = 1`, so the same model always gives the same values. Per jet the values are summed over candidates, then |.| is averaged over jets. Fields ``values`` (outputs x features), ``features``, ``outputs`` (class names, or ``Regression``).
 
+### 1.4 Tau trigger seeds
+
+#### Rate grid
+
+##### `tauRateGrid(seed)`
+
+MinBias rate (kHz) of a tau seed on a grid of thresholds (config TAU_SCANS <seed>_pt and <seed>_nn). Fields ``pt`` (minimum pT threshold, GeV), ``nn`` (score threshold) and ``rate``, one entry per grid point.\
+Scores and pT are the tagger's: for the network the class scores and the regressed pT, for -m cmssw the NN PUPPI tau score and pT. The candidates are the jets with the highest score that pass the pT threshold and |eta| < `TAU_ETA_CUT = 2.172`; di-tau seeds also require deltaR > `TAU_PAIR_MIN_DR = 0.5` between the two and cut on the smaller pT and score. diTauTopo ranks jets by tau score and cuts on the pair score: for the network the topology score (tau+_1 tau-_2 + tau-_1 tau+_2) / (that + bkg_1 bkg_2), for the CMSSW L1 baseline (no tau charge) the smaller NN PUPPI tau score.\
+`seed`: singleTau, diTau, diTauTopo
+
+#### Working point
+
+##### `tauWpLine(seed)`
+
+Working point line of a tau seed: the tauRateGrid(seed) points within rate_range of the target rate (config TAU_SEEDS), as fields ``target_pt`` and ``target_nn``, and their linear interpolation (extrapolated) on 100 pT values, fields ``pt`` and ``nn``. For the CMSSW L1 baseline only the singleTau line is its working point; diTau and diTauTopo use the fixed `CMSSW_WPS["tau"] = 0.22` score (see tauWp).\
+`seed`: singleTau, diTau, diTauTopo
+
+##### `tauWp(seed)`
+
+Score threshold of a di-tau seed at the CMSSW pT threshold `CMSSW_WPS["tau_l1_pt"] = 34`: for the network interpolated on tauWpLine(seed), for the CMSSW L1 baseline (-m cmssw) the fixed `CMSSW_WPS["tau"] = 0.22`.\
+`seed`: diTau, diTauTopo
+
+#### Rate at the working point
+
+##### `tauRateVsPt(seed, cut)`
+
+MinBias rate (kHz) versus a pT threshold (config TAU_SCANS <seed>_rate_pt) for a di-tau seed. Fields ``pt``, ``rate`` and ``err`` (sqrt(N) of the passing events).\
+``cut`` raw: jets without identification, uncorrected jet pT (the same for every model); wp: the tagger's pT and score (network or CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau: jets with |eta| < `DITAU_RATE_ETA_CUT = 2.5`, an event passes if any jet passes; the rate is normalised to the events with at least one such jet. diTauTopo: normalised to all MinBias events, the smaller pT of the two leading candidates with |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`; raw takes the two leading jets in pT, wp the two highest tau scores (CMSSW L1 baseline: the two leading jets in pT, as in the old script) and cuts on the pair score (see tauRateGrid).\
+`seed`: diTau, diTauTopo; `cut`: raw, wp
+
+#### Signal efficiency
+
+##### `tauEffVsGenPt(seed, cut, region)`
+
+Efficiency of a tau seed on gen-matched signal taus versus gen tau pT, per jet. Fields ``edges``, ``num``, ``den``, ``eff`` and Clopper-Pearson ``err_low``, ``err_up``.\
+``seed`` is diTau (pT > `CMSSW_WPS["tau_l1_pt"] = 34`, score > tauWp(diTau)) or singleTau (pT > `TAU_SEEDS["singleTau"]["wp_pt"] = 75.0`, score above the working point line there). ``cut`` wp (pT and score) or pt (the pT cut alone, the upper bound of the identification). The pT is the tagger's: for the network the seeded cone jet with pT regression, for the CMSSW L1 baseline the NN PUPPI tau pT. ``region`` is barrel (|eta| < `BARREL_ETA = 1.5`) or tau_endcap (BARREL_ETA < |eta| < `TAU_ETA_CUT = 2.172`), on the gen eta.\
+`seed`: singleTau, diTau; `cut`: pt, wp; `region`: barrel, tau_endcap
+
+##### `tauTotalEff(seed, cut, region)`
+
+Integrated efficiency of tauEffVsGenPt(seed, cut, region): passing / denominator jets.\
+`seed`: singleTau, diTau; `cut`: pt, wp; `region`: barrel, tau_endcap
+
+##### `singleTauEffVsThreshold(cut)`
+
+Single tau efficiency versus the pT threshold, with the score cut of the working point line at each threshold. Fields ``pt``, ``eff``, ``err`` (sqrt(N)/den).\
+Gen taus with |eta| < `TAU_ETA_CUT = 2.172`, gen pT > `TAU_GEN_PT_MIN["singleTau"] = 5.0` and deltaR < `TAU_GEN_MATCH_DR = 0.4`, and gen pT above the threshold. Thresholds: config `TAU_SCANS["singleTau_eff_pt"] = [[30, 150, 2]]`; thresholds with fewer than `SINGLE_TAU_MIN_GEN_TAUS = 50` such taus get 0. ``cut`` wp (pT and score) or pt (pT alone). As in the old code the first point (30 GeV) is a placeholder with efficiency 0.\
+`cut`: pt, wp
+
+##### `diTauTopoEffVsGenPt2d`
+
+Di-tau topology seed efficiency in bins of (gen pT of tau 1, gen pT of tau 2), on signal events with two gen-matched taus (gen pT > 1 GeV). The two candidates are the highest tau scores among the jets with pT > `CMSSW_WPS["tau_l1_pt"] = 34` (CMSSW L1 baseline: among all jets); both need |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`, the smaller pT > tau_l1_pt and the pair score > tauWp(diTauTopo) (see tauRateGrid). Fields ``edges``, ``num``, ``den``, ``eff`` (NaN where den = 0), and the normalised gen pT1 and gen pT2 distributions of all signal events with two jets, ``genpt1_frac`` and ``genpt2_frac`` (for the ratio map of the network against the CMSSW L1 baseline).
+
+##### `diTauTopoTotalEff`
+
+Integrated di-tau topology efficiency of diTauTopoEffVsGenPt2d: passing events over all events with two gen-matched taus.
+
+##### `diTauTopoTotalEffErr`
+
+sqrt(N) uncertainty of diTauTopoTotalEff.
+
+### 1.5 HH trigger seeds
+
+#### HH -> 4b: rate grid
+
+##### `bbbbRateGrid(score, sel)`
+
+MinBias rate (kHz) of the HH -> 4b seed HT > ht and (sum of the b scores of the 4 leading jets) > nn, on a grid of config `HH_SCANS["bbbb_ht"] = [[0, 500, 2], 10000]` and bbbb_nn. Fields ``ht``, ``nn``, ``rate``. The b score is the tagger's: the network's class score (raw or vs_qg), or for -m cmssw the CMSSW L1 b-tag score (no score counts as 0). Network jets with pT < `JET_PT_CUT = 15` or |eta| > `JET_ETA_CUT = 2.4` score 0; HT sums jets with pT > `HT_JET_PT_CUT = 30` and |eta| < JET_ETA_CUT. Events need 4 jets.\
+`score`: raw, vs_qg; `sel`: all, sel
+
+#### HH -> 4b: working point
+
+##### `bbbbWpLine(score, sel)`
+
+The bbbbRateGrid(score, sel) points within `BBBB_RATE_RANGE = 0.5` of `BBBB_TARGET_RATE = 14`. Fields ``ht``, ``nn``. For -m cmssw for comparison only: its working point is the fixed CMSSW_WPS one.\
+`score`: raw, vs_qg; `sel`: all, sel
+
+##### `bbbbWpHt(score, sel)`
+
+HT threshold (GeV) of the HH -> 4b working point: of the HT values of config `HH_SCANS["bbbb_wp_ht"] = [[150, 250, 5]]` with the b score sum cut interpolated on bbbbWpLine(score, sel), the one with the highest HH -> 4b efficiency. For -m cmssw the fixed `CMSSW_WPS["btag_l1_ht"] = 220`.\
+`score`: raw, vs_qg; `sel`: all, sel
+
+##### `bbbbWpNn(score, sel)`
+
+b score sum threshold of the HH -> 4b working point at HT > bbbbWpHt(score, sel). For -m cmssw the fixed `CMSSW_WPS["btag"] = 2.32`.\
+`score`: raw, vs_qg; `sel`: all, sel
+
+#### HH -> 4b: rate at the working point
+
+##### `bbbbOrRate(score, sel)`
+
+MinBias rate (kHz) of the HH -> 4b working point OR the HT-only trigger.\
+`score`: raw, vs_qg; `sel`: all, sel
+
+#### HH -> 4b: signal efficiency
+
+##### `bbbbEffVsGenHt(trigger, score, sel)`
+
+HH -> 4b efficiency versus generated HT. ``trigger``: wp (the model at its working point, HT > bbbbWpHt and b score sum > bbbbWpNn), htOnly (HT > htOnlyCut(bbbb)), wpPure (wp and not htOnly), wpOrHtOnly. Numerator: gen HT of jets with gen pT > `HT_JET_PT_CUT = 30` and |gen eta| < `JET_ETA_CUT = 2.4`, events with 4 jets; denominator: gen HT of all jets of all events (as the old code). Fields as tauEffVsGenPt.\
+`trigger`: wp, wpPure, htOnly, wpOrHtOnly; `score`: raw, vs_qg; `sel`: all, sel
+
+##### `bbbbEffVsGenMhh(trigger, score, sel)`
+
+HH -> 4b efficiency versus generated m_HH; triggers as bbbbEffVsGenHt. Needs genHH_mass.\
+`trigger`: wp, wpPure, htOnly, wpOrHtOnly; `score`: raw, vs_qg; `sel`: all, sel
+
+##### `bbbbEff(trigger, score, sel)`
+
+Integrated HH -> 4b efficiency of a trigger (as bbbbEffVsGenHt): passing events over all signal events.\
+`trigger`: wp, wpPure, htOnly, wpOrHtOnly; `score`: raw, vs_qg; `sel`: all, sel
+
+##### `bbbbEffFourJets(trigger, score, sel)`
+
+Integrated HH -> 4b efficiency of a trigger over the signal events with at least 4 jets (all signal events: bbbbEff).\
+`trigger`: wp, wpPure, htOnly, wpOrHtOnly; `score`: raw, vs_qg; `sel`: all, sel
+
+#### HH -> bb tau tau: rate grid
+
+##### `bbttRateGrid(sel)`
+
+MinBias rate (kHz) and HH -> bb tau tau efficiency of HT > `BBTT_HT_CUT = 220` and b sum > bb and tau pair score > tt, on a (bb, tt) grid, for both score types. Fields ``bb``, ``tt``, ``rate_raw``, ``rate_qg``, ``eff_raw``, ``eff_qg``, on the edges of config `HH_SCANS["bbtt_nn"] = [[0.01, 0.9, 0.01], 1.0, 2.0]`. Only points with a rate within `BBTT_GRID_KEEP_WINDOW = 2` of `BBTT_TARGET_RATE = 14` or of the rounded bbttRun3SeedRate (for raw or qg) are kept. Events need 4 jets.\
+`sel`: tau, all
+
+#### HH -> bb tau tau: working point
+
+##### `bbttWpLine(score, sel, rate)`
+
+The bbttRateGrid(sel) points within `BBTT_RATE_RANGE = 0.85` of a rate: ``rate`` seed (the rounded bbttRun3SeedRate) or target (`BBTT_TARGET_RATE = 14`). Without any, the point with the closest lower rate. Fields ``bb``, ``tt``.\
+`score`: raw, qg; `sel`: tau, all; `rate`: seed, target
+
+##### `bbttWpBb(score, sel, rate)`
+
+b sum threshold of the bb tau tau working point: of the bbttWpLine(score, sel, rate) points, the one with the highest HH -> bb tau tau efficiency.\
+`score`: raw, qg; `sel`: tau, all; `rate`: seed, target
+
+##### `bbttWpTt(score, sel, rate)`
+
+Tau pair score threshold of the bb tau tau working point (see bbttWpBb).\
+`score`: raw, qg; `sel`: tau, all; `rate`: seed, target
+
+##### `bbttWpRate(score, sel, rate)`
+
+Rate (kHz) the bb tau tau working point was picked at: the requested one, or the closest lower grid rate rounded to 0.1 kHz when no grid point is within range.\
+`score`: raw, qg; `sel`: tau, all; `rate`: seed, target
+
+#### HH -> bb tau tau: signal efficiency
+
+##### `bbttEffVsGenHt(trigger, score, sel)`
+
+HH -> bb tau tau efficiency versus generated HT (all jets). ``trigger``: nn (working point at the rate of the Run-3-like seed), nnTarget (at `BBTT_TARGET_RATE = 14`), htOnly (HT > htOnlyCut(bbtt)), nnTargetPure (nnTarget and not htOnly). Numerator: events with 4 jets; denominator: all signal events. Fields as tauEffVsGenPt.\
+`trigger`: nn, nnTarget, nnTargetPure, htOnly; `score`: raw, qg; `sel`: tau, all
+
+##### `bbttEffVsGenMhh(trigger, score, sel)`
+
+HH -> bb tau tau efficiency versus generated m_HH; triggers as bbttEffVsGenHt. Needs genHH_mass.\
+`trigger`: nn, nnTarget, nnTargetPure, htOnly; `score`: raw, qg; `sel`: tau, all
+
+##### `bbttEff(trigger, score, sel)`
+
+Integrated HH -> bb tau tau efficiency of a trigger (as bbttEffVsGenHt): passing events over all signal events.\
+`trigger`: nn, nnTarget, nnTargetPure, htOnly; `score`: raw, qg; `sel`: tau, all
+
+#### HH -> bb tau tau: CMSSW reference seeds (-m cmssw)
+
+##### `bbttRun3SeedRate`
+
+MinBias rate (kHz) of the Run-3-like bb tau tau seed (config `BBTT_RUN3_SEED = {'ht': 380, 'ht_with_taus': 380, 'tau_pt_with_ht': 26, 'tau_pt': 26, 'tau_eta': 2.1}`), with the CMSSW taus (score >= `CMSSW_WPS["tau"] = 0.22`), events with at least 2 jets. The bbtt working points are derived at this rate rounded to 0.1 kHz, and at `BBTT_TARGET_RATE = 14`.
+
+##### `bbttRefEffVsGenHt(trigger)`
+
+HH -> bb tau tau efficiency of a CMSSW reference seed versus generated HT (all jets), with the NN PUPPI taus (jet_tauscore, jet_taupt). ``trigger``: run3 (the Run-3-like seed, see bbttRun3SeedRate) or ditau (the CMSSW di-tau seed: two taus with pT > `CMSSW_WPS["tau_l1_pt"] = 34`, score > `CMSSW_WPS["tau"] = 0.22`, |eta| < `CMSSW_WPS["tau_eta"] = 2.1`). Numerator: events with 4 jets; denominator: all signal events. Fields as tauEffVsGenPt.\
+`trigger`: run3, ditau
+
+##### `bbttRefEff(trigger)`
+
+Integrated efficiency of a CMSSW reference seed (as bbttRefEffVsGenHt): passing events over all signal events.\
+`trigger`: run3, ditau
+
+#### HH: HT-only trigger and gen distributions
+
+##### `htOnlyCut(seed)`
+
+HT threshold (GeV) of the HT-only trigger at the seed's target rate: the lowest grid HT whose MinBias rate is within the range of the target, else the one with the closest lower rate. ``seed`` bbbb (HT of jets with pT > `HT_JET_PT_CUT = 30` and |eta| < `JET_ETA_CUT = 2.4`, the HT edges of bbbbRateGrid, range `BBBB_HT_ONLY_RATE_RANGE = 0.8` around `BBBB_TARGET_RATE = 14`) or bbtt (HT of all jets, the HT edges of bbttRateGrid, range `BBTT_RATE_RANGE = 0.85` around `BBTT_TARGET_RATE = 14`). Events need 4 jets.\
+`seed`: bbbb, bbtt
+
+##### `hhGenHist(sample, quantity)`
+
+Normalised distribution of a generated quantity of the signal events with at least 4 jets, in config `HH_GEN_HIST_EDGES = [[0, 800, 40]]` (values clipped to `HH_GEN_HIST_MAX = 800`). ``sample`` hh4b or hhbbtt; ``quantity`` ht (hh4b: jets with pT > `HT_JET_PT_CUT = 30` and |eta| < `JET_ETA_CUT = 2.4`; hhbbtt: all jets) or mhh. Fields ``edges``, ``counts``.\
+`sample`: hh4b, hhbbtt; `quantity`: ht, mhh
+
 ## 2. Collections
 
 ##### `collections.ci` `= ['train', 'jetClassifier', 'jetPt']`
@@ -198,6 +388,30 @@ Jet classification on the test split
 ##### `collections.jetPt` `= ['responseVsGenPt', 'responseVsPt', 'resolutionVsGenPt', 'resolutionVsPt', 'ptHist', 'shapImportance']`
 
 Jet pT regression on the test split
+
+##### `collections.seedBbbb` `= ['htOnlyCut', 'hhGenHist', 'bbbbRateGrid', 'bbbbWpLine', 'bbbbWpHt', 'bbbbWpNn', 'bbbbOrRate', 'bbbbEffVsGenHt', 'bbbbEffVsGenMhh', 'bbbbEff', 'bbbbEffFourJets']`
+
+HH -> 4b seed per BBBB_VARIANTS (score, sel)
+
+##### `collections.seedBbtt` `= ['bbttRun3SeedRate', 'htOnlyCut', 'hhGenHist', 'bbttRateGrid', 'bbttWpLine', 'bbttWpBb', 'bbttWpTt', 'bbttWpRate', 'bbttEffVsGenHt', 'bbttEff', 'bbttEffVsGenMhh']`
+
+HH -> bb tau tau seed per BBTT_VARIANTS (score, sel)
+
+##### `collections.seedDiTau` `= ['tauRateGrid', 'tauWpLine', 'tauWp', 'tauRateVsPt', 'tauEffVsGenPt', 'tauTotalEff']`
+
+Di-tau seed
+
+##### `collections.seedDiTauTopo` `= ['tauRateGrid', 'tauWpLine', 'tauWp', 'tauRateVsPt', 'diTauTopoEffVsGenPt2d', 'diTauTopoTotalEff', 'diTauTopoTotalEffErr']`
+
+Di-tau topology seed
+
+##### `collections.seedSingleTau` `= ['tauRateGrid', 'tauWpLine', 'singleTauEffVsThreshold', 'tauEffVsGenPt', 'tauTotalEff']`
+
+Single tau seed
+
+##### `collections.seeds` `= ['seedSingleTau', 'seedDiTau', 'seedDiTauTopo', 'seedBbbb', 'seedBbtt']`
+
+All trigger seed collections
 
 ##### `collections.train` `= ['lossHistory', 'shapImportance']`
 

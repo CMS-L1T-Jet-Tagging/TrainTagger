@@ -141,6 +141,140 @@ def train(config, info):
 
 
 @vm.collection()
+def seedSingleTau(config, info):
+    """Single tau seed: MinBias rate grid and working point line,
+    efficiency versus threshold, and efficiency versus gen pT at
+    TAU_SEEDS singleTau wp_pt in barrel and tau endcap, each at the
+    working point (wp) and with the pT cut alone (pt). Run it for the
+    network and for -m cmssw. Needs MINBIAS_SAMPLE and
+    SIGNAL_SAMPLES[TAU_SIGNAL]."""
+    out = ["tauRateGrid(singleTau)", "tauWpLine(singleTau)"]
+    out += [f"singleTauEffVsThreshold({c})" for c in ("pt", "wp")]
+    for r in ("barrel", "tau_endcap"):
+        for c in ("pt", "wp"):
+            out += [
+                f"tauEffVsGenPt(singleTau, {c}, {r})",
+                f"tauTotalEff(singleTau, {c}, {r})",
+            ]
+    return out
+
+
+@vm.collection()
+def seedDiTau(config, info):
+    """Di-tau seed: MinBias rate grid, working point, rate versus pT
+    threshold, and efficiency versus gen pT in barrel and tau endcap.
+    Needs MINBIAS_SAMPLE and SIGNAL_SAMPLES[TAU_SIGNAL].
+    """
+    out = ["tauRateGrid(diTau)", "tauWpLine(diTau)", "tauWp(diTau)"]
+    out += [f"tauRateVsPt(diTau, {c})" for c in ("raw", "wp")]
+    for r in ("barrel", "tau_endcap"):
+        for c in ("pt", "wp"):
+            out += [
+                f"tauEffVsGenPt(diTau, {c}, {r})",
+                f"tauTotalEff(diTau, {c}, {r})",
+            ]
+    return out
+
+
+@vm.collection()
+def seedDiTauTopo(config, info):
+    """Di-tau topology seed: MinBias rate grid, working point, rate
+    versus pT threshold, and efficiency in (gen pT1, gen pT2). Needs
+    MINBIAS_SAMPLE and SIGNAL_SAMPLES[TAU_SIGNAL].
+    """
+    out = [
+        "tauRateGrid(diTauTopo)",
+        "tauWpLine(diTauTopo)",
+        "tauWp(diTauTopo)",
+    ]
+    out += [f"tauRateVsPt(diTauTopo, {c})" for c in ("raw", "wp")]
+    return out + [
+        "diTauTopoEffVsGenPt2d",
+        "diTauTopoTotalEff",
+        "diTauTopoTotalEffErr",
+    ]
+
+
+@vm.collection()
+def seedBbbb(config, info):
+    """HH -> 4b seed per BBBB_VARIANTS (score, sel): MinBias rate grid
+    and working point line, HT-only threshold, working point,
+    efficiencies versus gen HT and gen m_HH, integrated efficiencies and
+    the rate of the working point OR HT-only. For -m cmssw only the raw
+    score variants. Needs MINBIAS_SAMPLE and SIGNAL_SAMPLES hh4b."""
+    out = ["htOnlyCut(bbbb)", "hhGenHist(hh4b, ht)", "hhGenHist(hh4b, mhh)"]
+    for score, sel in config["BBBB_VARIANTS"]:
+        if info.pseudo == "cmssw" and score != "raw":
+            continue
+        v = f"{score}, {sel}"
+        out += [
+            f"bbbbRateGrid({v})",
+            f"bbbbWpLine({v})",
+            f"bbbbWpHt({v})",
+            f"bbbbWpNn({v})",
+            f"bbbbOrRate({v})",
+        ]
+        for t in ("wp", "wpPure", "htOnly"):
+            out += [f"bbbbEffVsGenHt({t}, {v})", f"bbbbEffVsGenMhh({t}, {v})"]
+        for t in ("wp", "wpPure", "htOnly", "wpOrHtOnly"):
+            out += [f"bbbbEff({t}, {v})", f"bbbbEffFourJets({t}, {v})"]
+    return out
+
+
+@vm.collection()
+def seedBbtt(config, info):
+    """HH -> bb tau tau seed per BBTT_VARIANTS (score, sel): the
+    Run-3-like seed rate, (bb, tt) rate grids, working points at the
+    seed rate and at BBTT_TARGET_RATE, HT-only threshold, and
+    efficiencies versus gen HT and gen m_HH. For -m cmssw (no tau
+    charge, no bbtt working point) the CMSSW reference seeds: the
+    Run-3-like seed rate and the run3 and ditau efficiencies. Needs
+    MINBIAS_SAMPLE and SIGNAL_SAMPLES hhbbtt."""
+    if info.pseudo == "cmssw":
+        return ["bbttRun3SeedRate"] + [
+            f"bbttRef{v}({t})"
+            for t in ("run3", "ditau")
+            for v in ("EffVsGenHt", "Eff")
+        ]
+    out = [
+        "bbttRun3SeedRate",
+        "htOnlyCut(bbtt)",
+        "hhGenHist(hhbbtt, ht)",
+        "hhGenHist(hhbbtt, mhh)",
+    ]
+    for score, sel in config["BBTT_VARIANTS"]:
+        v = f"{score}, {sel}"
+        out.append(f"bbttRateGrid({sel})")
+        for which in ("seed", "target"):
+            out += [
+                f"bbttWpLine({v}, {which})",
+                f"bbttWpBb({v}, {which})",
+                f"bbttWpTt({v}, {which})",
+                f"bbttWpRate({v}, {which})",
+            ]
+        for t in ("nn", "nnTarget", "nnTargetPure", "htOnly"):
+            out += [f"bbttEffVsGenHt({t}, {v})", f"bbttEff({t}, {v})"]
+        out += [
+            f"bbttEffVsGenMhh({t}, {v})"
+            for t in ("htOnly", "nnTarget", "nnTargetPure")
+        ]
+    return out
+
+
+@vm.collection()
+def seeds(config, info):
+    """All trigger seed collections. They share one MinBias load and one
+    model evaluation per sample."""
+    return [
+        "seedSingleTau",
+        "seedDiTau",
+        "seedDiTauTopo",
+        "seedBbbb",
+        "seedBbtt",
+    ]
+
+
+@vm.collection()
 def ci(config, info):
     """Everything CI plots: the union of all collections that can run in
     the CI pipeline."""

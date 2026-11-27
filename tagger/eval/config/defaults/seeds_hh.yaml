@@ -81,7 +81,6 @@ HH_SCANS:
 HH_GEN_HT_EDGES: [[0, 800, 20]]
 HH_GEN_MHH_EDGES: [[0, 1000, 20]]
 
-# Normalised gen distributions (hhGenHist): bins (GeV, ranges), values
-# clipped to HH_GEN_HIST_MAX
-HH_GEN_HIST_EDGES: [[0, 800, 40]]
-HH_GEN_HIST_MAX: 800
+# Normalised gen distributions (hhGenHist): bins (GeV, ranges, 0 to
+# 800); values above the last edge count in the last bin
+HH_GEN_HIST_EDGES: [[0, 840, 40]]

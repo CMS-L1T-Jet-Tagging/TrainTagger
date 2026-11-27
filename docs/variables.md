@@ -372,7 +372,7 @@ HT threshold (GeV) of the HT-only trigger at the seed's target rate: the lowest 
 
 ##### `hhGenHist(sample, quantity)`
 
-Normalised distribution of a generated quantity of the signal events with at least 4 jets, in config `HH_GEN_HIST_EDGES = [[0, 800, 40]]` (values clipped to `HH_GEN_HIST_MAX = 800`). ``sample`` hh4b or hhbbtt; ``quantity`` ht (hh4b: jets with pT > `HT_JET_PT_CUT = 30` and |eta| < `JET_ETA_CUT = 2.4`; hhbbtt: all jets) or mhh. Fields ``edges``, ``counts``.\
+Normalised distribution of a generated quantity of the signal events with at least 4 jets, in config `HH_GEN_HIST_EDGES = [[0, 840, 40]]` (values above the last edge in the last bin). ``sample`` hh4b or hhbbtt; ``quantity`` ht (hh4b: jets with pT > `HT_JET_PT_CUT = 30` and |eta| < `JET_ETA_CUT = 2.4`; hhbbtt: all jets) or mhh. Fields ``edges``, ``counts``.\
 `sample`: hh4b, hhbbtt; `quantity`: ht, mhh
 
 ### 1.6 FastPUPPI jets

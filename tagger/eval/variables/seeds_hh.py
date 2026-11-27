@@ -847,10 +847,10 @@ def hhGenHist(
 ):
     """Normalised distribution of a generated quantity of the signal
     events with at least 4 jets, in config HH_GEN_HIST_EDGES (values
-    clipped to HH_GEN_HIST_MAX). ``sample`` hh4b or hhbbtt;
+    above the last edge in the last bin). ``sample`` hh4b or hhbbtt;
     ``quantity`` ht (hh4b: jets with pT > HT_JET_PT_CUT and |eta| <
-    JET_ETA_CUT; hhbbtt: all jets) or mhh. Fields ``edges``,
-    ``counts``."""
+    JET_ETA_CUT; hhbbtt: all jets) or mhh. Fields ``edges``, ``counts``.
+    """
     sig = signal(run, sample)
     if quantity == "mhh":
         values = ak.firsts(
@@ -873,8 +873,8 @@ def hhGenHist(
 
 
 def _bkg_hist(config, values):
+    edges = expand_ranges(config, "HH_GEN_HIST_EDGES")
     counts, edges = np.histogram(
-        np.clip(np.asarray(values), 0, config["HH_GEN_HIST_MAX"]),
-        bins=expand_ranges(config, "HH_GEN_HIST_EDGES"),
+        np.clip(np.asarray(values), edges[0], edges[-1]), bins=edges
     )
     return {"edges": edges.astype(float), "counts": counts / np.sum(counts)}

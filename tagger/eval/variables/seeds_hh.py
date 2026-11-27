@@ -24,8 +24,7 @@ candidates with pT > BBTT_SEL_TAU_PT) or all (four leading jets with pT
 
 The tagger is the model's. For ``-m cmssw`` the bbbb seed uses the CMSSW
 L1 baseline b-tag score (jet_bjetscore, raw only) through the same code,
-without the network's jet pT and eta mask (as in the old bbbb.py), at
-the fixed working point CMSSW_WPS btag_l1_ht and btag. The bbtt seed
+at the fixed working point CMSSW_WPS btag_l1_ht and btag. The bbtt seed
 needs the network's tau charge, which the CMSSW L1 baseline does not
 have: for cmssw the bbtt variables are the CMSSW reference seeds instead
 (the Run-3-like and the di-tau seed, with the NN PUPPI taus). The
@@ -116,12 +115,11 @@ def _compute_bbbb_events(run, sample, score):
         ev.branch("jet_pt"), ev.branch("jet_eta_phys"), b, num_elements=4
     )
     cfg = run.config
-    if not is_cmssw(ev):  # the CMSSW score unmasked, as in the old bbbb.py
-        b = ak.where(
-            (jet_pt > cfg["JET_PT_CUT"]) & (abs(jet_eta) < cfg["JET_ETA_CUT"]),
-            b,
-            0,
-        )
+    b = ak.where(
+        (jet_pt > cfg["JET_PT_CUT"]) & (abs(jet_eta) < cfg["JET_ETA_CUT"]),
+        b,
+        0,
+    )
     bsum = sum(b[:, i] for i in range(4))
     ht = ak.sum(
         jet_pt[
@@ -142,14 +140,13 @@ def _compute_bbbb_events(run, sample, score):
 # -- HH -> 4b: rate grid -----------------------------------------------
 @vm.variable(inputs={"minbias_events", "model"}, kind="curve")
 def bbbbRateGrid(run, score: BbbbScore, sel: BbbbSel):
-    """MinBias rate (kHz) of the HH -> 4b seed HT > ht and (sum of
-    the b scores of the 4 leading jets) > nn, on a grid of config
-    HH_SCANS bbbb_ht and bbbb_nn. Fields ``ht``, ``nn``, ``rate``.
-    The b score is the tagger's: the network's class score (raw or
-    vs_qg), or for -m cmssw the CMSSW L1 b-tag score (no score counts
-    as 0). Network jets with pT < JET_PT_CUT or |eta| > JET_ETA_CUT
-    score 0; HT sums jets with pT > HT_JET_PT_CUT and |eta| <
-    JET_ETA_CUT. Events need 4 jets."""
+    """MinBias rate (kHz) of the HH -> 4b seed HT > ht and (sum of the b
+    scores of the 4 leading jets) > nn, on a grid of config HH_SCANS
+    bbbb_ht and bbbb_nn. Fields ``ht``, ``nn``, ``rate``. The b score is
+    the tagger's: the network's class score (raw or vs_qg), or for -m
+    cmssw the CMSSW L1 b-tag score (no score counts as 0). Jets with pT
+    < JET_PT_CUT or |eta| > JET_ETA_CUT score 0; HT sums jets with pT >
+    HT_JET_PT_CUT and |eta| < JET_ETA_CUT. Events need 4 jets."""
     e = _bbbb_events(run, "minbias", score)
     keep = _bbbb_default_selection(run.config, e["jet_pt"], e["jet_eta"], sel)
     scans = run.config["HH_SCANS"]

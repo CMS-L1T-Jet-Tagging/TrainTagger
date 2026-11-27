@@ -16,11 +16,10 @@ Every seed goes through the same stages, one section each below:
 
 The tagger is the model's: the network (class scores, regressed pT) or,
 for ``-m cmssw``, the CMSSW L1 baseline NN PUPPI tau (jet_tauscore,
-jet_taupt; not the emulation of our model), through the same code,
-except that its diTauTopo candidates are chosen as in the old
-diTaus_topo.py. Its singleTau working point is derived on its rate grid
-like the network's; for diTau and diTauTopo it has the fixed CMSSW_WPS
-tau score, as in the old scripts.
+jet_taupt; not the emulation of our model), through the same code. Its
+singleTau working point is derived on its rate grid like the network's;
+for diTau and diTauTopo it has the fixed CMSSW_WPS tau score, as in the
+old scripts.
 """
 
 from functools import partial
@@ -292,10 +291,10 @@ def tauRateVsPt(run, seed: DiTauSeed, cut: Literal["raw", "wp"]):
     jets with |eta| < DITAU_RATE_ETA_CUT, an event passes if any jet
     passes; the rate is normalised to the events with at least one such
     jet. diTauTopo: normalised to all MinBias events, the smaller pT of
-    the two leading candidates with |eta| < TAU_ETA_CUT and deltaR >
-    TAU_PAIR_MIN_DR; raw takes the two leading jets in pT, wp the two
-    highest tau scores (CMSSW L1 baseline: the two leading jets in pT,
-    as in the old script) and cuts on the pair score (see tauRateGrid).
+    the two leading candidates with
+    |eta| < TAU_ETA_CUT and deltaR > TAU_PAIR_MIN_DR; raw takes the two
+    leading jets in pT, wp the two highest tau scores and cuts on the
+    pair score (see tauRateGrid).
     """
     mb = minbias(run)
     minbias_rate = run.config["MINBIAS_RATE"]
@@ -360,7 +359,7 @@ def tauRateVsPt(run, seed: DiTauSeed, cut: Literal["raw", "wp"]):
         eta,
         phi,
         num_elements=2,
-        ordering_var=None if is_cmssw(mb) else rank,
+        ordering_var=rank,
         with_event_id=True,
     )
     g_parts, jet_pt, jet_eta, jet_phi = g[:-3], g[-3], g[-2], g[-1]
@@ -507,9 +506,7 @@ def _compute_topo_eff_counts(run):
     wp, pt_wp = run.get("tauWp(diTauTopo)"), wps["tau_l1_pt"]
     rank, corr_pt = tau_jets(sig, "diTau", labels(run, sig))
     parts, pair = topo_parts(sig, labels(run, sig))
-    # the CMSSW L1 baseline ranks all jets by its tau score, as in the
-    # old topo_eff
-    order = rank if is_cmssw(sig) else np.where(corr_pt < pt_wp, 0.0, rank)
+    order = np.where(corr_pt < pt_wp, 0.0, rank)
     g = sig.grouped(
         *parts, corr_pt, eta, phi, num_elements=2, ordering_var=order
     )
@@ -559,11 +556,11 @@ def diTauTopoEffVsGenPt2d(run):
     """Di-tau topology seed efficiency in bins of (gen pT of tau 1, gen
     pT of tau 2), on signal events with two gen-matched taus (gen pT > 1
     GeV). The two candidates are the highest tau scores among the jets
-    with pT > CMSSW_WPS tau_l1_pt (CMSSW L1 baseline: among all jets);
-    both need |eta| < TAU_ETA_CUT and deltaR > TAU_PAIR_MIN_DR, the
-    smaller pT > tau_l1_pt and the pair score > tauWp(diTauTopo) (see
-    tauRateGrid). Fields ``edges``, ``num``, ``den``, ``eff`` (NaN where
-    den = 0), and the normalised gen pT1 and
+    with pT > CMSSW_WPS tau_l1_pt; both need |eta| < TAU_ETA_CUT and
+    deltaR >
+    TAU_PAIR_MIN_DR, the smaller pT > tau_l1_pt and the pair score >
+    tauWp(diTauTopo) (see tauRateGrid). Fields ``edges``, ``num``,
+    ``den``, ``eff`` (NaN where den = 0), and the normalised gen pT1 and
     gen pT2 distributions of all signal events with two jets,
     ``genpt1_frac`` and ``genpt2_frac`` (for the ratio map of the
     network against the CMSSW L1 baseline).

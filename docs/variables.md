@@ -212,7 +212,7 @@ Score threshold of a di-tau seed at the CMSSW pT threshold `CMSSW_WPS["tau_l1_pt
 ##### `tauRateVsPt(seed, cut)`
 
 MinBias rate (kHz) versus a pT threshold (config TAU_SCANS <seed>_rate_pt) for a di-tau seed. Fields ``pt``, ``rate`` and ``err`` (sqrt(N) of the passing events).\
-``cut`` raw: jets without identification, uncorrected jet pT (the same for every model); wp: the tagger's pT and score (network or CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau: jets with |eta| < `DITAU_RATE_ETA_CUT = 2.5`, an event passes if any jet passes; the rate is normalised to the events with at least one such jet. diTauTopo: normalised to all MinBias events, the smaller pT of the two leading candidates with |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`; raw takes the two leading jets in pT, wp the two highest tau scores (CMSSW L1 baseline: the two leading jets in pT, as in the old script) and cuts on the pair score (see tauRateGrid).\
+``cut`` raw: jets without identification, uncorrected jet pT (the same for every model); wp: the tagger's pT and score (network or CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau: jets with |eta| < `DITAU_RATE_ETA_CUT = 2.5`, an event passes if any jet passes; the rate is normalised to the events with at least one such jet. diTauTopo: normalised to all MinBias events, the smaller pT of the two leading candidates with |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`; raw takes the two leading jets in pT, wp the two highest tau scores and cuts on the pair score (see tauRateGrid).\
 `seed`: diTau, diTauTopo; `cut`: raw, wp
 
 #### Signal efficiency
@@ -236,7 +236,7 @@ Gen taus with |eta| < `TAU_ETA_CUT = 2.172`, gen pT > `TAU_GEN_PT_MIN["singleTau
 
 ##### `diTauTopoEffVsGenPt2d`
 
-Di-tau topology seed efficiency in bins of (gen pT of tau 1, gen pT of tau 2), on signal events with two gen-matched taus (gen pT > 1 GeV). The two candidates are the highest tau scores among the jets with pT > `CMSSW_WPS["tau_l1_pt"] = 34` (CMSSW L1 baseline: among all jets); both need |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`, the smaller pT > tau_l1_pt and the pair score > tauWp(diTauTopo) (see tauRateGrid). Fields ``edges``, ``num``, ``den``, ``eff`` (NaN where den = 0), and the normalised gen pT1 and gen pT2 distributions of all signal events with two jets, ``genpt1_frac`` and ``genpt2_frac`` (for the ratio map of the network against the CMSSW L1 baseline).
+Di-tau topology seed efficiency in bins of (gen pT of tau 1, gen pT of tau 2), on signal events with two gen-matched taus (gen pT > 1 GeV). The two candidates are the highest tau scores among the jets with pT > `CMSSW_WPS["tau_l1_pt"] = 34`; both need |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`, the smaller pT > tau_l1_pt and the pair score > tauWp(diTauTopo) (see tauRateGrid). Fields ``edges``, ``num``, ``den``, ``eff`` (NaN where den = 0), and the normalised gen pT1 and gen pT2 distributions of all signal events with two jets, ``genpt1_frac`` and ``genpt2_frac`` (for the ratio map of the network against the CMSSW L1 baseline).
 
 ##### `diTauTopoTotalEff`
 
@@ -252,7 +252,7 @@ sqrt(N) uncertainty of diTauTopoTotalEff.
 
 ##### `bbbbRateGrid(score, sel)`
 
-MinBias rate (kHz) of the HH -> 4b seed HT > ht and (sum of the b scores of the 4 leading jets) > nn, on a grid of config `HH_SCANS["bbbb_ht"] = [[0, 500, 2], 10000]` and bbbb_nn. Fields ``ht``, ``nn``, ``rate``. The b score is the tagger's: the network's class score (raw or vs_qg), or for -m cmssw the CMSSW L1 b-tag score (no score counts as 0). Network jets with pT < `JET_PT_CUT = 15` or |eta| > `JET_ETA_CUT = 2.4` score 0; HT sums jets with pT > `HT_JET_PT_CUT = 30` and |eta| < JET_ETA_CUT. Events need 4 jets.\
+MinBias rate (kHz) of the HH -> 4b seed HT > ht and (sum of the b scores of the 4 leading jets) > nn, on a grid of config `HH_SCANS["bbbb_ht"] = [[0, 500, 2], 10000]` and bbbb_nn. Fields ``ht``, ``nn``, ``rate``. The b score is the tagger's: the network's class score (raw or vs_qg), or for -m cmssw the CMSSW L1 b-tag score (no score counts as 0). Jets with pT < `JET_PT_CUT = 15` or |eta| > `JET_ETA_CUT = 2.4` score 0; HT sums jets with pT > `HT_JET_PT_CUT = 30` and |eta| < JET_ETA_CUT. Events need 4 jets.\
 `score`: raw, vs_qg; `sel`: all, sel
 
 #### HH -> 4b: working point

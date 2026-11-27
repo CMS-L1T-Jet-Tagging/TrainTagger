@@ -111,7 +111,7 @@ Binning: n + 1 bins over 0 to n, n the number of candidate slots per jet. Fields
 
 ##### `onEmulation(expr)`
 
-``expr`` evaluated on the jets of the emulation ntuple (config `EMULATION_SAMPLE = 'data/jetTuple_extended_5.root'`), with the outputs of the model version: the network (-m <model>), its hls4ml build (-m hls4ml:<model>, class scores quantised to HLS4ML_SCORE_BITS) or the CMSSW emulator (-m emulator:<model>, no pileup score).
+``expr`` evaluated on the jets of the emulation ntuple (config `EMULATION_SAMPLE = 'data/jetTuple_extended_5.root'`), with the outputs of the model version: the network (-m <model>), its hls4ml build (-m hls4ml:<model>, class scores quantised to `HLS4ML_SCORE_BITS = 8`) or the CMSSW emulator (-m emulator:<model>, no pileup score).
 
 ### 1.2 Jet pT regression
 
@@ -375,11 +375,74 @@ HT threshold (GeV) of the HT-only trigger at the seed's target rate: the lowest 
 Normalised distribution of a generated quantity of the signal events with at least 4 jets, in config `HH_GEN_HIST_EDGES = [[0, 800, 40]]` (values clipped to `HH_GEN_HIST_MAX = 800`). ``sample`` hh4b or hhbbtt; ``quantity`` ht (hh4b: jets with pT > `HT_JET_PT_CUT = 30` and |eta| < `JET_ETA_CUT = 2.4`; hhbbtt: all jets) or mhh. Fields ``edges``, ``counts``.\
 `sample`: hh4b, hhbbtt; `quantity`: ht, mhh
 
+### 1.6 FastPUPPI jets
+
+#### Response and resolution
+
+##### `fpResponseVsGenPt(process, coll, reduce)`
+
+Mean or median pT response (L1 / gen) of the jets of an L1 collection in bins of gen pT (config PT_BINS, open edges), as read (fields ``raw``, ``raw_err``) and with the standard jet energy corrections (``jecs``, ``jecs_err``); ``x`` the bin centres. Errors: std / sqrt(n), 0 for empty bins.\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `coll`: nn, sc; `reduce`: mean, median
+
+##### `fpResponseVsPt(process, coll, reduce)`
+
+Mean or median pT response (L1 / gen) of the gen-matched jets of an L1 collection in bins of their L1 pT (config PT_BINS, open edges): as read in bins of the raw pT, corrected in bins of the corrected pT. Fields and errors as fpResponseVsGenPt.\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `coll`: nn, sc; `reduce`: mean, median
+
+##### `fpResolutionVsGenPt(process, coll)`
+
+Relative resolution std(L1 pT - gen pT) / mean(gen pT) of the jets of an L1 collection in bins of gen pT (config PT_BINS), as read (``raw``, ``raw_err``) and corrected (``jecs``, ``jecs_err``); ``x`` the bin centres. Error: sigma / sqrt(2(n-1)), sigma itself for n <= 1.\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `coll`: nn, sc
+
+##### `fpResolutionVsPt(process, coll)`
+
+Relative resolution std(L1 pT - gen pT) / mean(gen pT) of the gen-matched jets of an L1 collection in bins of their L1 pT (config PT_BINS): as read in bins of the raw pT, corrected in bins of the corrected pT. Fields and errors as fpResolutionVsGenPt.\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `coll`: nn, sc
+
+#### Distributions
+
+##### `fpPtHist(process, jets, which)`
+
+pT spectrum of the leading jet per event or of all jets, in config `REGULAR_PT_BINS = [0, 1000, 50]` (values clipped into the last bin), as fractions of the entries. Fields ``edges``, ``fraction``. As in the old plot_basic.py the histogram holds every field of the jets (pT, eta, phi, mass, ...), and ``leading`` sorts each field on its own, so its entries can come from different jets.\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `jets`: nn, nnJecs, sc, scJecs, gen; `which`: leading, all
+
+##### `fpGenRecoPtMap(process, jets)`
+
+Number of gen-matched jets (genpt != 0) in bins of (gen pT, L1 pT), both in config `REGULAR_PT_BINS = [0, 1000, 50]` and clipped to its range. Fields ``edges``, ``counts`` (gen pT x L1 pT).\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `jets`: nn, nnJecs, sc, scJecs
+
+##### `fpMass(process, particle, jets)`
+
+Invariant mass of the jets of a decay: top (three jets of t -> W b -> q q' b) and W (two jets) in TT_PU200, H (two jets of H -> b bbar or c cbar) in VBFHToBB_PU200 / VBFHToCC_PU200. The partons are matched one to one to gen jets (deltaR < `MATCH_DELTA_R = 0.4`, relative pT difference < `MATCH_REL_PT = 0.5`), the L1 jets to those gen jets by their gen pT; only events with all jets matched, hadronic decays. Fields ``edges``, ``x`` (bin centres), ``fraction``, ``err`` (sqrt(N) / total), ``mean`` and ``sigma_eff`` (half width of the smallest interval with 68% of the events). Bins: config `MASS_BINS = {'top': [0, 310, 40], 'w': [0, 180, 40], 'h': [0, 230, 40]}`.\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `particle`: top, w, h; `jets`: nn, nnJecs, sc, scJecs, gen
+
+#### Working point
+
+##### `fpRateWp(obj, jets, rate)`
+
+Threshold (GeV) of an observable of an L1 jet type at a MinBias rate (kHz): of the threshold scan, the one whose rate is closest; an error if that is more than config `TURN_ON_RATE_TOLERANCE = 2` off. Observables: jet1, jet2, jet3 (leading, second, third jet pT), ht15, ht30 (scalar sum of the jet pT above 15 / 30 GeV), mjj (mass of the two leading jets), max_mjj (largest dijet mass), dijet, quadjet (pT of the second / fourth jet).\
+`obj`: jet1, jet2, jet3, ht15, ht30, mjj, max_mjj, dijet, quadjet; `jets`: nn, nnJecs, sc, scJecs
+
+#### Signal efficiency
+
+##### `fpTurnOnVsGen(process, obj, jets, rate)`
+
+Turn-on curve: efficiency of observable > fpRateWp(obj, jets, rate) versus the gen jet observable, in the bins of its threshold scan, on events with at least one L1 jet. Fields ``x`` (bin centres), ``xerr`` (half widths), ``eff``, ``err`` (binomial), and ``xmax`` (the x range of the plot).\
+`process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `obj`: jet1, jet2, jet3, ht15, ht30, mjj, max_mjj, dijet, quadjet; `jets`: nn, nnJecs, sc, scJecs
+
 ## 2. Collections
 
 ##### `collections.ci` `= ['train', 'jetClassifier', 'jetPt']`
 
 Everything CI plots
+
+##### `collections.emulation` `= ['onEmulation']`
+
+The model on the jets of the emulation ntuple
+
+##### `collections.emulationRegression` `= ['fpResponseVsGenPt', 'fpResponseVsPt', 'fpResolutionVsGenPt', 'fpResolutionVsPt', 'fpPtHist', 'fpGenRecoPtMap', 'fpTurnOnVsGen', 'fpRateWp', 'fpMass']`
+
+The model's CMSSW emulation in full events (FastPUPPI ntuples)
 
 ##### `collections.jetClassifier` `= ['rocOneVsRest', 'aucOneVsRest', 'roc', 'auc', 'effAtMistag', 'confusionMatrix', 'shapImportance', 'effVsPt', 'effVsGenPt', 'inputHist', 'multiplicity']`
 

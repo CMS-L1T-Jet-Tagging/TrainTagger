@@ -127,6 +127,85 @@ def jetPt(config, info):
 
 
 @vm.collection()
+def emulation(config, info):
+    """The model on the jets of the emulation ntuple: score histograms
+    and one-vs-rest ROCs per class, regression output, pT response, and
+    the outputs per jet. Run it for the network, -m hls4ml:<model> and
+    -m emulator:<model>; tagger.plot compares the three. Needs
+    EMULATION_SAMPLE.
+    """
+    if info.pseudo == "cmssw":
+        return []
+    out = []
+    for c in info.classes:
+        if c != "pileup":  # the CMSSW emulator has no pileup score
+            out += [
+                f"onEmulation(scoreHist({c}))",
+                f"onEmulation(rocOneVsRest({c}))",
+                f"onEmulation(aucOneVsRest({c}))",
+            ]
+    return out + [
+        "onEmulation(regressionHist)",
+        "onEmulation(responseHist(all))",
+        "onEmulation(responseMedian(all))",
+        "onEmulation(responseRms(all))",
+        "onEmulation(jetOutputs)",
+    ]
+
+
+@vm.collection()
+def emulationRegression(config, info):
+    """The model's CMSSW emulation in full events (FastPUPPI ntuples):
+    response and resolution, pT spectra and gen vs L1 pT maps per
+    FASTPUPPI_PROCESSES, top, W and Higgs mass peaks, and turn-on curves
+    at the TURN_ON_RATES working points, of the SC4NN jets (nn) against
+    the standard jets (sc, scJecs). Needs FASTPUPPI_DIR."""
+    if info.pseudo:
+        return []
+    out = []
+    for p in config["FASTPUPPI_PROCESSES"]:
+        for coll in ("nn", "sc"):
+            out += [
+                f"{v}({p}, {coll}, {r})"
+                for v in ("fpResponseVsGenPt", "fpResponseVsPt")
+                for r in ("mean", "median")
+            ]
+            out += [
+                f"{v}({p}, {coll})"
+                for v in ("fpResolutionVsGenPt", "fpResolutionVsPt")
+            ]
+        out += [
+            f"fpPtHist({p}, {j}, {w})"
+            for w in ("leading", "all")
+            for j in ("nn", "sc", "scJecs", "gen")
+        ]
+        out += [f"fpGenRecoPtMap({p}, nn)", f"fpGenRecoPtMap({p}, scJecs)"]
+        out += [
+            f"fpTurnOnVsGen({p}, {o}, {j}, {r})"
+            for o in config["TURN_ON_OBSERVABLES"]
+            for r in config["TURN_ON_RATES"]
+            for j in ("nn", "sc", "scJecs")
+        ]
+    out += [
+        f"fpRateWp({o}, {j}, {r})"
+        for o in config["TURN_ON_OBSERVABLES"]
+        for r in config["TURN_ON_RATES"]
+        for j in ("nn", "sc", "scJecs")
+    ]
+    out += [
+        f"fpMass(TT_PU200, {particle}, {j})"
+        for particle in ("top", "w")
+        for j in ("gen", "nn", "sc", "scJecs")
+    ]
+    out += [
+        f"fpMass({p}, h, {j})"
+        for p in ("VBFHToBB_PU200", "VBFHToCC_PU200")
+        for j in ("gen", "nn", "sc", "scJecs")
+    ]
+    return out
+
+
+@vm.collection()
 def train(config, info):
     """Training diagnostics: loss per epoch (train and validation) for
     each output, and the SHAP feature importance of the classification

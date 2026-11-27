@@ -13,7 +13,16 @@ import yaml
 
 DEFAULTS_DIR = Path(__file__).with_name("defaults")
 # Default files, in the order of the merged config
-DEFAULT_FILES = ["inputs", "common", "jet_classifier", "jet_pt", "train", "seeds_tau", "seeds_hh"]
+DEFAULT_FILES = [
+    "inputs",
+    "common",
+    "jet_classifier",
+    "jet_pt",
+    "train",
+    "seeds_tau",
+    "seeds_hh",
+    "emulation",
+]
 
 
 def _read_yaml(path):

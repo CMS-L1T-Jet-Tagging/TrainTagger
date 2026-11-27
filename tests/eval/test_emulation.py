@@ -77,12 +77,10 @@ def test_emulation_collection_evaluates_and_draws():
         one = [ModelResults(model, "m", ["emulation"])]
         n_specs = len(specs_for("emulation", one[0]))
         # without the other versions only the network series are drawn;
-        # the per-jet comparisons are skipped, and the response plot
-        # too: its network curve carries the emulator's numbers (swapped
-        # labels)
+        # the per-jet comparisons are skipped
         assert (
             draw("emulation", one, os.path.join(d, "alone"))
-            == n_specs - 1 - len(toy.CLASSES) - 1 - 1
+            == n_specs - 1 - len(toy.CLASSES) - 1
         )
         for version in ("hls4ml", "emulator"):
             evaluate(

@@ -163,32 +163,11 @@ def _response_stats(prefix):
 
 def response_hist():
     """emulation/response_emulation: jet response L1/gen of the three
-    versions, with median and RMS. As in the old script the first two
-    legend entries are swapped: the network's curve has the label and
-    numbers of the emulator, the emulator's those of the network."""
-    labels = [
-        ("Emulation", "emulator/"),
-        ("Tensorflow", ""),
-        ("hls4ml", "hls4ml/"),
-    ]
-    n = len(VERSIONS)
+    versions, with median and RMS."""
     return PlotSpec(
         name="emulation/response_emulation",
         plotter="histogram",
-        series=[
-            Series(
-                f"{prefix}onEmulation(responseHist(all))",
-                label=label + _response_stats(stats_prefix),
-                style=dict(
-                    color=style.colours[i],
-                    linestyle=style.LINESTYLES[n - 1 - i],
-                    linewidth=style.THIN_LINEWIDTH,
-                ),
-            )
-            for i, ((prefix, _), (label, stats_prefix)) in enumerate(
-                zip(VERSIONS, labels)
-            )
-        ],
+        series=_hist_series("onEmulation(responseHist(all))", _response_stats),
         options=_hist_opts("Jet Response (L1/Gen)", (0, 2)),
     )
 

@@ -394,32 +394,13 @@ def rate_grid(spec, models):
     return fig
 
 
-def _legacy_points(c):
-    """Points as the old seed scripts drew them, from the bars of hist's
-    plot_ratio: x at the bin centre minus half the average bin width, y
-    at the lower end of the error band, error = band height."""
-    edges = np.asarray(c["edges"], dtype=float)
-    eff = np.array(c["eff"], dtype=float)
-    centers = (edges[1:] + edges[:-1]) / 2
-    width = (edges[-1] - edges[0]) / len(eff)
-    eff[eff == 0] = np.nan
-    eff[np.isinf(eff)] = np.nan
-    top = eff + np.asarray(c["err_up"])
-    bottom = eff - np.asarray(c["err_low"])
-    bottom[np.isnan(bottom)] = 0
-    return centers - width / 2, bottom, top - bottom
-
-
 @plotter
 def eff_points(spec, models):
     """Binned efficiencies (curve fields ``edges``, ``eff``,
     ``err_low``, ``err_up``) as points with errors.
 
-    Option legacy (default True) draws them like the old seed scripts
-    (see _legacy_points), which shifts the points; False draws eff at
-    the bin centres with asymmetric Clopper-Pearson errors. Series
-    ``yerr``: with legacy, the expression of another result whose errors
-    are drawn. Options: header, zero_nan_err
+    Points at the bin centres, errors asymmetric Clopper-Pearson. Empty
+    bins (no denominator) are not drawn. Options: header, zero_nan_err
     (NaN errors drawn as 0), hline (y of a dashed line), hlines ((y,
     xmin, xmax) of a dashed line), background (dict expr, label: a
     normalised histogram, fields edges and counts, in grey), text ((x,
@@ -443,14 +424,9 @@ def eff_points(spec, models):
     for im, model in enumerate(models):
         for i, s in enumerate(spec.series):
             c = model.get(s.expr)
-            if opts.get("legacy", True):
-                x, y, yerr = _legacy_points(c)
-                if s.yerr:  # the errors of another result (old bbtt diTau)
-                    yerr = _legacy_points(model.get(s.yerr))[2]
-            else:
-                edges = np.asarray(c["edges"], dtype=float)
-                x, y = (edges[1:] + edges[:-1]) / 2, c["eff"]
-                yerr = np.vstack([c["err_low"], c["err_up"]])
+            edges = np.asarray(c["edges"], dtype=float)
+            x, y = (edges[1:] + edges[:-1]) / 2, c["eff"]
+            yerr = np.vstack([c["err_low"], c["err_up"]])
             if opts.get("zero_nan_err"):
                 yerr = np.nan_to_num(yerr, nan=0.0)
             kw = {

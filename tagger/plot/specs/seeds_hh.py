@@ -407,9 +407,6 @@ def bbtt_eff_vs_di_tau(config, score, sel):
             Series(
                 f"bbttEffVsGenHt(nnTarget, {v})",
                 label=_bbtt_labels(config, v)["nnTarget"],
-                # old code: drawn with the errors of the seed-rate
-                # working point
-                yerr=f"bbttEffVsGenHt(nn, {v})",
                 style=dict(c=C[1]),
             ),
         ],

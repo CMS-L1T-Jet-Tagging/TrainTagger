@@ -251,10 +251,8 @@ def ptWeightHist(run, binned_by: Literal["pt", "eta"]):
     if binned_by == "pt":
         var, bins = columns["pt"], run.config["PT_WEIGHT_PT_BINS"]
     else:
-        # as the old pt_weights.py: |column 3| of the particle inputs
-        # (deta in the baseline input set), not eta
         var, bins = (
-            abs(list(columns.values())[3]) * _RADIANS,
+            abs(columns["eta"]) * _RADIANS,
             run.config["PT_WEIGHT_ETA_BINS"],
         )
     value_range = (weights.min(), weights.max())

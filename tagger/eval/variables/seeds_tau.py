@@ -287,15 +287,14 @@ def _curve(pt, rate, err):
 def tauRateVsPt(run, seed: DiTauSeed, cut: Literal["raw", "wp"]):
     """MinBias rate (kHz) versus a pT threshold (config TAU_SCANS
     <seed>_rate_pt) for a di-tau seed. Fields ``pt``, ``rate`` and
-    ``err`` (sqrt(N) of the passing events).
+    ``err`` (sqrt(N) of the passing events). The rate is normalised to
+    all MinBias events.
 
     ``cut`` raw: jets without identification, uncorrected jet pT (the
     same for every model); wp: the tagger's pT and score (network or
     CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau:
     jets with |eta| < DITAU_RATE_ETA_CUT, an event passes if any jet
-    passes; the rate is normalised to the events with at least one such
-    jet. diTauTopo: normalised to all MinBias events, the smaller pT of
-    the two leading candidates with
+    passes. diTauTopo: the smaller pT of the two leading candidates with
     |eta| < TAU_ETA_CUT and deltaR > TAU_PAIR_MIN_DR; raw takes the two
     leading jets in pT, wp the two highest tau scores and cuts on the
     pair score (see tauRateGrid).
@@ -309,7 +308,6 @@ def tauRateVsPt(run, seed: DiTauSeed, cut: Literal["raw", "wp"]):
             < run.config["DITAU_RATE_ETA_CUT"]
         )
         event_id = mb.branch("event")[eta_sel]
-        n_event = len(np.unique(event_id))
         cuts = expand_ranges(run.config["TAU_SCANS"], "diTau_rate_pt")
         if cut == "raw":
             return _curve(

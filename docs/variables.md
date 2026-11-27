@@ -211,8 +211,8 @@ Score threshold of a di-tau seed at the CMSSW pT threshold `CMSSW_WPS["tau_l1_pt
 
 ##### `tauRateVsPt(seed, cut)`
 
-MinBias rate (kHz) versus a pT threshold (config TAU_SCANS <seed>_rate_pt) for a di-tau seed. Fields ``pt``, ``rate`` and ``err`` (sqrt(N) of the passing events).\
-``cut`` raw: jets without identification, uncorrected jet pT (the same for every model); wp: the tagger's pT and score (network or CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau: jets with |eta| < `DITAU_RATE_ETA_CUT = 2.5`, an event passes if any jet passes; the rate is normalised to the events with at least one such jet. diTauTopo: normalised to all MinBias events, the smaller pT of the two leading candidates with |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`; raw takes the two leading jets in pT, wp the two highest tau scores and cuts on the pair score (see tauRateGrid).\
+MinBias rate (kHz) versus a pT threshold (config TAU_SCANS <seed>_rate_pt) for a di-tau seed. Fields ``pt``, ``rate`` and ``err`` (sqrt(N) of the passing events). The rate is normalised to all MinBias events.\
+``cut`` raw: jets without identification, uncorrected jet pT (the same for every model); wp: the tagger's pT and score (network or CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau: jets with |eta| < `DITAU_RATE_ETA_CUT = 2.5`, an event passes if any jet passes. diTauTopo: the smaller pT of the two leading candidates with |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`; raw takes the two leading jets in pT, wp the two highest tau scores and cuts on the pair score (see tauRateGrid).\
 `seed`: diTau, diTauTopo; `cut`: raw, wp
 
 #### Signal efficiency

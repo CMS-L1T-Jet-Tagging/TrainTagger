@@ -20,6 +20,20 @@ mv output/$Model/*.yaml $Name/configs
 
 mv output/$Model/model $Name/model
 
+# eval results (tagger.eval), in the layout of the model folder so tagger.plot can read them back:
+# eval/, hls4ml/eval/ and emulator/eval/ of the model versions, cmssw/eval/ of the CMSSW L1 baseline
+mv output/$Model/eval $Name/eval
+for version in hls4ml emulator; do
+    if [ -d output/$Model/$version/eval ]; then
+        mkdir -p $Name/$version
+        mv output/$Model/$version/eval $Name/$version/eval
+    fi
+done
+if [ -d output/cmssw/eval ]; then
+    mkdir -p $Name/cmssw
+    mv output/cmssw/eval $Name/cmssw/eval
+fi
+
 mv output/$Model/plots/training/ $Name/plots
 mv output/$Model/plots/physics/ $Name/plots
 mv output/$Model/plots/emulation_regression/ $Name/plots
@@ -56,6 +70,15 @@ eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
 eos cp -r model/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/model
 eos cp -r plots/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots
 eos cp -r configs/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/configs
+
+eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/eval
+eos cp -r eval/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/eval
+for results in hls4ml emulator cmssw; do
+    if [ -d $results/eval ]; then
+        eos mkdir -p ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/$results/eval
+        eos cp -r $results/eval/* ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/$results/eval
+    fi
+done
 
 pb_copy_index.py ${EOS_STORAGE_DIR}/${EOS_STORAGE_SUBDIR}/plots --recursive
 

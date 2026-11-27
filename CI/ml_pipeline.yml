@@ -325,8 +325,16 @@ upload_tagged_model:
   image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
   stage: upload
   tags: [k8s-gpu]
-  needs: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
-  dependencies: [emulation-evaluate,hls4ml,train,evaluate,profile,synth]
+  # needs also downloads the artefacts of these jobs
+  needs:
+    - emulation-evaluate
+    - hls4ml
+    - train
+    - evaluate
+    - profile
+    - synth
+    - job: emulation_regression
+      optional: true
   rules:
     - if: $RERUN_ON_TAG == "True"
   before_script:
@@ -350,6 +358,17 @@ upload_tagged_model:
     - mv output/$Model/plots/profile $Name/plots
     - mv output/$Model/plots/training/ $Name/plots
     - mv output/$Model/plots/physics/ $Name/plots
+    - if [ -d output/$Model/plots/emulation_regression ]; then mv output/$Model/plots/emulation_regression $Name/plots; fi
+    # eval results (tagger.eval), in the layout of a model folder as in upload_new_model.sh
+    - |
+      mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/eval
+      cp -r output/$Model/eval/* ${EOS_STORAGE_DIR}/tags/${TAG}/test/eval/
+      for results in output/$Model/hls4ml output/$Model/emulator output/cmssw; do
+          if [ -d $results/eval ]; then
+              mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/$(basename $results)/eval
+              cp -r $results/eval/* ${EOS_STORAGE_DIR}/tags/${TAG}/test/$(basename $results)/eval/
+          fi
+      done
     - cd ..
     - rm -rf php-plots
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping

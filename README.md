@@ -285,7 +285,7 @@ All branches of this repo have a continous integration (CI) pipeline associated 
 
 Relevant variables for pipelines are found in ```.gitlab-ci.yml``` and are set as environment variables within the pipeline. For example the pipeline will use ```${Name}``` which expands to ```new_samples_baseline_5param_extended_trk``` when evaluated. The CI steps are essentially bash scripts.
 
-All artefacts are uploaded to [this](https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/) website for viewing. With the structure ```branches/my-branch/name/pipeline/plots|model|firmware```
+All artefacts are uploaded to [this](https://cms-l1t-jet-tagger.web.cern.ch/TrainTagger/) website for viewing. With the structure ```branches/my-branch/name/pipeline/plots|model|firmware|configs|eval```, where ```eval``` holds the results of ```tagger.eval``` (and ```hls4ml/eval```, ```emulator/eval```, ```cmssw/eval``` those of the other model versions and the CMSSW L1 baseline), in the layout of a model folder
 
 The CI will carry out dataset creation, training, evaluation, model synthesis, emulation, and uploading of all artefacts to a website for viewing. The stages are as follows, with some additional notes about each stage.
 

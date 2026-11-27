@@ -59,14 +59,10 @@ python tagger/train/train.py -y tagger/model/configs/$Model.yaml -o output/$Mode
 #Make some basic validation plots
 python tagger/train/train.py --plot-basic -y tagger/model/configs/$Model.yaml -o output/$Model
 
-#Make other plots for bbbb/di-taus final state for example:
-python bbbb.py --deriveWPs  -m output/$Model
-python bbbb.py --eff -m output/$Model
-
-#Or for di-taus
-python tagger/plot/diTaus.py -m output/$Model
-python tagger/plot/diTaus.py --BkgRate -m output/$Model
-python tagger/plot/diTaus.py --eff -m output/$Model
+#Trigger seed plots (bbtt, bbbb, di-tau, di-tau topology, single tau): compute, then draw
+python -m tagger.eval -m cmssw -c seeds            #CMSSW L1 baseline, independent of the model
+python -m tagger.eval -m output/$Model -c seeds
+python -m tagger.plot -m output/$Model -c seeds
 
 #Synthesize the model (with wrapper and CMMSSW)
 python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
@@ -128,16 +124,48 @@ The model configs are defined in `tagger/model/configs` and passed to the traini
 
 # 3. Physics Validation
 
-Various physics validation plots can be make using the `tagger/plot` modules, the plots are divided into different final states, such as `bbbb.py`, to use the script, you need to derive the working points before evaluating the background rate/efficiency. The -m points the plotting script at the model to load and use for evaluating
+The trigger seed studies (HH -> bb tau tau, HH -> 4b, di-tau, di-tau topology, single tau) are the `seeds`
+collection. `tagger.eval` computes the numbers, including the working points at the target rates, and writes
+them to `output/<model>/eval/`; `tagger.plot` only draws them. The reference is the CMSSW L1 baseline (the
+NN PUPPI tau and L1 b-tag scores stored in the ntuples, not the CMSSW emulation of our model), the `cmssw`
+pseudo-model: compute it once, and the plots of every model show it.
 
 ```
-python tagger/plot/bbbb.py --deriveWPs -n <number of samples to use, usually ~1M> -m output/baseline
+python -m tagger.eval -m cmssw -c seeds
+python -m tagger.eval -m output/baseline -c seeds
+python -m tagger.plot -m output/baseline -c seeds
 ```
 
-then, evaluate the efficiency using:
+The samples are read from `data/`, as in CI (config `MINBIAS_SAMPLE`, `SIGNAL_SAMPLES` and `TREE` in
+`tagger/eval/config/defaults/inputs.yaml`). The default config is a set of YAML files in
+`tagger/eval/config/defaults/`, one per collection. Change any key with `--set KEY=VALUE` (VALUE in YAML),
+for example `--set "SEED_N_ENTRIES={minbias: 500000, signal: 500000}"` or
+`--set MINBIAS_SAMPLE=/eos/path/to/MinBias_PU200.root`, or with `--config my.yaml`, a YAML file of the keys
+to change. One collection works too, e.g. `-c seedBbbb`.
+`python -m tagger.eval --list` lists all variables and collections; `docs/variables.md` documents them.
+`docs/plotting.md` explains how the plots are made and how to add new ones.
+
+The `emulation` collection compares the network with its hls4ml build and its CMSSW emulator (our model
+run inside CMSSW, not the `cmssw` L1 baseline) on the jets of the emulation ntuple
+(`data/jetTuple_<TRACK_ALGO>_<N_PARAMS>.root`, config `EMULATION_SAMPLE`): scores, ROCs, regression, pT
+response and the bit accuracy of hls4ml against the emulator. `hls4ml:<model>` and
+`emulator:<model>` are the two other versions of the model; their results go to `<model>/hls4ml` and
+`<model>/emulator`.
 
 ```
-python tagger/plot/bbbb.py --eff -n <number of samples to use, usually ~500k> -m output/baseline
+python -m tagger.eval -m output/baseline -m hls4ml:output/baseline -m emulator:output/baseline -c emulation
+python -m tagger.plot -m output/baseline -c emulation
+```
+
+The `emulationRegression` collection looks at the model's CMSSW emulation in full events: the FastPUPPI
+performance ntuples that the CI job `run_processes` writes (`<process>_perfNano.root` and `jecs.root` in
+`${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}`, config `FASTPUPPI_DIR`). It compares the jets with the model's
+pT regression to the standard seeded cone jets: response and resolution, pT spectra, top, W and Higgs mass
+peaks, and turn-on curves at fixed MinBias rates.
+
+```
+python -m tagger.eval -m output/baseline -c emulationRegression --set FASTPUPPI_DIR=path/to/FPOutput
+python -m tagger.plot -m output/baseline -c emulationRegression
 ```
 
 # 4. Synthesize the model to HDL Codes

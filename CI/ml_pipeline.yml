@@ -122,26 +122,20 @@ evaluate:
   - eos cp $BBTT_EOS_DIR/$BBTT .
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
-  - echo "pT weights plots"
-  - python tagger/plot/pt_weights.py -m output/$Model
-  - echo "bbtt performance"
-  - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbtt.py --deriveWPs --minbias data/$MINBIAS --signal data/$BBTT -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbtt.py --eff -s data/$BBTT -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "VBF tautau performance"
-  - python tagger/plot/diTaus.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus.py --BkgRate --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus.py --eff --vbf_sample data/$VBFHTAUTAU -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "Topology tautau performance"
-  - python tagger/plot/diTaus_topo.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus_topo.py --BkgRate --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/diTaus_topo.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "bbbb performance"
-  - python tagger/plot/bbbb.py --deriveWPs --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/bbbb.py --eff -s data/$BBBB --minbias data/$MINBIAS -n 500000 --tree $NTUPLE_TREE -m output/$Model
-  - echo "Single tau performance"
-  - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
-  - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+  - echo "Trigger seed performance (bbtt, VBF tautau, topology tautau, bbbb, single tau)"
+  # the samples copied above, as config keys (tagger/eval/config/defaults/inputs.yaml)
+  - |
+    cat > seed_inputs.yaml << EOF
+    TREE: $NTUPLE_TREE
+    MINBIAS_SAMPLE: data/$MINBIAS
+    SIGNAL_SAMPLES:
+      vbfHtautau: data/$VBFHTAUTAU
+      hhbbtt: data/$BBTT
+      hh4b: data/$BBBB
+    EOF
+  - python -m tagger.eval -m cmssw -c seeds --config seed_inputs.yaml
+  - python -m tagger.eval -m output/$Model -c seeds --config seed_inputs.yaml
+  - python -m tagger.plot -m output/$Model -c seeds
   artifacts:
     paths:
       - output
@@ -217,7 +211,10 @@ emulation-evaluate:
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
-  - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -o output/$Model/plots/emulation
+  # the network, its hls4ml build and its CMSSW emulator on the same jets
+  - python -m tagger.eval -m output/$Model -m hls4ml:output/$Model -m emulator:output/$Model -c emulation
+    --set "EMULATION_SAMPLE=data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root"
+  - python -m tagger.plot -m output/$Model -c emulation
   artifacts:
     paths:
       - output/$Model
@@ -284,10 +281,10 @@ emulation_regression:
   script:
   - source activate tagger
   - export KRB5CCNAME=$(klist -e  | egrep -o 'FILE:.*')
-  - mkdir -p output/$Model/plots/emulation_regression
-  - python tagger/plot/emulation_regression/plot_basic.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_masses.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
-  - python tagger/plot/emulation_regression/plot_turnon.py -m output/$Model -i ${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}
+  # FastPUPPI ntuples of run_processes
+  - python -m tagger.eval -m output/$Model -c emulationRegression
+    --set "FASTPUPPI_DIR=${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR}"
+  - python -m tagger.plot -m output/$Model -c emulationRegression
   artifacts:
     paths:
       - output/$Model
@@ -372,6 +369,15 @@ code_quality:
    artifacts:
     reports:
       codequality: gl-code-quality-report.json
+
+unit_tests:
+  stage: test
+  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  needs: []  # toy inputs only: runs at the start of the pipeline, without the training
+  script:
+    - source activate tagger
+    - pip install pytest  # in case the CI image lacks it
+    - python -m pytest
 
 pylint:
   stage: test

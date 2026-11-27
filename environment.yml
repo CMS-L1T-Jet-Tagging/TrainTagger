@@ -25,6 +25,7 @@ dependencies:
     - notebook
     - schema
     - tqdm
+    - pytest
 
     - tensorflow==2.14
     - pyparsing

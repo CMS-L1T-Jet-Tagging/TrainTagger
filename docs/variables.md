@@ -199,12 +199,12 @@ Scores and pT are the tagger's: for the network the class scores and the regress
 
 ##### `tauWpLine(seed)`
 
-Working point line of a tau seed: the tauRateGrid(seed) points within rate_range of the target rate (config TAU_SEEDS), as fields ``target_pt`` and ``target_nn``, and their linear interpolation (extrapolated) on 100 pT values, fields ``pt`` and ``nn``. For the CMSSW L1 baseline only the singleTau line is its working point; diTau and diTauTopo use the fixed `CMSSW_WPS["tau"] = 0.22` score (see tauWp).\
+Working point line of a tau seed: the tauRateGrid(seed) points within rate_range of the target rate (config TAU_SEEDS), as fields ``target_pt`` and ``target_nn``, and their linear interpolation (extrapolated) on 100 pT values, fields ``pt`` and ``nn``. Of several points at the same pT the interpolation uses the highest score. For the CMSSW L1 baseline only the singleTau line is its working point; diTau and diTauTopo use the fixed `CMSSW_WPS["tau"] = 0.22` score (see tauWp).\
 `seed`: singleTau, diTau, diTauTopo
 
 ##### `tauWp(seed)`
 
-Score threshold of a di-tau seed at the CMSSW pT threshold `CMSSW_WPS["tau_l1_pt"] = 34`: for the network interpolated on tauWpLine(seed), for the CMSSW L1 baseline (-m cmssw) the fixed `CMSSW_WPS["tau"] = 0.22`.\
+Score threshold of a di-tau seed at the CMSSW pT threshold `CMSSW_WPS["tau_l1_pt"] = 34`: for the network interpolated on tauWpLine(seed) (highest score per pT), for the CMSSW L1 baseline (-m cmssw) the fixed `CMSSW_WPS["tau"] = 0.22`.\
 `seed`: diTau, diTauTopo
 
 #### Rate at the working point

@@ -52,6 +52,29 @@ def find_rate(
     ]
 
 
+def wp_per_pt(
+    pt: npt.ArrayLike, nn: npt.ArrayLike
+) -> tuple[npt.NDArray, npt.NDArray]:
+    """The highest score per pT of the on-target grid points.
+
+    The on-target points of a rate grid hold several scores per pT (the
+    rate range). The highest, the most conservative cut, is kept, so
+    that the interpolation in pT is well defined.
+
+    Args:
+        pt: pT of the points.
+        nn: Score of the points.
+
+    Returns:
+        tuple: The distinct pT values (sorted) and the highest score of
+            each.
+    """
+    pts, inv = np.unique(np.asarray(pt, dtype=float), return_inverse=True)
+    best = np.full(len(pts), -np.inf)
+    np.maximum.at(best, inv, np.asarray(nn, dtype=float))
+    return pts, best
+
+
 def closest_lower(rates: npt.ArrayLike, target: float) -> int:
     """Index of the highest rate that is not above the target.
 

@@ -13,6 +13,7 @@ from tagger.eval import config as config_mod
 from tagger.eval.utils.cli import evaluate
 from tagger.eval.variable_manager import ModelInfo, vm
 from tagger.eval.variables.base.efficiency import efficiency
+from tagger.eval.variables.base.rates import wp_per_pt
 from tagger.eval.variables import seeds_hh
 from tagger.plot.cli import draw, ModelResults, specs_for
 from tagger.plot.registry import load_all
@@ -69,6 +70,12 @@ def test_bbbb_rate_grid_matches_hist_slicing():
             {"nn": slice(nn * 1.0j, None, sum)}
         ]
         assert np.isclose(grid["rate"][k], count / e["n_events"] * 100)
+
+
+def test_wp_per_pt_keeps_the_highest_score():
+    pts, nn = wp_per_pt([40, 30, 40, 30, 50], [0.2, 0.5, 0.3, 0.1, 0.05])
+    assert list(pts) == [30, 40, 50]
+    assert list(nn) == [0.5, 0.3, 0.05]
 
 
 def test_bbtt_tau_selection_uses_each_events_pair():

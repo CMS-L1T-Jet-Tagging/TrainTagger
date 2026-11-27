@@ -42,6 +42,7 @@ from tagger.eval.variables.base.rates import (
     hist_2d,
     rate_points,
     threshold_grid,
+    wp_per_pt,
 )
 from tagger.eval.variables.base.seeds import (
     expand_ranges,
@@ -225,8 +226,9 @@ def tauWpLine(run, seed: Seed):
     """Working point line of a tau seed: the tauRateGrid(seed) points
     within rate_range of the target rate (config TAU_SEEDS), as fields
     ``target_pt`` and ``target_nn``, and their linear interpolation
-    (extrapolated) on 100 pT values, fields ``pt`` and ``nn``. For the
-    CMSSW L1 baseline only the singleTau line is its
+    (extrapolated) on 100 pT values, fields ``pt`` and ``nn``. Of
+    several points at the same pT the interpolation uses the highest
+    score. For the CMSSW L1 baseline only the singleTau line is its
     working point; diTau and diTauTopo use the fixed CMSSW_WPS tau score
     (see tauWp).
     """
@@ -236,7 +238,9 @@ def tauWpLine(run, seed: Seed):
     target_pt, target_nn = grid["pt"][idx], grid["nn"][idx]
     pt = np.linspace(*_WP_LINE_PT[seed], 100)
     nn = interp1d(
-        target_pt, target_nn, kind="linear", fill_value="extrapolate"
+        *wp_per_pt(target_pt, target_nn),
+        kind="linear",
+        fill_value="extrapolate",
     )(pt)
     return {"pt": pt, "nn": nn, "target_pt": target_pt, "target_nn": target_nn}
 
@@ -245,15 +249,14 @@ def tauWpLine(run, seed: Seed):
 def tauWp(run, seed: DiTauSeed):
     """Score threshold of a di-tau seed at the CMSSW pT threshold
     CMSSW_WPS["tau_l1_pt"]: for the network interpolated on
-    tauWpLine(seed), for the CMSSW L1 baseline
+    tauWpLine(seed) (highest score per pT), for the CMSSW L1 baseline
     (-m cmssw) the fixed CMSSW_WPS["tau"].
     """
     if is_cmssw(minbias(run)):
         return float(run.config["CMSSW_WPS"]["tau"])
     line = run.get(f"tauWpLine({seed})")
     f = interp1d(
-        line["target_pt"],
-        line["target_nn"],
+        *wp_per_pt(line["target_pt"], line["target_nn"]),
         kind="linear",
         fill_value="extrapolate",
     )
@@ -261,12 +264,13 @@ def tauWp(run, seed: DiTauSeed):
 
 
 def _single_tau_wp_interp(run):
-    """Score cut versus pT threshold: the on-target points interpolated
-    linearly in pT, clamped outside (old singleTau.get_interp_func)."""
+    """Score cut versus pT threshold: of the on-target points at the
+    same pT the highest (most conservative) score, interpolated linearly
+    in pT, clamped outside."""
     line = run.get("tauWpLine(singleTau)")
-    nn = list(line["target_nn"])
+    pts, nn = wp_per_pt(line["target_pt"], line["target_nn"])
     return interp1d(
-        line["target_pt"],
+        pts,
         nn,
         kind="linear",
         fill_value=(np.max(nn), np.min(nn)),

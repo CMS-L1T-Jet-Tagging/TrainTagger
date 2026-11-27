@@ -259,33 +259,3 @@ def set_style():
     matplotlib.rcParams['ytick.major.width'] = 5
     matplotlib.rcParams['ytick.minor.size'] = 10
     matplotlib.rcParams['ytick.minor.width'] = 4
-
-# Input feature ranges of the old plotting scripts
-INPUT_FEATURE_RANGES = {
-    'pt': (0, 150),
-    'pt_rel': (0, 1),
-    'pt_log': (0, 5),
-    'eta': (-580, 580),
-    'deta': (-150, 150),
-    'dphi': (-150, 150),
-    'phi': (-3.5, 3.5),
-    'mass': (0, 10),
-    'isPhoton': (0, 1),
-    'isElectronPlus': (0, 1),
-    'isElectronMinus': (0, 1),
-    'isMuonPlus': (0, 1),
-    'isMuonMinus': (0, 1),
-    'isNeutralHadron': (0, 1),
-    'isChargedHadronPlus': (0, 1),
-    'isChargedHadronMinus': (0, 1),
-    'z0': (-420, 420),
-    'dxy': (0, 80),
-    'isfilled': (0, 1),
-    'puppiweight': (0, 1),
-    'quality': (0, 7.1),
-    'emid': (0, 7.1),
-    'charge': (-2, 2),
-    'id': (-1, 10),
-    'eta_phys': (-3, 3),
-    'phi_phys': (-3.5, 3.5),
-}

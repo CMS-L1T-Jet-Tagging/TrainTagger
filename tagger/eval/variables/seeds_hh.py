@@ -267,11 +267,16 @@ def _compute_bbbb_signal(run, score, sel):
     sig = signal(run, "hh4b")
     has_mhh = sig.has_branch("genHH_mass")
     event = sig.branch("event")
-    gen_all = group_id_values(
-        event, sig.branch("jet_genmatch_pt"), num_elements=0
+    all_pt, all_eta = group_id_values(
+        event,
+        sig.branch("jet_genmatch_pt"),
+        sig.branch("jet_genmatch_eta"),
+        num_elements=0,
     )[1]
-    all_genht = ak.sum(gen_all[-1], axis=1)
     ht_pt, eta_cut = run.config["HT_JET_PT_CUT"], run.config["JET_ETA_CUT"]
+    all_genht = ak.sum(
+        all_pt[(all_pt > ht_pt) & (np.abs(all_eta) < eta_cut)], axis=1
+    )  # as genht below
     arrays = [sig.branch("jet_genmatch_pt"), sig.branch("jet_genmatch_eta")]
     if has_mhh:
         arrays.append(sig.branch("genHH_mass"))
@@ -309,10 +314,10 @@ def bbbbEffVsGenHt(run, trigger: BbbbTrigger, score: BbbbScore, sel: BbbbSel):
     """HH -> 4b efficiency versus generated HT. ``trigger``: wp (the
     model at its working point, HT > bbbbWpHt and b score sum >
     bbbbWpNn), htOnly (HT > htOnlyCut(bbbb)), wpPure (wp and not
-    htOnly), wpOrHtOnly. Numerator: gen HT of jets with gen pT >
-    HT_JET_PT_CUT and |gen eta| < JET_ETA_CUT, events with 4 jets;
-    denominator: gen HT of all jets of all events (as the old code).
-    Fields as tauEffVsGenPt.
+    htOnly), wpOrHtOnly. Gen HT: gen-matched pT of the jets with gen pT
+    > HT_JET_PT_CUT and |gen eta| < JET_ETA_CUT. Numerator: passing
+    events (they have 4 jets); denominator: all signal events. Fields as
+    tauEffVsGenPt.
     """
     s = _bbbb_signal(run, score, sel)
     edges = expand_ranges(run.config, "HH_GEN_HT_EDGES")

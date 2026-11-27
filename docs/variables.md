@@ -283,7 +283,7 @@ MinBias rate (kHz) of the HH -> 4b working point OR the HT-only trigger.\
 
 ##### `bbbbEffVsGenHt(trigger, score, sel)`
 
-HH -> 4b efficiency versus generated HT. ``trigger``: wp (the model at its working point, HT > bbbbWpHt and b score sum > bbbbWpNn), htOnly (HT > htOnlyCut(bbbb)), wpPure (wp and not htOnly), wpOrHtOnly. Numerator: gen HT of jets with gen pT > `HT_JET_PT_CUT = 30` and |gen eta| < `JET_ETA_CUT = 2.4`, events with 4 jets; denominator: gen HT of all jets of all events (as the old code). Fields as tauEffVsGenPt.\
+HH -> 4b efficiency versus generated HT. ``trigger``: wp (the model at its working point, HT > bbbbWpHt and b score sum > bbbbWpNn), htOnly (HT > htOnlyCut(bbbb)), wpPure (wp and not htOnly), wpOrHtOnly. Gen HT: gen-matched pT of the jets with gen pT > `HT_JET_PT_CUT = 30` and |gen eta| < `JET_ETA_CUT = 2.4`. Numerator: passing events (they have 4 jets); denominator: all signal events. Fields as tauEffVsGenPt.\
 `trigger`: wp, wpPure, htOnly, wpOrHtOnly; `score`: raw, vs_qg; `sel`: all, sel
 
 ##### `bbbbEffVsGenMhh(trigger, score, sel)`

@@ -265,10 +265,7 @@ def eff_vs(config, group, var):
         series=[
             Series(
                 f"{var}({group}, {m})",
-                label=(
-                    f"{WP_NAMES.get(i, 'WP')} ({'mistag' if i == 0 else 'eff'}"
-                    f" = {m:.0%})"
-                ),
+                label=f"{WP_NAMES.get(i, 'WP')} (mistag = {m:.0%})",
                 y="eff",
                 yerr="err",
                 style=dict(color=WP_COLOURS[i % 3], linestyle="-"),

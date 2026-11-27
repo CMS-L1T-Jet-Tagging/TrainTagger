@@ -212,7 +212,7 @@ Score threshold of a di-tau seed at the CMSSW pT threshold `CMSSW_WPS["tau_l1_pt
 ##### `tauRateVsPt(seed, cut)`
 
 MinBias rate (kHz) versus a pT threshold (config TAU_SCANS <seed>_rate_pt) for a di-tau seed. Fields ``pt``, ``rate`` and ``err`` (sqrt(N) of the passing events). The rate is normalised to all MinBias events.\
-``cut`` raw: jets without identification, uncorrected jet pT (the same for every model); wp: the tagger's pT and score (network or CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau: jets with |eta| < `DITAU_RATE_ETA_CUT = 2.5`, an event passes if any jet passes. diTauTopo: the smaller pT of the two leading candidates with |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`; raw takes the two leading jets in pT, wp the two highest tau scores and cuts on the pair score (see tauRateGrid).\
+``cut`` raw: jets without identification, uncorrected jet pT (the same for every model); wp: the tagger's pT and score (network or CMSSW L1 baseline) at its working point, score > tauWp(seed). diTau: jets with |eta| < `DITAU_RATE_ETA_CUT = 2.5`, an event passes if any jet passes. diTauTopo: the smaller pT of the two leading candidates with |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`; raw takes the two leading jets in pT, wp the candidates of tauRateGrid at each threshold (the two highest tau scores among the jets above it) and cuts on the pair score.\
 `seed`: diTau, diTauTopo; `cut`: raw, wp
 
 #### Signal efficiency
@@ -236,7 +236,7 @@ Gen taus with |eta| < `TAU_ETA_CUT = 2.172`, gen pT > `TAU_GEN_PT_MIN["singleTau
 
 ##### `diTauTopoEffVsGenPt2d`
 
-Di-tau topology seed efficiency in bins of (gen pT of tau 1, gen pT of tau 2), on signal events with two gen-matched taus (gen pT > 1 GeV). The two candidates are the highest tau scores among the jets with pT > `CMSSW_WPS["tau_l1_pt"] = 34`; both need |eta| < `TAU_ETA_CUT = 2.172` and deltaR > `TAU_PAIR_MIN_DR = 0.5`, the smaller pT > tau_l1_pt and the pair score > tauWp(diTauTopo) (see tauRateGrid). Fields ``edges``, ``num``, ``den``, ``eff`` (NaN where den = 0), and the normalised gen pT1 and gen pT2 distributions of all signal events with two jets, ``genpt1_frac`` and ``genpt2_frac`` (for the ratio map of the network against the CMSSW L1 baseline).
+Di-tau topology seed efficiency in bins of (gen pT of tau 1, gen pT of tau 2), on signal events with two gen-matched taus (gen pT > 1 GeV). The two candidates are the highest tau scores among the jets with pT > `CMSSW_WPS["tau_l1_pt"] = 34` and |eta| < `TAU_ETA_CUT = 2.172`, as in tauRateGrid; both need |eta| < TAU_ETA_CUT and deltaR > `TAU_PAIR_MIN_DR = 0.5`, the smaller pT > tau_l1_pt and the pair score > tauWp(diTauTopo) (see tauRateGrid). Fields ``edges``, ``num``, ``den``, ``eff`` (NaN where den = 0), and the normalised gen pT1 and gen pT2 distributions of all signal events with two jets, ``genpt1_frac`` and ``genpt2_frac`` (for the ratio map of the network against the CMSSW L1 baseline).
 
 ##### `diTauTopoTotalEff`
 

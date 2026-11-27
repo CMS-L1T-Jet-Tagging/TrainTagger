@@ -302,7 +302,7 @@ def topo_wp_grid(config):
         xlabel="Tau Topology Score",
         ylabel=r"Min reco $p_T$ [GeV]",
         zlabel=r"Di-tau rate [kHZ]",
-        xlim=(0, 0.2),
+        xlim=(0, 1),
         ylim=(10, 100),
     )
 

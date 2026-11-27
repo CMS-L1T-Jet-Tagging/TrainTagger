@@ -40,7 +40,7 @@ TAU_SCANS:
   diTau_pt: [[20, 100, 2], 1500]
   diTau_nn: [[0, 1.01, 0.005]]
   diTauTopo_pt: [[20, 100, 2], 1500]
-  diTauTopo_nn: [[0, 0.6, 0.0005]]
+  diTauTopo_nn: [[0, 1.0005, 0.0005]]
   # pT thresholds (GeV) of tauRateVsPt and singleTauEffVsThreshold
   diTau_rate_pt: [[0, 250, 10]]
   diTauTopo_rate_pt: [[0, 100, 2]]

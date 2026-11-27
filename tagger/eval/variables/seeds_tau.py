@@ -199,15 +199,8 @@ def tauRateGrid(run, seed: Seed):
     pt_edges, nn_edges = expand_ranges(scans, f"{seed}_pt"), expand_ranges(
         scans, f"{seed}_nn"
     )
-    # the old plot left out diTauTopo pair scores in the overflow
-    # (>= 0.5995)
     return threshold_grid(
-        pt_edges,
-        nn_edges,
-        candidates,
-        mb.n_events,
-        run.config["MINBIAS_RATE"],
-        overflow=seed != "diTauTopo",
+        pt_edges, nn_edges, candidates, mb.n_events, run.config["MINBIAS_RATE"]
     )
 
 
@@ -296,8 +289,9 @@ def tauRateVsPt(run, seed: DiTauSeed, cut: Literal["raw", "wp"]):
     jets with |eta| < DITAU_RATE_ETA_CUT, an event passes if any jet
     passes. diTauTopo: the smaller pT of the two leading candidates with
     |eta| < TAU_ETA_CUT and deltaR > TAU_PAIR_MIN_DR; raw takes the two
-    leading jets in pT, wp the two highest tau scores and cuts on the
-    pair score (see tauRateGrid).
+    leading jets in pT, wp the candidates of tauRateGrid at each
+    threshold (the two highest tau scores among the jets above it) and
+    cuts on the pair score.
     """
     mb = minbias(run)
     minbias_rate = run.config["MINBIAS_RATE"]
@@ -353,30 +347,18 @@ def tauRateVsPt(run, seed: DiTauSeed, cut: Literal["raw", "wp"]):
                 flatten=True,
             ),
         )
-    rank, corr_pt = tau_jets(mb, "diTau", labels(run, mb))
-    parts, pair = topo_parts(mb, labels(run, mb))
-    event_id, g = mb.grouped(
-        *parts,
-        corr_pt,
-        eta,
-        phi,
-        num_elements=2,
-        ordering_var=rank,
-        with_event_id=True,
+    wp, candidates = run.get("tauWp(diTauTopo)"), _ditau_candidates(
+        run, mb, topo=True
     )
-    g_parts, jet_pt, jet_eta, jet_phi = g[:-3], g[-3], g[-2], g[-1]
-    c = _pair_cuts(run.config, jet_eta, jet_phi)
-    sel = pair(*g_parts)[c] > run.get("tauWp(diTauTopo)")
+    n_pass = []
+    for pt_cut in cuts:
+        pt, nn = candidates(pt_cut)
+        n_pass.append(np.sum((pt > pt_cut) & (nn > wp)))
+    n_pass = np.asarray(n_pass, dtype=float)
     return _curve(
         cuts,
-        *rate_points(
-            event_id[c][sel],
-            min_of_leading_two(jet_pt, c)[sel],
-            cuts,
-            n_event,
-            minbias_rate,
-            flatten=True,
-        ),
+        n_pass / n_event * minbias_rate,
+        np.sqrt(n_pass) / n_event * minbias_rate,
     )
 
 
@@ -504,12 +486,14 @@ def _topo_eff_counts(run):
 def _compute_topo_eff_counts(run):
     """_topo_eff_counts without the cache."""
     sig = _signal(run)
-    wps = run.config["CMSSW_WPS"]
+    cut, wps = run.config["TAU_ETA_CUT"], run.config["CMSSW_WPS"]
     eta, phi = sig.branch("jet_eta_phys"), sig.branch("jet_phi_phys")
     wp, pt_wp = run.get("tauWp(diTauTopo)"), wps["tau_l1_pt"]
     rank, corr_pt = tau_jets(sig, "diTau", labels(run, sig))
     parts, pair = topo_parts(sig, labels(run, sig))
-    order = np.where(corr_pt < pt_wp, 0.0, rank)
+    order = np.where(
+        (corr_pt < pt_wp) | (np.abs(np.asarray(eta)) > cut), 0.0, rank
+    )  # as tauRateGrid
     g = sig.grouped(
         *parts, corr_pt, eta, phi, num_elements=2, ordering_var=order
     )
@@ -559,8 +543,8 @@ def diTauTopoEffVsGenPt2d(run):
     """Di-tau topology seed efficiency in bins of (gen pT of tau 1, gen
     pT of tau 2), on signal events with two gen-matched taus (gen pT > 1
     GeV). The two candidates are the highest tau scores among the jets
-    with pT > CMSSW_WPS tau_l1_pt; both need |eta| < TAU_ETA_CUT and
-    deltaR >
+    with pT > CMSSW_WPS tau_l1_pt and |eta| < TAU_ETA_CUT, as in
+    tauRateGrid; both need |eta| < TAU_ETA_CUT and deltaR >
     TAU_PAIR_MIN_DR, the smaller pT > tau_l1_pt and the pair score >
     tauWp(diTauTopo) (see tauRateGrid). Fields ``edges``, ``num``,
     ``den``, ``eff`` (NaN where den = 0), and the normalised gen pT1 and

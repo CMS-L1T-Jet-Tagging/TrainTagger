@@ -160,6 +160,25 @@ def test_ht_only_cut_falls_back_to_a_lower_rate():
     assert cut == 0.0
 
 
+def test_bbbb_wp_falls_back_to_the_closest_rate():
+    """No grid point near an unreachable target rate: the working point
+    is the grid point with the closest rate, not an error."""
+    run = toy.run(
+        toy.ToySeedSources(),
+        overrides=[
+            "MINBIAS_RATE=100",
+            "BBBB_TARGET_RATE=1000",
+            "BBBB_RATE_RANGE=0.01",
+        ],
+    )
+    grid = run.get("bbbbRateGrid(raw, all)")
+    line = run.get("bbbbWpLine(raw, all)")
+    closest = int(np.argmax(grid["rate"]))  # every rate is below 1000
+    assert list(line["ht"]) == [grid["ht"][closest]]
+    assert run.get("bbbbWpHt(raw, all)") == grid["ht"][closest]
+    assert run.get("bbbbWpNn(raw, all)") == grid["nn"][closest]
+
+
 def cmssw_run():
     return toy.run(
         toy.ToySeedSources(pseudo="cmssw"), overrides=toy.SEED_OVERRIDES

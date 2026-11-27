@@ -259,7 +259,7 @@ MinBias rate (kHz) of the HH -> 4b seed HT > ht and (sum of the b scores of the 
 
 ##### `bbbbWpLine(score, sel)`
 
-The bbbbRateGrid(score, sel) points within `BBBB_RATE_RANGE = 0.5` of `BBBB_TARGET_RATE = 14`. Fields ``ht``, ``nn``. For -m cmssw for comparison only: its working point is the fixed CMSSW_WPS one.\
+The bbbbRateGrid(score, sel) points within `BBBB_RATE_RANGE = 0.5` of `BBBB_TARGET_RATE = 14`; without any, the point with the closest rate. Fields ``ht``, ``nn``. For -m cmssw for comparison only: its working point is the fixed CMSSW_WPS one.\
 `score`: raw, vs_qg; `sel`: all, sel
 
 ##### `bbbbWpHt(score, sel)`

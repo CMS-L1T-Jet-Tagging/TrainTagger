@@ -170,15 +170,20 @@ def bbbbRateGrid(run, score: BbbbScore, sel: BbbbSel):
 @vm.variable(inputs={"minbias_events", "model"}, kind="curve")
 def bbbbWpLine(run, score: BbbbScore, sel: BbbbSel):
     """The bbbbRateGrid(score, sel) points within BBBB_RATE_RANGE of
-    BBBB_TARGET_RATE. Fields ``ht``, ``nn``. For -m cmssw for comparison
-    only: its working point is the fixed CMSSW_WPS one.
+    BBBB_TARGET_RATE; without any, the point with the closest rate.
+    Fields ``ht``, ``nn``. For -m cmssw for comparison only: its working
+    point is the fixed CMSSW_WPS one.
     """
     grid = run.get(f"bbbbRateGrid({score}, {sel})")
-    idx = find_rate(
-        list(grid["rate"]),
-        run.config["BBBB_TARGET_RATE"],
-        run.config["BBBB_RATE_RANGE"],
-    )
+    target = run.config["BBBB_TARGET_RATE"]
+    idx = find_rate(list(grid["rate"]), target, run.config["BBBB_RATE_RANGE"])
+    if not idx:
+        idx = [int(np.argmin(np.abs(np.asarray(grid["rate"]) - target)))]
+        print(
+            f"  bbbbWpLine({score}, {sel}): no grid point within"
+            f" BBBB_RATE_RANGE of {target} kHz, using the closest rate"
+            f" ({grid['rate'][idx[0]]:.3g} kHz)"
+        )
     return {"ht": grid["ht"][idx], "nn": grid["nn"][idx]}
 
 
@@ -201,6 +206,8 @@ def _compute_bbbb_wp(run, score, sel):
         run.config, e["jet_pt"], e["jet_eta"], sel
     )
     line = run.get(f"bbbbWpLine({score}, {sel})")
+    if len(line["ht"]) == 1:  # a single point: the working point
+        return float(line["ht"][0]), float(line["nn"][0])
     f = interp1d(
         list(line["ht"]),
         list(line["nn"]),

@@ -55,8 +55,18 @@ def minbias(run: EvalRun) -> EventSample:
     Returns:
         EventSample: The first config SEED_N_ENTRIES minbias jets of
             config MINBIAS_SAMPLE.
+
+    Raises:
+        ValueError: The sample has no events (no rate can be computed).
     """
-    return run.input("minbias_events", run.config["SEED_N_ENTRIES"]["minbias"])
+    events = run.input(
+        "minbias_events", run.config["SEED_N_ENTRIES"]["minbias"]
+    )
+    if events.n_events == 0:
+        raise ValueError(
+            f"no events in the MinBias sample {run.config['MINBIAS_SAMPLE']}"
+        )
+    return events
 
 
 def signal(run: EvalRun, sample: str) -> EventSample:

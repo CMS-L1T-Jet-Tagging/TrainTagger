@@ -15,6 +15,7 @@ from tagger.eval.variable_manager import ModelInfo, vm
 from tagger.eval.variables.base.efficiency import efficiency
 from tagger.eval.variables.base.rates import wp_per_pt
 from tagger.eval.variables import seeds_hh
+from tagger.eval.variables.base.taggers import run3_bbtt_seed
 from tagger.plot.cli import draw, ModelResults, specs_for
 from tagger.plot.registry import load_all
 
@@ -76,6 +77,45 @@ def test_wp_per_pt_keeps_the_highest_score():
     pts, nn = wp_per_pt([40, 30, 40, 30, 50], [0.2, 0.5, 0.3, 0.1, 0.05])
     assert list(pts) == [30, 40, 50]
     assert list(nn) == [0.5, 0.3, 0.05]
+
+
+def _run3_bbtt_seed_cases(cases, seed):
+    jet_pt = ak.Array([[ht / 2, ht / 2] for ht, _, _ in cases])
+    tau_pt = ak.Array([[pt, pt] for _, pt, _ in cases])
+    eta = ak.Array([[0.0, 0.0]] * len(cases))
+    score = ak.Array([[1.0, 1.0]] * len(cases))
+    passed = run3_bbtt_seed(jet_pt, eta, tau_pt, score, 0.5, seed)
+    assert list(passed) == [c[2] for c in cases]
+
+
+def test_bbtt_run3_seed_terms():
+    """Default: (HT > 380) or (two taus > 34 GeV), as in the plot
+    legend."""
+    _run3_bbtt_seed_cases(
+        [  # (HT, tau pT, passes)
+            (400, 0, True),
+            (300, 30, False),
+            (200, 35, True),
+            (390, 25, True),
+        ],
+        config_mod.load()["BBTT_RUN3_SEED"],
+    )
+
+
+def test_bbtt_run3_seed_middle_term():
+    """With ht_with_taus set: (HT > 380) or (HT > 280 and two taus > 26
+    GeV) or (two taus > 34 GeV)."""
+    seed = dict(config_mod.load()["BBTT_RUN3_SEED"], ht_with_taus=280)
+    _run3_bbtt_seed_cases(
+        [  # (HT, tau pT, passes)
+            (400, 0, True),
+            (300, 30, True),
+            (300, 25, False),
+            (200, 30, False),
+            (200, 35, True),
+        ],
+        seed,
+    )
 
 
 def test_bbtt_tau_selection_uses_each_events_pair():

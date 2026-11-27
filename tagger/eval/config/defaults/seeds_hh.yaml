@@ -37,13 +37,14 @@ BBTT_GRID_KEEP_WINDOW: 2
 #   HT > ht
 #   OR (HT > ht_with_taus and two taus with pT > tau_pt_with_ht)
 #   OR two taus with pT > tau_pt
-# taus with |eta| <= tau_eta. As in the old bbtt.py, the HT > 280 term
-# uses 380 GeV and both tau pT terms 26 GeV.
+# taus with |eta| <= tau_eta. The middle term is off with
+# ht_with_taus: null, as in the plot legend; the comment in the old
+# bbtt.py had it with ht_with_taus: 280.
 BBTT_RUN3_SEED:
   ht: 380
-  ht_with_taus: 380
+  ht_with_taus: null
   tau_pt_with_ht: 26
-  tau_pt: 26
+  tau_pt: 34
   tau_eta: 2.1
 
 

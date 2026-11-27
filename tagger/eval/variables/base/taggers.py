@@ -168,9 +168,10 @@ def run3_bbtt_seed(
     """Events passing the Run-3-like bb tau tau seed.
 
     HT > ht OR (HT > ht_with_taus and two taus with pT > tau_pt_with_ht)
-    OR two taus with pT > tau_pt. Taus: the two highest NN PUPPI tau
-    scores, both with |eta| <= tau_eta and a score at or above the CMSSW
-    working point. HT of all jets.
+    OR two taus with pT > tau_pt. The middle term is left out when
+    ht_with_taus is None. Taus: the two highest NN PUPPI tau scores, both
+    with |eta| <= tau_eta and a score at or above the CMSSW working
+    point. HT of all jets.
 
     Args:
         jet_pt: Jet pT per event (events x jets).
@@ -193,13 +194,12 @@ def run3_bbtt_seed(
         tau_scores[:, 1] >= cmssw_tau_wp
     )
     taus = eta & ident
-    taus_with_ht = _both_above(taus, tau_pt, seed["tau_pt_with_ht"])
     ht = ak.sum(jet_pt, axis=1)
-    return (
-        (ht > seed["ht"])
-        | ((ht > seed["ht_with_taus"]) & taus_with_ht)
-        | _both_above(taus, tau_pt, seed["tau_pt"])
-    )
+    passed = (ht > seed["ht"]) | _both_above(taus, tau_pt, seed["tau_pt"])
+    if seed["ht_with_taus"] is not None:
+        taus_with_ht = _both_above(taus, tau_pt, seed["tau_pt_with_ht"])
+        passed = passed | ((ht > seed["ht_with_taus"]) & taus_with_ht)
+    return passed
 
 
 def _both_above(passing, pt, pt_cut):

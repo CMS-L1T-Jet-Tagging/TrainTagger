@@ -351,7 +351,7 @@ Integrated HH -> bb tau tau efficiency of a trigger (as bbttEffVsGenHt): passing
 
 ##### `bbttRun3SeedRate`
 
-MinBias rate (kHz) of the Run-3-like bb tau tau seed (config `BBTT_RUN3_SEED = {'ht': 380, 'ht_with_taus': 380, 'tau_pt_with_ht': 26, 'tau_pt': 26, 'tau_eta': 2.1}`), with the CMSSW taus (score >= `CMSSW_WPS["tau"] = 0.22`), events with at least 2 jets. The bbtt working points are derived at this rate rounded to 0.1 kHz, and at `BBTT_TARGET_RATE = 14`.
+MinBias rate (kHz) of the Run-3-like bb tau tau seed (config `BBTT_RUN3_SEED = {'ht': 380, 'ht_with_taus': None, 'tau_pt_with_ht': 26, 'tau_pt': 34, 'tau_eta': 2.1}`), with the CMSSW taus (score >= `CMSSW_WPS["tau"] = 0.22`), events with at least 2 jets. The bbtt working points are derived at this rate rounded to 0.1 kHz, and at `BBTT_TARGET_RATE = 14`.
 
 ##### `bbttRefEffVsGenHt(trigger)`
 

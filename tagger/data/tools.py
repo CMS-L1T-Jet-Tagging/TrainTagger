@@ -374,7 +374,7 @@ def constituents_mask(x, features_dim):
 
     return mask
 
-def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
+def load_data(outdir, percentage, model, test_ratio=0.1, fields=None, shuffle=True):
     """
     Load a specified percentage of the dataset using uproot.concatenate.
 
@@ -383,6 +383,7 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
         percentage (float): The percentage of TOTAL data to load (0-100).
         test_ratio (float): how much of the total data would be used for testing (0-1)
         fields (list, optional): Specific fields to load. If None, load all fields.
+        shuffle (bool): shuffle the jets before the split; False keeps the file order.
 
     Returns:
         awkward.Array: Concatenated data arrays from selected chunks.
@@ -439,7 +440,8 @@ def load_data(outdir, percentage, model, test_ratio=0.1, fields=None):
     # Shuffle the data indices
     total_data_len = len(data)
     indices = np.arange(total_data_len)
-    np.random.shuffle(indices)
+    if shuffle:
+        np.random.shuffle(indices)
 
     # Split indices based on test_ratio
     split_index = int((1 - test_ratio) * total_data_len)

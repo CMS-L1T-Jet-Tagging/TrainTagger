@@ -51,7 +51,10 @@ class JetTagModel(ABC):
 
         self.history = None
 
-    run_schema = {"verbose" : And(int, lambda s: s in [1,2,3]),
+    # Name of the layer with one pT weight per constituent, None if the model has none
+    output_pt_weights_name = None
+
+    run_schema ={"verbose" : And(int, lambda s: s in [1,2,3]),
                   "debug": bool,
                   "num_threads" : And(int, lambda s: 1 <= s <= 128),
                  }
@@ -100,16 +103,17 @@ class JetTagModel(ABC):
         Must be written for child class if you want to run the synthesis steps
         """
 
-    def predict(self, particle_features_test: npt.NDArray[np.float64]) -> tuple:
+    def predict(self, particle_features_test: npt.NDArray[np.float64], verbose="auto") -> tuple:
         """Predict method for model
 
         Args:
             particle_features_test (npt.NDArray[np.float64]): Input X test
+            verbose (int or "auto"): Keras verbosity of the prediction, 0 for silent
 
         Returns:
             tuple: (class_predictions , pt_ratio_predictions)
         """
-        model_outputs = self.jet_model.predict(particle_features_test)
+        model_outputs = self.jet_model.predict(particle_features_test, verbose=verbose)
         class_predictions = model_outputs[0]
         pt_ratio_predictions = model_outputs[1].flatten()
         return (class_predictions, pt_ratio_predictions)

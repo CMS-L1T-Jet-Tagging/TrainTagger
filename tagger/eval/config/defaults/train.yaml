@@ -1,0 +1,6 @@
+# Default config: train collection (variables/train.py).
+
+# -- SHAP feature importance (shapImportance) --------------------------
+# Jets explained (also the background) and the random seed
+SHAP_N_JETS: 10
+SHAP_SEED: 1

@@ -1,0 +1,50 @@
+# Default config: the input files of every collection.
+#
+# Paths are relative to the folder tagger.eval runs in. The CI copies
+# its files into data/ and passes their names with --set
+# (CI/ml_pipeline.yml).
+
+# -- Trigger seed collections (seeds_tau, seeds_hh) --------------------
+# Jet ntuples, one entry per jet, grouped into events by the event
+# branch. The CI copies them from
+# /eos/cms/store/cmst3/group/l1tr/sewuchte/l1teg/fp_jettuples_240926_170X_v0.1_full/
+TREE: outnano/Jets
+
+MINBIAS_SAMPLE: data/MinBias_PU200.root
+
+SIGNAL_SAMPLES:
+  vbfHtautau: data/VBFHToTauTau_PU200.root
+  hhbbtt: data/GluGluHHTo2B2Tau_PU200.root
+  hh4b: data/GluGluHHTo4B_PU200.root
+
+# Jets (ntuple entries) read per sample. All seeds share one load and
+# one model evaluation per sample.
+SEED_N_ENTRIES:
+  minbias: 1000000
+  signal: 1000000
+
+
+# -- Emulation collection ----------------------------------------------
+# Jet ntuple of the CMSSW build with the model's emulator,
+# jetTuple_<TRACK_ALGO>_<N_PARAMS>.root in CI
+EMULATION_SAMPLE: data/jetTuple_extended_5.root
+
+EMULATION_TREE: outnano/Jets
+
+# Preprocessed jets of EMULATION_SAMPLE (tagger.data.tools.make_data):
+# made on first use, remade when the sample changes
+EMULATION_DATA_DIR: emulation_data
+
+
+# -- FastPUPPI regression collection -----------------------------------
+# Folder of <process>_perfNano.root and jecs.root, written by the CI job
+# run_processes (${EOS_STORAGE_DIR}/${EOS_STORAGE_PROCSDIR} in CI)
+FASTPUPPI_DIR: data/fastpuppi
+
+
+# -- CMSSW L1 baseline -------------------------------------------------
+# Results folder of the -m cmssw pseudo-model (NN PUPPI tau and L1 b-tag
+# scores from the ntuples, not the emulation of our model). It does not
+# depend on the network, so one eval run serves every model; tagger.plot
+# reads it for the CMSSW curves.
+CMSSW_MODEL_DIR: output/cmssw

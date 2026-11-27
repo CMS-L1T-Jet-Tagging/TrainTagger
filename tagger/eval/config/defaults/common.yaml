@@ -1,0 +1,47 @@
+# Default config: keys shared by several collections.
+
+# -- Classes and collections -------------------------------------------
+# Class groups usable wherever a variable takes a class argument, e.g.
+# roc(taus, jets). A plain class name (b, light, ...) is a group of one.
+# Groups whose classes the model lacks are skipped.
+CLASS_GROUPS:
+  taus: [taup, taum]
+  jets: [b, charm, light, gluon]
+  qcd: [light, gluon]
+  leptons: [muon, electron]
+
+# User collections: name -> list of expressions or other collection
+# names, e.g.
+#   COLLECTIONS:
+#     myAucs: ["auc(b, light)", "auc(taus, jets)"]
+#     mine: [myAucs, confusionMatrix]
+COLLECTIONS: {}
+
+
+# -- Jets --------------------------------------------------------------
+# Reco jets: |eta| < JET_ETA_CUT; the seeded cone jets also pT >
+# JET_PT_CUT (GeV), as in the jet training
+JET_PT_CUT: 15
+JET_ETA_CUT: 2.4
+
+# pT bins (GeV) of the efficiency versus pT, and of the pT response and
+# resolution (jetPt and emulationRegression collections)
+PT_BINS: [15, 17, 19, 22, 25, 30, 35, 40, 45, 50, 60, 76, 97, 122, 154,
+          195, 246, 311, 393, 496, 627, 792, 1000]
+
+
+# -- Rates and CMSSW references ----------------------------------------
+# MinBias rate (kHz): 2760 bunches x 11246 Hz revolution frequency
+# (old common.MINBIAS_RATE)
+MINBIAS_RATE: 31038.96
+
+# Reference CMSSW working points (old common.WPs_CMSSW)
+CMSSW_WPS:
+  tau: 0.22            # PFTau.h, tau score
+  tau_l1_pt: 34        # tau pT, GeV
+  # |eta| of the taus of the CMSSW di-tau seed (old bbtt.py)
+  tau_eta: 2.1
+  l1_pt_sc_barrel: 164
+  l1_pt_sc_endcap: 121
+  btag: 2.32           # Annual review 2024, slide 19
+  btag_l1_ht: 220

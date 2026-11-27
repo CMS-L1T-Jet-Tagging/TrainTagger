@@ -81,13 +81,7 @@ def test_response_and_leading_pt_against_brute_force():
     sel = (corrected > lo) & (corrected < hi) & (truth > 0)
     r = run.get("fpResponseVsPt(TT_PU200, sc, median)")
     assert np.isclose(r["jecs"][8], np.median(corrected[sel] / truth[sel]))
-    # as the old plot: every field of the leading entry (each field
-    # sorted on its own) goes into the histogram
-    leading = ak.to_numpy(
-        ak.flatten(
-            ak.sort(jets["raw"], axis=1, ascending=False)[:, :1], axis=None
-        )
-    )
+    leading = [max(e) for e in ak.to_list(jets["raw"].pt) if len(e)]
     h = run.get("fpPtHist(TT_PU200, sc, leading)")
     assert np.allclose(
         h["fraction"],

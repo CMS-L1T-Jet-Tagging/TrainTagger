@@ -365,22 +365,14 @@ def fpResolutionVsPt(run, process: Process, coll: Coll):
 def fpPtHist(
     run, process: Process, jets: JetsOrGen, which: Literal["leading", "all"]
 ):
-    """pT spectrum of the leading jet per event or of all jets, in
-    config REGULAR_PT_BINS (values clipped into the last bin), as
-    fractions of the entries. Fields ``edges``, ``fraction``. As in
-    the old plot_basic.py the histogram holds every field of the jets
-    (pT, eta, phi, mass, ...), and ``leading`` sorts each field on
-    its own, so its entries can come from different jets."""
+    """pT spectrum of the leading jet per event (events with a jet) or
+    of all jets, in config REGULAR_PT_BINS (values clipped into the last
+    bin), as fractions of the jets. Fields ``edges``, ``fraction``."""
     j = _jets(run, process, jets)
-    pt = ak.to_numpy(
-        ak.flatten(
-            (
-                ak.sort(j, axis=1, ascending=False)[:, :1]
-                if which == "leading"
-                else j
-            ),
-            axis=None,
-        )
+    pt = (
+        ak.to_numpy(ak.max(j.pt, axis=1)[ak.num(j.pt) > 0])
+        if which == "leading"
+        else ak.to_numpy(ak.flatten(j.pt))
     )
     edges = np.linspace(*run.config["REGULAR_PT_BINS"])
     pt = np.clip(pt, 0, np.max(edges) - 0.5)

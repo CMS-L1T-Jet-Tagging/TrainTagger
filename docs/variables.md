@@ -403,7 +403,7 @@ Relative resolution std(L1 pT - gen pT) / mean(gen pT) of the gen-matched jets o
 
 ##### `fpPtHist(process, jets, which)`
 
-pT spectrum of the leading jet per event or of all jets, in config `REGULAR_PT_BINS = [0, 1000, 50]` (values clipped into the last bin), as fractions of the entries. Fields ``edges``, ``fraction``. As in the old plot_basic.py the histogram holds every field of the jets (pT, eta, phi, mass, ...), and ``leading`` sorts each field on its own, so its entries can come from different jets.\
+pT spectrum of the leading jet per event (events with a jet) or of all jets, in config `REGULAR_PT_BINS = [0, 1000, 50]` (values clipped into the last bin), as fractions of the jets. Fields ``edges``, ``fraction``.\
 `process`: TT_PU200, QCD_Pt15To3000_PU200, MinBias_PU200, VBFHToBB_PU200, VBFHToCC_PU200; `jets`: nn, nnJecs, sc, scJecs, gen; `which`: leading, all
 
 ##### `fpGenRecoPtMap(process, jets)`

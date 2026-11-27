@@ -36,6 +36,20 @@ def quantize(value, bits):
 def rms(array):
     return np.sqrt(np.mean(array**2))
 
+
+def quantize_ptreg_emulator(value):
+    """
+    Quantize a pt-regression output the way the CMSSW emulator does before storing
+    jet_SC4NGJet_score_regression: L1TSC4NGJetID::output_regression_type =
+    ap_ufixed<22,12,AP_TRN,AP_SAT> (see L1Trigger/Phase2L1ParticleFlow/.../L1TSC4NGJet.cc:
+    inputtype model output -> output_regression_type), i.e. truncate to 12 fractional bits
+    and saturate to [0, (2^22-1)/2^12]. Inputtype widening of the model output is exact, so
+    the stored value = trunc(model_output * 2^12) / 2^12.
+    """
+    value = np.asarray(value, dtype=np.float64)
+    limit = (2**22 - 1) / 2**12
+    return np.floor(np.clip(value, 0.0, limit) * 2**12) / 2**12
+
 def doPlots(model, outputdir, inputdir):
     os.makedirs(outputdir, exist_ok=True)
 
@@ -118,14 +132,37 @@ def doPlots(model, outputdir, inputdir):
         log = 'linear',
         x_range=(0, 2),
     )
-    bit_accurate = np.count_nonzero(
-        (np.array(data['jet_SC4NGJet_score_regression']) - np.array(modelsAndNames['Y_hls_predict_reg'][:, 0]))
-    )
+    # The CMSSW-emulator regression score stored in the ntuple is the model output truncated
+    # to ap_ufixed<22,12,AP_TRN,AP_SAT>; compare the TF/hls4ml outputs on that same grid so the
+    # bit-accuracy metric is apples-to-apples.
+    emu_regression = np.array(data['jet_SC4NGJet_score_regression'])
+    hls_regression_emu_grid = quantize_ptreg_emulator(modelsAndNames['Y_hls_predict_reg'][:, 0])
+    tf_regression_emu_grid = quantize_ptreg_emulator(modelsAndNames['Y_predict_reg'][:, 0])
+    modelsAndNames["Y_hls_predict_reg_emu_grid"] = hls_regression_emu_grid
+    modelsAndNames["Y_predict_reg_emu_grid"] = tf_regression_emu_grid
+
+    bit_accurate = np.count_nonzero(emu_regression - hls_regression_emu_grid)
     print(
-        "Percent bit accuracy between CMSSW emulator and hls4ml for regression is",
-        100 - 100 * bit_accurate / len(np.array(data['jet_SC4NGJet_score_regression'])),
+        "Percent bit accuracy between CMSSW emulator and hls4ml for regression (on the emulator output grid) is",
+        100 - 100 * bit_accurate / len(emu_regression),
         "%",
     )
+    tf_bit_accurate = np.count_nonzero(emu_regression - tf_regression_emu_grid)
+    print(
+        "Percent bit accuracy between CMSSW emulator and Tensorflow for regression (on the emulator output grid) is",
+        100 - 100 * tf_bit_accurate / len(emu_regression),
+        "%",
+    )
+    for name, pred in [
+        ("hls4ml", np.array(modelsAndNames['Y_hls_predict_reg'][:, 0])),
+        ("Tensorflow", np.array(modelsAndNames['Y_predict_reg'][:, 0])),
+    ]:
+        delta = np.abs(emu_regression - pred)
+        print(
+            f"Regression agreement |CMSSW - {name}| within 1e-3: "
+            f"{100 * np.count_nonzero(delta <= 0.001) / len(emu_regression)} % "
+            f"(meanabs {np.mean(delta):.6g}, max {np.max(delta):.6g})"
+        )
     plt.savefig("%s/jetRegression_1D.png" % outputdir, bbox_inches='tight')
     plt.savefig("%s/jetRegression_1D.pdf" % outputdir, bbox_inches='tight')
 

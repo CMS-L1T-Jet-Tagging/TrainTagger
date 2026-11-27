@@ -1,0 +1,62 @@
+# Default config: emulation and emulationRegression (FastPUPPI)
+# collections (variables/jet_classifier.py, variables/fastpuppi.py).
+
+# -- Emulation ---------------------------------------------------------
+# The network, its hls4ml build and the CMSSW emulator on the same jets
+#
+# Bits of the hls4ml class scores: the scores are rounded to multiples
+# of 2^-(bits-1), as quantize() of the old makeEmulationPlot.py did
+HLS4ML_SCORE_BITS: 8
+
+
+# -- FastPUPPI regression ----------------------------------------------
+# The model's CMSSW emulation in full events
+#
+# Processes of the response, resolution, pT distributions, gen vs reco
+# pT maps and turn-on curves
+FASTPUPPI_PROCESSES: [TT_PU200, QCD_Pt15To3000_PU200]
+
+# Uniform pT bins (GeV) of the pT spectra and gen vs L1 pT maps:
+# [low, high, number of edges]
+REGULAR_PT_BINS: [0, 1000, 50]
+
+# |eta| bins of the jet energy corrections; must match the JEC eta bins
+# in FastPUPPI
+JEC_ETA_BINS: [0, 1.3, 1.7, 1.9, 2.1, 2.4, 2.8, 3.0, 3.3, 3.6, 4.0, 4.8]
+
+
+# -- Turn-on curves ----------------------------------------------------
+# Observables, and the MinBias rates (kHz) of their working points
+TURN_ON_OBSERVABLES: [jet1, jet2, ht30]
+TURN_ON_RATES: [10, 20, 50, 100]
+
+# Threshold scan per observable (GeV): [first, last, step] of the
+# thresholds, also the bins of the turn-on curve, and the x range of the
+# turn-on plot
+TURN_ON_SCANS:
+  jet1: [80, 500, 0.25, 500]
+  jet2: [50, 320, 0.25, 500]
+  jet3: [5, 100, 0.25, 300]
+  ht15: [100, 550, 0.25, 1200]
+  ht30: [100, 550, 0.25, 1000]
+  mjj: [400, 2200, 0.25, 1500]
+  max_mjj: [400, 2800, 0.25, 2000]
+  dijet: [10, 500, 0.1, 400]
+  quadjet: [1, 200, 0.05, 200]
+
+# A working point more than this (kHz) off its rate is an error
+TURN_ON_RATE_TOLERANCE: 2
+
+
+# -- Mass peaks --------------------------------------------------------
+# Matching of gen partons to gen jets: deltaR < MATCH_DELTA_R and
+# |pT jet - pT parton| / pT parton < MATCH_REL_PT
+MATCH_DELTA_R: 0.4
+MATCH_REL_PT: 0.5
+
+# Mass bins (GeV) of the top, W and Higgs mass peaks:
+# [low, high, number of edges]
+MASS_BINS:
+  top: [0, 310, 40]
+  w: [0, 180, 40]
+  h: [0, 230, 40]

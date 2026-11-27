@@ -11,7 +11,7 @@ from tagger.model.common import fromFolder
 
 # Import from other modules
 from tagger.plot import style
-from tagger.plot.common import plot_2d
+from tagger.plot.plotters import plot_2d
 
 from hls4ml.model import profiling
 

@@ -1,0 +1,86 @@
+# Default config: HH trigger seeds, HH -> 4b and HH -> bb tau tau
+# (variables/seeds_hh.py).
+#
+# Ranges as in seeds_tau.yaml: [first, last, step] ranges (last
+# excluded) and single values.
+
+# -- HH -> 4b ----------------------------------------------------------
+# Target rate (kHz), and the window of the working point line
+BBBB_TARGET_RATE: 14
+BBBB_RATE_RANGE: 0.5
+
+# Window (kHz) around BBBB_TARGET_RATE in which the HT-only trigger
+# threshold is searched
+BBBB_HT_ONLY_RATE_RANGE: 0.8
+
+# Variants: [score, sel]
+BBBB_VARIANTS: [[raw, all]]
+
+
+# -- HH -> bb tau tau --------------------------------------------------
+# User target rate (kHz) besides the rate of the Run-3-like seed, and
+# its window
+BBTT_TARGET_RATE: 14
+BBTT_RATE_RANGE: 0.85
+
+# HT threshold (GeV) of the working points
+BBTT_HT_CUT: 220
+
+# Variants: [score, sel]
+BBTT_VARIANTS: [[raw, tau], [qg, tau], [raw, all], [qg, all]]
+
+# bbttRateGrid keeps the grid points within this window (kHz) of
+# BBTT_TARGET_RATE or of the Run-3-like seed rate
+BBTT_GRID_KEEP_WINDOW: 2
+
+# Run-3-like bb tau tau seed (old bbtt.py), GeV:
+#   HT > ht
+#   OR (HT > ht_with_taus and two taus with pT > tau_pt_with_ht)
+#   OR two taus with pT > tau_pt
+# taus with |eta| <= tau_eta. The middle term is off with
+# ht_with_taus: null, as in the plot legend; the comment in the old
+# bbtt.py had it with ht_with_taus: 280.
+BBTT_RUN3_SEED:
+  ht: 380
+  ht_with_taus: null
+  tau_pt_with_ht: 26
+  tau_pt: 34
+  tau_eta: 2.1
+
+
+# -- Candidates and selections -----------------------------------------
+# HT sums the jets with pT > HT_JET_PT_CUT (GeV) and
+# |eta| < JET_ETA_CUT; bbbb: jets with pT < JET_PT_CUT or
+# |eta| > JET_ETA_CUT score 0
+HT_JET_PT_CUT: 30
+
+# Extra selections (sel), all with |eta| < JET_ETA_CUT: bbbb sel the 4
+# leading jets with pT > BBBB_SEL_JET_PT; bbtt tau both tau candidates
+# with pT > BBTT_SEL_TAU_PT; bbtt all the 4 leading jets with pT >
+# BBTT_SEL_JET_PT (GeV)
+BBBB_SEL_JET_PT: 10
+BBTT_SEL_TAU_PT: 7
+BBTT_SEL_JET_PT: 5
+
+
+# -- Threshold scans (ranges) ------------------------------------------
+HH_SCANS:
+  # bbbbRateGrid: HT (GeV, also htOnlyCut bbbb) and b score sum edges;
+  # HT of the bbbb working point search
+  bbbb_ht: [[0, 500, 2], 10000]
+  bbbb_nn: [[0, 2.5, 0.01], 4.0]
+  bbbb_wp_ht: [[150, 250, 5]]
+  # bbttRateGrid: HT (GeV, also htOnlyCut bbtt) and the edges of both
+  # the b sum and the tau pair score
+  bbtt_ht: [[150, 500, 5], 10000]
+  bbtt_nn: [[0.01, 0.9, 0.01], 1.0, 2.0]
+
+
+# -- Signal efficiency -------------------------------------------------
+# Generated HT and m_HH bins (GeV, ranges) of the efficiencies
+HH_GEN_HT_EDGES: [[0, 800, 20]]
+HH_GEN_MHH_EDGES: [[0, 1000, 20]]
+
+# Normalised gen distributions (hhGenHist): bins (GeV, ranges, 0 to
+# 800); values above the last edge count in the last bin
+HH_GEN_HIST_EDGES: [[0, 840, 40]]

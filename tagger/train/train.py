@@ -6,17 +6,21 @@ import numpy as np
 
 # Import from other modules
 from tagger.data.tools import load_data, to_ML
-from tagger.model.common import fromFolder, fromYaml
-from tagger.plot.basic import basic
+from tagger.eval import config as config_mod
+from tagger.eval.utils.cli import evaluate
+from tagger.model.common import fromYaml
+from tagger.plot.cli import plot
 
 
-def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt):
+def save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt, reco_eta=None):
 
     os.makedirs(os.path.join(out_dir, 'testing_data'), exist_ok=True)
     np.savez_compressed(os.path.join(out_dir, "testing_data/test_dict.npz"), **test_dict)
     np.savez_compressed(os.path.join(out_dir, "testing_data/y_test.npz"), label=y_test)
     np.savez_compressed(os.path.join(out_dir, "testing_data/truth_pt_test.npz"), truth_pt=truth_pt_test)
     np.savez_compressed(os.path.join(out_dir, "testing_data/reco_pt_test.npz"), reco_pt=reco_pt)
+    if reco_eta is not None:  # jet eta, for the efficiency-vs-eta variables of tagger.eval
+        np.savez_compressed(os.path.join(out_dir, "testing_data/reco_eta_test.npz"), reco_eta=reco_eta)
 
     print(f"Test labels saved to {out_dir}")
 
@@ -125,6 +129,21 @@ def train_weights(y_train, reco_pt_train, class_labels, weightingMethod, debug, 
         return None
     return sample_weights
 
+
+def eval_and_plot(out_dir, collections, config=None, plot_dir=None):
+    """Evaluate some collections of one model (tagger.eval) and draw their plots (tagger.plot).
+    ``config``: the eval config, the defaults if None."""
+    evaluate(out_dir, collections, config or config_mod.load())
+    plot([out_dir], collections, plot_dir)
+
+
+def plot_basic(out_dir, signal_processes):
+    """Evaluate the trained model and draw its performance plots."""
+    config = config_mod.load()
+    config["SIGNAL_PROCESSES"] = list(signal_processes)
+    eval_and_plot(out_dir, ["jetClassifier", "jetPt"], config)
+
+
 def train(model, out_dir, percent):
 
     # Load the data, class_labels and input variables name, not really using input variable names to be honest
@@ -155,7 +174,7 @@ def train(model, out_dir, percent):
         'jet_features': jet_features_test,
     }
     test_dict, _ = model.prepare_inputs(raw_inputs_test)  # to set the input keys
-    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test)
+    save_test_data(out_dir, test_dict, y_test, truth_pt_test, reco_pt_test, np.asarray(data_test["jet_eta_phys"]))
 
     # Calculate the sample weights for training
     jet_weights = []
@@ -183,8 +202,10 @@ def train(model, out_dir, percent):
 
     # Finished training, save model
     model.save()
+    model.save_history()
 
-    model.plot_loss()
+    # loss per epoch: saved as a result, then drawn (train collection)
+    eval_and_plot(out_dir, ["train"])
 
     return
 
@@ -211,8 +232,7 @@ if __name__ == "__main__":
 
     if args.plot_basic:
         # All the basic plots!
-        model = fromFolder(args.output)
-        results = basic(model, args.signal_processes)
+        plot_basic(args.output, args.signal_processes)
 
     else:
         model = fromYaml(args.yaml_config, args.output)

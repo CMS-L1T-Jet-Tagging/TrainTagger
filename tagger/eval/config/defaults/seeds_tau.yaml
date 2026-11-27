@@ -1,0 +1,71 @@
+# Default config: tau trigger seeds, singleTau, diTau and diTauTopo
+# (variables/seeds_tau.py).
+#
+# Ranges: a list of [first, last, step] ranges (as np.arange, last
+# excluded) and single values, e.g. [0, [30, 150, 2]] is 0, 30, 32, ...,
+# 148. In a threshold scan, a single value past the ranges is an
+# overflow edge: the last bin then holds everything above.
+
+# -- Seeds -------------------------------------------------------------
+# Signal sample of the efficiencies (a key of SIGNAL_SAMPLES)
+TAU_SIGNAL: vbfHtautau
+
+# Target rate and the +- window (kHz) in which grid points count as on
+# target. singleTau: wp_pt is the threshold of the efficiency-vs-gen-pT
+# plots.
+TAU_SEEDS:
+  singleTau: {target_rate: 31, rate_range: 1.0, wp_pt: 75.0}
+  diTau: {target_rate: 28, rate_range: 1.0}
+  diTauTopo: {target_rate: 28, rate_range: 1.0}
+
+
+# -- Candidates --------------------------------------------------------
+# Tau acceptance, slide 7 of
+# https://indico.cern.ch/event/1380964/contributions/5852368/attachments/2841655/4973190/AnnualReview_2024.pdf
+TAU_ETA_CUT: 2.172
+
+# Smallest deltaR between the two taus of a di-tau pair
+TAU_PAIR_MIN_DR: 0.5
+
+# The diTau rate versus pT takes jets with |eta| < DITAU_RATE_ETA_CUT
+DITAU_RATE_ETA_CUT: 2.5
+
+
+# -- Threshold scans (ranges) ------------------------------------------
+# The resolution of the rate grids, working point searches and curves
+TAU_SCANS:
+  # tauRateGrid: pT (GeV) and score threshold edges per seed
+  singleTau_pt: [[30, 80, 1], [80, 150, 2], 1500]
+  singleTau_nn: [[0, 0.5, 0.002], [0.5, 1.01, 0.005]]
+  diTau_pt: [[20, 100, 2], 1500]
+  diTau_nn: [[0, 1.01, 0.005]]
+  diTauTopo_pt: [[20, 100, 2], 1500]
+  diTauTopo_nn: [[0, 1.0005, 0.0005]]
+  # pT thresholds (GeV) of tauRateVsPt and singleTauEffVsThreshold
+  diTau_rate_pt: [[0, 250, 10]]
+  diTauTopo_rate_pt: [[0, 100, 2]]
+  singleTau_eff_pt: [[30, 150, 2]]
+
+
+# -- Signal efficiency -------------------------------------------------
+# Gen taus: deltaR to the jet < TAU_GEN_MATCH_DR and gen pT (GeV) >
+# TAU_GEN_PT_MIN of the seed
+TAU_GEN_MATCH_DR: 0.4
+TAU_GEN_PT_MIN: {singleTau: 5.0, diTau: 1.0, diTauTopo: 1.0}
+
+# |eta| boundary of the barrel: the efficiencies split into barrel and
+# tau_endcap (BARREL_ETA to TAU_ETA_CUT)
+BARREL_ETA: 1.5
+
+# Gen tau pT bins (GeV, ranges) of the efficiencies, and of both axes of
+# the diTauTopo 2D efficiency
+TAU_EFF_PT_EDGES:
+  singleTau: [0, [30, 150, 2]]
+  diTau: [0, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100,
+          125, 150, 175, 200]
+TOPO_EFF_PT_EDGES: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120,
+                    140, 200]
+
+# singleTau efficiency versus threshold: thresholds with fewer gen taus
+# above them get efficiency 0
+SINGLE_TAU_MIN_GEN_TAUS: 50

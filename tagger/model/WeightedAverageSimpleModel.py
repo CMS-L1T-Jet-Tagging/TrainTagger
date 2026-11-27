@@ -25,6 +25,8 @@ class WeightedAverageSimpleModel(QKerasModel):
         JetTagModel (_type_): Base class of a JetTagModel
     """
 
+    output_pt_weights_name = 'pt_weights_output'
+
     schema = Schema(
             {
                 "model": str,
@@ -152,7 +154,7 @@ class WeightedAverageSimpleModel(QKerasModel):
         pt_weights = QDense(16, name='Dense_pt_weights_output', **self.common_args)(pt_weights)
         pt_weights = QActivation(
             activation=quantized_relu(self.quantization_config['reg_quantizer_bits'] , self.quantization_config['reg_quantizer_bits_int']),
-            name='pt_weights_output')(pt_weights)
+            name=self.output_pt_weights_name)(pt_weights)
 
         weighted_pt = tf.keras.layers.Multiply(name='apply_pt_weights')([pt_weights, pt])
         pt_output_dense = QDense(1, name='pT_output_dense',

@@ -63,10 +63,9 @@ SPECTRUM_LINEWIDTH = 2  # FastPUPPI pT spectra
 ERRORBAR_LINEWIDTH = 2  # efficiency points without errorbar_kw
 MASS_LINEWIDTH = 1.5  # nominal mass line of the mass peaks
 GRID_LINEWIDTH = 0.75  # grid of the FastPUPPI turn-on curves
-# dashed line at efficiency 1 (option hline)
-REFERENCE_LINEWIDTH = 3
-# dashed lines of the HH seed plots (option hlines)
-HH_REFERENCE_LINEWIDTH = 4
+REFERENCE_LINEWIDTH = (
+    3  # dashed reference lines, e.g. at efficiency 1 (hline, hlines)
+)
 
 # Marker and error bar cap sizes besides MARKERSIZE and CAPSIZE
 RESPONSE_MARKERSIZE = 8  # pT response and resolution points

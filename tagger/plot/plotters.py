@@ -455,7 +455,7 @@ def eff_points(spec, models):
             *opts["hlines"],
             linestyles="dashed",
             color="black",
-            linewidth=style.HH_REFERENCE_LINEWIDTH,
+            linewidth=style.REFERENCE_LINEWIDTH,
         )
     if "text" in opts:
         x, y, template = opts["text"]

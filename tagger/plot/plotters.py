@@ -698,8 +698,7 @@ def pt_map(spec, models):
     """A (gen pT x L1 pT) map (curve fields ``edges``, ``counts``) of
     the first model, log colour scale; with two series their ratio (0
     where the second is empty) on a diverging scale around 1. Options:
-    xlabel, ylabel, zlabel. As in the old plot_basic.py, gen pT is drawn
-    on the y axis and L1 pT on the x axis."""
+    xlabel, ylabel, zlabel."""
     opts = spec.options
     maps = [models[0].get(s.expr) for s in spec.series]
     edges = np.asarray(maps[0]["edges"], dtype=float)
@@ -724,7 +723,7 @@ def pt_map(spec, models):
         norm, cmap = LogNorm(), plt.cm.viridis.copy()
     cmap.set_bad(color="lightgray")
     im = ax.imshow(
-        z,
+        z.T,
         origin="lower",
         cmap=cmap,
         norm=norm,

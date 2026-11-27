@@ -461,8 +461,7 @@ def singleTauEffVsThreshold(run, cut: Literal["pt", "wp"]):
     and deltaR < TAU_GEN_MATCH_DR, and gen pT above the threshold.
     Thresholds: config TAU_SCANS singleTau_eff_pt; thresholds with fewer
     than SINGLE_TAU_MIN_GEN_TAUS such taus get 0. ``cut`` wp (pT and
-    score) or pt (pT alone). As in the old code the first point (30 GeV)
-    is a placeholder with efficiency 0.
+    score) or pt (pT alone).
     """
     j = _signal_jets(run, "singleTau")
     eta_cut = run.config["TAU_ETA_CUT"]
@@ -473,8 +472,8 @@ def singleTauEffVsThreshold(run, cut: Literal["pt", "wp"]):
     pt_edges = np.asarray(
         expand_ranges(run.config["TAU_SCANS"], "singleTau_eff_pt")
     )
-    counts, denoms = [0.0], [1e-6]
-    for pt_cut in pt_edges[1:]:
+    counts, denoms = [], []
+    for pt_cut in pt_edges:
         deno = gen_cuts & (j["gen_pt"] > pt_cut)
         d = np.sum(deno)
         denoms.append(d)
@@ -485,7 +484,9 @@ def singleTauEffVsThreshold(run, cut: Literal["pt", "wp"]):
         if cut == "wp":
             sel = sel & (j["score"] > max(f(pt_cut), 0.0))
         counts.append(np.sum(sel))
-    denoms = np.array(denoms)
+    denoms = np.maximum(
+        np.array(denoms, dtype=float), 1.0
+    )  # no gen tau: efficiency 0
     return {
         "pt": pt_edges.astype(float),
         "eff": np.array(counts) / denoms,

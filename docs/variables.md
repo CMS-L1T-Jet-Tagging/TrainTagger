@@ -231,7 +231,7 @@ Integrated efficiency of tauEffVsGenPt(seed, cut, region): passing / denominator
 ##### `singleTauEffVsThreshold(cut)`
 
 Single tau efficiency versus the pT threshold, with the score cut of the working point line at each threshold. Fields ``pt``, ``eff``, ``err`` (sqrt(N)/den).\
-Gen taus with |eta| < `TAU_ETA_CUT = 2.172`, gen pT > `TAU_GEN_PT_MIN["singleTau"] = 5.0` and deltaR < `TAU_GEN_MATCH_DR = 0.4`, and gen pT above the threshold. Thresholds: config `TAU_SCANS["singleTau_eff_pt"] = [[30, 150, 2]]`; thresholds with fewer than `SINGLE_TAU_MIN_GEN_TAUS = 50` such taus get 0. ``cut`` wp (pT and score) or pt (pT alone). As in the old code the first point (30 GeV) is a placeholder with efficiency 0.\
+Gen taus with |eta| < `TAU_ETA_CUT = 2.172`, gen pT > `TAU_GEN_PT_MIN["singleTau"] = 5.0` and deltaR < `TAU_GEN_MATCH_DR = 0.4`, and gen pT above the threshold. Thresholds: config `TAU_SCANS["singleTau_eff_pt"] = [[30, 150, 2]]`; thresholds with fewer than `SINGLE_TAU_MIN_GEN_TAUS = 50` such taus get 0. ``cut`` wp (pT and score) or pt (pT alone).\
 `cut`: pt, wp
 
 ##### `diTauTopoEffVsGenPt2d`

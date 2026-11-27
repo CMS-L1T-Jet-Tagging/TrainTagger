@@ -13,7 +13,6 @@ import numpy.typing as npt
 import yaml
 from schema import Schema, And, Use, Optional
 
-from tagger.plot.basic import loss_history
 
 class JetTagModel(ABC):
     """Parent Class for Jet Tag Models
@@ -198,15 +197,12 @@ class JetTagModel(ABC):
         self.extra_vars = extra_vars
         self.class_labels = class_labels
 
-    def plot_loss(self):
-        """Plot the loss of the model to the output directory"""
-        out_dir = self.output_directory
-        # Produce some basic plots with the training for diagnostics
-        plot_path = os.path.join(out_dir, "plots/training")
-        os.makedirs(plot_path, exist_ok=True)
-
-        # Plot history
-        loss_history(plot_path, [self.loss_name + self.output_id_name, self.loss_name + self.output_pt_name], self.history)
+    def save_history(self):
+        """Save the loss per epoch to training_history.json, the input of the eval train collection."""
+        path = os.path.join(self.output_directory, "training_history.json")
+        with open(path, "w") as f:
+            json.dump({k: [float(v) for v in values] for k, values in self.history.history.items()}, f, indent=1)
+        return path
 
 
 class JetModelFactory:

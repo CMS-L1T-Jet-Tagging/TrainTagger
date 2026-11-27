@@ -1,0 +1,73 @@
+# Default config: jetClassifier collection
+# (variables/jet_classifier.py).
+
+# -- ROCs --------------------------------------------------------------
+# Binary ROCs: "all" means every ordered pair of model classes, else a
+# list of [signal, background]
+ROC_PAIRS: all
+
+# Combined ROCs: one plot per entry, [signal, [backgrounds]]
+ROC_COMBINED:
+  taus: [taus, [jets, muon, electron]]
+  jets: [light, [b, charm, gluon]]
+
+# Extra ROCs with roc, auc and effAtMistag, besides ROC_PAIRS. The first
+# two are the test bench stand-ins (tagger/compare:
+# metrics.eff_b_vs_qcd, metrics.eff_tau_vs_jets).
+ROC_EXTRA_PAIRS: [[b, qcd], [taus, jets]]
+
+# Mistag rates of effAtMistag: one effAtMistag per ROC pair and point
+MISTAG_POINTS: [0.1, 0.01, 0.001]
+
+# Signal processes of the per-process ROCs (train.py -sig). Each needs
+# signal_process_data/<process>.
+SIGNAL_PROCESSES: []
+
+
+# -- Efficiency versus pT and eta --------------------------------------
+# Working points (one-vs-rest mistag rates) and class groups
+EFF_VS_PT_MISTAGS: [0.5, 0.2, 0.1]
+EFF_VS_PT_GROUPS: [taus, b]
+
+# Jet eta bins of effVsEta and effVsAbsEta (the training jets have
+# |eta| < 2.4)
+ETA_BINS: [-2.4, -2.0, -1.6, -1.2, -0.8, -0.4, 0.0, 0.4, 0.8, 1.2, 1.6,
+           2.0, 2.4]
+ABS_ETA_BINS: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0,
+               2.2, 2.4]
+
+
+# -- Histograms --------------------------------------------------------
+# Bins of the class score histograms (scoreHist, scores between 0 and 1)
+SCORE_HIST_BINS: 50
+
+# Input feature histograms (old basic.py plot_input_vars): bins, and the
+# [low, high] range per particle feature
+INPUT_HIST_BINS: 50
+INPUT_FEATURE_RANGES:
+  pt: [0, 150]
+  pt_rel: [0, 1]
+  pt_log: [0, 5]
+  eta: [-580, 580]
+  deta: [-150, 150]
+  dphi: [-150, 150]
+  phi: [-3.5, 3.5]
+  mass: [0, 10]
+  isPhoton: [0, 1]
+  isElectronPlus: [0, 1]
+  isElectronMinus: [0, 1]
+  isMuonPlus: [0, 1]
+  isMuonMinus: [0, 1]
+  isNeutralHadron: [0, 1]
+  isChargedHadronPlus: [0, 1]
+  isChargedHadronMinus: [0, 1]
+  z0: [-420, 420]
+  dxy: [0, 80]
+  isfilled: [0, 1]
+  puppiweight: [0, 1]
+  quality: [0, 7.1]
+  emid: [0, 7.1]
+  charge: [-2, 2]
+  id: [-1, 10]
+  eta_phys: [-3, 3]
+  phi_phys: [-3.5, 3.5]

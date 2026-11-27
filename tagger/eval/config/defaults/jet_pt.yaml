@@ -1,0 +1,59 @@
+# Default config: jetPt collection (variables/jet_pt.py).
+
+# -- Response and resolution -------------------------------------------
+# Jet groups of the pT response and resolution, besides inclusive and
+# every single class
+RESPONSE_GROUPS: [taus, jets, leptons]
+
+
+# -- Histograms --------------------------------------------------------
+# Jet pT histograms (ptHist): bins and [low, high] range (GeV)
+PT_HIST_BINS: 50
+PT_HIST_RANGE: [0, 300]
+
+# Histograms of the pT correction and the pT response: [low, high]
+# range, the bins of regressionHist and responseHist (all jets), and of
+# ptRatioHist (per class)
+RATIO_HIST_RANGE: [0, 2]
+RATIO_HIST_BINS: 50
+PT_RATIO_HIST_BINS: 10
+
+
+# -- pT weights --------------------------------------------------------
+# Models with a pt_weights_output layer, e.g. WeightedAverageSimpleModel
+#
+# Largest weight kept (larger ones are set to it)
+PT_WEIGHT_CLIP: 200
+
+# Weight distributions: bins of the weight, and the constituent pT (GeV)
+# and |eta| bins they are split in
+PT_WEIGHT_HIST_BINS: 20
+PT_WEIGHT_PT_BINS: [0, 5, 15, 30, 80, .inf]
+PT_WEIGHT_ETA_BINS: [0, 0.5, 1, 1.5, 2, 2.5]
+
+# Weight-vs-feature maps: weight bins, and per particle input feature
+# its [low, high, bins]; deta, dphi and eta in radians (x pi/720), eta
+# as |eta|. Values outside are clipped into the first and last bin.
+PT_WEIGHT_MAP_BINS: 15
+PT_WEIGHT_BINNING:
+  pt: [0, 100, 20]
+  pt_rel: [0, 1, 10]
+  pt_log: [0, 6, 20]
+  eta: [-2.5, 2.5, 15]
+  deta: [-0.5, 0.5, 10]
+  dphi: [-0.5, 0.5, 10]
+  mass: [0, 50, 20]
+  isPhoton: [-0.1, 1.1, 2]
+  isElectronPlus: [-0.1, 1.1, 2]
+  isElectronMinus: [-0.1, 1.1, 2]
+  isMuonPlus: [-0.1, 1.1, 2]
+  isMuonMinus: [-0.1, 1.1, 2]
+  isNeutralHadron: [-0.1, 1.1, 2]
+  isChargedHadronPlus: [-0.1, 1.1, 2]
+  isChargedHadronMinus: [-0.1, 1.1, 2]
+  z0: [-30, 30, 10]
+  dxy: [-0.5, 0.5, 10]
+  isfilled: [-0.1, 1.1, 2]
+  puppiweight: [-0.1, 1.1, 5]
+  quality: [-0.1, 1.1, 5]
+  emid: [-0.1, 1.1, 5]

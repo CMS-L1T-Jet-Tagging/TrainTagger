@@ -39,15 +39,10 @@ def rms(array):
 
 def quantize_ptreg_emulator(value):
     """
-    Quantize a pt-regression output the way the CMSSW emulator does before storing
-    jet_SC4NGJet_score_regression: L1TSC4NGJetID::output_regression_type =
-    ap_ufixed<22,12,AP_TRN,AP_SAT> (see L1Trigger/Phase2L1ParticleFlow/.../L1TSC4NGJet.cc:
-    inputtype model output -> output_regression_type), i.e. truncate to 12 fractional bits
-    and saturate to [0, (2^22-1)/2^12]. Inputtype widening of the model output is exact, so
-    the stored value = trunc(model_output * 2^12) / 2^12.
+    Quantize pt regression back to what is used in CMSSW ap_fixed<22,12>
     """
     value = np.asarray(value, dtype=np.float64)
-    limit = (2**22 - 1) / 2**12
+    limit = (2**22 - 1) / 2**12  # ufixed<12,10>
     return np.floor(np.clip(value, 0.0, limit) * 2**12) / 2**12
 
 def doPlots(model, outputdir, inputdir):

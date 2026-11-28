@@ -121,7 +121,7 @@ def derive_diTaus_topo_WPs(model, minbias_path, n_entries=100, tree='jetntuple/J
         'basic_input': raw_inputs,
         'jet_features': raw_jet_features
     }
-    raw_pred_score, raw_pt_correction = model.predict(model.prepare_inputs(raw_inputs_dict)[0])
+    raw_pred_score, raw_pt_correction = model.predict(raw_inputs_dict)
 
     apply_light = True
     raw_tau_plus = raw_pred_score[:,model.class_labels['taup']]

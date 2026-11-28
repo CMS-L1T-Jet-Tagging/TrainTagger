@@ -21,7 +21,8 @@ from qkeras.utils import load_qmodel
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras import Model
 
-from tagger.model.common_tensorflow import huber_loss, AAtt, AttentionPooling, choose_aggregator
+from tagger.model.common import huber_loss
+from tagger.model.common_qkeras import AAtt, AttentionPooling
 from tagger.model.JetTagModel import JetModelFactory, JetTagModel
 from tagger.data.tools import constituents_mask
 
@@ -155,7 +156,7 @@ class QKerasModel(JetTagModel):
         """
 
         # Train the model using hyperparameters in yaml config
-        self.history = self.jet_model.fit(
+        history = self.jet_model.fit(
             inputs_dict,
             {self.loss_name + self.output_id_name: y_train, self.loss_name + self.output_pt_name: pt_target_train},
             sample_weight={
@@ -170,39 +171,12 @@ class QKerasModel(JetTagModel):
             shuffle=True,
         )
 
-    def prepare_inputs(self, raw_inputs: dict) -> dict:
-        """Prepare the input dictionary for the model from a list of arrays
+        self.history = history.history
+        self.results_dict['best_loss'] = np.min(history.history['loss'])
+        self.results_dict['best_val_loss'] = np.min(history.history['val_loss'])
+        self.results_dict['best_jet_id_loss'] = np.min(history.history[self.loss_name + self.output_id_name+'_loss'])
+        self.results_dict['best_pT_output_loss'] = np.min(history.history[self.loss_name + self.output_pt_name+'_loss'])
 
-        Args:
-            raw_inputs: Dictionary of all possible input arrays (currently requires basic_input, jet_pt and jet_eta)
-
-        Returns:
-            dict: Dictionary of required input arrays
-        """
-
-        # get relevant feature indices
-        pt_rel_idx = self.particle_input_vars.index("pt_rel")
-
-        # build all possible inputs, add here if ever in need of new ones
-        input_dict = {
-            'basic_input': raw_inputs['basic_input'],
-            'basic_mask': constituents_mask(raw_inputs['basic_input'], 10),
-            'pt_mask': constituents_mask(raw_inputs['basic_input'], 10)[:, :, 0],
-            'constituent_fraction': raw_inputs['basic_input'][:, :, pt_rel_idx],
-        }
-
-        # remove unused inputs
-        for key in list(input_dict.keys()):
-            if key not in self.inputs['basic_features']:
-                del input_dict[key]
-
-        # add jet features if specified in model config
-        if len(self.inputs['jet_features']) > 0:
-            input_dict['jet_features'] = raw_inputs['jet_features']
-
-        input_shapes = {k: v.shape[1:] for k, v in input_dict.items()}
-
-        return input_dict, input_shapes
 
     def get_keras_trace_model(self):
         # Create a sub-model that outputs all intermediate layers and get keras trace

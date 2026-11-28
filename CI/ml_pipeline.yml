@@ -1,6 +1,5 @@
 include:
     - CI/cmssw.yml
-    - template: Code-Quality.gitlab-ci.yml
 
 stages:
   - data
@@ -19,7 +18,6 @@ stages:
   - run_QCD_Pt15To3000_PU200
   - emulation_regression
   - upload
-  - test
 
 variables:
     Name: new_samples_baseline_5param_extended_trk
@@ -46,15 +44,18 @@ variables:
     CMSSW_EMULATOR_WRAPPER: 'https://github.com/cms-hls4ml/L1TSC4NGJetModel.git'
     FASTPUPPI_VERSION: 'CMSSW_17_0_0_pre2_NGJet_plus_correlator'
     RERUN_ON_TAG: 'False'
+    RERUN_ON_OLDTRAINING: 'False'
     RUN_EMULATION: 'True'
     RUN_SYNTHESIS: 'True'
     TAG: 'v1.0.1'
+    IMAGE: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
 
 .template:
-  image: gitlab-registry.cern.ch/ml_l1/ops/docker-images/mamba_jettagger:latest
+  image: $IMAGE
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
+    - source setup-ci.sh TAGGER_VERIFY=1
     - env
   script:
     - python $FOLDER/$SCRIPT $ARGS
@@ -71,13 +72,11 @@ data:
      when: manual
   script:
   - source activate tagger
-  - mkdir data
-  - cd data
   - export EOS_MGM_URL=root://eoscms.cern.ch
-  - eos cp $EOS_DATA_DIR/${TRAIN} .
-  - eos cp $EOS_DATA_DIR/${SIGNAL}.root .
-  - cd ..
-  - python tagger/data/make_data.py -i data/${TRAIN} --tree $NTUPLE_TREE -sig $SIGNAL
+  - mkdir data
+  - eos find -f --maxdepth 1 "${EOS_DATA_DIR%/}/"   | grep -E '/[^/]+\.root$'   | grep -Ev '/(All200|MinBias)[^/]*$'   | xargs -d '\n' -I{} eos cp -p {} data/
+  - ls data
+  - python tagger/data/make_data.py --config tagger/data/configs/data-config-baseline-17-ci.yaml
   - tar -cf training_data_$Inputs.tgz training_data
   - tar -cf signal_process_data.tgz signal_process_data
   - export EOS_MGM_URL=root://eosproject.cern.ch
@@ -89,7 +88,7 @@ train:
   extends:
     - .template
   stage: train
-  tags: [cern-nextgen-gpu]
+  tags: [cern-nextgen-h100]
   needs:
     - job : data
       optional: true
@@ -98,6 +97,8 @@ train:
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
   - ./CI/run_training.sh $RERUN_ON_TAG $RERUN_ON_OLDTRAINING
+  - mkdir output/$Model/configs
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_t.json
   artifacts:
     paths:
       - output
@@ -123,6 +124,7 @@ evaluate:
   - eos cp $EOS_DATA_DIR/$VBFHTAUTAU .
   - cd ..
   - echo "pT weights plots"
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/plot/pt_weights.py -m output/$Model
   - echo "bbtt performance"
   - python tagger/plot/bbtt.py --deriveRate --minbias data/$MINBIAS -n 650000 --tree $NTUPLE_TREE -m output/$Model
@@ -142,6 +144,7 @@ evaluate:
   - echo "Single tau performance"
   - python tagger/plot/singleTau.py --deriveWPs --minbias data/$MINBIAS -n 1000000 --tree $NTUPLE_TREE -m output/$Model
   - python tagger/plot/singleTau.py --eff --vbf_sample data/$VBFHTAUTAU -n 1000000 --tree $NTUPLE_TREE -m output/$Model
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_e.json
   artifacts:
     paths:
       - output
@@ -161,14 +164,10 @@ hls4ml:
     - job : train
       optional: true
   script:
-  - pip uninstall hls4ml
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
-  - cd hls4ml
-  - pip install .
-  - cd ..
   - eos cp ${EOS_STORAGE_DIR}/${EOS_STORAGE_DATADIR}/training_data_$Inputs.tgz .
   - tar -xf training_data_$Inputs.tgz
   - source activate tagger
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/firmware/hls4ml_convert.py -m output/$Model -o output/$Model/firmware
   artifacts:
     paths:
@@ -184,17 +183,21 @@ synth:
   rules:
     - if: $RUN_SYNTHESIS == "True"
   script:
-    - cd output/$Model/firmware/L1TSC4NGJetModel
+    - cd output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME
+    - cat build_opt.tcl
+    - sed -i 's/    cosim      1$/    cosim      0/' build_opt.tcl
+    - sed -i 's/    validation 1$/    validation 0/' build_opt.tcl
+    - cat build_opt.tcl
     - vitis_hls -f build_prj.tcl
     - vivado -mode batch -source vivado_synth.tcl
     - cd ../../../..
-    - cp tagger/firmware/wrapper_generator.sh output/$Model/firmware/L1TSC4NGJetModel/firmware
-    - cd output/$Model/firmware/L1TSC4NGJetModel/firmware
-    - ./wrapper_generator.sh L1TSC4NGJetModel.h
+    - cp tagger/firmware/wrapper_generator.sh output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME/firmware
+    - cd output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME/firmware
+    - ./wrapper_generator.sh L1TSC4NGJetModel_$HLS4ML_NAME.h
     - cd ../../../../..
   artifacts:
     paths:
-      - output/$Model/firmware/L1TSC4NGJetModel
+      - output/$Model/firmware/L1TSC4NGJetModel_$HLS4ML_NAME
     expire_in: 7 days
 
 emulation-evaluate:
@@ -207,17 +210,14 @@ emulation-evaluate:
   needs: [emulate,train,hls4ml]
   dependencies: [emulate,train,hls4ml]
   script:
-  - pip uninstall hls4ml
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
-  - cd hls4ml
-  - pip install .
-  - cd ..
   - mkdir data
   - cd data
   - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
   - cd ..
   - source activate tagger
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
   - python tagger/plot/makeEmulationPlot.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -o output/$Model/plots/emulation
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_ee.json
   artifacts:
     paths:
       - output/$Model
@@ -228,30 +228,37 @@ profile:
     - .template
   stage: profile
   tags: [cern-nextgen-gpu]
-  needs: [emulate,train,hls4ml,synth]
-  dependencies: [emulate,train,hls4ml,synth]
+  needs:
+    - job: train
+      optional: false
+    - job: emulate
+      optional: true
+    - job: hls4ml
+      optional: false
+    - job: synth
+      optional: false
   rules:
-    - if: ($RUN_EMULATION == "True") &&  ($RUN_SYNTHESIS == "True")
+    - if: $RUN_SYNTHESIS == "True"
   script:
-  - pip uninstall hls4ml
-  - git clone https://github.com/CMS-L1T-Jet-Tagging/hls4ml.git -b jet_tagger_hls4ml_update
-  - cd hls4ml
-  - pip install .
-  - cd ..
   - source activate tagger
   - pip install hls4ml[profiling]
-  - mkdir data
-  - cd data
-  - cp ../${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root .
-  - cd ..
-  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile
+  - |
+    if [ "$RUN_EMULATION" == "True" ]; then
+      mkdir -p data
+      cp ${CMSSW_VERSION}/src/FastPUPPI/NtupleProducer/python/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root data
+    fi
+  - mv output/$Model/configs/results_dict_t.json output/$Model/results_dict.json
+  - python tagger/firmware/hls4ml_profile.py -r True -i data/jetTuple_${TRACK_ALGO}_${N_PARAMS}.root -m output/$Model -of output/$Model/firmware -o output/$Model/plots/profile -e $RUN_EMULATION
+  - mv output/$Model/results_dict.json output/$Model/configs/results_dict_p.json
   artifacts:
+    paths:
+      - output/$Model
     expire_in: 7 days
 
 run_processes:
   image: gitlab-registry.cern.ch/cms-cloud/cmssw-docker/al8-cms:latest
   stage: run_processes
-  tags: [cern-nextgen-gpu]
+  tags: [cern-nextgen-h100]
   needs:
     - job : hls4ml
       optional: true
@@ -313,7 +320,7 @@ upload_new_model:
     - job: profile
       optional: true
     - job: emulation_regression
-      optional: false
+      optional: true
   before_script:
     - export PYTHONPATH=/builds/ml_l1/TrainTagger:$PYTHONPATH
     - echo "$AUTO_DEVOPS_CERNBOX_PASS" | kinit "$AUTO_DEVOPS_CERNBOX_USER@CERN.CH" > /dev/null
@@ -345,8 +352,8 @@ upload_tagged_model:
     - mkdir -p ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots
     - mkdir $Name
     - cd output/$Model/firmware
-    - tar -cvf L1TSC4NGJetModel.tgz L1TSC4NGJetModel
-    - cp -r L1TSC4NGJetModel.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
+    - tar -cvf L1TSC4NGJetModel_$HLS4ML_NAME.tgz L1TSC4NGJetModel_$HLS4ML_NAME
+    - cp -r L1TSC4NGJetModel_$HLS4ML_NAME.tgz ${EOS_STORAGE_DIR}/tags/${TAG}/test/firmware/
     - cd ../../..
     - mkdir $Name/plots
     - mv output/$Model/plots/emulation $Name/plots
@@ -358,40 +365,9 @@ upload_tagged_model:
     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.cern.ch/cebrown/php-plots -b feature/update_extension_grouping
     - export PATH="${PATH}:/builds/ml_l1/php-plots/bin"
     - pb_copy_index.py TrainTagger/${Name} --recursive
-    # - pb_copy_index.py ${EOS_STORAGE_DIR}/tags/${TAG}/test --recursive
     - cd TrainTagger/${Name}
     - pb_deploy_plots.py plots ${EOS_STORAGE_DIR}/tags/${TAG}/test/plots --recursive --extensions png,pdf
   artifacts:
     paths:
       - $Name
     expire_in: 7 days
-
-code_quality:
-   tags:
-    - docker-privileged-xl
-   artifacts:
-    reports:
-      codequality: gl-code-quality-report.json
-
-pylint:
-  stage: test
-  image: python:3.7-slim
-  before_script:
-    - mkdir -p public/badges public/lint
-    - echo undefined > public/badges/$CI_JOB_NAME.score
-    - pip install pylint-gitlab
-  script:
-    - pylint --exit-zero --output-format=text $(find -type f -name "*.py" ! -path "**/.venv/**") | tee /tmp/pylint.txt
-    - sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' /tmp/pylint.txt > public/badges/$CI_JOB_NAME.score
-    - pylint --exit-zero --output-format=pylint_gitlab.GitlabCodeClimateReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > codeclimate.json
-    - pylint --exit-zero --output-format=pylint_gitlab.GitlabPagesHtmlReporter $(find -type f -name "*.py" ! -path "**/.venv/**") > public/lint/index.html
-  after_script:
-    - anybadge --overwrite --label $CI_JOB_NAME --value=$(cat public/badges/$CI_JOB_NAME.score) --file=public/badges/$CI_JOB_NAME.svg 4=red 6=orange 8=yellow 10=green
-    - |
-      echo "Your score is: $(cat public/badges/$CI_JOB_NAME.score)"
-  artifacts:
-    paths:
-      - public
-    reports:
-      codequality: codeclimate.json
-    when: always

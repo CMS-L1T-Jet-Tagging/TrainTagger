@@ -1,0 +1,202 @@
+import json
+import os
+from schema import Schema, And, Use, Optional
+from math import log2
+import scipy
+import numpy.typing as npt
+import keras
+import numpy as np
+
+import inspect
+import string
+
+from keras.layers import BatchNormalization, Input, Activation, GlobalAveragePooling1D, AveragePooling1D, Flatten,Rescaling
+from hgq.layers import QAdd, QDenseT, QDense,QGlobalAveragePooling1D,QMultiHeadAttentionT, QSoftmax,QLayerBaseSingleInput,QLayerBaseMultiInputs,  QEinsumDenseBatchnorm, QGlobalAveragePooling1D, QAdd,QSum, QMultiply,QLinformerAttention
+from hgq.layers.activation import QUnaryFunctionLUT
+from hgq.config import LayerConfigScope, QuantizerConfigScope, QuantizerConfig
+from hgq.regularizers import MonoL1
+from hgq.constraints import MinMax, Min
+from hgq.utils.sugar import FreeEBOPs, BetaScheduler,PieceWiseSchedule,EarlyStoppingWithEbopsThres,BetaPID
+
+from keras.models import load_model
+#import hls4ml
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tagger.data.tools import load_data, to_ML
+from tagger.model.JetTagModel import JetModelFactory, JetTagModel
+from tagger.model.HGQ2.HGQ2Model import HGQ2Model
+from tagger.model.common import initialise_tensorflow
+
+from hgq.utils import trace_minmax
+import inspect
+import string
+
+import hgq.layers.table.dense as _table_dense
+
+def _fixed_build_module(self, presum_idxs, presum_shape, weight_idxs):
+    layers = []
+    labels = iter(sorted(set(string.ascii_letters) - set(presum_idxs) - set(weight_idxs)))
+    hidden_in = next(labels)
+    hidden_out = next(labels)
+    for _ in range(self.n_hl):
+        bias_axes = f'{weight_idxs}{hidden_out}' if self.bias_axes is not None and not self.enable_bn else None
+        eq = f'{presum_idxs}{hidden_in},{weight_idxs}{hidden_in}{hidden_out}->{presum_idxs}{hidden_out}'
+        layers.append(
+            keras.layers.EinsumDense(
+                eq,
+                output_shape=presum_shape[1:] + (self.d_hl,),
+                activation=self.subnn_activation,
+                bias_axes=bias_axes,
+            )
+        )
+        hidden_in, hidden_out = hidden_out, hidden_in
+
+    bias_axes = weight_idxs if self.bias_axes is not None and not self.enable_bn else None
+    layers.append(
+        keras.layers.EinsumDense(
+            f'{presum_idxs}{hidden_in},{weight_idxs}{hidden_in}->{presum_idxs}',
+            output_shape=presum_shape[1:],
+            activation='linear',
+            bias_axes=bias_axes,
+        )
+    )
+    module = keras.models.Sequential(layers)
+    module.build(presum_shape + (1,))  # the fix: the input is always a scalar
+    return module
+
+
+# Patch every class in the table module whose _build_module has the einsum signature
+_patched = []
+for _name, _cls in inspect.getmembers(_table_dense, inspect.isclass):
+    _bm = _cls.__dict__.get('_build_module')
+    if _bm is not None and 'presum_idxs' in inspect.signature(_bm).parameters:
+        _cls._build_module = _fixed_build_module
+        _patched.append(_name)
+
+assert _patched, 'No table einsum-dense class found to patch'
+print('Patched HGQ2 table classes:', _patched)
+
+@JetModelFactory.register('LEAFformerHGQ2')
+class LEAFformerHGQ2(HGQ2Model):
+
+    schema = Schema(
+            {
+                "model": str,
+                ## generic run config coniguration
+                "run_config" : JetTagModel.run_schema,
+                "model_config" : {"name" : str,
+                                  "feedforward_dim" : int,
+                                  "num_heads" : int,
+                                  "classification_layers" : list,
+                                  "classification_parallelisation_factor" : list,
+                                  "regression_layers" : list,
+                                  "regression_parallelisation_factor" : list,
+                                  "beta": And(float, lambda s: 1.0 >= s >= 0.0),
+                                  },
+
+                "training_config" : HGQ2Model.training_config,
+
+                "input_config" : HGQ2Model.input_config,
+
+                "firmware_config" : HGQ2Model.firmware_config,
+
+                "quantization_config" : None
+            }
+    )
+
+
+    def build_model(self, inputs_shape, outputs_shape):
+
+        self.results_dict['model_seed'] = initialise_tensorflow(self.run_config['num_threads'])
+
+        scope0 = QuantizerConfigScope(k0=1, b0=8, i0=1, br=MonoL1(1e-8), overflow_mode='WRAP')
+
+        scope1 = QuantizerConfigScope(place='datalane', k0=1, f0=6, fr=MonoL1(1e-8), ir=MonoL1(1e-8))
+        betascope = LayerConfigScope(beta0=self.model_config['beta'])
+
+        iq_conf = QuantizerConfig(k0=1, i0=11, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+        oq_conf_jetid = QuantizerConfig(k0=0, i0=12, f0=12, trainable=False,round_mode='RND',overflow_mode='SAT')
+        oq_conf_pt = QuantizerConfig(k0=1, i0=9, f0=6, trainable=False,round_mode='RND',overflow_mode='SAT')
+
+        # Linformer Attention Config
+        mhaconfig = QuantizerConfigScope(place='table', overflow_mode='SAT_SYM', homogeneous_axis=(0,1), bc=Min(0))
+
+        FF_DIM = self.model_config['feedforward_dim']
+        NUM_PARTICLES = inputs_shape['basic_input'][0]
+        NUM_FEATURES = inputs_shape['basic_input'][1]
+        numheads = self.model_config['num_heads']
+
+        bn_mom = 0.75
+
+        with betascope, scope0, scope1:
+            inp = keras.layers.Input((NUM_PARTICLES, NUM_FEATURES),name='basic_input')
+            emb = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(inp)
+
+            with mhaconfig:
+                xa = QMultiHeadAttentionT(numheads, FF_DIM, dropout=0.0)(emb, emb)
+
+            xa = xf = QAdd()([emb, xa])
+            xf = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(xf)
+            xf = QDenseT(FF_DIM, batch_norm=True, bn_momentum=bn_mom)(xf)
+            x = QAdd()([xa, xf])
+
+            x = GlobalAveragePooling1D()(x)
+
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][0], bias_axes='C', activation='relu', )(x)
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC',self.model_config['classification_layers'][1], bias_axes='C', activation='relu', )(jet_id)
+            jet_id = QEinsumDenseBatchnorm('bc,cC->bC', outputs_shape[0], bias_axes='C')(jet_id)
+            jet_id = Activation('softmax', name='jet_id_output')(jet_id)
+
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][0], bias_axes='C', activation='relu', )(x)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', self.model_config['regression_layers'][1], bias_axes='C', activation='relu', )(pt_regress)
+            pt_regress = QEinsumDenseBatchnorm('bc,cC->bC', 1, bias_axes='C',name='pT_output')(pt_regress)
+
+            #Define the model using both branches
+            self.jet_model = keras.Model(inputs = inp, outputs = [jet_id, pt_regress])
+            print(self.jet_model.summary())
+            self.results_dict['num_parameters'] = self.jet_model.count_params()
+
+    def firmware_convert(self, firmware_dir: str, build: bool = False):
+            """Run the hls4ml model conversion
+
+            Args:
+                firmware_dir (str): Where to save the firmware
+                build (bool, optional): Run the full hls4ml build? Or just create the project. Defaults to False.
+            """
+
+            print(f"Warning: this firmware convert will not produce a bit accurate emulation and will fail when synthesising")
+
+            # Remove the old directory if it exists
+            hls4ml_outdir = firmware_dir + '/' + self.firmware_config['project_name']
+            os.system(f'rm -rf {hls4ml_outdir}')
+
+            # Create default config
+            config = hls4ml.utils.config_from_keras_model(self.jet_model, granularity='name')
+            config["Model"]["Strategy"]="distributed_arithmetic"
+            config["Model"]["ReuseFactor"]=1
+            config['IOType'] = 'io_parallel'
+
+            # Write HLS
+            self.hls_jet_model = hls4ml.converters.convert_from_keras_model(
+                self.jet_model,
+                backend='Vitis',
+                project_name=self.firmware_config['project_name'],
+                clock_period=self.firmware_config['clock_period'],
+                hls_config=config,
+                output_dir=f'{hls4ml_outdir}',
+                part= self.firmware_config['fpga_part'],
+                namespace='hls4ml_'+self.firmware_config['project_name'],
+                write_weights_txt=False,
+                write_emulation_constants=True,
+            )
+
+            # Compile the project
+            self.hls_jet_model.compile()
+
+            # Save config  as json file
+            print("Saving default config as config.json ...")
+            with open(hls4ml_outdir + '/config.json', 'w') as fp:
+                json.dump(config, fp)
+
+            if build:
+                # build the project
+                self.hls_jet_model.build(csim=False, reset=True)
